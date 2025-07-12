@@ -59,12 +59,20 @@ executables:
             echo "Unit tests completed"
           retries: 3
 
-
   - verb: test
     name: e2e
     description: Run E2E tests with instrumented binary and coverage
     serial:
       dir: //
+      params:
+        - envKey: UPDATE_GOLDEN_FILES
+          text: "false"
+        - envKey: COLORFGBG
+          text: 15;0
+        - envKey: COLORTERM
+          text: truecolor
+        - envKey: TERM
+          text: xterm-256color
       execs:
         - cmd: |
             set -e

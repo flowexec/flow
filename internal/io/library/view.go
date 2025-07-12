@@ -4,8 +4,6 @@ package library
 import (
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -102,8 +100,11 @@ func (l *Library) paneZeroContent() string {
 	}
 
 	var sb strings.Builder
+	l.mu.RLock()
 	workspaces := l.visibleWorkspaces
 	namespaces := l.visibleNamespaces
+	l.mu.RUnlock()
+
 	sb.WriteString(renderPaneTitle("Workspaces", len(workspaces), l.currentPane == 0, l.theme))
 
 	numWs := len(workspaces)
@@ -158,8 +159,10 @@ func (l *Library) paneOneContent() string {
 	}
 
 	var sb strings.Builder
+	l.mu.RLock()
 	sb.WriteString(renderPaneTitle("Executables", len(l.visibleExecutables), l.currentPane == 1, l.theme))
 	if len(l.visibleExecutables) == 0 {
+		l.mu.RUnlock()
 		sb.WriteString(l.theme.RenderError("No executables found"))
 		return sb.String()
 	}
@@ -171,7 +174,10 @@ func (l *Library) paneOneContent() string {
 	if len(l.visibleNamespaces) > 0 {
 		curNs = l.visibleNamespaces[l.currentNamespace]
 	}
-	for i, ex := range l.visibleExecutables {
+	visibleExecutables := l.visibleExecutables
+	l.mu.RUnlock()
+
+	for i, ex := range visibleExecutables {
 		if uint(i) == l.currentExecutable {
 			indicator := "*"
 			if (l.ctx.CurrentWorkspace != nil && ex.Workspace() == l.ctx.CurrentWorkspace.AssignedName()) ||
@@ -190,11 +196,17 @@ func (l *Library) paneOneContent() string {
 }
 
 func (l *Library) paneTwoContent() string {
+	l.mu.RLock()
 	if len(l.visibleExecutables) == 0 {
+		l.mu.RUnlock()
 		return ""
 	} else if !l.splitView && l.currentPane != 2 {
+		l.mu.RUnlock()
 		return ""
 	}
+
+	ex := l.visibleExecutables[l.currentExecutable]
+	l.mu.RUnlock()
 
 	_, _, maxWidth := calculateViewportWidths(l.termWidth, l.splitView)
 	paneTwoMaxWidth := math.Floor(float64(maxWidth) * 0.95)
@@ -211,7 +223,6 @@ func (l *Library) paneTwoContent() string {
 		return l.theme.RenderError(fmt.Sprintf("unable to render markdown: %s", err.Error()))
 	}
 
-	ex := l.visibleExecutables[l.currentExecutable]
 	content := ex.Markdown()
 	switch l.currentFormat {
 	case 0:
@@ -255,37 +266,38 @@ func (l *Library) footerContent() string {
 			)
 		} else if help {
 			return l.theme.RenderFooter(fmt.Sprintf("%s ● %s", footerPrefix, paneZeroHelp), l.termWidth)
-		} else if l.currentWorkspace < uint(len(l.visibleWorkspaces)) {
-			ws := l.visibleWorkspaces[l.currentWorkspace]
-			if ws == allWorkspacesLabel {
-				break
-			}
-			var wsCfg *workspace.Workspace
-			for i, w := range l.allWorkspaces {
-				if w.AssignedName() == ws {
-					wsCfg = l.allWorkspaces[i]
+		} else {
+			l.mu.RLock()
+			if l.currentWorkspace < uint(len(l.visibleWorkspaces)) {
+				ws := l.visibleWorkspaces[l.currentWorkspace]
+				l.mu.RUnlock()
+				if ws == allWorkspacesLabel {
+					break
 				}
-			}
-			if wsCfg == nil {
-				l.ctx.Logger.Errorf("unable to find workspace config for %s", ws)
-				break
-			}
+				var wsCfg *workspace.Workspace
+				for i, w := range l.allWorkspaces {
+					if w.AssignedName() == ws {
+						wsCfg = l.allWorkspaces[i]
+					}
+				}
+				if wsCfg == nil {
+					l.ctx.Logger.Errorf("unable to find workspace config for %s", ws)
+					break
+				}
 
-			path, err := relativePathFromWd(wsCfg.Location())
-			if err != nil {
-				l.ctx.Logger.Error(err, "unable to get relative path from wd")
-				break
+				var info string
+				switch {
+				case l.noticeText != "":
+					info = l.noticeText
+				case len(wsCfg.Tags) > 0:
+					info = fmt.Sprintf("%s(%s) -> %s", wsCfg.DisplayName, common.Tags(wsCfg.Tags).PreviewString(), wsCfg.Location())
+				default:
+					info = fmt.Sprintf("%s -> %s", wsCfg.DisplayName, wsCfg.Location())
+				}
+				return l.theme.RenderFooter(fmt.Sprintf("%s ● %s", footerPrefix, info), l.termWidth)
+			} else {
+				l.mu.RUnlock()
 			}
-			var info string
-			switch {
-			case l.noticeText != "":
-				info = l.noticeText
-			case len(wsCfg.Tags) > 0:
-				info = fmt.Sprintf("%s(%s) -> %s", wsCfg.DisplayName, common.Tags(wsCfg.Tags).PreviewString(), path)
-			default:
-				info = fmt.Sprintf("%s -> %s", wsCfg.DisplayName, path)
-			}
-			return l.theme.RenderFooter(fmt.Sprintf("%s ● %s", footerPrefix, info), l.termWidth)
 		}
 	case 1, 2:
 		if help {
@@ -297,30 +309,23 @@ func (l *Library) footerContent() string {
 			return l.theme.RenderFooter(
 				fmt.Sprintf("%s ● %s", footerPrefix, helpStr), l.termWidth,
 			)
-		} else if l.currentExecutable < uint(len(l.visibleExecutables)) {
-			var info string
-			switch {
-			case l.noticeText != "":
-				info = l.noticeText
-			default:
-				exec := l.visibleExecutables[l.currentExecutable]
-				path, err := relativePathFromWd(exec.FlowFilePath())
-				if err != nil {
-					l.ctx.Logger.Error(err, "unable to get relative path from wd")
-					break
+		} else {
+			l.mu.RLock()
+			if l.currentExecutable < uint(len(l.visibleExecutables)) {
+				var info string
+				switch {
+				case l.noticeText != "":
+					info = l.noticeText
+				default:
+					exec := l.visibleExecutables[l.currentExecutable]
+					l.mu.RUnlock()
+					info = exec.FlowFilePath()
 				}
-				info = path
+				return l.theme.RenderFooter(fmt.Sprintf("%s ● %s", footerPrefix, info), l.termWidth)
+			} else {
+				l.mu.RUnlock()
 			}
-			return l.theme.RenderFooter(fmt.Sprintf("%s ● %s", footerPrefix, info), l.termWidth)
 		}
 	}
 	return l.theme.RenderFooter(footerPrefix, l.termWidth)
-}
-
-func relativePathFromWd(path string) (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Rel(wd, path)
 }

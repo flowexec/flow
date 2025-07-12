@@ -77,21 +77,28 @@ func (l *Library) updateWsPane(msg tea.Msg) (viewport.Model, tea.Cmd) {
 		return l.paneZeroViewport, nil
 	}
 
+	l.mu.RLock()
 	numWs := len(l.visibleWorkspaces)
 	numNs := len(l.visibleNamespaces)
 	if numWs == 0 {
+		l.mu.RUnlock()
 		return l.paneZeroViewport, nil
 	}
 
 	curWs := l.visibleWorkspaces[l.currentWorkspace]
+	l.mu.RUnlock()
+
 	curWsCfg := l.allWorkspaces.FindByName(curWs)
 	wsCanMoveUp := numWs > 1 && l.currentWorkspace >= 1 && l.currentWorkspace < uint(numWs)
 	wsCanMoveDown := numWs > 1 && l.currentWorkspace < uint(numWs-1)
 
 	var curNs string
+	l.mu.RLock()
 	if len(l.visibleNamespaces) > 0 {
 		curNs = l.visibleNamespaces[l.currentNamespace]
 	}
+	l.mu.RUnlock()
+
 	nsCanMoveUp := curNs != "" && numNs > 1 && l.currentNamespace >= 1 && l.currentNamespace < uint(numNs)
 	nsCanMoveDown := curNs != "" && numNs > 1 && l.currentNamespace < uint(numNs-1)
 
@@ -198,12 +205,16 @@ func (l *Library) updateExecPanes(msg tea.Msg) (viewport.Model, tea.Cmd) {
 		pane = l.paneTwoViewport
 	}
 
+	l.mu.RLock()
 	numExecs := len(l.visibleExecutables)
 	if numExecs == 0 {
+		l.mu.RUnlock()
 		return pane, nil
 	}
 
 	curExec := l.visibleExecutables[l.currentExecutable]
+	l.mu.RUnlock()
+
 	canMoveUp := numExecs > 1 && l.currentExecutable >= 1 && l.currentExecutable < uint(numExecs)
 	canMoveDown := numExecs > 1 && l.currentExecutable < uint(numExecs-1)
 

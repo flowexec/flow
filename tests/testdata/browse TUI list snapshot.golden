@@ -1,0 +1,33 @@
+[?25l[?2004h]2;flow-test╭───────────╮                                                                   
+│ flow-test │───────────────────────────────────────────────────────────────────
+╰───────────╯                                                                   
+                                                                                
+                                                                                
+ ●∙∙ loading...                                                                 
+                                                                                
+                                                                                
+                                                                                [80D[8A╭───────────╮                                                                   
+│ flow-test │───────────────────────────────────────────────────────────────────
+╰───────────╯                                                                   
+                                                                                
+   14 executables                                                               
+                                                                                
+   ║ run default/                                                               
+     run default/examples:request                                               
+     run default/examples:request-with-body                                     
+     run default/examples:request-with-timeout                                  
+     run default/examples:request-with-transform                                
+     run default/examples:request-with-validated-status                         
+     run default/examples:simple-print                                          
+     run default/examples:with-args                                             
+     run default/examples:with-exit                                             
+     run default/examples:with-params                                           
+     run default/examples:with-pauses                                           
+     run default/examples:with-plaintext                                        
+     run default/examples:with-timeout                                          
+     run default/examples:with-tmp-dir                                          
+                                                                                
+                                                                                
+                                                                                
+────────────────────────────────────────────────────────────────────────────────
+[ q: quit ] [ h: show help ]                                                    [80D[2K[?2004l[?25h[?1002l[?1003l[?1006l

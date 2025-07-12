@@ -37,6 +37,11 @@ type Context struct {
 	*context.Context
 	cacheDir  string
 	configDir string
+	wsDir     string
+}
+
+func (c *Context) WorkspaceDir() string {
+	return c.wsDir
 }
 
 // NewContext creates a new context for testing runners. It initializes the context with
@@ -54,11 +59,12 @@ func NewContext(ctx stdCtx.Context, t ginkgo.FullGinkgoTInterface) *Context {
 			t.Fatalf("logger exit called - %s", msg)
 		}),
 	)
-	ctxx, configDir, cacheDir := newTestContext(ctx, t, logger, stdIn, stdOut)
+	ctxx, configDir, cacheDir, wsDir := newTestContext(ctx, t, logger, stdIn, stdOut)
 	return &Context{
 		Context:   ctxx,
 		configDir: configDir,
 		cacheDir:  cacheDir,
+		wsDir:     wsDir,
 	}
 }
 
@@ -145,7 +151,7 @@ func newTestContext(
 	t ginkgo.FullGinkgoTInterface,
 	logger tuikitIO.Logger,
 	stdIn, stdOut *os.File,
-) (*context.Context, string, string) {
+) (*context.Context, string, string, string) {
 	configDir, cacheDir, wsDir := initTestDirectories(t)
 	setTestEnv(t, configDir, cacheDir)
 
@@ -174,7 +180,7 @@ func newTestContext(
 		ExecutableCache:  execCache,
 	}
 	ctxx.SetIO(stdIn, stdOut)
-	return ctxx, configDir, cacheDir
+	return ctxx, configDir, cacheDir, wsDir
 }
 
 func initTestDirectories(t ginkgo.FullGinkgoTInterface) (string, string, string) {

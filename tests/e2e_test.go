@@ -3,15 +3,23 @@
 package tests_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/flowexec/tuikit"
+	"github.com/muesli/termenv"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"testing"
 )
+
+func init() {
+	lipgloss.SetColorProfile(termenv.Ascii)
+}
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -30,4 +38,11 @@ func readFileContent(f *os.File) (string, error) {
 		fmt.Println(outStr)
 	}
 	return outStr, nil
+}
+
+func newTUIContainer(ctx context.Context) *tuikit.Container {
+	app := &tuikit.Application{Name: "flow-test"}
+	container, err := tuikit.NewContainer(ctx, app)
+	Expect(err).NotTo(HaveOccurred())
+	return container
 }

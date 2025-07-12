@@ -2,6 +2,7 @@ package library
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/flowexec/tuikit"
@@ -37,6 +38,9 @@ type Library struct {
 	paneZeroViewport, paneOneViewport, paneTwoViewport                 viewport.Model
 
 	cmdRunFunc func(string) error
+
+	// Mutex to protect concurrent access to shared fields
+	mu sync.RWMutex
 }
 
 type Filter struct {

@@ -48,14 +48,18 @@ func (l *Library) setVisibleExecs() {
 	}
 
 	curWs := l.filter.Workspace
+
+	l.mu.RLock()
 	if label := l.visibleWorkspaces[l.currentWorkspace]; label != "" && label != allWorkspacesLabel {
 		curWs = label
 	} else if curWs == allWorkspacesLabel {
 		curWs = ""
 	}
+	l.mu.RUnlock()
 
 	curNs := l.filter.Namespace
 	if l.showNamespaces && len(l.visibleNamespaces) > 0 {
+		l.mu.RLock()
 		if label := l.visibleNamespaces[l.currentNamespace]; label != "" {
 			switch label {
 			case withoutNamespaceLabel:
@@ -66,6 +70,7 @@ func (l *Library) setVisibleExecs() {
 				curNs = label
 			}
 		}
+		l.mu.RUnlock()
 	}
 
 	filter := l.filter
@@ -80,7 +85,10 @@ func (l *Library) setVisibleExecs() {
 	slices.SortFunc(filteredExec, func(i, j *executable.Executable) int {
 		return strings.Compare(i.Ref().String(), j.Ref().String())
 	})
+
+	l.mu.Lock()
 	l.visibleExecutables = filteredExec
+	l.mu.Unlock()
 }
 
 func (l *Library) setVisibleWorkspaces() {
@@ -112,7 +120,10 @@ func (l *Library) setVisibleWorkspaces() {
 		labels = append(labels, ws.AssignedName())
 	}
 	slices.Sort(labels)
+
+	l.mu.Lock()
 	l.visibleWorkspaces = append(prepend, labels...) //nolint:gocritic
+	l.mu.Unlock()
 }
 
 func (l *Library) setVisibleNamespaces() {
@@ -123,7 +134,11 @@ func (l *Library) setVisibleNamespaces() {
 	var labels, prepend []string
 	var someWithoutNs bool
 	filter := l.filter
+
+	l.mu.RLock()
 	filterWs := l.visibleWorkspaces[l.currentWorkspace]
+	l.mu.RUnlock()
+
 	nsSet := make(map[string]struct{})
 	for _, ex := range l.allExecutables {
 		ns := ex.Ref().Namespace()
@@ -149,5 +164,8 @@ func (l *Library) setVisibleNamespaces() {
 	if someWithoutNs {
 		prepend = append(prepend, withoutNamespaceLabel)
 	}
+
+	l.mu.Lock()
 	l.visibleNamespaces = append(prepend, labels...) //nolint:gocritic
+	l.mu.Unlock()
 }
