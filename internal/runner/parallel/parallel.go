@@ -87,7 +87,6 @@ func (r *parallelRunner) Exec(
 	return fmt.Errorf("no parallel executables to run")
 }
 
-//nolint:funlen,gocognit
 func handleExec(
 	ctx *context.Context, parent *executable.Executable,
 	eng engine.Engine,

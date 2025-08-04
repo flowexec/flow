@@ -84,7 +84,6 @@ func (r *serialRunner) Exec(
 	return fmt.Errorf("no serial executables to run")
 }
 
-//nolint:funlen,gocognit
 func handleExec(
 	ctx *context.Context,
 	parent *executable.Executable,

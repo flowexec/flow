@@ -136,9 +136,8 @@ func BuildArgsFromEnv(
 		}
 
 		if value, found := inputEnv[childArg.EnvKey]; found {
-			pos := 0
 			if childArg.Pos != nil {
-				pos = *childArg.Pos
+				pos := *childArg.Pos
 				argsWithPositions = append(argsWithPositions, argWithPos{value: value, pos: pos})
 			}
 			if childArg.Flag != "" {
@@ -151,12 +150,14 @@ func BuildArgsFromEnv(
 		return argsWithPositions[i].pos < argsWithPositions[j].pos
 	})
 
-	result := make([]string, len(argsWithPositions))
+	result := make([]string, len(argsWithPositions)+len(flagArgs))
 	for i, arg := range argsWithPositions {
 		result[i] = arg.value
 	}
+	pos := len(argsWithPositions)
 	for flag, value := range flagArgs {
-		result = append(result, flag+"="+value)
+		result[pos] = flag + "=" + value
+		pos++
 	}
 
 	return result
