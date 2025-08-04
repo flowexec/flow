@@ -42,17 +42,17 @@ func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 }
 
 // Exec mocks base method.
-func (m *MockRunner) Exec(arg0 *context.Context, arg1 *executable.Executable, arg2 engine.Engine, arg3 map[string]string) error {
+func (m *MockRunner) Exec(arg0 *context.Context, arg1 *executable.Executable, arg2 engine.Engine, arg3 map[string]string, arg4 []string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exec", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Exec", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Exec indicates an expected call of Exec.
-func (mr *MockRunnerMockRecorder) Exec(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Exec(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockRunner)(nil).Exec), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockRunner)(nil).Exec), arg0, arg1, arg2, arg3, arg4)
 }
 
 // IsCompatible mocks base method.

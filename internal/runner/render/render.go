@@ -44,13 +44,14 @@ func (r *renderRunner) Exec(
 	e *executable.Executable,
 	_ engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	if !ctx.Config.ShowTUI() {
 		return fmt.Errorf("unable to render when interactive mode is disabled")
 	}
 
 	renderSpec := e.Render
-	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), ctx.Args, inputEnv); err != nil {
+	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 
@@ -59,7 +60,7 @@ func (r *renderRunner) Exec(
 		e.FlowFilePath(),
 		e.WorkspacePath(),
 		e.Env(),
-		ctx.Args,
+		inputArgs,
 		inputEnv,
 	); err != nil {
 		ctx.AddCallback(cb)
@@ -69,7 +70,7 @@ func (r *renderRunner) Exec(
 	}
 
 	envMap, err := env.BuildEnvMap(
-		ctx.Config.CurrentVaultName(), e.Env(), ctx.Args, inputEnv, env.DefaultEnv(ctx, e),
+		ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, env.DefaultEnv(ctx, e),
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
