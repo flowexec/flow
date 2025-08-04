@@ -4,6 +4,9 @@ import (
 	stdCtx "context"
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -41,9 +44,10 @@ func (r *parallelRunner) Exec(
 	e *executable.Executable,
 	eng engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	parallelSpec := e.Parallel
-	if err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), ctx.Args, inputEnv); err != nil {
+	if err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 
@@ -52,7 +56,7 @@ func (r *parallelRunner) Exec(
 		e.FlowFilePath(),
 		e.WorkspacePath(),
 		e.Env(),
-		ctx.Args,
+		inputArgs,
 		inputEnv,
 	); err != nil {
 		ctx.AddCallback(cb)
@@ -83,12 +87,11 @@ func (r *parallelRunner) Exec(
 	return fmt.Errorf("no parallel executables to run")
 }
 
-//nolint:funlen,gocognit
 func handleExec(
 	ctx *context.Context, parent *executable.Executable,
 	eng engine.Engine,
 	parallelSpec *executable.ParallelExecutableType,
-	promptedEnv map[string]string,
+	inputEnv map[string]string,
 	cacheData map[string]string,
 ) error {
 	groupCtx, cancel := stdCtx.WithCancel(ctx.Ctx)
@@ -100,18 +103,44 @@ func handleExec(
 	}
 	group.SetLimit(limit)
 
-	dataMap := expr.ExpressionEnv(ctx, parent, cacheData, promptedEnv)
+	// Expand the directory of the parallel execution. The root / parent's directory is used if one is not specified.
+	var root *executable.Executable
+	if ctx.RootExecutable != nil {
+		root = ctx.RootExecutable
+	} else {
+		root = parent
+	}
+	if parallelSpec.Dir == "" {
+		parallelSpec.Dir = executable.Directory(filepath.Dir(root.FlowFilePath()))
+	}
+	targetDir, isTmp, err := parallelSpec.Dir.ExpandDirectory(
+		root.WorkspacePath(),
+		root.FlowFilePath(),
+		ctx.ProcessTmpDir,
+		inputEnv,
+	)
+	if err != nil {
+		return errors.Wrap(err, "unable to expand directory")
+	} else if isTmp && ctx.ProcessTmpDir == "" {
+		ctx.ProcessTmpDir = targetDir
+	}
 
+	// Build the list of steps to execute
 	var execs []engine.Exec
+	conditionalData := expr.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+
 	for i, refConfig := range parallelSpec.Execs {
+		// Skip over steps that do not match the condition
 		if refConfig.If != "" {
-			if truthy, err := expr.IsTruthy(refConfig.If, &dataMap); err != nil {
+			if truthy, err := expr.IsTruthy(refConfig.If, &conditionalData); err != nil {
 				return err
 			} else if !truthy {
 				logger.Log().Debugf("skipping execution %d/%d", i+1, len(parallelSpec.Execs))
 				continue
 			}
 		}
+
+		// Get the executable for the step
 		var exec *executable.Executable
 		switch {
 		case len(refConfig.Ref) > 0:
@@ -126,8 +155,10 @@ func handleExec(
 			return errors.New("parallel executable must have a ref or cmd")
 		}
 
-		execPromptedEnv := make(map[string]string)
-		maps.Copy(promptedEnv, execPromptedEnv)
+		// Prepare the environment and arguments for the child executable
+		childEnv := make(map[string]string)
+		childArgs := make([]string, 0)
+		maps.Copy(childEnv, inputEnv)
 		if len(refConfig.Args) > 0 {
 			execEnv := exec.Env()
 			if execEnv == nil || execEnv.Args == nil {
@@ -136,14 +167,31 @@ func handleExec(
 					exec.Ref().String(),
 				)
 			} else {
-				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, refConfig.Args, execPromptedEnv)
+				for _, arg := range os.Environ() {
+					kv := strings.SplitN(arg, "=", 2)
+					if len(kv) == 2 {
+						childEnv[kv[0]] = kv[1]
+					}
+				}
+
+				if parallelSpec.Args == nil {
+					childArgs = refConfig.Args
+				} else {
+					childArgs = envUtils.BuildArgsFromEnv(execEnv.Args, childEnv)
+					if len(childArgs) == 0 {
+						childArgs = refConfig.Args // If no resolved args, fallback to original args
+					}
+				}
+
+				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, childArgs, childEnv)
 				if err != nil {
 					logger.Log().Error(err, "unable to process arguments")
 				}
-				maps.Copy(execPromptedEnv, a)
+				maps.Copy(childEnv, a)
 			}
 		}
 
+		// Set log fields and directory for the executable
 		switch {
 		case exec.Exec != nil:
 			fields := map[string]interface{}{"step": exec.Ref().String()}
@@ -159,10 +207,18 @@ func handleExec(
 			if parallelSpec.Dir != "" && exec.Serial.Dir == "" {
 				exec.Serial.Dir = parallelSpec.Dir
 			}
+		case exec.Request != nil:
+			if exec.Request.ResponseFile != nil && parallelSpec.Dir != "" && exec.Request.ResponseFile.Dir == "" {
+				exec.Request.ResponseFile.Dir = parallelSpec.Dir
+			}
+		case exec.Render != nil:
+			if parallelSpec.Dir != "" && exec.Render.Dir == "" {
+				exec.Render.Dir = parallelSpec.Dir
+			}
 		}
 
 		runExec := func() error {
-			err := runner.Exec(ctx, exec, eng, execPromptedEnv)
+			err := runner.Exec(ctx, exec, eng, childEnv, childArgs)
 			if err != nil {
 				return err
 			}
@@ -171,6 +227,7 @@ func handleExec(
 
 		execs = append(execs, engine.Exec{ID: exec.Ref().String(), Function: runExec, MaxRetries: refConfig.Retries})
 	}
+
 	results := eng.Execute(
 		ctx.Ctx, execs,
 		engine.WithMode(engine.Parallel),

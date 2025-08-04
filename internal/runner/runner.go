@@ -12,7 +12,13 @@ import (
 //go:generate mockgen -destination=mocks/mock_runner.go -package=mocks github.com/flowexec/flow/internal/runner Runner
 type Runner interface {
 	Name() string
-	Exec(ctx *context.Context, e *executable.Executable, eng engine.Engine, inputEnv map[string]string) error
+	Exec(
+		ctx *context.Context,
+		e *executable.Executable,
+		eng engine.Engine,
+		inputEnv map[string]string,
+		inputArgs []string,
+	) error
 	IsCompatible(executable *executable.Executable) bool
 }
 
@@ -31,6 +37,7 @@ func Exec(
 	executable *executable.Executable,
 	eng engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	var assignedRunner Runner
 	for _, runner := range registeredRunners {
@@ -42,14 +49,15 @@ func Exec(
 	if assignedRunner == nil {
 		return fmt.Errorf("compatible runner not found for executable %s", executable.ID())
 	}
+	ctx.RootExecutable = executable
 
 	if executable.Timeout == nil {
-		return assignedRunner.Exec(ctx, executable, eng, inputEnv)
+		return assignedRunner.Exec(ctx, executable, eng, inputEnv, inputArgs)
 	}
 
 	done := make(chan error, 1)
 	go func() {
-		done <- assignedRunner.Exec(ctx, executable, eng, inputEnv)
+		done <- assignedRunner.Exec(ctx, executable, eng, inputEnv, inputArgs)
 	}()
 
 	select {

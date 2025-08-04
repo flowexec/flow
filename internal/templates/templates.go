@@ -145,17 +145,17 @@ func runExecutables(
 			return errors.New("post-run executable must have a ref or cmd")
 		}
 		inputEnv := make(map[string]string)
+		inputArgs := make([]string, 0)
 		ee := expressionEnv(templateData)
 		maps.Copy(inputEnv, ee)
 		//nolint:nestif
 		if len(e.Args) > 0 {
-			args := make([]string, 0)
 			for _, arg := range e.Args {
 				a, err := processAsGoTemplate(flowfileDir, arg, templateData)
 				if err != nil {
 					return errors.Wrap(err, fmt.Sprintf("unable to process %s executable %d", stage, i))
 				}
-				args = append(args, a.String())
+				inputArgs = append(inputArgs, a.String())
 			}
 			execEnv := exec.Env()
 			if execEnv == nil || execEnv.Args == nil {
@@ -164,7 +164,7 @@ func runExecutables(
 					exec.Ref().String(),
 				)
 			} else {
-				a, err := argUtils.BuildArgsEnvMap(execEnv.Args, args, ee)
+				a, err := argUtils.BuildArgsEnvMap(execEnv.Args, inputArgs, ee)
 				if err != nil {
 					logger.Log().Error(err, "unable to process arguments")
 				}
@@ -177,7 +177,7 @@ func runExecutables(
 				"step":  i + 1,
 			})
 		}
-		if err := runner.Exec(ctx, exec, engine.NewExecEngine(), inputEnv); err != nil {
+		if err := runner.Exec(ctx, exec, engine.NewExecEngine(), inputEnv, inputArgs); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("unable to execute %s executable %d", stage, i))
 		}
 	}

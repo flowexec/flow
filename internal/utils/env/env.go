@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,16 +17,20 @@ import (
 func SetEnv(
 	currentVault string,
 	exec *executable.ExecutableEnvironment,
-	args []string,
-	promptedEnv map[string]string,
+	inputArgs []string,
+	inputEnv map[string]string,
 ) error {
 	var errs []error
+
+	envMap := make(map[string]string)
+	maps.Copy(envMap, inputEnv)
+
 	for _, param := range exec.Params {
 		if param.OutputFile != "" {
 			// CreateTempEnvFiles will handle outputFile parameters
 			continue
 		}
-		val, err := ResolveParameterValue(currentVault, param, promptedEnv)
+		val, err := ResolveParameterValue(currentVault, param, envMap)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -33,13 +38,20 @@ func SetEnv(
 		if err := os.Setenv(param.EnvKey, val); err != nil {
 			errs = append(errs, fmt.Errorf("failed to set env %s: %w", param.EnvKey, err))
 		}
+		envMap[param.EnvKey] = val
 	}
 
-	argEnvMap, err := BuildArgsEnvMap(exec.Args, args, promptedEnv)
+	argEnvMap, err := BuildArgsEnvMap(exec.Args, inputArgs, envMap)
 	if err != nil {
-		errs = append(errs, fmt.Errorf("failed to build args env map: %w", err))
+		errs = append(errs, fmt.Errorf("failed to build inputArgs env map: %w", err))
 	}
 	for key, val := range argEnvMap {
+		val = os.Expand(val, func(key string) string {
+			if v, ok := envMap[key]; ok {
+				return v
+			}
+			return ""
+		})
 		if err := os.Setenv(key, val); err != nil {
 			errs = append(errs, fmt.Errorf("failed to set env %s: %w", key, err))
 		}
@@ -112,12 +124,14 @@ func CreateTempEnvFiles(
 func BuildEnvMap(
 	currentVault string,
 	exec *executable.ExecutableEnvironment,
-	args []string,
+	inputArgs []string,
 	inputEnv map[string]string,
 	defaultEnv map[string]string,
 ) (map[string]string, error) {
-	envMap := make(map[string]string)
 	var errs []error
+
+	envMap := make(map[string]string)
+	maps.Copy(envMap, inputEnv)
 
 	for k, v := range defaultEnv {
 		if _, ok := envMap[k]; !ok {
@@ -130,7 +144,7 @@ func BuildEnvMap(
 			continue
 		}
 
-		val, err := ResolveParameterValue(currentVault, param, inputEnv)
+		val, err := ResolveParameterValue(currentVault, param, envMap)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -138,12 +152,17 @@ func BuildEnvMap(
 		envMap[param.EnvKey] = val
 	}
 
-	argEnvMap, err := BuildArgsEnvMap(exec.Args, args, envMap)
+	argEnvMap, err := BuildArgsEnvMap(exec.Args, inputArgs, envMap)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build args env map: %w", err)
+		return nil, fmt.Errorf("failed to build inputArgs env map: %w", err)
 	}
 	for key, val := range argEnvMap {
-		envMap[key] = val
+		envMap[key] = os.Expand(val, func(key string) string {
+			if v, ok := envMap[key]; ok {
+				return v
+			}
+			return ""
+		})
 	}
 
 	if len(errs) > 0 {

@@ -95,11 +95,6 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		logger.Log().FatalErr(err)
 	}
 
-	// populate args for environment handling ignoring arg 0 (the ref)
-	if len(args) >= 2 {
-		ctx.Args = args[1:]
-	}
-
 	var ref executable.Ref
 	if len(args) == 0 {
 		ref = context.ExpandRef(ctx, executable.NewRef("", verb))
@@ -166,7 +161,13 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	startTime := time.Now()
 	eng := engine.NewExecEngine()
-	if err := runner.Exec(ctx, e, eng, envMap); err != nil {
+
+	var execArgs []string
+	if len(args) >= 2 {
+		execArgs = args[1:]
+	}
+
+	if err := runner.Exec(ctx, e, eng, envMap, execArgs); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	dur := time.Since(startTime)

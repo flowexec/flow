@@ -35,8 +35,9 @@ type Context struct {
 	WorkspacesCache  cache.WorkspaceCache
 	ExecutableCache  cache.ExecutableCache
 
-	// Args includes the command line arguments passed to the exec command. It is only populated when that command is used.
-	Args []string
+	// RootExecutable is the executable that is being run in the current context.
+	// This will be nil if the context is not associated with an executable run.
+	RootExecutable *executable.Executable
 
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.

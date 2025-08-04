@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
+	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/runner/engine/mocks"
@@ -108,7 +109,7 @@ var _ = Describe("ParallelRunner", func() {
 			mockEngine.EXPECT().
 				Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(results).Times(1)
-			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, promptedEnv)).To(Succeed())
+			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, promptedEnv, nil)).To(Succeed())
 		})
 
 		It("fail when there is an engine error", func() {
@@ -128,7 +129,7 @@ var _ = Describe("ParallelRunner", func() {
 			mockEngine.EXPECT().
 				Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(results).Times(1)
-			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, promptedEnv)).ToNot(Succeed())
+			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, promptedEnv, nil)).ToNot(Succeed())
 		})
 
 		It("should skip execution when condition is false", func() {
@@ -145,7 +146,58 @@ var _ = Describe("ParallelRunner", func() {
 			mockEngine.EXPECT().
 				Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(results).Times(1)
-			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, make(map[string]string))).To(Succeed())
+			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, make(map[string]string), nil)).To(Succeed())
+		})
+
+		It("should pass environment args from parent to child executables", func() {
+			pos1 := 1
+			parentExec := &executable.Executable{
+				Parallel: &executable.ParallelExecutableType{
+					Args:  executable.ArgumentList{{EnvKey: "TEST_VAR", Pos: &pos1}},
+					Execs: []executable.ParallelRefConfig{{Ref: "test:child", Args: []string{"var=$TEST_VAR"}}},
+				},
+			}
+			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")
+
+			childExec := &executable.Executable{
+				Exec: &executable.ExecExecutableType{
+					Cmd:  "echo $TEST_VAR",
+					Args: executable.ArgumentList{{EnvKey: "TEST_VAR", Flag: "var"}},
+				},
+			}
+			childExec.SetContext("test", "/test", "test", "/test/child.flow")
+
+			mockCache := ctx.ExecutableCache
+			mockCache.EXPECT().GetExecutableByRef(gomock.Any()).Return(childExec, nil).Times(1)
+
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
+			ctx.RunnerMock.EXPECT().
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), []string{"var=test_value"}).
+				DoAndReturn(func(
+					_ *context.Context,
+					exec *executable.Executable,
+					_ engine.Engine,
+					inputEnv map[string]string,
+					inputArgs []string,
+				) error {
+					Expect(inputEnv).To(HaveKeyWithValue("TEST_VAR", "test_value"))
+					Expect(inputArgs).To(ContainElement("var=test_value"))
+					return nil
+				}).Times(1)
+
+			results := engine.ResultSummary{Results: []engine.Result{{}}}
+			mockEngine.EXPECT().
+				Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(
+					_ stdCtx.Context, execs []engine.Exec, _ ...engine.OptionFunc) engine.ResultSummary {
+					for _, exec := range execs {
+						Expect(exec.Function()).To(Succeed())
+					}
+					return results
+				})
+
+			Expect(parallelRnr.Exec(ctx.Ctx, parentExec, mockEngine, make(map[string]string), []string{"test_value"})).
+				To(Succeed())
 		})
 	})
 })
