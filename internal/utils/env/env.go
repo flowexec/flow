@@ -9,6 +9,7 @@ import (
 
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/utils"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -206,9 +207,9 @@ func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[str
 	envMap["FLOW_WORKSPACE_PATH"] = executable.WorkspacePath()
 	envMap["FLOW_CONFIG_PATH"] = filesystem.ConfigDirPath()
 	envMap["FLOW_CACHE_PATH"] = filesystem.CachedDataDirPath()
-	envMap["DISABLE_FLOW_INTERACTIVE"] = "true"
-	if interactive := os.Getenv("DISABLE_FLOW_INTERACTIVE"); interactive != "" {
-		envMap["DISABLE_FLOW_INTERACTIVE"] = interactive
+	envMap[io.DisableInteractiveEnvKey] = "true"
+	if interactive := os.Getenv(io.DisableInteractiveEnvKey); interactive != "" {
+		envMap[io.DisableInteractiveEnvKey] = interactive
 	}
 	return envMap
 }

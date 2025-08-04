@@ -61,7 +61,7 @@ func TUIEnabled(ctx *context.Context, cmd *cobra.Command) bool {
 		format := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 		formatDisabled = format == "yaml" || format == "yml" || format == "json"
 	}
-	envDisabled, _ := strconv.ParseBool(os.Getenv("DISABLE_FLOW_INTERACTIVE"))
+	envDisabled, _ := strconv.ParseBool(os.Getenv(flowIO.DisableInteractiveEnvKey))
 	return !formatDisabled && !envDisabled && ctx.Config.ShowTUI()
 }
 

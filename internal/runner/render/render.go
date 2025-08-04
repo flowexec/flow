@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
@@ -107,7 +108,13 @@ func (r *renderRunner) Exec(
 	}
 
 	logger.Log().Infof("Rendering content from file %s", contentFile)
-	filename := filepath.Base(contentFile)
+
+	if os.Getenv(io.DisableInteractiveEnvKey) != "" {
+		logger.Log().Print("### Rendered Content Start ###")
+		logger.Log().Print(buff.String())
+		logger.Log().Print("### Rendered Content End ###")
+		return nil
+	}
 
 	if err := ctx.TUIContainer.Start(); err != nil {
 		return errors.Wrapf(err, "unable to open viewer")
@@ -116,6 +123,7 @@ func (r *renderRunner) Exec(
 		ctx.TUIContainer.WaitForExit()
 	}()
 
+	filename := filepath.Base(contentFile)
 	ctx.TUIContainer.SetState("file", filename)
 	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), buff.String()))
 }
