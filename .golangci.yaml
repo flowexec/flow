@@ -95,6 +95,14 @@ linters:
         text: (SA5011|SA5001)
       - path: (.+)\.go$
         text: declaration of "(err|ctx)" shadows declaration at
+      # The serial and parallel runners have inherently complex logic.
+      - path: internal/runner/(parallel|serial)
+        linters:
+          - cyclop
+          - nestif
+          - funlen
+          - gocognit
+          - gocyclo
     paths:
       - third_party$
       - builtin$

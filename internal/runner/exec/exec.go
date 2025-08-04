@@ -34,10 +34,11 @@ func (r *execRunner) Exec(
 	e *executable.Executable,
 	_ engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	execSpec := e.Exec
 	defaultEnv := env.DefaultEnv(ctx, e)
-	envMap, err := env.BuildEnvMap(ctx.Config.CurrentVaultName(), e.Env(), ctx.Args, inputEnv, defaultEnv)
+	envMap, err := env.BuildEnvMap(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, defaultEnv)
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
@@ -48,7 +49,7 @@ func (r *execRunner) Exec(
 		e.FlowFilePath(),
 		e.WorkspacePath(),
 		e.Env(),
-		ctx.Args,
+		inputArgs,
 		envMap,
 	); err != nil {
 		ctx.AddCallback(cb)

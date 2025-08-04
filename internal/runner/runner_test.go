@@ -48,10 +48,11 @@ var _ = Describe("Runner", func() {
 				Name: "test-executable",
 			}
 			inputEnv := make(map[string]string)
+			inputArgs := make([]string, 0)
 
 			mockRunner.EXPECT().IsCompatible(executable).Return(true)
-			mockRunner.EXPECT().Exec(ctx, executable, mockEngine, inputEnv).Return(nil)
-			Expect(runner.Exec(ctx, executable, mockEngine, inputEnv)).To(Succeed())
+			mockRunner.EXPECT().Exec(ctx, executable, mockEngine, inputEnv, inputArgs).Return(nil)
+			Expect(runner.Exec(ctx, executable, mockEngine, inputEnv, inputArgs)).To(Succeed())
 		})
 
 		It("should return error when no compatible runner is found", func() {
@@ -59,11 +60,12 @@ var _ = Describe("Runner", func() {
 			exec := &executable.Executable{
 				Name: "test-exec",
 			}
-			promptedEnv := make(map[string]string)
+			inputEnv := make(map[string]string)
+			inputArgs := make([]string, 0)
 
 			mockRunner.EXPECT().IsCompatible(exec).Return(false)
 
-			err := runner.Exec(ctx, exec, mockEngine, promptedEnv)
+			err := runner.Exec(ctx, exec, mockEngine, inputEnv, inputArgs)
 			Expect(err.Error()).To(ContainSubstring("compatible runner not found"))
 		})
 
@@ -74,18 +76,19 @@ var _ = Describe("Runner", func() {
 				Name:    "test-exec",
 				Timeout: &timeout,
 			}
-			promptedEnv := make(map[string]string)
+			inputEnv := make(map[string]string)
+			inputArgs := make([]string, 0)
 
 			mockRunner.EXPECT().IsCompatible(exec).Return(true)
-			mockRunner.EXPECT().Exec(ctx, exec, mockEngine, promptedEnv).DoAndReturn(
+			mockRunner.EXPECT().Exec(ctx, exec, mockEngine, inputEnv, inputArgs).DoAndReturn(
 				func(
-					_ *context.Context, _ *executable.Executable, _ engine.Engine, _ map[string]string,
+					_ *context.Context, _ *executable.Executable, _ engine.Engine, _ map[string]string, _ []string,
 				) error {
 					time.Sleep(2 * time.Second)
 					return nil
 				})
 
-			err := runner.Exec(ctx, exec, mockEngine, promptedEnv)
+			err := runner.Exec(ctx, exec, mockEngine, inputEnv, inputArgs)
 			Expect(err.Error()).To(ContainSubstring("timeout"))
 		})
 	})

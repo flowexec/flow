@@ -41,10 +41,11 @@ func (r *requestRunner) Exec(
 	e *executable.Executable,
 	_ engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	requestSpec := e.Request
 	envMap, err := env.BuildEnvMap(
-		ctx.Config.CurrentVaultName(), e.Env(), ctx.Args, inputEnv, env.DefaultEnv(ctx, e),
+		ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, env.DefaultEnv(ctx, e),
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")

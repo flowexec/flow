@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/types/config"
@@ -300,8 +301,55 @@ var _ = Describe("Env", func() {
 			Expect(envMap["FLOW_CURRENT_WORKSPACE"]).To(Equal(wsName))
 			Expect(envMap["FLOW_CURRENT_NAMESPACE"]).To(Equal(nsName))
 			Expect(envMap["FLOW_EXECUTABLE_NAME"]).To(Equal(execName))
-			Expect(envMap["DISABLE_FLOW_INTERACTIVE"]).To(Equal("true"))
+			Expect(envMap[io.DisableInteractiveEnvKey]).To(Equal("true"))
 			// TODO: Add more assertions for other keys in the environment map
+		})
+	})
+
+	Describe("BuildArgsFromEnv", func() {
+		It("should include all expected args when they're in the environment", func() {
+			parentEnv := map[string]string{
+				"NAMESPACE": "my-namespace",
+				"REPO_NAME": "bitnami",
+				"REPO_URL":  "https://charts.bitnami.com/bitnami",
+			}
+
+			pos1 := 1
+			pos2 := 2
+			childArgs := executable.ArgumentList{
+				{EnvKey: "REPO_NAME", Pos: &pos1},
+				{EnvKey: "REPO_URL", Pos: &pos2},
+				{EnvKey: "NAMESPACE", Flag: "namespace"},
+			}
+
+			filteredArgs := env.BuildArgsFromEnv(childArgs, parentEnv)
+			Expect(filteredArgs).
+				To(Equal([]string{"bitnami", "https://charts.bitnami.com/bitnami", "namespace=my-namespace"}))
+		})
+
+		It("should handle missing parent env values gracefully", func() {
+			parentEnv := map[string]string{
+				"REPO_NAME": "bitnami",
+				// REPO_URL is missing
+			}
+
+			pos1 := 1
+			pos2 := 2
+			childArgs := executable.ArgumentList{
+				{EnvKey: "REPO_NAME", Pos: &pos1},
+				{EnvKey: "REPO_URL", Pos: &pos2}, // This won't be found
+			}
+
+			filteredArgs := env.BuildArgsFromEnv(childArgs, parentEnv)
+			Expect(filteredArgs).To(Equal([]string{"bitnami"}))
+		})
+
+		It("should handle empty child args", func() {
+			parentEnv := map[string]string{"NAMESPACE": "my-namespace"}
+
+			var childArgs executable.ArgumentList
+			filteredArgs := env.BuildArgsFromEnv(childArgs, parentEnv)
+			Expect(filteredArgs).To(BeNil())
 		})
 	})
 })

@@ -70,6 +70,16 @@ func validateArgType(t ArgumentType) error {
 	}
 }
 
+func (al *ArgumentList) Flags() []string {
+	var flags []string
+	for _, arg := range *al {
+		if arg.Flag != "" {
+			flags = append(flags, arg.Flag)
+		}
+	}
+	return flags
+}
+
 func (al *ArgumentList) Validate() error {
 	var errs []error
 	for _, arg := range *al {

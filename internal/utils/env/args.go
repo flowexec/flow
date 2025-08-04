@@ -2,6 +2,8 @@ package env
 
 import (
 	"os"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/flowexec/flow/types/executable"
@@ -19,16 +21,16 @@ func BuildArgsEnvMap(
 	return argsToEnvMap(al), nil
 }
 
-func parseArgs(args []string) (flagArgs map[string]string, posArgs []string) {
+func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[string]string, posArgs []string) {
 	flagArgs = make(map[string]string)
 	posArgs = make([]string, 0)
-	for i := 0; i < len(args); i++ {
-		split := strings.Split(args[i], "=")
-		if len(split) >= 2 {
-			flagArgs[split[0]] = strings.Join(split[1:], "=")
+	for i := 0; i < len(execArgs); i++ {
+		split := strings.SplitN(execArgs[i], "=", 2)
+		if len(split) == 2 && slices.Contains(args.Flags(), split[0]) {
+			flagArgs[split[0]] = split[1]
 			continue
 		}
-		posArgs = append(posArgs, args[i])
+		posArgs = append(posArgs, execArgs[i])
 	}
 	return
 }
@@ -41,7 +43,6 @@ func resolveArgValues(
 	if len(args) == 0 {
 		return nil, nil
 	}
-
 	if env != nil {
 		// Expand environment variables in arguments
 		for i, a := range execArgs {
@@ -50,7 +51,7 @@ func resolveArgValues(
 			})
 		}
 	}
-	flagArgs, posArgs := parseArgs(execArgs)
+	flagArgs, posArgs := parseArgs(args, execArgs)
 	if err := setArgValues(args, flagArgs, posArgs, env); err != nil {
 		return nil, err
 	}
@@ -108,4 +109,56 @@ func filterArgsWithOutputFile(args executable.ArgumentList) executable.ArgumentL
 	}
 
 	return outputArgs
+}
+
+// BuildArgsFromEnv builds a list of arguments from the provided environment and expected args list. It will
+// return the positional arguments in the order they are expected and then append any flag arguments at the end.
+//
+// TODO: Add support for overriding flag values.
+func BuildArgsFromEnv(
+	argsList executable.ArgumentList,
+	inputEnv map[string]string,
+) []string {
+	if len(argsList) == 0 {
+		return nil
+	}
+
+	type argWithPos struct {
+		value string
+		pos   int
+	}
+	var argsWithPositions []argWithPos
+	flagArgs := make(map[string]string)
+
+	for _, childArg := range argsList {
+		if childArg.EnvKey == "" {
+			continue
+		}
+
+		if value, found := inputEnv[childArg.EnvKey]; found {
+			if childArg.Pos != nil {
+				pos := *childArg.Pos
+				argsWithPositions = append(argsWithPositions, argWithPos{value: value, pos: pos})
+			}
+			if childArg.Flag != "" {
+				flagArgs[childArg.Flag] = value
+			}
+		}
+	}
+
+	sort.Slice(argsWithPositions, func(i, j int) bool {
+		return argsWithPositions[i].pos < argsWithPositions[j].pos
+	})
+
+	result := make([]string, len(argsWithPositions)+len(flagArgs))
+	for i, arg := range argsWithPositions {
+		result[i] = arg.value
+	}
+	pos := len(argsWithPositions)
+	for flag, value := range flagArgs {
+		result[pos] = flag + "=" + value
+		pos++
+	}
+
+	return result
 }

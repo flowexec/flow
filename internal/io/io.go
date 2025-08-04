@@ -2,8 +2,9 @@ package io
 
 import "os"
 
+const DisableInteractiveEnvKey = "DISABLE_FLOW_INTERACTIVE"
+
 var (
 	Stdout = os.Stdout
-	Stderr = os.Stderr
 	Stdin  = os.Stdin
 )

@@ -71,7 +71,7 @@ var _ = Describe("Request Runner", func() {
 			}
 
 			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -86,7 +86,7 @@ var _ = Describe("Request Runner", func() {
 			}
 
 			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("value")).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -105,7 +105,7 @@ var _ = Describe("Request Runner", func() {
 			exec.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
 
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(2)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(filepath.Clean(filepath.Join(ctx.Ctx.CurrentWorkspace.Location(), "response.json")))
@@ -123,7 +123,7 @@ var _ = Describe("Request Runner", func() {
 			}
 
 			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("HTTPS://HTTPBIN.ORG")).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
