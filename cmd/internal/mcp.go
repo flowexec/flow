@@ -22,7 +22,7 @@ func RegisterMCPCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func mcpFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
+func mcpFunc(_ *context.Context, _ *cobra.Command, _ []string) {
 	server := mcp.NewServer(&mcp.FlowCLIExecutor{})
 	if err := server.Run(); err != nil {
 		logger.Log().FatalErr(err)
