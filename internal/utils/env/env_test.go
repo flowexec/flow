@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/types/config"
@@ -300,7 +301,7 @@ var _ = Describe("Env", func() {
 			Expect(envMap["FLOW_CURRENT_WORKSPACE"]).To(Equal(wsName))
 			Expect(envMap["FLOW_CURRENT_NAMESPACE"]).To(Equal(nsName))
 			Expect(envMap["FLOW_EXECUTABLE_NAME"]).To(Equal(execName))
-			Expect(envMap["DISABLE_FLOW_INTERACTIVE"]).To(Equal("true"))
+			Expect(envMap[io.DisableInteractiveEnvKey]).To(Equal("true"))
 			// TODO: Add more assertions for other keys in the environment map
 		})
 	})
