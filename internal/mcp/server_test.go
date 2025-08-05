@@ -106,12 +106,11 @@ var _ = Describe("MCP Server", func() {
 			}
 
 			expectedPrompts := []string{
-				"validate_flowfile",
 				"generate_executable",
-				"create_workspace",
+				"generate_project_executables",
 				"debug_executable",
-				"design_workflow",
-				"migrate_scripts",
+				"explain_flow",
+				"migrate_automation",
 			}
 
 			for _, expectedPrompt := range expectedPrompts {

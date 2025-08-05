@@ -12,8 +12,9 @@ type CommandExecutor interface {
 	Execute(args ...string) (string, error)
 }
 
-// FlowCLIExecutor runs the flow CLI with provided arguments. The CLI is being executed instead of importing the internal
-// flow package directly to avoid duplicating the code that's defined in the cmd package and to make testing easier.
+// FlowCLIExecutor runs the flow CLI with provided arguments. The CLI is being executed instead of importing the
+// internal flow package directly to avoid duplicating the code that's defined in the cmd package and to make testing
+// easier.
 //
 // The binary name can be overridden by setting the FLOW_CLI_BINARY environment variable.
 type FlowCLIExecutor struct{}
