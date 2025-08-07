@@ -43,6 +43,7 @@ flow complements existing CLI tools by adding multi-project organization, built-
 - **Flexible execution** - Serial, parallel, conditional, and interactive workflows
 - **Workflow generation** - Create projects and workflows from reusable templates
 - **Composable workflows** - Reference and chain workflows within and across projects
+- **Platform integrations** - GitHub Actions, AI assistants (MCP), and more
 
 <p align="center"><img src="docs/_media/demo.gif" alt="flow" width="1600"/></p>
 

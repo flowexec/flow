@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
@@ -67,13 +65,7 @@ func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
 	}
 
 	workspaceCache := cache.NewWorkspaceCache()
-	if workspaceCache == nil {
-		panic("workspace cache initialization error")
-	}
 	executableCache := cache.NewExecutableCache(workspaceCache)
-	if executableCache == nil {
-		panic("executable cache initialization error")
-	}
 
 	ctxx, cancel := context.WithCancel(ctx)
 	c := &Context{
@@ -189,43 +181,11 @@ func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 }
 
 func currentWorkspace(cfg *config.Config) (*workspace.Workspace, error) {
-	var ws, wsPath string
-	mode := cfg.WorkspaceMode
-
-	switch mode {
-	case config.ConfigWorkspaceModeDynamic:
-		wd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		if runtime.GOOS == "darwin" {
-			// On macOS, paths that start with /tmp (and some other system directories)
-			// are actually symbolic links to paths under /private. The OS may return
-			// either form of the path - e.g., both "/tmp/file" and "/private/tmp/file"
-			// refer to the same location. We strip the "/private" prefix for consistent
-			// path comparison, while preserving the original paths for filesystem operations.
-			wd = strings.TrimPrefix(wd, "/private")
-		}
-
-		for wsName, path := range cfg.Workspaces {
-			rel, err := filepath.Rel(filepath.Clean(path), filepath.Clean(wd))
-			if err != nil {
-				return nil, err
-			}
-			if !strings.HasPrefix(rel, "..") {
-				ws = wsName
-				wsPath = path
-				break
-			}
-		}
-		fallthrough
-	case config.ConfigWorkspaceModeFixed:
-		if ws != "" && wsPath != "" {
-			break
-		}
-		ws = cfg.CurrentWorkspace
-		wsPath = cfg.Workspaces[ws]
+	ws, err := cfg.CurrentWorkspaceName()
+	if err != nil {
+		return nil, err
 	}
+	wsPath := cfg.Workspaces[ws]
 	if ws == "" || wsPath == "" {
 		return nil, fmt.Errorf("current workspace not found")
 	}

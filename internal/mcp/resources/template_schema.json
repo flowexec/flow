@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowexec.io/schemas/template_schema.json",
+  "title": "Template",
+  "description": "Configuration for a flowfile template; templates can be used to generate flow files.",
+  "type": "object",
+  "required": [
+    "template"
+  ],
+  "definitions": {
+    "Artifact": {
+      "description": "File source and destination configuration.\nGo templating from form data is supported in all fields.\n",
+      "type": "object",
+      "required": [
+        "srcName"
+      ],
+      "properties": {
+        "asTemplate": {
+          "description": "If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \nthe form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.\n",
+          "type": "boolean",
+          "default": false
+        },
+        "dstDir": {
+          "description": "The directory to copy the file to. If not set, the file will be copied to the root of the flow file directory.\nThe directory will be created if it does not exist.\n",
+          "type": "string",
+          "default": ""
+        },
+        "dstName": {
+          "description": "The name of the file to copy to. If not set, the file will be copied with the same name.",
+          "type": "string",
+          "default": ""
+        },
+        "if": {
+          "description": "An expression that determines whether the the artifact should be copied, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe artifact will not be copied.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\n",
+          "type": "string",
+          "default": ""
+        },
+        "srcDir": {
+          "description": "The directory to copy the file from. \nIf not set, the file will be copied from the directory of the template file.\n",
+          "type": "string",
+          "default": ""
+        },
+        "srcName": {
+          "description": "The name of the file to copy.",
+          "type": "string"
+        }
+      }
+    },
+    "ExecutableRef": {
+      "description": "A reference to an executable.\nThe format is `\u003cverb\u003e \u003cworkspace\u003e/\u003cnamespace\u003e:\u003cexecutable name\u003e`.\nFor example, `exec ws/ns:my-workflow`.\n\n- If the workspace is not specified, the current workspace will be used.\n- If the namespace is not specified, the current namespace will be used.\n- Excluding the name will reference the executable with a matching verb but an unspecified name and namespace (e.g. `exec ws` or simply `exec`).\n",
+      "type": "string"
+    },
+    "Field": {
+      "description": "A field to be displayed to the user when generating a flow file from a template.",
+      "type": "object",
+      "required": [
+        "key",
+        "prompt"
+      ],
+      "properties": {
+        "default": {
+          "description": "The default value to use if a value is not set.",
+          "type": "string",
+          "default": ""
+        },
+        "description": {
+          "description": "A description of the field.",
+          "type": "string",
+          "default": ""
+        },
+        "group": {
+          "description": "The group to display the field in. Fields with the same group will be displayed together.",
+          "type": "integer",
+          "default": 0
+        },
+        "key": {
+          "description": "The key to associate the data with. This is used as the key in the template data map.",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "A prompt to be displayed to the user when collecting an input value.",
+          "type": "string"
+        },
+        "required": {
+          "description": "If true, a value must be set. If false, the default value will be used if a value is not set.",
+          "type": "boolean",
+          "default": false
+        },
+        "type": {
+          "description": "The type of input field to display.",
+          "type": "string",
+          "default": "text",
+          "enum": [
+            "text",
+            "masked",
+            "multiline",
+            "confirm"
+          ]
+        },
+        "validate": {
+          "description": "A regular expression to validate the input value against.",
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "TemplateRefConfig": {
+      "description": "Configuration for a template executable.",
+      "type": "object",
+      "properties": {
+        "args": {
+          "description": "Arguments to pass to the executable.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "cmd": {
+          "description": "The command to execute.\nOne of `cmd` or `ref` must be set.\n",
+          "type": "string",
+          "default": ""
+        },
+        "if": {
+          "description": "An expression that determines whether the executable should be run, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe executable will be skipped.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\n",
+          "type": "string",
+          "default": ""
+        },
+        "ref": {
+          "$ref": "#/definitions/ExecutableRef",
+          "description": "A reference to another executable to run in serial.\nOne of `cmd` or `ref` must be set.\n",
+          "default": ""
+        }
+      }
+    }
+  },
+  "properties": {
+    "artifacts": {
+      "description": "A list of artifacts to be copied after generating the flow file.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Artifact"
+      }
+    },
+    "form": {
+      "description": "Form fields to be displayed to the user when generating a flow file from a template. \nThe form will be rendered first, and the user's input can be used to render the template.\nFor example, a form field with the key `name` can be used in the template as `{{.name}}`.\n",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/Field"
+      }
+    },
+    "postRun": {
+      "description": "A list of exec executables to run after generating the flow file.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TemplateRefConfig"
+      }
+    },
+    "preRun": {
+      "description": "A list of exec executables to run before generating the flow file.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TemplateRefConfig"
+      }
+    },
+    "template": {
+      "description": "The flow file template to generate. The template must be a valid flow file after rendering.",
+      "type": "string"
+    }
+  }
+}

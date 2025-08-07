@@ -82,4 +82,5 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	internal.RegisterTemplateCmd(ctx, rootCmd)
 	internal.RegisterLogsCmd(ctx, rootCmd)
 	internal.RegisterSyncCmd(ctx, rootCmd)
+	internal.RegisterMCPCmd(ctx, rootCmd)
 }

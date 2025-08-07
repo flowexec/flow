@@ -26,6 +26,7 @@ and cross-project composition. Go beyond task running to workflow management tha
 - **Cross-Project Composition**: Reference and share workflows between different projects
 - **Visual Workflow Browser**: Discover and run workflows with powerful filtering and search
 - **Flexible Configuration**: YAML-based definitions with arguments, secrets, and conditional logic
+- **Platform Integrations**: GitHub Actions, AI assistants (MCP), and more
 
 **Ready to organize your automation?** → [Install flow](installation.md) → [Quick start guide](quickstart.md)
 

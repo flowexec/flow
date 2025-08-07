@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://flowexec.io/schemas/workspace_schema.json",
+  "title": "Workspace",
+  "description": "Configuration for a workspace in the Flow CLI.\nThis configuration is used to define the settings for a workspace.\nEvery workspace has a workspace config file named `flow.yaml` in the root of the workspace directory.\n",
+  "type": "object",
+  "definitions": {
+    "CommonTags": {
+      "description": "A list of tags.\nTags can be used with list commands to filter returned data.\n",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ExecutableFilter": {
+      "type": "object",
+      "properties": {
+        "excluded": {
+          "description": "A list of directories or file patterns to exclude from the executable search.\nSupports directory paths (e.g., \"node_modules/\", \"vendor/\") and glob patterns for filenames (e.g., \"*.js.flow\", \"*temp*\").\nCommon exclusions like node_modules/, vendor/, third_party/, external/, and *.js.flow are excluded by default.\n",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "included": {
+          "description": "A list of directories or file patterns to include in the executable search.\nSupports directory paths (e.g., \"src/\", \"scripts/\") and glob patterns for filenames (e.g., \"*.test.flow\", \"example*\").\n",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "VerbAliases": {
+      "description": "A map of executable verbs to valid aliases. This allows you to use custom aliases for exec commands in the workspace.\nSetting this will override all of the default flow command aliases. The verbs and its mapped aliases must be valid flow verbs.\n\nIf set to an empty object, verb aliases will be disabled.\n",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "properties": {
+    "description": {
+      "description": "A description of the workspace. This description is rendered as markdown in the interactive UI.",
+      "type": "string",
+      "default": ""
+    },
+    "descriptionFile": {
+      "description": "A path to a markdown file that contains the description of the workspace.",
+      "type": "string",
+      "default": ""
+    },
+    "displayName": {
+      "description": "The display name of the workspace. This is used in the interactive UI.",
+      "type": "string",
+      "default": ""
+    },
+    "executables": {
+      "$ref": "#/definitions/ExecutableFilter"
+    },
+    "tags": {
+      "$ref": "#/definitions/CommonTags",
+      "default": []
+    },
+    "verbAliases": {
+      "$ref": "#/definitions/VerbAliases"
+    }
+  }
+}
