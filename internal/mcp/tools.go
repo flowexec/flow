@@ -311,11 +311,11 @@ func executeFlowHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			cmdArgs = append(cmdArgs, "--sync")
 		}
 
-		output, err := executor.Execute(cmdArgs...)
-		if err != nil {
-			ref := strings.Join([]string{executableVerb, executableID}, " ")
-			return mcp.NewToolResultError(fmt.Sprintf("%s execution failed: %s", ref, output)), nil
-		}
+		output, _ := executor.Execute(cmdArgs...)
+		// if err != nil {
+		// 	ref := strings.Join([]string{executableVerb, executableID}, " ")
+		// 	return mcp.NewToolResultError(fmt.Sprintf("%s execution failed: %s", ref, output)), nil
+		// }
 
 		return mcp.NewToolResultText(output), nil
 	}

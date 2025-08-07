@@ -3,6 +3,8 @@ package mcp
 import (
 	"os"
 	"os/exec"
+
+	"github.com/pkg/errors"
 )
 
 const cliBinaryEnvKey = "FLOW_CLI_BINARY"
@@ -17,6 +19,7 @@ type CommandExecutor interface {
 // easier.
 //
 // The binary name can be overridden by setting the FLOW_CLI_BINARY environment variable.
+// TODO: consider replacing this with a programatic command runner, similar to the e2e test setup
 type FlowCLIExecutor struct{}
 
 func (c *FlowCLIExecutor) Execute(args ...string) (string, error) {
@@ -27,7 +30,11 @@ func (c *FlowCLIExecutor) Execute(args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		// Only return an error if it's not an exit error.
+		exitErr := &exec.ExitError{}
+		if !errors.As(err, &exitErr) {
+			return string(output), err
+		}
 	}
 	return string(output), nil
 }
