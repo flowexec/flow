@@ -1,8 +1,49 @@
 # Integrations
 
-flow integrates with popular CI/CD platforms and containerized environments to bring your automation anywhere.
+flow integrates with popular CI/CD platforms, AI assistants, and containerized environments to bring your automation anywhere.
 
-## GitHub Actions
+
+## AI Assistant Integration
+
+### Model Context Protocol (MCP) <!-- {docsify-ignore} -->
+
+Connect flow to AI assistants through the local Model Context Protocol server for natural language workflow management.
+The flow MCP server enables AI assistants to discover, understand, and execute your flow workflows through conversational interfaces.
+
+#### Basic Usage <!-- {docsify-ignore} -->
+
+Add the MCP server command to your favorite MCP client:
+
+```shell
+flow mcp
+```
+
+The server uses stdio transport and provides AI assistants with:
+
+**Available Tools:**
+- `get_info` - Get flow information, schemas, and current context
+- `execute` - Execute flow workflows
+- `list_workspaces` - List all registered workspaces
+- `get_workspace` - Get details about a specific workspace
+- `switch_workspace` - Change the current workspace
+- `list_executables` - List and filter executables across workspaces
+- `get_executable` - Get detailed information about an executable
+- `get_execution_logs` - Retrieve recent execution logs
+- `sync_executables` - Sync workspace and executable state
+
+**Available Prompts:**
+- `generate_executable` - Generate flow executable configurations
+- `generate_project_executables` - Generate complete project automation sets
+- `debug_executable` - Debug failing executables
+- `migrate_automation` - Convert existing automation to flow
+- `explain_flow` - Explain flow concepts and usage
+
+> [!NOTE]
+> **Learn more about MCP**: Visit the [Model Context Protocol](https://modelcontextprotocol.io) documentation for client setup and integration details.
+
+## CI/CD & Deployment <!-- {docsify-ignore} -->
+
+### GitHub Actions
 
 Execute flow workflows directly in your GitHub Actions pipelines with the official action.
 
@@ -22,7 +63,7 @@ jobs:
 
 > **Complete documentation**: Visit the [Flow Execute Action](https://github.com/marketplace/actions/flow-execute) on GitHub Marketplace.
 
-## Docker
+### Docker
 
 Run flow in containerized environments for CI/CD pipelines or isolated execution.
 

@@ -27,7 +27,7 @@ If the user prompts with any of these concepts, then they are likely referring t
 ## Best Practices
 
 ### Safety
-- **Always confirm** before running `execute_flow` with potentially destructive commands
+- **Always confirm** before running `execute` with potentially destructive commands
 - **Validate YAML** before suggesting users save it to files. The JSON Schemas are provided by the `get_info` tool
 - **Check current context** before making workspace assumptions
 - **Use appropriate filters** when using tools that may return long lists. For instance, provide the appropriate arguments for the `list_executables` tool if you know the target workspace, a keyword, or verb for the executable that you're looking for.
@@ -66,7 +66,7 @@ When tools return JSON, present it in a user-friendly way:
 - **Inspire creativity** - help users see automation opportunities they might not have considered
 
 ## Tool Usage Gotchas
-- `execute_flow` can be used to run flow executables, not arbitrary shell commands or non-exec flow commands.
-  - If an executable has `args` defined, you must provide them in the `args` field of the `execute_flow` tool.
-  - If an executable has `params` defined where the type is `prompt`, you must provide them in the `params` field of the `execute_flow` tool. Do this by providing a mapping of the EnvKey to the value you want to provide.
+- `execute` can be used to run flow executables, not arbitrary shell commands or non-exec flow commands.
+  - If an executable has `args` defined, you must provide them in the `args` field of the `execute` tool.
+  - If an executable has `params` defined where the type is `prompt`, you must provide them in the `params` field of the `execute` tool. Do this by providing a mapping of the EnvKey to the value you want to provide.
 - When running tools, be aware that the current workspace may the output / response. Switch to the workspace that you expect if it's not already set in the context.

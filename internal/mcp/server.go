@@ -2,8 +2,11 @@ package mcp
 
 import (
 	_ "embed"
+	"os"
 
 	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/flowexec/flow/internal/io"
 )
 
 //go:embed resources/server-instructions.md
@@ -29,6 +32,8 @@ func NewServer(executor CommandExecutor) *Server {
 }
 
 func (s *Server) Run() error {
+	_ = os.Setenv(io.DisableInteractiveEnvKey, "true")
+
 	return server.ServeStdio(s.srv)
 }
 

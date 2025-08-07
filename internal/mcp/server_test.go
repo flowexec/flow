@@ -84,7 +84,7 @@ var _ = Describe("MCP Server", func() {
 				"switch_workspace",
 				"get_executable",
 				"list_executables",
-				"execute_flow",
+				"execute",
 				"get_execution_logs",
 				"sync_executables",
 			}
@@ -238,14 +238,14 @@ var _ = Describe("MCP Server", func() {
 			})
 		})
 
-		Context("execute_flow tool", func() {
+		Context("execute tool", func() {
 			It("should call executor with provided arguments", func() {
 				expectedOutput := "execution result"
 				mockExecutor.EXPECT().
 					Execute("test", "test:test-flow", "arg1", "arg2").
 					Return(expectedOutput, nil)
 
-				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute_flow", map[string]interface{}{
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
 					"executable_verb": "test",
 					"executable_id":   "test:test-flow",
 					"args":            "arg1 arg2",
@@ -261,7 +261,7 @@ var _ = Describe("MCP Server", func() {
 					Execute("test", "test:test-flow").
 					Return(expectedOutput, nil)
 
-				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute_flow", map[string]interface{}{
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
 					"executable_verb": "test",
 					"executable_id":   "test:test-flow",
 				}))

@@ -116,7 +116,7 @@ func addServerTools(srv *server.MCPServer, executor CommandExecutor) {
 	}
 	srv.AddTool(listExecutables, listExecutablesHandler(executor))
 
-	executeFlow := mcp.NewTool("execute_flow",
+	executeFlow := mcp.NewTool("execute",
 		mcp.WithDescription("Execute a flow executable"),
 		mcp.WithString("executable_verb", mcp.Required(),
 			mcp.Enum(executable.SortedValidVerbs()...),
