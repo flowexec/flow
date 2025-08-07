@@ -120,7 +120,10 @@ func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 		Aliases: []string{"set", "use"},
 		Short:   "Switch the current workspace.",
 		Args:    cobra.ExactArgs(1),
-		Run:     func(cmd *cobra.Command, args []string) { switchWorkspaceFunc(ctx, cmd, args) },
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return maps.Keys(ctx.Config.Workspaces), cobra.ShellCompDirectiveNoFileComp
+		},
+		Run: func(cmd *cobra.Command, args []string) { switchWorkspaceFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, workspaceCmd, *flags.FixedWsModeFlag)
 	setCmd.AddCommand(workspaceCmd)

@@ -33,13 +33,17 @@ func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			),
 		Args: cobra.MaximumNArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			verbStr := cmd.CalledAs()
+			verb := executable.Verb(verbStr)
 			execList, err := ctx.ExecutableCache.GetExecutableList()
 			if err != nil {
 				return nil, cobra.ShellCompDirectiveError
 			}
 			execIDs := make([]string, 0, len(execList))
 			for _, e := range execList {
-				execIDs = append(execIDs, e.ID())
+				if e.Verb.Equals(verb) {
+					execIDs = append(execIDs, e.ID())
+				}
 			}
 			return execIDs, cobra.ShellCompDirectiveNoFileComp
 		},
