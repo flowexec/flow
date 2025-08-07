@@ -64,3 +64,9 @@ When tools return JSON, present it in a user-friendly way:
 - **Teach Flow concepts** while helping with immediate tasks
 - **Show examples** of executable configurations for various use cases
 - **Inspire creativity** - help users see automation opportunities they might not have considered
+
+## Tool Usage Gotchas
+- `execute_flow` can be used to run flow executables, not arbitrary shell commands or non-exec flow commands.
+  - If an executable has `args` defined, you must provide them in the `args` field of the `execute_flow` tool.
+  - If an executable has `params` defined where the type is `prompt`, you must provide them in the `params` field of the `execute_flow` tool. Do this by providing a mapping of the EnvKey to the value you want to provide.
+- When running tools, be aware that the current workspace may the output / response. Switch to the workspace that you expect if it's not already set in the context.

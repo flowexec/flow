@@ -139,4 +139,4 @@ my-web-app/
 2. **Define executables**: Create `.flow` files with tasks
 3. **Use templates**: (optional) Generate new `.flow` files from `.flow.tmpl` templates
 4. **Sync workspace state**: Update flow's cache with `flow sync`
-5**Execute tasks**: Run executables with `flow <verb> <id>`
+5. **Execute tasks**: Run executables with `flow <verb> <id>`
