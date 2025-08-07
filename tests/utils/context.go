@@ -22,7 +22,7 @@ import (
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner/mocks"
 	"github.com/flowexec/flow/internal/services/store"
-	"github.com/flowexec/flow/tools/builder"
+	"github.com/flowexec/flow/tests/utils/builder"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/workspace"
 )

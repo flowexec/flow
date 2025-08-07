@@ -15,7 +15,7 @@ import (
 	"github.com/flowexec/flow/internal/runner/engine/mocks"
 	"github.com/flowexec/flow/internal/runner/parallel"
 	testUtils "github.com/flowexec/flow/tests/utils"
-	"github.com/flowexec/flow/tools/builder"
+	"github.com/flowexec/flow/tests/utils/builder"
 	"github.com/flowexec/flow/types/executable"
 )
 
