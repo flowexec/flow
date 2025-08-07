@@ -101,7 +101,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: merged-coverage.out
+          files: merged-coverage.out
           flags: combined
           name: cli-coverage
           fail_ci_if_error: true
