@@ -91,18 +91,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: e2e-coverage
-      - uses: flowexec/action@v1
-        with:
-          executable: 'transform coverage'
-          timeout: '5m'
-          flow-version: 'main'
       - name: Upload to codecov
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          files: merged-coverage.out
-          flags: combined
           name: cli-coverage
           fail_ci_if_error: true
 
