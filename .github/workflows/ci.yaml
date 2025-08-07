@@ -97,7 +97,7 @@ jobs:
           timeout: '5m'
           flow-version: 'main'
       - name: Upload to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
