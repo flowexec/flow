@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	stdio "io"
 	"os"
@@ -61,8 +62,9 @@ func RunCmd(
 
 	err = runner.Run(ctx, prog)
 	if err != nil {
-		if code, isExit := interp.IsExitStatus(err); isExit {
-			return fmt.Errorf("command exited with non-zero status %d", code)
+		var exitStatus interp.ExitStatus
+		if errors.As(err, &exitStatus) {
+			return fmt.Errorf("command exited with non-zero status %w", exitStatus)
 		}
 		return fmt.Errorf("encountered an error executing command - %w", err)
 	}
@@ -121,8 +123,9 @@ func RunFile(
 
 	err = runner.Run(ctx, prog)
 	if err != nil {
-		if code, isExit := interp.IsExitStatus(err); isExit {
-			return fmt.Errorf("file execution exited with non-zero status %d", code)
+		var exitStatus interp.ExitStatus
+		if errors.As(err, &exitStatus) {
+			return fmt.Errorf("file execution exited with non-zero status %w", exitStatus)
 		}
 		return fmt.Errorf("encountered an error executing file - %w", err)
 	}
