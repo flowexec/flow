@@ -24,7 +24,7 @@ Take your automation to the next level:
 - **[Templates & Code Generation](templating.md)** - Generate workflows and project scaffolding
 - **[Advanced Workflows](advanced.md)** - Complex automation with conditionals, state, and composition
 - **[Interactive UI](interactive.md)** - Customize and use the terminal interface
-- **[Integrations](integrations.md)** - Run flow in CI/CD and containerized environments
+- **[Integrations](integrations.md)** - Run flow in MCP clients, GitHub Actions, and containerized environments
 
 ## Other Resources
 

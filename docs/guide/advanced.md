@@ -371,20 +371,24 @@ executables:
       cmd: ./deploy.sh
 ```
 
+> [!NOTE]
+> In serial and parallel executables, `params` and `args` that are defined at the parent level will apply to all 
+> child executables. Argument from the parent -> child executable should use matching `EnvKey` to ensure proper resolution.
+
 **Resolution example:**
 ```shell
 # Shell environment
-export ENVIRONMENT=development
 export API_KEY=shell-key
 export VERBOSE=true
+export ENVIRONMENT=development
 
 # Command execution
 flow deploy app verbose=false --param ENVIRONMENT=production
 
 # Final environment variables:
-# ENVIRONMENT=production    (--param override wins)
 # API_KEY=<secret-value>    (params wins over shell)
-# VERBOSE=false             (args wins over shell)
+# VERBOSE=false             (args wins over shell and params)
+# ENVIRONMENT=production    (--param override wins over all)
 ```
 
 ### Environment Variable Expansion <!-- {docsify-ignore} -->

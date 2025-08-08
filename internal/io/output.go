@@ -5,11 +5,9 @@ import (
 	"strings"
 )
 
-func TypesDocsURL(docID, anchor string) string {
-	if anchor != "" {
-		anchor = "#" + anchor
-	} else {
-		anchor = "?id=" + strings.ToLower(anchor)
+func TypesDocsURL(docType, docId string) string {
+	if docId != "" {
+		docId = "?id=" + strings.ToLower(docId)
 	}
-	return fmt.Sprintf("https://flowexec.io/#/types/%s%s", docID, anchor)
+	return fmt.Sprintf("https://flowexec.io/types/%s%s", docType, docId)
 }

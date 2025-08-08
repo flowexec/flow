@@ -57,7 +57,7 @@ pub mod error {
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
 #[doc = "    \"if\": {"]
-#[doc = "      \"description\": \"An expression that determines whether the the artifact should be copied, using the Expr language syntax. \\nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \\nthe artifact will not be copied.\\n\\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \\n(form), and context information (name, workspace, directory, etc.).\\n\\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\\n\","]
+#[doc = "      \"description\": \"An expression that determines whether the the artifact should be copied, using the Expr language syntax. \\nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \\nthe artifact will not be copied.\\n\\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \\n(form), and context information (name, workspace, directory, etc.).\\n\\nSee the [flow documentation](https://flowexec.io/guide/templating) for more information.\\n\","]
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
@@ -85,7 +85,7 @@ pub struct Artifact {
     #[doc = "The name of the file to copy to. If not set, the file will be copied with the same name."]
     #[serde(rename = "dstName", default)]
     pub dst_name: ::std::string::String,
-    #[doc = "An expression that determines whether the the artifact should be copied, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe artifact will not be copied.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\n"]
+    #[doc = "An expression that determines whether the the artifact should be copied, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe artifact will not be copied.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/guide/templating) for more information.\n"]
     #[serde(rename = "if", default)]
     pub if_: ::std::string::String,
     #[doc = "The directory to copy the file from. \nIf not set, the file will be copied from the directory of the template file.\n"]
@@ -460,7 +460,7 @@ impl Template {
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
 #[doc = "    \"if\": {"]
-#[doc = "      \"description\": \"An expression that determines whether the executable should be run, using the Expr language syntax. \\nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \\nthe executable will be skipped.\\n\\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \\n(form), and context information (name, workspace, directory, etc.).\\n\\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\\n\","]
+#[doc = "      \"description\": \"An expression that determines whether the executable should be run, using the Expr language syntax. \\nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \\nthe executable will be skipped.\\n\\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \\n(form), and context information (name, workspace, directory, etc.).\\n\\nSee the [flow documentation](https://flowexec.io/guide/templating) for more information.\\n\","]
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
@@ -481,7 +481,7 @@ pub struct TemplateRefConfig {
     #[doc = "The command to execute.\nOne of `cmd` or `ref` must be set.\n"]
     #[serde(default)]
     pub cmd: ::std::string::String,
-    #[doc = "An expression that determines whether the executable should be run, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe executable will be skipped.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/#/guide/templating) for more information.\n"]
+    #[doc = "An expression that determines whether the executable should be run, using the Expr language syntax. \nThe expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met, \nthe executable will be skipped.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), form input \n(form), and context information (name, workspace, directory, etc.).\n\nSee the [flow documentation](https://flowexec.io/guide/templating) for more information.\n"]
     #[serde(rename = "if", default)]
     pub if_: ::std::string::String,
     #[doc = "A reference to another executable to run in serial.\nOne of `cmd` or `ref` must be set.\n"]

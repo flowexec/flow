@@ -62,7 +62,7 @@ export interface Artifact {
    * The expression has access to OS/architecture information (os, arch), environment variables (env), form input
    * (form), and context information (name, workspace, directory, etc.).
    *
-   * See the [flow documentation](https://flowexec.io/#/guide/templating) for more information.
+   * See the [flow documentation](https://flowexec.io/guide/templating) for more information.
    *
    */
   if?: string;
@@ -138,7 +138,7 @@ export interface TemplateRefConfig {
    * The expression has access to OS/architecture information (os, arch), environment variables (env), form input
    * (form), and context information (name, workspace, directory, etc.).
    *
-   * See the [flow documentation](https://flowexec.io/#/guide/templating) for more information.
+   * See the [flow documentation](https://flowexec.io/guide/templating) for more information.
    *
    */
   if?: string;

@@ -338,7 +338,7 @@ Please provide a clear explanation that:
 
 Make the explanation conversational and practical, focusing on helping me understand not just what something is, 
 but why it's useful and how to use it effectively. You should fetch any additional information you need directly
-from the Flow documentation at https://flowexec.io/#/README
+from the Flow documentation at https://flowexec.io/README
 
 Do not add confusion by mentioning other tools or platforms unless directly relevant to the explanation. Clearly state
 when you do not have enough information to provide a complete answer, and suggest where I can find more details.`

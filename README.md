@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-    <b>flow</b> is your personal workflow hub - organize automation across all your projects with built-in secrets, templates, and cross-project composition.
-    Define workflows in YAML, discover them visually, and run them anywhere.
+    <b>flow</b> is your local-first developer platform - organize automation across all your projects with built-in secrets, templates, and cross-project workflows.
+    Define workflows in YAML, browse auto-generated documentation, and run them anywhere.
 </p>
 
 ---
@@ -83,14 +83,14 @@ flow browse
 
 **Complete documentation at [flowexec.io](https://flowexec.io)**
 
-- [Installation](https://flowexec.io/#/installation) - Multiple installation methods
-- [Quick Start](https://flowexec.io/#/quickstart) - Get up and running in 5 minutes
-- [Core Concepts](https://flowexec.io/#/guide/concepts) - Understand workspaces, executables, and vaults
-- [User Guides](https://flowexec.io/#/guide/README) - Comprehensive guides for all features
+- [Installation](https://flowexec.io/installation) - Multiple installation methods
+- [Quick Start](https://flowexec.io/quickstart) - Get up and running in 5 minutes
+- [Core Concepts](https://flowexec.io/guide/concepts) - Understand workspaces, executables, and vaults
+- [User Guides](https://flowexec.io/guide/README) - Comprehensive guides for all features
 
 ## Community
 
 - [Discord Community](https://discord.gg/CtByNKNMxM) - Get help and share workflows
 - [Issue Tracker](https://github.com/flowexec/flow/issues) - Report bugs and request features
 - [Examples Repository](https://github.com/flowexec/examples) - Real-world workflow patterns
-- [Contributing Guide](https://flowexec.io/#/development) - Help make flow better
+- [Contributing Guide](https://flowexec.io/development) - Help make flow better
