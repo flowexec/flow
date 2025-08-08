@@ -12,7 +12,7 @@ If the target executable accept arguments, they can be passed in the form of fla
 Flag arguments are specified with the format 'flag=value' and positional arguments are specified as values without any prefix.
 
 
-See https://flowexec.io/#/types/flowfile#executableverb for more information on executable verbs and https://flowexec.io/#/types/flowfile#executableref for more information on executable IDs.
+See https://flowexec.io/types/flowfile?docId=executableverb for more information on executable verbs and https://flowexec.io/types/flowfile?docId=executableref for more information on executable IDs.
 
 
 #### Examples

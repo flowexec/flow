@@ -32,7 +32,7 @@ type Artifact struct {
 	// environment variables (env), form input
 	// (form), and context information (name, workspace, directory, etc.).
 	//
-	// See the [flow documentation](https://flowexec.io/#/guide/templating) for more
+	// See the [flow documentation](https://flowexec.io/guide/templating) for more
 	// information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
@@ -138,7 +138,7 @@ type TemplateRefConfig struct {
 	// environment variables (env), form input
 	// (form), and context information (name, workspace, directory, etc.).
 	//
-	// See the [flow documentation](https://flowexec.io/#/guide/templating) for more
+	// See the [flow documentation](https://flowexec.io/guide/templating) for more
 	// information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`

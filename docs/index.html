@@ -40,12 +40,14 @@
       subMaxLevel: 3,
       coverpage: true,
       onlyCover: false,
-      nameLink: '#/README',
+      nameLink: 'README',
       auto2top: true,
+      routerMode: 'history',
       alias: {
         '/releases/(.*)': 'https://github.com/flowexec/flow/releases/$1',
         '/schemas/(.*)': 'https://github.com/flowexec/flow/tree/main/schemas/$1',
         '/issues/(.*)': 'https://github.com/flowexec/flow/issues/$1',
+        '/(.*)/_sidebar.md': '$1/_sidebar.md',
       },
       copyCode: {
         buttonText: 'Copy',

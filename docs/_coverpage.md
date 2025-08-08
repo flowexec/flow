@@ -2,7 +2,7 @@
 
 # flow
 
-> _Interactive CLI automation that flows with you._
+> _Local developer platform that flows with you._
 
 - Define your _executables_ in YAML
 - Browse and execute with ease
