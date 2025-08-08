@@ -3,7 +3,6 @@ visibility: private
 tags: [development]
 executables:
   - verb: generate
-    aliases: [code]
     description: Generate code and documentation for the project.
     serial:
       failFast: false

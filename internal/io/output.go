@@ -7,7 +7,7 @@ import (
 
 func TypesDocsURL(docType, docId string) string {
 	if docId != "" {
-		docId = "?docId=" + strings.ToLower(docId)
+		docId = "?id=" + strings.ToLower(docId)
 	}
 	return fmt.Sprintf("https://flowexec.io/types/%s%s", docType, docId)
 }

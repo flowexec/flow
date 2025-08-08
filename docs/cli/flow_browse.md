@@ -10,7 +10,7 @@ Browse executables across workspaces.
   flow browse --list         # Simple list view of executables
   flow browse VERB [ID]      # Detailed view of specific executable
 
-See https://flowexec.io/types/flowfile?docId=executableverb for more information on executable verbs and https://flowexec.io/types/flowfile?docId=executableref for more information on executable references.
+See https://flowexec.io/types/flowfile?id=executableverb for more information on executable verbs and https://flowexec.io/types/flowfile?id=executableref for more information on executable references.
 
 ```
 flow browse [EXECUTABLE-REFERENCE] [flags]
