@@ -42,14 +42,14 @@ func main() {
 		}
 	}()
 
-	ctx := context.NewContext(stdCtx.Background(), io.Stdin, io.Stdout)
+	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
+	ctx := context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
 	defer ctx.Finalize()
 
 	if ctx == nil {
 		panic("failed to initialize context")
 	}
 	rootCmd := cmd.NewRootCmd(ctx)
-	ctx.Ctx, ctx.CancelFunc = stdCtx.WithCancel(ctx.Ctx)
 	if err := cmd.Execute(ctx, rootCmd); err != nil {
 		logger.Log().FatalErr(err)
 	}

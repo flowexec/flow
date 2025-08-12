@@ -51,7 +51,7 @@ func showForm(ctx *context.Context, fields executable.FormFields) error {
 	if err != nil {
 		return fmt.Errorf("encountered form init error: %w", err)
 	}
-	if err = form.Run(ctx.Ctx); err != nil {
+	if err = form.Run(ctx); err != nil {
 		return fmt.Errorf("encountered form run error: %w", err)
 	}
 	for _, f := range fields {

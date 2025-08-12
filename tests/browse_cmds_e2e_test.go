@@ -39,7 +39,7 @@ var _ = Describe("browse TUI", func() {
 			return nil
 		}
 
-		container = newTUIContainer(ctx.Ctx)
+		container = newTUIContainer(ctx)
 		ctx.TUIContainer = container
 	})
 

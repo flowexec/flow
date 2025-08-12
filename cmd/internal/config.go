@@ -55,7 +55,7 @@ func resetConfigFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
-	if err := form.Run(ctx.Ctx); err != nil {
+	if err := form.Run(ctx); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	resp := form.FindByKey("confirm").Value()

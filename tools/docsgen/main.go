@@ -25,7 +25,8 @@ var (
 
 func main() {
 	fmt.Println("generating CLI docs...")
-	ctx := context.NewContext(stdCtx.Background(), os.Stdin, os.Stdout)
+	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
+	ctx := context.NewContext(bkgCtx, cancelFunc, os.Stdin, os.Stdout)
 	defer ctx.Finalize()
 
 	rootCmd := cmd.NewRootCmd(ctx)
