@@ -16,7 +16,7 @@
       ],
       "properties": {
         "asTemplate": {
-          "description": "If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \nthe form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.\n",
+          "description": "If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \nthe form data. [Expr language functions](https://expr-lang.org/docs/language-definition) are available for use in the template.\n",
           "type": "boolean",
           "default": false
         },

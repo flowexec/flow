@@ -1,16 +1,14 @@
 package render
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	stdio "io"
 	"os"
 	"path/filepath"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/flowexec/tuikit/views"
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -97,21 +95,21 @@ func (r *renderRunner) Exec(
 		}
 	}
 
-	tmpl, err := template.New(filepath.Base(renderSpec.TemplateFile)).Funcs(sprig.TxtFuncMap()).ParseFiles(contentFile)
-	if err != nil {
+	tmpl := expression.NewTemplate(filepath.Base(renderSpec.TemplateFile), map[string]interface{}{"data": templateData})
+	if err = tmpl.ParseFile(contentFile); err != nil {
 		return errors.Wrapf(err, "unable to parse template file %s", contentFile)
 	}
 
-	var buff bytes.Buffer
-	if err = tmpl.Execute(&buff, templateData); err != nil {
-		return errors.Wrapf(err, "unable to execute template file %s", contentFile)
+	data, err := tmpl.ExecuteToString()
+	if err != nil {
+		return errors.Wrapf(err, "unable to parse template file %s", contentFile)
 	}
 
 	logger.Log().Infof("Rendering content from file %s", contentFile)
 
 	if os.Getenv(io.DisableInteractiveEnvKey) != "" {
 		logger.Log().Print("### Rendered Content Start ###")
-		logger.Log().Print(buff.String())
+		logger.Log().Print(data)
 		logger.Log().Print("### Rendered Content End ###")
 		return nil
 	}
@@ -125,7 +123,7 @@ func (r *renderRunner) Exec(
 
 	filename := filepath.Base(contentFile)
 	ctx.TUIContainer.SetState("file", filename)
-	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), buff.String()))
+	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), data))
 }
 
 func readDataFile(dir, path string) (interface{}, error) {

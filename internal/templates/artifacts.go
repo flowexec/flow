@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/logger"
-	"github.com/flowexec/flow/internal/services/expr"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -46,7 +46,7 @@ func copyArtifact(
 	}
 
 	if artifact.If != "" {
-		eval, err := expr.IsTruthy(artifact.If, templateData)
+		eval, err := expression.IsTruthy(artifact.If, templateData)
 		if err != nil {
 			return errors.Wrap(err, "unable to evaluate if condition")
 		}

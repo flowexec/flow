@@ -66,13 +66,14 @@ var _ = Describe("Request Runner", func() {
 		var testServer *httptest.Server
 		BeforeEach(func() {
 			testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == http.MethodGet {
+				switch r.Method {
+				case http.MethodGet:
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"message": "GET request successful"}`))
-				} else if r.Method == http.MethodPost {
+					_, _ = w.Write([]byte(`{"message": "GET request successful"}`))
+				case http.MethodPost:
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(`{"key": "value"}`))
-				} else {
+					_, _ = w.Write([]byte(`{"key": "value"}`))
+				default:
 					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 				}
 			}))

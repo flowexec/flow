@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/services/expr"
 	"github.com/flowexec/flow/internal/services/rest"
 	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/types/executable"
@@ -53,6 +53,13 @@ func (r *requestRunner) Exec(
 
 	url := expandEnvVars(envMap, requestSpec.URL)
 	body := expandEnvVars(envMap, requestSpec.Body)
+	if body != "" {
+		body, err = expression.EvaluateString(body, map[string]interface{}{"env": envMap})
+		if err != nil {
+			return errors.Wrap(err, "unable to evaluate request body expression")
+		}
+	}
+
 	for key, value := range requestSpec.Headers {
 		requestSpec.Headers[key] = expandEnvVars(envMap, value)
 	}
@@ -70,7 +77,7 @@ func (r *requestRunner) Exec(
 
 	respStr := resp.Body
 	if requestSpec.TransformResponse != "" {
-		respStr, err = expr.EvaluateString(requestSpec.TransformResponse, resp)
+		respStr, err = expression.EvaluateString(requestSpec.TransformResponse, resp)
 		if err != nil {
 			return errors.Wrap(err, "unable to transform response")
 		}

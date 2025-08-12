@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/services/expr"
 	"github.com/flowexec/flow/internal/services/store"
 	envUtils "github.com/flowexec/flow/internal/utils/env"
 	execUtils "github.com/flowexec/flow/internal/utils/executables"
@@ -116,12 +116,12 @@ func handleExec(
 
 	// Build the list of steps to execute
 	var execs []engine.Exec
-	conditionalData := expr.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+	conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
 
 	for i, refConfig := range serialSpec.Execs {
 		// Skip over steps that do not match the condition
 		if refConfig.If != "" {
-			truthy, err := expr.IsTruthy(refConfig.If, &conditionalData)
+			truthy, err := expression.IsTruthy(refConfig.If, conditionalData)
 			if err != nil {
 				return err
 			}

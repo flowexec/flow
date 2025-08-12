@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/services/expr"
 	"github.com/flowexec/flow/internal/utils"
 	argUtils "github.com/flowexec/flow/internal/utils/env"
 	execUtils "github.com/flowexec/flow/internal/utils/executables"
@@ -114,7 +114,7 @@ func runExecutables(
 	logger.Log().Debugf("running %d %s executables", len(execs), stage)
 	for i, e := range execs {
 		if e.If != "" {
-			eval, err := expr.IsTruthy(e.If, templateData)
+			eval, err := expression.IsTruthy(e.If, templateData)
 			if err != nil {
 				return errors.Wrap(err, "unable to evaluate if condition")
 			}
@@ -238,7 +238,7 @@ func templateToFlowfile(
 }
 
 func processAsGoTemplate(fileName, txt string, data expressionData) (*bytes.Buffer, error) {
-	tmpl := expr.NewTemplate(fileName, data)
+	tmpl := expression.NewTemplate(fileName, data)
 	if err := tmpl.Parse(txt); err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("unable to parse %s template", fileName))
 	}

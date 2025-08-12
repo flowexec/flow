@@ -2,9 +2,13 @@ package runner
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/jahvon/expression"
+
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -70,4 +74,39 @@ func Exec(
 
 func Reset() {
 	registeredRunners = make([]Runner, 0)
+}
+
+type CtxData struct {
+	Workspace     string `expr:"workspace"`
+	Namespace     string `expr:"namespace"`
+	WorkspacePath string `expr:"workspacePath"`
+	FlowFileName  string `expr:"flowFileName"`
+	FlowFilePath  string `expr:"flowFilePath"`
+	FlowFileDir   string `expr:"flowFileDir"`
+}
+
+func ExpressionEnv(
+	ctx *context.Context,
+	executable *executable.Executable,
+	dataMap, envMap map[string]string,
+) expression.Data {
+	fn := filepath.Base(filepath.Base(executable.FlowFilePath()))
+	data, err := expression.BuildData(
+		ctx,
+		envMap,
+		"store", dataMap,
+		"ctx", &CtxData{
+			Workspace:     ctx.CurrentWorkspace.AssignedName(),
+			Namespace:     ctx.Config.CurrentNamespace,
+			WorkspacePath: executable.WorkspacePath(),
+			FlowFileName:  fn,
+			FlowFilePath:  executable.FlowFilePath(),
+			FlowFileDir:   filepath.Dir(executable.FlowFilePath()),
+		},
+	)
+	if err != nil {
+		logger.Log().Errorf("failed to build expression data: %v", err)
+		return nil
+	}
+	return data
 }

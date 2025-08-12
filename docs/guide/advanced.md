@@ -16,6 +16,8 @@ The expression language supports standard comparison and logical operators:
 - String: `+` (concatenation), `matches` (regex matching)
 - Length: `len()`
 
+See the [Expr Language Definition](https://expr-lang.org/docs/language-definition) for all available operators and functions.
+
 ### Basic Conditions <!-- {docsify-ignore} -->
 
 Use the `if` field to control when executables run:
