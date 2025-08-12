@@ -31,7 +31,7 @@ func (c *FlowCLIExecutor) Execute(args ...string) (string, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Only return an error if it's not an exit error.
-		exitErr := &exec.ExitError{}
+		var exitErr exec.ExitError
 		if !errors.As(err, &exitErr) {
 			return string(output), err
 		}

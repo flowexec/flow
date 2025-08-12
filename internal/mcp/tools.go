@@ -311,11 +311,11 @@ func executeFlowHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			cmdArgs = append(cmdArgs, "--sync")
 		}
 
-		output, _ := executor.Execute(cmdArgs...)
-		// if err != nil {
-		// 	ref := strings.Join([]string{executableVerb, executableID}, " ")
-		// 	return mcp.NewToolResultError(fmt.Sprintf("%s execution failed: %s", ref, output)), nil
-		// }
+		output, err := executor.Execute(cmdArgs...)
+		if err != nil {
+			ref := strings.Join([]string{executableVerb, executableID}, " ")
+			return mcp.NewToolResultError(fmt.Sprintf("%s execution failed: %s", ref, output)), nil
+		}
 
 		return mcp.NewToolResultText(output), nil
 	}
@@ -350,8 +350,5 @@ func syncStateHandler(executor CommandExecutor) server.ToolHandlerFunc {
 }
 
 func boolPtr(b bool) *bool {
-	if b {
-		return &b
-	}
-	return nil
+	return &b
 }
