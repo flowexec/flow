@@ -327,11 +327,11 @@ executables:
 - `method`: HTTP method (GET, POST, PUT, PATCH, DELETE)
 - `url`: Request URL (required)
 - `headers`: Custom headers
-- `body`: Request body
+- `body`: Request body with Expr templating
 - `timeout`: Request timeout
 - `validStatusCodes`: Acceptable status codes
 - `logResponse`: Log response body
-- `transformResponse`: Transform response with Expr
+- `transformResponse`: Transform response with Expr templating
 - `responseFile`: Save response to file
 
 ### render - Dynamic Documentation
@@ -351,16 +351,16 @@ executables:
 ```markdown
 # System Status
 
-Current time: {{ .timestamp }}
+Current time: {{ data["timestamp"] }}
 
 ## Services
 {{- range .services }}
-- **{{ .name }}**: {{ .status }}
+- **{{ .name }}**: {{ data["status"] }}
 {{- end }}
 
 ## Metrics
-- CPU: {{ .cpu }}%
-- Memory: {{ .memory }}%
+- CPU: {{ data["cpu"] }}%
+- Memory: {{ data["memory"] }}%
 ```
 
 **Options:**

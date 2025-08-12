@@ -42,7 +42,7 @@ pub mod error {
 #[doc = "  ],"]
 #[doc = "  \"properties\": {"]
 #[doc = "    \"asTemplate\": {"]
-#[doc = "      \"description\": \"If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \\nthe form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.\\n\","]
+#[doc = "      \"description\": \"If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \\nthe form data. [Expr language functions](https://expr-lang.org/docs/language-definition) are available for use in the template.\\n\","]
 #[doc = "      \"default\": false,"]
 #[doc = "      \"type\": \"boolean\""]
 #[doc = "    },"]
@@ -76,7 +76,7 @@ pub mod error {
 #[doc = r" </details>"]
 #[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
 pub struct Artifact {
-    #[doc = "If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \nthe form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.\n"]
+    #[doc = "If true, the artifact will be copied as a template file. The file will be rendered using Go templating from \nthe form data. [Expr language functions](https://expr-lang.org/docs/language-definition) are available for use in the template.\n"]
     #[serde(rename = "asTemplate", default)]
     pub as_template: bool,
     #[doc = "The directory to copy the file to. If not set, the file will be copied to the root of the flow file directory.\nThe directory will be created if it does not exist.\n"]

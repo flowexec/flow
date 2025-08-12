@@ -40,7 +40,7 @@ export interface Template {
 export interface Artifact {
   /**
    * If true, the artifact will be copied as a template file. The file will be rendered using Go templating from
-   * the form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.
+   * the form data. [Expr language functions](https://expr-lang.org/docs/language-definition) are available for use in the template.
    *
    */
   asTemplate?: boolean;
