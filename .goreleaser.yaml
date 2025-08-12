@@ -52,9 +52,9 @@ homebrew_casks:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_FLOW_GITHUB_TOKEN }}"
     completions:
-      bash: completions/flow.bash
-      zsh: completions/flow.zsh
-      fish: completions/flow.fish
+      bash: scripts/completions/flow.bash
+      zsh: scripts/completions/flow.zsh
+      fish: scripts/completions/flow.fish
 #    dependencies:
 #      - cask: xclip # Required for clipboard support, only linux, so I need to figure out to get this to skip macOS
     hooks:
