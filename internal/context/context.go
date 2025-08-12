@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
@@ -25,8 +26,11 @@ const (
 )
 
 type Context struct {
-	Ctx              context.Context
-	CancelFunc       context.CancelFunc
+	ctx           context.Context
+	cancelFunc    context.CancelFunc
+	stdOut, stdIn *os.File
+	callbacks     []func(*Context) error
+
 	Config           *config.Config
 	CurrentWorkspace *workspace.Workspace
 	TUIContainer     *tuikit.Container
@@ -40,12 +44,9 @@ type Context struct {
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
 	ProcessTmpDir string
-
-	stdOut, stdIn *os.File
-	callbacks     []func(*Context) error
 }
 
-func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
+func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
 		panic(errors.Wrap(err, "user config load error"))
@@ -67,16 +68,15 @@ func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
 	workspaceCache := cache.NewWorkspaceCache()
 	executableCache := cache.NewExecutableCache(workspaceCache)
 
-	ctxx, cancel := context.WithCancel(ctx)
 	c := &Context{
-		Ctx:              ctxx,
-		CancelFunc:       cancel,
+		ctx:              ctx,
+		cancelFunc:       cancelFunc,
+		stdOut:           stdOut,
+		stdIn:            stdIn,
 		Config:           cfg,
 		CurrentWorkspace: wsConfig,
 		WorkspacesCache:  workspaceCache,
 		ExecutableCache:  executableCache,
-		stdOut:           stdOut,
-		stdIn:            stdIn,
 	}
 
 	app := tuikit.NewApplication(
@@ -99,6 +99,32 @@ func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
 		panic(errors.Wrap(err, "TUI container initialization error"))
 	}
 	return c
+}
+
+func (ctx *Context) Deadline() (deadline time.Time, ok bool) {
+	return ctx.ctx.Deadline()
+}
+
+func (ctx *Context) Done() <-chan struct{} {
+	return ctx.ctx.Done()
+}
+
+func (ctx *Context) Err() error {
+	return ctx.ctx.Err()
+}
+
+func (ctx *Context) Cancel() {
+	if ctx.cancelFunc != nil {
+		ctx.cancelFunc()
+	}
+}
+
+// TODO: Move access to various context fields to this function
+func (ctx *Context) Value(key any) any {
+	if key == HeaderCtxKey {
+		return ctx.String()
+	}
+	return ctx.ctx.Value(key)
 }
 
 func (ctx *Context) String() string {
@@ -127,6 +153,14 @@ func (ctx *Context) StdIn() *os.File {
 func (ctx *Context) SetIO(stdIn, stdOut *os.File) {
 	ctx.stdIn = stdIn
 	ctx.stdOut = stdOut
+}
+
+// SetContext sets the context and cancel function for the Context.
+// This function should NOT be used outside of tests! The context and cancel function
+// should be set when creating the context.
+func (ctx *Context) SetContext(c context.Context, cancelFunc context.CancelFunc) {
+	ctx.ctx = c
+	ctx.cancelFunc = cancelFunc
 }
 
 func (ctx *Context) SetView(view tuikit.View) error {

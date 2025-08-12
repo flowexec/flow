@@ -94,7 +94,7 @@ func handleExec(
 	inputEnv map[string]string,
 	cacheData map[string]string,
 ) error {
-	groupCtx, cancel := stdCtx.WithCancel(ctx.Ctx)
+	groupCtx, cancel := stdCtx.WithCancel(ctx)
 	defer cancel()
 	group, _ := errgroup.WithContext(groupCtx)
 	limit := parallelSpec.MaxThreads
@@ -229,7 +229,7 @@ func handleExec(
 	}
 
 	results := eng.Execute(
-		ctx.Ctx, execs,
+		ctx, execs,
 		engine.WithMode(engine.Parallel),
 		engine.WithFailFast(parent.Parallel.FailFast),
 		engine.WithMaxThreads(parent.Parallel.MaxThreads),

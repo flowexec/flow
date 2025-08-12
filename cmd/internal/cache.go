@@ -65,7 +65,7 @@ func cacheSetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 		if err != nil {
 			logger.Log().FatalErr(err)
 		}
-		if err = form.Run(ctx.Ctx); err != nil {
+		if err = form.Run(ctx); err != nil {
 			logger.Log().FatalErr(err)
 		}
 		value = form.FindByKey("value").Value()

@@ -178,7 +178,7 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
-	if err := form.Run(ctx.Ctx); err != nil {
+	if err := form.Run(ctx); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	resp := form.FindByKey("confirm").Value()

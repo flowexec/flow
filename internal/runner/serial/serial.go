@@ -217,7 +217,7 @@ func handleExec(
 		execs = append(execs, engine.Exec{ID: exec.Ref().String(), Function: runExec, MaxRetries: refConfig.Retries})
 	}
 
-	results := eng.Execute(ctx.Ctx, execs, engine.WithMode(engine.Serial), engine.WithFailFast(parent.Serial.FailFast))
+	results := eng.Execute(ctx, execs, engine.WithMode(engine.Serial), engine.WithFailFast(parent.Serial.FailFast))
 	if results.HasErrors() {
 		return errors.New(results.String())
 	}

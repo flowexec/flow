@@ -102,13 +102,12 @@ func NewContextWithMocks(ctx stdCtx.Context, tb testing.TB) *ContextWithMocks {
 	wsCache := cacheMocks.NewMockWorkspaceCache(gomock.NewController(tb))
 	execCache := cacheMocks.NewMockExecutableCache(gomock.NewController(tb))
 	ctxx := &context.Context{
-		Ctx:              ctx,
-		CancelFunc:       cancel,
 		Config:           testUserCfg,
 		CurrentWorkspace: testWsCfg,
 		WorkspacesCache:  wsCache,
 		ExecutableCache:  execCache,
 	}
+	ctxx.SetContext(ctx, cancel)
 	ctxx.SetIO(null, null)
 	return &ContextWithMocks{
 		Ctx:             ctxx,
@@ -120,7 +119,8 @@ func NewContextWithMocks(ctx stdCtx.Context, tb testing.TB) *ContextWithMocks {
 }
 
 func ResetTestContext(ctx *Context, tb testing.TB) {
-	ctx.Ctx = stdCtx.Background()
+	c, cancel := stdCtx.WithCancel(stdCtx.Background())
+	ctx.SetContext(c, cancel)
 	stdIn, stdOut := createTempIOFiles(tb)
 	ctx.SetIO(stdIn, stdOut)
 	setTestEnv(tb, ctx.configDir, ctx.cacheDir)
@@ -173,13 +173,12 @@ func newTestContext(
 	}
 
 	ctxx := &context.Context{
-		Ctx:              ctx,
-		CancelFunc:       cancel,
 		Config:           testCfg,
 		CurrentWorkspace: testWsCfg,
 		WorkspacesCache:  wsCache,
 		ExecutableCache:  execCache,
 	}
+	ctxx.SetContext(ctx, cancel)
 	ctxx.SetIO(stdIn, stdOut)
 	return ctxx, configDir, cacheDir, wsDir
 }

@@ -152,7 +152,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		if err != nil {
 			logger.Log().FatalErr(err)
 		}
-		if err := form.Run(ctx.Ctx); err != nil {
+		if err := form.Run(ctx); err != nil {
 			logger.Log().FatalErr(err)
 		}
 		for key, val := range form.ValueMap() {
@@ -223,7 +223,7 @@ func runByRef(ctx *context.Context, cmd *cobra.Command, argsStr string) error {
 	execCmd.SetIn(ctx.StdIn())
 	execPreRun(ctx, execCmd, []string{id})
 	execFunc(ctx, execCmd, verb, []string{id})
-	ctx.CancelFunc()
+	ctx.Cancel()
 	return nil
 }
 
@@ -241,7 +241,7 @@ func setAuthEnv(ctx *context.Context, _ *cobra.Command, executable *executable.E
 		if err != nil {
 			logger.Log().FatalErr(err)
 		}
-		if err := form.Run(ctx.Ctx); err != nil {
+		if err := form.Run(ctx); err != nil {
 			logger.Log().FatalErr(err)
 		}
 		val := form.FindByKey(vault.EncryptionKeyEnvVar).Value()
