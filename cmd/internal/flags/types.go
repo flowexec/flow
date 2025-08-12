@@ -203,7 +203,7 @@ var VaultSetFlag = &Metadata{
 var VaultTypeFlag = &Metadata{
 	Name:      "type",
 	Shorthand: "t",
-	Usage:     "Vault type. Either age or aes256",
+	Usage:     "Vault type. Either unencrypted, age, aes256, keyring, or external",
 	Default:   "aes256",
 	Required:  false,
 }
@@ -249,4 +249,12 @@ var VaultIdentityFileFlag = &Metadata{
 	Usage:    "File path for the Age vault identity. An absolute path is recommended. Only used for Age vaults.",
 	Default:  "",
 	Required: false,
+}
+
+var VaultFromFileFlag = &Metadata{
+	Name:      "config",
+	Shorthand: "c",
+	Usage:     "File path to read the external vault's configuration from. The file must be a valid vault configuration file.",
+	Default:   "",
+	Required:  false,
 }

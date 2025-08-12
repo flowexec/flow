@@ -19,6 +19,7 @@ const (
 	LegacyVaultReservedName = "legacy"
 
 	v2CacheDataDir = "vaults"
+	keyringService = "io.flowexec.flow"
 )
 
 type Vault = vault.Provider
@@ -101,6 +102,27 @@ func generateAESKey(keyEnv, logLevel string) string {
 	return key
 }
 
+func NewUnencryptedVault(name, storagePath string) {
+	storagePath = utils.ExpandPath(storagePath, CacheDirectory(""), nil)
+	if storagePath == "" {
+		logger.Log().Fatalf("unable to expand storage path: %s", storagePath)
+	}
+
+	opts := []vault.Option{vault.WithUnencryptedPath(storagePath), vault.WithProvider(vault.ProviderTypeUnencrypted)}
+
+	v, cfg, err := vault.New(name, opts...)
+	if err != nil {
+		logger.Log().FatalErr(err)
+	}
+
+	cfgPath := ConfigFilePath(v.ID())
+	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+	}
+
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' without encryption created successfully", v.ID()))
+}
+
 func NewAgeVault(name, storagePath, recipients, identityKey, identityFile string) {
 	storagePath = utils.ExpandPath(storagePath, CacheDirectory(""), nil)
 	if storagePath == "" {
@@ -137,6 +159,51 @@ func NewAgeVault(name, storagePath, recipients, identityKey, identityFile string
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with Age encryption created successfully", v.ID()))
 }
 
+func NewKeyringVault(name string) {
+	opts := []vault.Option{
+		vault.WithKeyringService(fmt.Sprintf("%s.%s", keyringService, name)),
+		vault.WithProvider(vault.ProviderTypeKeyring)}
+	v, cfg, err := vault.New(name, opts...)
+	if err != nil {
+		logger.Log().FatalErr(err)
+	}
+
+	cfgPath := ConfigFilePath(v.ID())
+	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+	}
+
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with Keyring encryption created successfully", v.ID()))
+}
+
+func NewExternalVault(providerConfigFile string) {
+	if providerConfigFile == "" {
+		logger.Log().Fatalf("provider config file path cannot be empty")
+	}
+
+	providerConfigFile = utils.ExpandPath(providerConfigFile, CacheDirectory(""), nil)
+	if providerConfigFile == "" {
+		logger.Log().Fatalf("unable to expand provider config file path: %s", providerConfigFile)
+	}
+
+	cfg, err := vault.LoadConfigJSON(providerConfigFile)
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("failed to load vault config: %w", err))
+	}
+
+	v, _, err := vault.New(cfg.ID, vault.WithExternalConfig(cfg.External))
+	if err != nil {
+		logger.Log().FatalErr(err)
+	}
+
+	cfgPath := ConfigFilePath(v.ID())
+	if err = vault.SaveConfigJSON(cfg, cfgPath); err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+	}
+
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with external provider registered successfully", v.ID()))
+}
+
 func VaultFromName(name string) (*VaultConfig, Vault, error) {
 	if name == "" {
 		return nil, nil, fmt.Errorf("vault name cannot be empty")
@@ -156,6 +223,16 @@ func VaultFromName(name string) (*VaultConfig, Vault, error) {
 		return &cfg, provider, err
 	case vault.ProviderTypeAES256:
 		provider, err := vault.NewAES256Vault(&cfg)
+		return &cfg, provider, err
+	case vault.ProviderTypeUnencrypted:
+		provider, err := vault.NewUnencryptedVault(&cfg)
+		return &cfg, provider, err
+	case vault.ProviderTypeKeyring:
+		provider, err := vault.NewKeyringVault(&cfg)
+		return &cfg, provider, err
+	case vault.ProviderTypeExternal:
+		// todo: rename this func in the vault pkg
+		provider, err := vault.NewExternalVaultProvider(&cfg)
 		return &cfg, provider, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported vault type: %s", cfg.Type)
