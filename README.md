@@ -38,7 +38,7 @@ flow run hello
 flow complements existing CLI tools by adding multi-project organization, built-in security, and visual discovery to your automation toolkit.
 
 - **Workspace organization** - Group and manage workflows across multiple projects
-- **Encrypted secret vaults** - Multiple backends (AES, Age, external tools)
+- **Encrypted secret vaults** - Multiple backends (AES, Age, keyring, external tools)
 - **Interactive discovery** - Browse, search, and filter workflows visually
 - **Flexible execution** - Serial, parallel, conditional, and interactive workflows
 - **Workflow generation** - Create projects and workflows from reusable templates

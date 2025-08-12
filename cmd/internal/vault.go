@@ -64,6 +64,7 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 	RegisterFlag(ctx, createCmd, *flags.VaultTypeFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultPathFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultSetFlag)
+	RegisterFlag(ctx, createCmd, *flags.VaultFromFileFlag)
 	// AES flags
 	RegisterFlag(ctx, createCmd, *flags.VaultKeyEnvFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultKeyFileFlag)
@@ -82,6 +83,8 @@ func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	setVault := flags.ValueFor[bool](cmd, *flags.VaultSetFlag, false)
 
 	switch strings.ToLower(vaultType) {
+	case "unencrypted":
+		vaultV2.NewUnencryptedVault(vaultName, vaultPath)
 	case "aes256":
 		keyEnv := flags.ValueFor[string](cmd, *flags.VaultKeyEnvFlag, false)
 		keyFile := flags.ValueFor[string](cmd, *flags.VaultKeyFileFlag, false)
@@ -92,8 +95,19 @@ func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		identityEnv := flags.ValueFor[string](cmd, *flags.VaultIdentityEnvFlag, false)
 		identityFile := flags.ValueFor[string](cmd, *flags.VaultIdentityFileFlag, false)
 		vaultV2.NewAgeVault(vaultName, vaultPath, recipients, identityEnv, identityFile)
+	case "keyring":
+		vaultV2.NewKeyringVault(vaultName)
+	case "external":
+		cfgFile := flags.ValueFor[string](cmd, *flags.VaultFromFileFlag, false)
+		if cfgFile == "" {
+			logger.Log().Fatalf("external vault requires a configuration file to be specified with --config")
+		}
+		vaultV2.NewExternalVault(vaultPath)
 	default:
-		logger.Log().Fatalf("unsupported vault type: %s - must be one of 'aes256' or 'age'", vaultType)
+		logger.Log().Fatalf(
+			"unsupported vault type: %s - must be one of 'aes256', 'age', 'unencrypted', 'keyring', or 'external'",
+			vaultType,
+		)
 	}
 
 	if ctx.Config.Vaults == nil {
