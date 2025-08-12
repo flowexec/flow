@@ -2,6 +2,8 @@ package request_test
 
 import (
 	stdCtx "context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,10 +63,25 @@ var _ = Describe("Request Runner", func() {
 	})
 
 	Describe("Exec", func() {
+		var testServer *httptest.Server
+		BeforeEach(func() {
+			testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodGet {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"message": "GET request successful"}`))
+				} else if r.Method == http.MethodPost {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"key": "value"}`))
+				} else {
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				}
+			}))
+		})
+
 		It("should send a GET request and log the response", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:         "https://httpbin.org/get",
+					URL:         testServer.URL,
 					Method:      executable.RequestExecutableTypeMethodGET,
 					LogResponse: true,
 				},
@@ -78,7 +95,7 @@ var _ = Describe("Request Runner", func() {
 		It("should send a POST request with a body and log the response", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:         "https://httpbin.org/post",
+					URL:         testServer.URL,
 					Method:      executable.RequestExecutableTypeMethodPOST,
 					Body:        `{"key": "value"}`,
 					LogResponse: true,
@@ -93,7 +110,7 @@ var _ = Describe("Request Runner", func() {
 		It("should save the response to a file", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:    "https://httpbin.org/get",
+					URL:    testServer.URL,
 					Method: executable.RequestExecutableTypeMethodGET,
 					ResponseFile: &executable.RequestResponseFile{
 						Filename: "response.json",
@@ -115,14 +132,14 @@ var _ = Describe("Request Runner", func() {
 		It("should transform the response when specified", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:               "https://httpbin.org/get",
+					URL:               testServer.URL,
 					Method:            executable.RequestExecutableTypeMethodGET,
 					TransformResponse: `upper(body)`,
 					LogResponse:       true,
 				},
 			}
 
-			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("HTTPS://HTTPBIN.ORG")).Times(1)
+			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("SUCCESSFUL")).Times(1)
 			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
