@@ -261,7 +261,17 @@ type ParallelRefConfigList []ParallelRefConfig
 // Only one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying
 // more than one will result in an error.
 type Parameter struct {
+	// A path to a file containing environment variables to be passed to the
+	// executable.
+	// The file should contain one variable per line in the format `KEY=VALUE`.
+	//
+	EnvFile string `json:"envFile,omitempty" yaml:"envFile,omitempty" mapstructure:"envFile,omitempty"`
+
 	// The name of the environment variable that will be assigned the value.
+	//
+	// When specified with `envFile`, only the environment variable with this name
+	// will be set.
+	//
 	EnvKey string `json:"envKey,omitempty" yaml:"envKey,omitempty" mapstructure:"envKey,omitempty"`
 
 	// A path where the parameter value will be temporarily written to disk.

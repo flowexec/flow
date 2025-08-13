@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,9 +27,11 @@ import (
 	"github.com/flowexec/flow/internal/runner/request"
 	"github.com/flowexec/flow/internal/runner/serial"
 	"github.com/flowexec/flow/internal/services/store"
+	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/internal/vault"
 	vaultV2 "github.com/flowexec/flow/internal/vault/v2"
 	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/types/workspace"
 )
 
 func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -125,7 +128,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	if !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
 		logger.Log().FatalErr(fmt.Errorf(
-			"e '%s' cannot be executed from workspace %s",
+			"executable '%s' cannot be executed from workspace %s",
 			ref,
 			ctx.Config.CurrentWorkspace,
 		))
@@ -140,8 +143,14 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	_ = s.Close()
 
-	// add --param overrides to the env map
 	envMap := make(map[string]string)
+	// add workspace env variables to the env map
+	if wsCfg, ok := ctx.WorkspacesCache.GetData().Workspaces[e.Workspace()]; !ok {
+		logger.Log().Warnf("workspace %s not found in cache, skipping env file resolution", e.Workspace())
+	} else {
+		applyWorkspaceParameterOverrides(wsCfg, envMap)
+	}
+	// add --param overrides to the env map
 	paramOverrides := flags.ValueFor[[]string](cmd, *flags.ParameterValueFlag, false)
 	applyParameterOverrides(paramOverrides, envMap)
 
@@ -393,6 +402,31 @@ func pendingFormFields(
 		}
 	}
 	return pending
+}
+
+//nolint:nestif
+func applyWorkspaceParameterOverrides(ws *workspace.Workspace, envMap map[string]string) {
+	if len(ws.EnvFiles) > 0 {
+		loaded, err := env.LoadEnvFromFiles(ws.EnvFiles, ws.Location())
+		if err != nil {
+			logger.Log().Errorf("failed loading env files for workspace %s: %v", ws.AssignedName(), err)
+		}
+		for k, v := range loaded {
+			envMap[k] = v
+		}
+	} else {
+		rootEnvFile := filepath.Join(ws.Location(), ".env")
+		if _, err := os.Stat(rootEnvFile); err == nil {
+			loaded, err := env.LoadEnvFromFiles([]string{rootEnvFile}, ws.Location())
+			if err != nil {
+				logger.Log().Errorf("failed loading root env file %s: %v", rootEnvFile, err)
+			} else {
+				for k, v := range loaded {
+					envMap[k] = v
+				}
+			}
+		}
+	}
 }
 
 func applyParameterOverrides(overrides []string, envMap map[string]string) {

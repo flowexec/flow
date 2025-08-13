@@ -67,6 +67,14 @@ properties:
     goJSONSchema:
       type: "map[string][]string"
       nillable: false
+  envFiles:
+    type: array
+    items:
+      type: string
+    description: |
+      A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.
+      By default, the `.env` file in the workspace root is loaded if it exists.
+    default: []
   assignedName:
     type: string
     goJSONSchema:

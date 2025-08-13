@@ -66,6 +66,101 @@ var _ = Describe("Env", func() {
 				Expect(val).To(Equal("my value"))
 			})
 
+			It("should set environment variables from envFile without specific envKey", func() {
+				tmpDir := GinkgoTB().TempDir()
+				envFile := filepath.Join(tmpDir, ".env")
+				envContent := `TEST_ENV_VAR1=value1
+TEST_ENV_VAR2=value2
+# This is a comment
+TEST_ENV_VAR3=value3`
+				err := os.WriteFile(envFile, []byte(envContent), 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{
+						{EnvFile: envFile},
+					},
+				}
+				promptedEnv := map[string]string{}
+				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				Expect(err).ToNot(HaveOccurred())
+
+				val, exists := os.LookupEnv("TEST_ENV_VAR1")
+				Expect(exists).To(BeTrue())
+				Expect(val).To(Equal("value1"))
+				val, exists = os.LookupEnv("TEST_ENV_VAR2")
+				Expect(exists).To(BeTrue())
+				Expect(val).To(Equal("value2"))
+				val, exists = os.LookupEnv("TEST_ENV_VAR3")
+				Expect(exists).To(BeTrue())
+				Expect(val).To(Equal("value3"))
+			})
+
+			It("should set specific environment variable from envFile with envKey", func() {
+				tmpDir := GinkgoTB().TempDir()
+				envFile := filepath.Join(tmpDir, ".env")
+				envContent := `TEST_ENV_VAR1=value1
+TEST_ENV_VAR2=value2
+TEST_ENV_VAR3=value3`
+				err := os.WriteFile(envFile, []byte(envContent), 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{
+						{EnvKey: "SPECIFIC_VAR", EnvFile: envFile},
+					},
+				}
+				promptedEnv := map[string]string{}
+				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("env key SPECIFIC_VAR not found in env file"))
+			})
+
+			It("should set specific environment variable from envFile with matching envKey", func() {
+				// Clean up any existing env vars first
+				os.Unsetenv("TEST_ENV_VAR1")
+				os.Unsetenv("TEST_ENV_VAR2")
+				os.Unsetenv("TEST_ENV_VAR3")
+
+				tmpDir := GinkgoTB().TempDir()
+				envFile := filepath.Join(tmpDir, ".env")
+				envContent := `TEST_ENV_VAR1=value1
+TEST_ENV_VAR2=value2
+TEST_ENV_VAR3=value3`
+				err := os.WriteFile(envFile, []byte(envContent), 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{
+						{EnvKey: "TEST_ENV_VAR2", EnvFile: envFile},
+					},
+				}
+				promptedEnv := map[string]string{}
+				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				Expect(err).ToNot(HaveOccurred())
+
+				val, exists := os.LookupEnv("TEST_ENV_VAR2")
+				Expect(exists).To(BeTrue())
+				Expect(val).To(Equal("value2"))
+				// Should not set other variables from the file
+				_, exists = os.LookupEnv("TEST_ENV_VAR1")
+				Expect(exists).To(BeFalse())
+				_, exists = os.LookupEnv("TEST_ENV_VAR3")
+				Expect(exists).To(BeFalse())
+			})
+
+			It("should handle missing envFile gracefully", func() {
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{
+						{EnvFile: "/nonexistent/file.env"},
+					},
+				}
+				promptedEnv := map[string]string{}
+				err := env.SetEnv("", exec, []string{}, promptedEnv)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to read .env file"))
+			})
+
 			It("should set environment variables correctly from args", func() {
 				pos := 1
 				exec := &executable.ExecutableEnvironment{
@@ -275,6 +370,96 @@ var _ = Describe("Env", func() {
 			envMap, err := env.BuildEnvMap("", exec, []string{"flag=test3"}, inputEnv, defaultEnv)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envMap).To(Equal(map[string]string{"TEST_KEY": "test", "TEST_KEY_2": "test2", "TEST_KEY_3": "test3"}))
+		})
+
+		It("should build environment map with envFile without specific envKey", func() {
+			tmpDir := GinkgoTB().TempDir()
+			envFile := filepath.Join(tmpDir, ".env")
+			envContent := `BUILD_ENV_VAR1=build_value1
+BUILD_ENV_VAR2=build_value2
+BUILD_ENV_VAR3=build_value3`
+			err := os.WriteFile(envFile, []byte(envContent), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			exec := &executable.ExecutableEnvironment{
+				Params: []executable.Parameter{
+					{EnvFile: envFile},
+					{EnvKey: "REGULAR_VAR", Text: "regular_value"},
+				},
+			}
+			inputEnv := make(map[string]string)
+			defaultEnv := make(map[string]string)
+			envMap, err := env.BuildEnvMap("", exec, []string{}, inputEnv, defaultEnv)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedMap := map[string]string{
+				"BUILD_ENV_VAR1": "build_value1",
+				"BUILD_ENV_VAR2": "build_value2",
+				"BUILD_ENV_VAR3": "build_value3",
+				"REGULAR_VAR":    "regular_value",
+			}
+			Expect(envMap).To(Equal(expectedMap))
+		})
+
+		It("should build environment map with envFile and specific envKey", func() {
+			tmpDir := GinkgoTB().TempDir()
+			envFile := filepath.Join(tmpDir, ".env")
+			envContent := `BUILD_ENV_VAR1=build_value1
+BUILD_ENV_VAR2=build_value2
+BUILD_ENV_VAR3=build_value3`
+			err := os.WriteFile(envFile, []byte(envContent), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			exec := &executable.ExecutableEnvironment{
+				Params: []executable.Parameter{
+					{EnvKey: "SPECIFIC_BUILD_VAR", EnvFile: envFile},
+				},
+			}
+			inputEnv := make(map[string]string)
+			defaultEnv := make(map[string]string)
+			_, err = env.BuildEnvMap("", exec, []string{}, inputEnv, defaultEnv)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("env key SPECIFIC_BUILD_VAR not found in env file"))
+		})
+
+		It("should build environment map with envFile and matching envKey", func() {
+			tmpDir := GinkgoTB().TempDir()
+			envFile := filepath.Join(tmpDir, ".env")
+			envContent := `BUILD_ENV_VAR1=build_value1
+BUILD_ENV_VAR2=build_value2
+BUILD_ENV_VAR3=build_value3`
+			err := os.WriteFile(envFile, []byte(envContent), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			exec := &executable.ExecutableEnvironment{
+				Params: []executable.Parameter{
+					{EnvKey: "BUILD_ENV_VAR2", EnvFile: envFile},
+					{EnvKey: "REGULAR_VAR", Text: "regular_value"},
+				},
+			}
+			inputEnv := make(map[string]string)
+			defaultEnv := make(map[string]string)
+			envMap, err := env.BuildEnvMap("", exec, []string{}, inputEnv, defaultEnv)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedMap := map[string]string{
+				"BUILD_ENV_VAR2": "build_value2",
+				"REGULAR_VAR":    "regular_value",
+			}
+			Expect(envMap).To(Equal(expectedMap))
+		})
+
+		It("should handle missing envFile in BuildEnvMap", func() {
+			exec := &executable.ExecutableEnvironment{
+				Params: []executable.Parameter{
+					{EnvFile: "/nonexistent/build.env"},
+				},
+			}
+			inputEnv := make(map[string]string)
+			defaultEnv := make(map[string]string)
+			_, err := env.BuildEnvMap("", exec, []string{}, inputEnv, defaultEnv)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read .env file"))
 		})
 	})
 

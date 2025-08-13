@@ -46,6 +46,12 @@ type Workspace struct {
 	// The display name of the workspace. This is used in the interactive UI.
 	DisplayName string `json:"displayName,omitempty" yaml:"displayName,omitempty" mapstructure:"displayName,omitempty"`
 
+	// A list of environment variable files to load for the workspace. These files
+	// should contain key-value pairs of environment variables.
+	// By default, the `.env` file in the workspace root is loaded if it exists.
+	//
+	EnvFiles []string `json:"envFiles,omitempty" yaml:"envFiles,omitempty" mapstructure:"envFiles,omitempty"`
+
 	// Executables corresponds to the JSON schema field "executables".
 	Executables *ExecutableFilter `json:"executables,omitempty" yaml:"executables,omitempty" mapstructure:"executables,omitempty"`
 

@@ -17,6 +17,7 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `description` | A description of the workspace. This description is rendered as markdown in the interactive UI. | `string` |  |  |
 | `descriptionFile` | A path to a markdown file that contains the description of the workspace. | `string` |  |  |
 | `displayName` | The display name of the workspace. This is used in the interactive UI. | `string` |  |  |
+| `envFiles` | A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables. By default, the `.env` file in the workspace root is loaded if it exists.  | `array` (`string`) | [] |  |
 | `executables` |  | [ExecutableFilter](#ExecutableFilter) | <no value> |  |
 | `tags` |  | [CommonTags](#CommonTags) | [] |  |
 | `verbAliases` |  | [VerbAliases](#VerbAliases) | <no value> |  |

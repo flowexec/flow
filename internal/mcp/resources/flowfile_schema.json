@@ -283,8 +283,13 @@
       "description": "A parameter is a value that can be passed to an executable and all of its sub-executables.\nOnly one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying more than one will result in an error.\n",
       "type": "object",
       "properties": {
+        "envFile": {
+          "description": "A path to a file containing environment variables to be passed to the executable.\nThe file should contain one variable per line in the format `KEY=VALUE`.\n",
+          "type": "string",
+          "default": ""
+        },
         "envKey": {
-          "description": "The name of the environment variable that will be assigned the value.",
+          "description": "The name of the environment variable that will be assigned the value.\n\nWhen specified with `envFile`, only the environment variable with this name will be set.\n",
           "type": "string",
           "default": ""
         },

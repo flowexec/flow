@@ -60,6 +60,14 @@
       "type": "string",
       "default": ""
     },
+    "envFiles": {
+      "description": "A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.\nBy default, the `.env` file in the workspace root is loaded if it exists.\n",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
     "executables": {
       "$ref": "#/definitions/ExecutableFilter"
     },

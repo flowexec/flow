@@ -237,3 +237,20 @@ func ExecWithEnvOutputFiles(opts ...Option) *executable.Executable {
 	}
 	return e
 }
+
+func ExecWithWorkspaceEnv(opts ...Option) *executable.Executable {
+	name := "with-workspace-env"
+	e := &executable.Executable{
+		Verb:       "run",
+		Name:       name,
+		Visibility: privateExecVisibility(),
+		Exec: &executable.ExecExecutableType{
+			Cmd: fmt.Sprintf(`echo 'hello from %s'; echo "WORKSPACE_ENV_VAR=$WORKSPACE_ENV_VAR"`, name),
+		},
+	}
+	if len(opts) > 0 {
+		vals := NewOptionValues(opts...)
+		e.SetContext(vals.WorkspaceName, vals.WorkspacePath, vals.NamespaceName, vals.FlowFilePath)
+	}
+	return e
+}
