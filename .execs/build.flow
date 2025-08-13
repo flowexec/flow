@@ -40,6 +40,8 @@ executables:
       execs:
         - cmd: go run ./tools/docsgen/.
         - cmd: ./scripts/completions.sh
+        # HACK: Copy the index.html to 404.html GitHub Pages redirect with the history router
+        - cmd: cp docs/index.html docs/404.html
 
   - verb: generate
     name: cli
