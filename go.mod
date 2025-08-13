@@ -1,6 +1,6 @@
 module github.com/flowexec/flow
 
-go 1.24.0
+go 1.24.6
 
 require (
 	github.com/atotto/clipboard v0.1.4
@@ -24,7 +24,6 @@ require (
 	github.com/spf13/pflag v1.0.7
 	go.etcd.io/bbolt v1.4.2
 	go.uber.org/mock v0.5.2
-	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
 	golang.org/x/sync v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -94,6 +93,7 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.34.0 // indirect

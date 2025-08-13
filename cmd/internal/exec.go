@@ -28,8 +28,6 @@ import (
 	"github.com/flowexec/flow/internal/runner/serial"
 	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/internal/utils/env"
-	"github.com/flowexec/flow/internal/vault"
-	vaultV2 "github.com/flowexec/flow/internal/vault/v2"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -169,9 +167,6 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		}
 	}
 
-	if ctx.Config.CurrentVault == nil || *ctx.Config.CurrentVault == vaultV2.LegacyVaultReservedName {
-		setAuthEnv(ctx, cmd, e, false)
-	}
 	startTime := time.Now()
 	eng := engine.NewExecEngine()
 
@@ -234,103 +229,6 @@ func runByRef(ctx *context.Context, cmd *cobra.Command, argsStr string) error {
 	execFunc(ctx, execCmd, verb, []string{id})
 	ctx.Cancel()
 	return nil
-}
-
-func setAuthEnv(ctx *context.Context, _ *cobra.Command, executable *executable.Executable, force bool) {
-	if authRequired(ctx, executable) || force {
-		form, err := views.NewForm(
-			io.Theme(ctx.Config.Theme.String()),
-			ctx.StdIn(),
-			ctx.StdOut(),
-			&views.FormField{
-				Key:   vault.EncryptionKeyEnvVar,
-				Title: "Enter vault encryption key",
-				Type:  views.PromptTypeMasked,
-			})
-		if err != nil {
-			logger.Log().FatalErr(err)
-		}
-		if err := form.Run(ctx); err != nil {
-			logger.Log().FatalErr(err)
-		}
-		val := form.FindByKey(vault.EncryptionKeyEnvVar).Value()
-		if val == "" {
-			logger.Log().FatalErr(fmt.Errorf("vault encryption key required"))
-		}
-		if err := os.Setenv(vault.EncryptionKeyEnvVar, val); err != nil {
-			logger.Log().FatalErr(fmt.Errorf("failed to set vault encryption key\n%w", err))
-		}
-	}
-}
-
-// TODO: refactor this function to simplify the logic
-//
-//nolint:all
-func authRequired(ctx *context.Context, rootExec *executable.Executable) bool {
-	if os.Getenv(vault.EncryptionKeyEnvVar) != "" {
-		return false
-	}
-	switch {
-	case rootExec.Exec != nil:
-		for _, param := range rootExec.Exec.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-	case rootExec.Launch != nil:
-		for _, param := range rootExec.Launch.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-	case rootExec.Request != nil:
-		for _, param := range rootExec.Request.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-	case rootExec.Render != nil:
-		for _, param := range rootExec.Render.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-	case rootExec.Serial != nil:
-		for _, param := range rootExec.Serial.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-		for _, e := range rootExec.Serial.Execs {
-			if e.Ref != "" {
-				childExec, err := ctx.ExecutableCache.GetExecutableByRef(e.Ref)
-				if err != nil {
-					continue
-				}
-				if authRequired(ctx, childExec) {
-					return true
-				}
-			}
-		}
-	case rootExec.Parallel != nil:
-		for _, param := range rootExec.Parallel.Params {
-			if param.SecretRef != "" {
-				return true
-			}
-		}
-		for _, e := range rootExec.Parallel.Execs {
-			if e.Ref != "" {
-				childExec, err := ctx.ExecutableCache.GetExecutableByRef(e.Ref)
-				if err != nil {
-					continue
-				}
-				if authRequired(ctx, childExec) {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }
 
 //nolint:gocognit

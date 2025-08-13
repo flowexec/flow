@@ -1,3 +1,4 @@
+//nolint:cyclop,funlen
 package secret
 
 import (
@@ -10,16 +11,50 @@ import (
 
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/logger"
-	"github.com/flowexec/flow/internal/vault"
+	vault2 "github.com/flowexec/flow/internal/vault"
 )
 
 func NewSecretView(
 	ctx *context.Context,
-	secret vault.Secret,
+	vlt vault2.Vault,
+	ref vault2.SecretRef,
 	asPlainText bool,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	v := vault.NewVault()
+	if ref.Vault() != vlt.ID() {
+		err := fmt.Errorf(
+			"failure while initializing the secret view secret: vault mismatch -expected %s, got %s",
+			vlt.ID(),
+			ref.Vault(),
+		)
+		container.HandleError(err)
+		return nil
+	}
+
+	s, err := vlt.GetSecret(ref.Key())
+	if err != nil {
+		container.HandleError(fmt.Errorf("failure while initializing the secret view secret: %w", err))
+		return nil
+	}
+
+	secret, err := vault2.NewSecret(vlt.ID(), ref.Key(), s)
+	if err != nil {
+		container.HandleError(fmt.Errorf("failure while initializing the secret view secret: %w", err))
+		return nil
+	}
+	if asPlainText {
+		secret = secret.AsPlaintext()
+	} else {
+		secret = secret.AsObfuscatedText()
+	}
+
+	loadSecretList := func() {
+		view := NewSecretListView(ctx, vlt, asPlainText)
+		if err := ctx.SetView(view); err != nil {
+			logger.Log().FatalErr(err)
+		}
+	}
+
 	var secretKeyCallbacks = []types.KeyCallback{
 		{
 			Key: "r", Label: "rename",
@@ -40,11 +75,15 @@ func NewSecretView(
 					return nil
 				}
 				newName := form.FindByKey("value").Value()
-				if err := v.RenameSecret(secret.Reference, newName); err != nil {
-					container.HandleError(fmt.Errorf("unable to rename secret: %w", err))
+				if err := vlt.SetSecret(newName, secret); err != nil {
+					container.HandleError(fmt.Errorf("unable to set secret with new name: %w", err))
 					return nil
 				}
-				LoadSecretListView(ctx, asPlainText)
+				if err := vlt.DeleteSecret(ref.Key()); err != nil {
+					container.HandleError(fmt.Errorf("unable to delete old secret: %w", err))
+					return nil
+				}
+				loadSecretList()
 				container.SetNotice("secret renamed", themes.OutputLevelInfo)
 				return nil
 			},
@@ -68,12 +107,12 @@ func NewSecretView(
 					return nil
 				}
 				newValue := form.FindByKey("value").Value()
-				secretValue := vault.SecretValue(newValue)
-				if err := v.SetSecret(secret.Reference, secretValue); err != nil {
+				secretValue := vault2.NewSecretValue([]byte(newValue))
+				if err := vlt.SetSecret(ref.Key(), secretValue); err != nil {
 					container.HandleError(fmt.Errorf("unable to edit secret: %w", err))
 					return nil
 				}
-				LoadSecretListView(ctx, asPlainText)
+				loadSecretList()
 				container.SetNotice("secret value updated", themes.OutputLevelInfo)
 				return nil
 			},
@@ -81,73 +120,75 @@ func NewSecretView(
 		{
 			Key: "x", Label: "delete",
 			Callback: func() error {
-				if err := v.DeleteSecret(secret.Reference); err != nil {
+				if err := vlt.DeleteSecret(ref.Key()); err != nil {
 					container.HandleError(fmt.Errorf("unable to delete secret: %w", err))
 					return nil
 				}
-				LoadSecretListView(ctx, asPlainText)
+				loadSecretList()
 				container.SetNotice("secret deleted", themes.OutputLevelInfo)
 				return nil
 			},
 		},
 	}
 
-	return views.NewEntityView(container.RenderState(), &secret, types.EntityFormatDocument, secretKeyCallbacks...)
+	return views.NewEntityView(container.RenderState(), secret, types.EntityFormatDocument, secretKeyCallbacks...)
 }
 
 func NewSecretListView(
 	ctx *context.Context,
-	secrets vault.SecretList,
+	vlt vault2.Vault,
 	asPlainText bool,
 ) tuikit.View {
 	container := ctx.TUIContainer
+
+	keys, err := vlt.ListSecrets()
+	if err != nil {
+		container.HandleError(fmt.Errorf("failed to list secrets: %w", err))
+		return nil
+	}
+	secrets := make(vault2.SecretList, 0, len(keys))
+	for _, key := range keys {
+		s, err := vlt.GetSecret(key)
+		if err != nil {
+			container.HandleError(fmt.Errorf("failed to get secret %s: %w", key, err))
+			continue
+		}
+		secret, err := vault2.NewSecret(vlt.ID(), key, s)
+		if err != nil {
+			container.HandleError(fmt.Errorf("failed to create secret object for %s: %w", key, err))
+			continue
+		}
+		if asPlainText {
+			secret = secret.AsPlaintext()
+		} else {
+			secret = secret.AsObfuscatedText()
+		}
+		secrets = append(secrets, secret)
+	}
+
 	if len(secrets.Items()) == 0 {
 		container.HandleError(fmt.Errorf("no secrets found"))
 	}
 
 	selectFunc := func(filterVal string) error {
-		var secret vault.Secret
+		var secret vault2.Secret
 		var found bool
 		for _, s := range secrets {
-			if s.Reference == filterVal {
+			if s == nil {
+				continue
+			}
+			if string(s.Ref()) == filterVal {
 				secret = s
 				found = true
 				break
 			}
 		}
-		if !found {
+		if !found || secret == nil {
 			return fmt.Errorf("secret not found")
 		}
 
-		return container.SetView(NewSecretView(ctx, secret, asPlainText))
+		return container.SetView(NewSecretView(ctx, vlt, secret.Ref(), asPlainText))
 	}
 
 	return views.NewCollectionView(container.RenderState(), secrets, types.CollectionFormatList, selectFunc)
-}
-
-func LoadSecretListView(
-	ctx *context.Context,
-	asPlainText bool,
-) {
-	v := vault.NewVault()
-	secrets, err := v.GetAllSecrets()
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
-	var secretList vault.SecretList
-	for name, secret := range secrets {
-		if asPlainText {
-			secretList = append(secretList, vault.Secret{Reference: name, Secret: secret.PlainTextString()})
-		} else {
-			secretList = append(secretList, vault.Secret{Reference: name, Secret: secret.ObfuscatedString()})
-		}
-	}
-	view := NewSecretListView(
-		ctx,
-		secretList,
-		asPlainText,
-	)
-	if err := ctx.SetView(view); err != nil {
-		logger.Log().FatalErr(err)
-	}
 }
