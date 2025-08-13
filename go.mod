@@ -11,7 +11,7 @@ require (
 	github.com/flowexec/tuikit v0.2.3
 	github.com/flowexec/vault v0.2.1
 	github.com/gen2brain/beeep v0.11.1
-	github.com/jahvon/expression v0.1.3
+	github.com/jahvon/expression v0.1.4
 	github.com/jahvon/glamour v0.8.1-patch3
 	github.com/mark3labs/mcp-go v0.37.0
 	github.com/mattn/go-runewidth v0.0.16

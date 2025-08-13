@@ -118,8 +118,8 @@ github.com/invopop/jsonschema v0.13.0 h1:KvpoAJWEjR3uD9Kbm2HWJmqsEaHt8lBUpd0qHcI
 github.com/invopop/jsonschema v0.13.0/go.mod h1:ffZ5Km5SWWRAIN6wbDXItl95euhFz2uON45H2qjYt+0=
 github.com/jackmordaunt/icns/v3 v3.0.1 h1:xxot6aNuGrU+lNgxz5I5H0qSeCjNKp8uTXB1j8D4S3o=
 github.com/jackmordaunt/icns/v3 v3.0.1/go.mod h1:5sHL59nqTd2ynTnowxB/MDQFhKNqkK8X687uKNygaSQ=
-github.com/jahvon/expression v0.1.3 h1:ZOH6tj1zK9h+M+eDy/n1Fz6XL/vA3lCV6bzHe6YWAvY=
-github.com/jahvon/expression v0.1.3/go.mod h1:4HJB2k+epW5vFeptF6ILlXbFRQ+CuCyCSO4QdnGT3AE=
+github.com/jahvon/expression v0.1.4 h1:4q/jvM5G2mBJDqXtTUDThtJ4Sfajx+vIhUf4r6EAy6A=
+github.com/jahvon/expression v0.1.4/go.mod h1:4HJB2k+epW5vFeptF6ILlXbFRQ+CuCyCSO4QdnGT3AE=
 github.com/jahvon/glamour v0.8.1-patch3 h1:LfyMACZavV8yxK4UsPENNQQOqafWuq4ZdLuEAP2ZLE8=
 github.com/jahvon/glamour v0.8.1-patch3/go.mod h1:30MVJwG3rcEHrN277NrA4DKzndSL9lBtEmpcfOygwCQ=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
