@@ -206,6 +206,14 @@ impl
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
+#[doc = "    \"envFiles\": {"]
+#[doc = "      \"description\": \"A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.\\nBy default, the `.env` file in the workspace root is loaded if it exists.\\n\","]
+#[doc = "      \"default\": [],"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"type\": \"string\""]
+#[doc = "      }"]
+#[doc = "    },"]
 #[doc = "    \"executables\": {"]
 #[doc = "      \"$ref\": \"#/definitions/ExecutableFilter\""]
 #[doc = "    },"]
@@ -231,6 +239,13 @@ pub struct Workspace {
     #[doc = "The display name of the workspace. This is used in the interactive UI."]
     #[serde(rename = "displayName", default)]
     pub display_name: ::std::string::String,
+    #[doc = "A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.\nBy default, the `.env` file in the workspace root is loaded if it exists.\n"]
+    #[serde(
+        rename = "envFiles",
+        default,
+        skip_serializing_if = "::std::vec::Vec::is_empty"
+    )]
+    pub env_files: ::std::vec::Vec<::std::string::String>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub executables: ::std::option::Option<ExecutableFilter>,
     #[serde(default = "defaults::workspace_tags")]
@@ -253,6 +268,7 @@ impl ::std::default::Default for Workspace {
             description: Default::default(),
             description_file: Default::default(),
             display_name: Default::default(),
+            env_files: Default::default(),
             executables: Default::default(),
             tags: defaults::workspace_tags(),
             verb_aliases: Default::default(),
@@ -327,6 +343,8 @@ pub mod builder {
         description: ::std::result::Result<::std::string::String, ::std::string::String>,
         description_file: ::std::result::Result<::std::string::String, ::std::string::String>,
         display_name: ::std::result::Result<::std::string::String, ::std::string::String>,
+        env_files:
+            ::std::result::Result<::std::vec::Vec<::std::string::String>, ::std::string::String>,
         executables: ::std::result::Result<
             ::std::option::Option<super::ExecutableFilter>,
             ::std::string::String,
@@ -341,6 +359,7 @@ pub mod builder {
                 description: Ok(Default::default()),
                 description_file: Ok(Default::default()),
                 display_name: Ok(Default::default()),
+                env_files: Ok(Default::default()),
                 executables: Ok(Default::default()),
                 tags: Ok(super::defaults::workspace_tags()),
                 verb_aliases: Ok(Default::default()),
@@ -379,6 +398,16 @@ pub mod builder {
             self.display_name = value
                 .try_into()
                 .map_err(|e| format!("error converting supplied value for display_name: {}", e));
+            self
+        }
+        pub fn env_files<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::vec::Vec<::std::string::String>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.env_files = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for env_files: {}", e));
             self
         }
         pub fn executables<T>(mut self, value: T) -> Self
@@ -421,6 +450,7 @@ pub mod builder {
                 description: value.description?,
                 description_file: value.description_file?,
                 display_name: value.display_name?,
+                env_files: value.env_files?,
                 executables: value.executables?,
                 tags: value.tags?,
                 verb_aliases: value.verb_aliases?,
@@ -433,6 +463,7 @@ pub mod builder {
                 description: Ok(value.description),
                 description_file: Ok(value.description_file),
                 display_name: Ok(value.display_name),
+                env_files: Ok(value.env_files),
                 executables: Ok(value.executables),
                 tags: Ok(value.tags),
                 verb_aliases: Ok(value.verb_aliases),

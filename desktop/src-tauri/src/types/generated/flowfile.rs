@@ -944,8 +944,13 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableParallelRefConfig>>
 #[doc = "  \"description\": \"A parameter is a value that can be passed to an executable and all of its sub-executables.\\nOnly one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying more than one will result in an error.\\n\","]
 #[doc = "  \"type\": \"object\","]
 #[doc = "  \"properties\": {"]
+#[doc = "    \"envFile\": {"]
+#[doc = "      \"description\": \"A path to a file containing environment variables to be passed to the executable.\\nThe file should contain one variable per line in the format `KEY=VALUE`.\\n\","]
+#[doc = "      \"default\": \"\","]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
 #[doc = "    \"envKey\": {"]
-#[doc = "      \"description\": \"The name of the environment variable that will be assigned the value.\","]
+#[doc = "      \"description\": \"The name of the environment variable that will be assigned the value.\\n\\nWhen specified with `envFile`, only the environment variable with this name will be set.\\n\","]
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
@@ -975,7 +980,10 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableParallelRefConfig>>
 #[doc = r" </details>"]
 #[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
 pub struct ExecutableParameter {
-    #[doc = "The name of the environment variable that will be assigned the value."]
+    #[doc = "A path to a file containing environment variables to be passed to the executable.\nThe file should contain one variable per line in the format `KEY=VALUE`.\n"]
+    #[serde(rename = "envFile", default)]
+    pub env_file: ::std::string::String,
+    #[doc = "The name of the environment variable that will be assigned the value.\n\nWhen specified with `envFile`, only the environment variable with this name will be set.\n"]
     #[serde(rename = "envKey", default)]
     pub env_key: ::std::string::String,
     #[doc = "A path where the parameter value will be temporarily written to disk.\nThe file will be created before execution and cleaned up afterwards.\n"]
@@ -999,6 +1007,7 @@ impl ::std::convert::From<&ExecutableParameter> for ExecutableParameter {
 impl ::std::default::Default for ExecutableParameter {
     fn default() -> Self {
         Self {
+            env_file: Default::default(),
             env_key: Default::default(),
             output_file: Default::default(),
             prompt: Default::default(),
@@ -3468,6 +3477,7 @@ pub mod builder {
     }
     #[derive(Clone, Debug)]
     pub struct ExecutableParameter {
+        env_file: ::std::result::Result<::std::string::String, ::std::string::String>,
         env_key: ::std::result::Result<::std::string::String, ::std::string::String>,
         output_file: ::std::result::Result<::std::string::String, ::std::string::String>,
         prompt: ::std::result::Result<::std::string::String, ::std::string::String>,
@@ -3477,6 +3487,7 @@ pub mod builder {
     impl ::std::default::Default for ExecutableParameter {
         fn default() -> Self {
             Self {
+                env_file: Ok(Default::default()),
                 env_key: Ok(Default::default()),
                 output_file: Ok(Default::default()),
                 prompt: Ok(Default::default()),
@@ -3486,6 +3497,16 @@ pub mod builder {
         }
     }
     impl ExecutableParameter {
+        pub fn env_file<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::string::String>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.env_file = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for env_file: {}", e));
+            self
+        }
         pub fn env_key<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<::std::string::String>,
@@ -3543,6 +3564,7 @@ pub mod builder {
             value: ExecutableParameter,
         ) -> ::std::result::Result<Self, super::error::ConversionError> {
             Ok(Self {
+                env_file: value.env_file?,
                 env_key: value.env_key?,
                 output_file: value.output_file?,
                 prompt: value.prompt?,
@@ -3554,6 +3576,7 @@ pub mod builder {
     impl ::std::convert::From<super::ExecutableParameter> for ExecutableParameter {
         fn from(value: super::ExecutableParameter) -> Self {
             Self {
+                env_file: Ok(value.env_file),
                 env_key: Ok(value.env_key),
                 output_file: Ok(value.output_file),
                 prompt: Ok(value.prompt),

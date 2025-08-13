@@ -203,6 +203,12 @@ definitions:
         type: string
         description: A reference to a secret to be passed to the executable.
         default: ""
+      envFile:
+        type: string
+        description: |
+          A path to a file containing environment variables to be passed to the executable.
+          The file should contain one variable per line in the format `KEY=VALUE`.
+        default: ""
       outputFile:
         type: string
         description: |
@@ -211,7 +217,10 @@ definitions:
         default: ""
       envKey:
         type: string
-        description: The name of the environment variable that will be assigned the value.
+        description: |
+          The name of the environment variable that will be assigned the value.
+          
+          When specified with `envFile`, only the environment variable with this name will be set.
         default: ""
   ParameterList:
     type: array

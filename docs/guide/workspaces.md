@@ -79,6 +79,11 @@ verbAliases:
   run: ["start", "exec"]
   build: ["compile", "make"]
   # Set to {} to disable all aliases
+  
+# Environment variables to load for all executables in this workspace
+envFiles:
+  - .env
+  - .env.local
 
 # Control executable discovery
 executables:
@@ -100,6 +105,7 @@ executables:
 
 **Behavior Customization:**
 - `verbAliases`: Customize which verb synonyms are available
+- `envFiles`: List of environment files to load for all executables (the root `.env` is loaded by default)
 
 > **Complete reference**: See the [workspace configuration schema](../types/workspace.md) for all available options.
 

@@ -15,6 +15,8 @@ import (
 )
 
 // SetEnv sets environment variables based on the parameters and arguments defined in the executable environment.
+//
+//nolint:gocognit
 func SetEnv(
 	currentVault string,
 	exec *executable.ExecutableEnvironment,
@@ -27,10 +29,42 @@ func SetEnv(
 	maps.Copy(envMap, inputEnv)
 
 	for _, param := range exec.Params {
-		if param.OutputFile != "" {
+		switch {
+		case param.OutputFile != "":
 			// CreateTempEnvFiles will handle outputFile parameters
 			continue
+		case param.EnvFile != "":
+			dotEnvMap, err := readDotEnvFile(param.EnvFile, envMap["FLOW_DEFINITION_DIR"])
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			//nolint:nestif
+			if param.EnvKey != "" {
+				val, ok := dotEnvMap[param.EnvKey]
+				if !ok {
+					errs = append(errs, fmt.Errorf("env key %s not found in env file %s", param.EnvKey, param.EnvFile))
+					continue
+				}
+				if err := os.Setenv(param.EnvKey, val); err != nil {
+					errs = append(errs, fmt.Errorf("failed to set env %s from file %s: %w", param.EnvKey, param.EnvFile, err))
+				} else {
+					envMap[param.EnvKey] = val
+				}
+			} else {
+				for k, v := range dotEnvMap {
+					if err := os.Setenv(k, v); err != nil {
+						errs = append(errs, fmt.Errorf("failed to set env %s from file %s: %w", k, param.EnvFile, err))
+					}
+					envMap[k] = v
+				}
+			}
+			continue
+		case param.EnvKey == "":
+			// No env var to set for this parameter
+			continue
 		}
+
 		val, err := ResolveParameterValue(currentVault, param, envMap)
 		if err != nil {
 			errs = append(errs, err)
@@ -141,8 +175,30 @@ func BuildEnvMap(
 	}
 
 	for _, param := range exec.Params {
-		if param.OutputFile != "" && param.EnvKey == "" {
+		switch {
+		case param.OutputFile != "":
 			continue
+		case param.EnvFile != "":
+			dotEnvMap, err := readDotEnvFile(param.EnvFile, defaultEnv["FLOW_DEFINITION_DIR"])
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			if param.EnvKey != "" {
+				val, ok := dotEnvMap[param.EnvKey]
+				if !ok {
+					errs = append(errs, fmt.Errorf("env key %s not found in env file %s", param.EnvKey, param.EnvFile))
+					continue
+				}
+				envMap[param.EnvKey] = val
+			} else {
+				for k, v := range dotEnvMap {
+					envMap[k] = v
+				}
+			}
+			continue
+		case param.EnvKey == "":
+			continue // No env var to set for this parameter
 		}
 
 		val, err := ResolveParameterValue(currentVault, param, envMap)
@@ -227,4 +283,45 @@ func createEnvValueFile(destination, content, wsPath, flowFileDir string, envMap
 	}
 
 	return dest, nil
+}
+
+func LoadEnvFromFiles(files []string, expansionFallbackDir string) (map[string]string, error) {
+	envMap := make(map[string]string)
+	for _, file := range files {
+		dotEnvMap, err := readDotEnvFile(file, expansionFallbackDir)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range dotEnvMap {
+			envMap[k] = v
+		}
+	}
+	return envMap, nil
+}
+
+func readDotEnvFile(file, expansionFallbackDir string) (map[string]string, error) {
+	if file == "" {
+		return nil, fmt.Errorf("env file path is empty")
+	}
+
+	envMap := make(map[string]string)
+	path := utils.ExpandPath(file, expansionFallbackDir, nil)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read .env file %s: %w", file, err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue // Skip empty lines and comments
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			envMap[parts[0]] = parts[1]
+		}
+	}
+
+	return envMap, nil
 }

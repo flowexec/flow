@@ -29,6 +29,12 @@ export interface Workspace {
    * The display name of the workspace. This is used in the interactive UI.
    */
   displayName?: string;
+  /**
+   * A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.
+   * By default, the `.env` file in the workspace root is loaded if it exists.
+   *
+   */
+  envFiles?: string[];
   executables?: ExecutableFilter;
   tags?: CommonTags;
   verbAliases?: VerbAliases;

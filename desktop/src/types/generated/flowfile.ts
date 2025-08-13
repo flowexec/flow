@@ -366,7 +366,16 @@ export interface ExecutableArgument {
  */
 export interface ExecutableParameter {
   /**
+   * A path to a file containing environment variables to be passed to the executable.
+   * The file should contain one variable per line in the format `KEY=VALUE`.
+   *
+   */
+  envFile?: string;
+  /**
    * The name of the environment variable that will be assigned the value.
+   *
+   * When specified with `envFile`, only the environment variable with this name will be set.
+   *
    */
   envKey?: string;
   /**

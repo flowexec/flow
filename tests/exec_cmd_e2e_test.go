@@ -4,6 +4,8 @@ package tests_test
 
 import (
 	stdCtx "context"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -68,6 +70,23 @@ var _ = Describe("exec e2e", func() {
 			Expect(out).To(ContainSubstring("argval"))
 			Expect(out).NotTo(ContainSubstring("notme"))
 
+			Expect(out).To(ContainSubstring("flow completed"))
+		})
+	})
+
+	Describe("workspace envFile feature", func() {
+		It("should inherit environment variables from workspace .env file", func() {
+			envFilePath := filepath.Join(ctx.WorkspaceDir(), ".env")
+			envContent := "WORKSPACE_ENV_VAR=test_value_from_env"
+			err := os.WriteFile(envFilePath, []byte(envContent), 0644)
+			Expect(err).ToNot(HaveOccurred())
+
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(ctx.Context, "exec", "examples:with-workspace-env", "--log-level", "debug")).To(Succeed())
+			out, _ := readFileContent(stdOut)
+
+			Expect(out).To(ContainSubstring("WORKSPACE_ENV_VAR=test_value_from_env"))
 			Expect(out).To(ContainSubstring("flow completed"))
 		})
 	})

@@ -237,7 +237,8 @@ Only one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying mor
 
 | Field | Description | Type | Default | Required |
 | ----- | ----------- | ---- | ------- | :--------: |
-| `envKey` | The name of the environment variable that will be assigned the value. | `string` |  |  |
+| `envFile` | A path to a file containing environment variables to be passed to the executable. The file should contain one variable per line in the format `KEY=VALUE`.  | `string` |  |  |
+| `envKey` | The name of the environment variable that will be assigned the value.  When specified with `envFile`, only the environment variable with this name will be set.  | `string` |  |  |
 | `outputFile` | A path where the parameter value will be temporarily written to disk. The file will be created before execution and cleaned up afterwards.  | `string` |  |  |
 | `prompt` | A prompt to be displayed to the user when collecting an input value. | `string` |  |  |
 | `secretRef` | A reference to a secret to be passed to the executable. | `string` |  |  |

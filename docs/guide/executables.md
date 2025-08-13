@@ -61,6 +61,12 @@ executables:
 
 Customize executable behavior with environment variables or temporary files using `params` or `args`.
 
+> [!INFO]
+> Executables inherit environment variables from their parent executable, workspace, and system.
+> 
+> By default, values defined in the `.env` file at the workspace root are automatically loaded. This can be overriden
+> in the workspace configuration file with the `envFiles` field.
+
 ### Parameters (`params`) <!-- {docsify-ignore} -->
 
 Set environment data from various sources:
@@ -85,6 +91,11 @@ executables:
         # Static values
         - text: "production"
           envKey: DEPLOY_ENV
+          
+        # Env File (key=value format)
+        - envFile: "development.env"
+        - envFile: "staging.env"
+          envKey: SHARED_KEYS  # Only load specific keys
 
         # Saved to a file
         - secretRef: tls-cert
@@ -95,6 +106,7 @@ executables:
 - `secretRef`: Reference to vault secret
 - `prompt`: Interactive user input
 - `text`: Static value
+- `envFile`: Load environment variables from a file
 
 ### Arguments (`args`) <!-- {docsify-ignore} -->
 
