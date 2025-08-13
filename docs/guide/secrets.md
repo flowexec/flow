@@ -201,18 +201,6 @@ flow vault create myapp --key-file ~/mykeys/myapp.key
 flow vault create team --type age --identity-file ~/identities/identity.txt --identity-env MY_IDENTITY
 ```
 
-#### Pre-v1 Migration
-
-If you have a (pre-v1.0) legacy vault, you can migrate it to a v1 vault:
-
-```shell
-flow vault create new-vault --key-env MY_NEW_VAULT_KEY
-# Be sure to set the new and old vault keys if needed
-flow vault migrate new-vault
-```
-
-This migrates secrets from the old vault format to the new named vault system. Note that this requires the old vault to be accessible with its key set in the `FLOW_VAULT_KEY` environment variable.
-
 ## Using Secrets in Workflows
 
 ### Basic Usage <!-- {docsify-ignore} -->

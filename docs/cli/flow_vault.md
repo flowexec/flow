@@ -22,7 +22,6 @@ Manage sensitive secret stores.
 * [flow vault edit](flow_vault_edit.md)	 - Edit the configuration of an existing vault.
 * [flow vault get](flow_vault_get.md)	 - Get the details of a vault.
 * [flow vault list](flow_vault_list.md)	 - List all available vaults.
-* [flow vault migrate](flow_vault_migrate.md)	 - Migrate the legacy vault to a newer vault.
 * [flow vault remove](flow_vault_remove.md)	 - Remove an existing vault.
 * [flow vault switch](flow_vault_switch.md)	 - Switch the active vault.
 

@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/flowexec/flow/internal/vault"
-	vaultV2 "github.com/flowexec/flow/internal/vault/v2"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -42,34 +41,22 @@ func resolveSecretValue(
 	currentVault string,
 	secretRef string,
 ) (string, error) {
-	//nolint:nestif
-	if currentVault == "" {
-		if err := vault.ValidateReference(secretRef); err != nil {
-			return "", err
-		}
-		v := vault.NewVault()
-		secret, err := v.GetSecret(secretRef)
-		if err != nil {
-			return "", err
-		}
-		return secret.PlainTextString(), nil
-	} else {
-		rVault, key, err := vaultV2.RefToParts(vaultV2.SecretRef(secretRef))
-		if err != nil {
-			return "", err
-		}
-		if rVault == "" {
-			rVault = currentVault
-		}
-		_, v, err := vaultV2.VaultFromName(rVault)
-		if err != nil {
-			return "", err
-		}
-		defer v.Close()
-		secret, err := v.GetSecret(key)
-		if err != nil {
-			return "", err
-		}
-		return secret.PlainTextString(), nil
+
+	rVault, key, err := vault.RefToParts(vault.SecretRef(secretRef))
+	if err != nil {
+		return "", err
 	}
+	if rVault == "" {
+		rVault = currentVault
+	}
+	_, v, err := vault.VaultFromName(rVault)
+	if err != nil {
+		return "", err
+	}
+	defer v.Close()
+	secret, err := v.GetSecret(key)
+	if err != nil {
+		return "", err
+	}
+	return secret.PlainTextString(), nil
 }
