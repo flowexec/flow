@@ -33,7 +33,7 @@ archives:
     files:
       - LICENSE
       - README.md
-      - completions
+      - scripts/completions
     name_template: >-
       {{ .Binary }}_
       {{- .Tag }}_
