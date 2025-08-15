@@ -41,7 +41,6 @@ func resolveSecretValue(
 	currentVault string,
 	secretRef string,
 ) (string, error) {
-
 	rVault, key, err := vault.RefToParts(vault.SecretRef(secretRef))
 	if err != nil {
 		return "", err

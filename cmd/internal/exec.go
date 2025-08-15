@@ -143,11 +143,16 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	envMap := make(map[string]string)
 	// add workspace env variables to the env map
-	if wsCfg, ok := ctx.WorkspacesCache.GetData().Workspaces[e.Workspace()]; !ok {
-		logger.Log().Warnf("workspace %s not found in cache, skipping env file resolution", e.Workspace())
+	if wsData, err := ctx.WorkspacesCache.GetWorkspaceConfigList(); err != nil {
+		logger.Log().Errorf("failed to get workspace cache data, skipping env file resolution: %v", err)
 	} else {
-		applyWorkspaceParameterOverrides(wsCfg, envMap)
+		if wsCfg := wsData.FindByName(e.Workspace()); wsCfg == nil {
+			logger.Log().Warnf("workspace %s not found in cache, skipping env file resolution", e.Workspace())
+		} else {
+			applyWorkspaceParameterOverrides(wsCfg, envMap)
+		}
 	}
+
 	// add --param overrides to the env map
 	paramOverrides := flags.ValueFor[[]string](cmd, *flags.ParameterValueFlag, false)
 	applyParameterOverrides(paramOverrides, envMap)
