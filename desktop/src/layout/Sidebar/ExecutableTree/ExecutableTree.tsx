@@ -37,11 +37,8 @@ import {
   UpdateVerbType,
   ValidationVerbType,
 } from "../../../types/executable";
-
-interface ExecutableTreeProps {
-  visibleExecutables: EnrichedExecutable[];
-  onSelectExecutable: (executable: string) => void;
-}
+import {useAppContext} from "../../../hooks/useAppContext.tsx";
+import {Link} from "react-router";
 
 interface CustomTreeNodeData extends TreeNodeData {
   isNamespace: boolean;
@@ -155,58 +152,67 @@ function Leaf({
     }
   }
 
+  if (customNode.isNamespace) {
+    return (
+      <Group gap="xs" {...elementProps} key={customNode.value} mb="3">
+        {icon}
+        <Text>{customNode.label}</Text>
+      </Group>
+    );
+  }
+
   return (
-    <Group gap="xs" {...elementProps} key={customNode.value} mb="3">
-      {icon}
-      <Text>{customNode.label}</Text>
-    </Group>
+    <Link to={`/executable/${customNode.value}`}>
+      <Group gap="xs" {...elementProps} key={customNode.value} mb="3">
+        {icon}
+        <Text>{customNode.label}</Text>
+      </Group>
+    </Link>
   );
 }
 
-export function ExecutableTree({
-  visibleExecutables,
-  onSelectExecutable,
-}: ExecutableTreeProps) {
+export function ExecutableTree() {
+  const { executables } = useAppContext();
   const tree = useTree();
 
-  React.useEffect(() => {
-    const selectedValue = tree.selectedState[0];
-    if (selectedValue) {
-      const findNode = (
-        nodes: CustomTreeNodeData[]
-      ): CustomTreeNodeData | undefined => {
-        for (const node of nodes) {
-          if (node.value === selectedValue) {
-            return node;
-          }
-          if (node.children) {
-            const found = findNode(node.children as CustomTreeNodeData[]);
-            if (found) return found;
-          }
-        }
-        return undefined;
-      };
-
-      const node = findNode(getTreeData(visibleExecutables));
-      if (node && !node.isNamespace) {
-        onSelectExecutable(selectedValue);
-      }
-    }
-  }, [tree.selectedState, visibleExecutables, onSelectExecutable]);
+  // React.useEffect(() => {
+  //   const selectedValue = tree.selectedState[0];
+  //   if (selectedValue) {
+  //     const findNode = (
+  //       nodes: CustomTreeNodeData[]
+  //     ): CustomTreeNodeData | undefined => {
+  //       for (const node of nodes) {
+  //         if (node.value === selectedValue) {
+  //           return node;
+  //         }
+  //         if (node.children) {
+  //           const found = findNode(node.children as CustomTreeNodeData[]);
+  //           if (found) return found;
+  //         }
+  //       }
+  //       return undefined;
+  //     };
+  //
+  //     // const node = findNode(getTreeData(executables));
+  //     // if (node && !node.isNamespace) {
+  //     //   onSelectExecutable(selectedValue);
+  //     // }
+  //   }
+  // }, [tree.selectedState, executables, onSelectExecutable]);
 
   return (
     <>
       <Text size="xs" fw={700} c="dimmed" mb="0" mt="md">
-        EXECUTABLES ({visibleExecutables.length})
+        EXECUTABLES ({executables.length})
       </Text>
-      {visibleExecutables.length === 0 ? (
+      {executables.length === 0 ? (
         <Text size="xs" c="red">
           No executables found
         </Text>
       ) : (
         <ScrollArea scrollbarSize={6} scrollHideDelay={100}>
           <Tree
-            data={getTreeData(visibleExecutables)}
+            data={getTreeData(executables)}
             selectOnClick
             tree={tree}
             renderNode={Leaf}

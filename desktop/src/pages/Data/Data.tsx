@@ -1,8 +1,10 @@
 import { Tabs } from "@mantine/core";
 import { IconBraces, IconLock } from "@tabler/icons-react";
+import {PageWrapper} from "../../components/PageWrapper.tsx";
 
-export default function Data() {
+export function Data() {
   return (
+      <PageWrapper>
     <Tabs defaultValue="cache">
       <Tabs.List>
         <Tabs.Tab value="cache" leftSection={<IconBraces size={12} />}>
@@ -15,5 +17,6 @@ export default function Data() {
       <Tabs.Panel value="cache">Cache data should show here</Tabs.Panel>
       <Tabs.Panel value="vault">Vault data should show here</Tabs.Panel>
     </Tabs>
+      </PageWrapper>
   );
 }

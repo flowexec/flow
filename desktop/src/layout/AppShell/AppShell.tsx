@@ -1,57 +1,34 @@
 import {
-  ActionIcon,
   Loader,
   AppShell as MantineAppShell,
   Notification as MantineNotification,
   Text,
 } from "@mantine/core";
-import { IconRefresh } from "@tabler/icons-react";
-import { ReactNode } from "react";
-import { EnrichedExecutable } from "../../types/executable";
-import {
-  colorFromType,
-  Notification,
-  NotificationType,
-} from "../../types/notification";
-import { EnrichedWorkspace } from "../../types/workspace";
+import {useEffect} from "react";
+import {colorFromType, NotificationType,} from "../../types/notification";
 import { Header } from "../Header/Header";
 import { Sidebar } from "../Sidebar/Sidebar";
-import { View } from "../Viewer/Viewer";
 import styles from "./AppShell.module.css";
+import {useAppContext} from "../../hooks/useAppContext.tsx";
+import {useNotifier} from "../../hooks/useNotifier.tsx";
+import {Outlet, useLocation} from "react-router";
 
-interface AppShellProps {
-  children: ReactNode;
-  currentView: View;
-  setCurrentView: (view: View) => void;
-  workspaces: EnrichedWorkspace[];
-  selectedWorkspace: string | null;
-  onSelectWorkspace: (workspaceName: string) => void;
-  visibleExecutables: EnrichedExecutable[];
-  onSelectExecutable: (executable: string) => void;
-  onLogoClick: () => void;
-  hasError: Error | null;
-  isLoading: boolean;
-  refreshAll: () => void;
-  notification: Notification | null;
-  setNotification: (notification: Notification | null) => void;
-}
+export function AppShell() {
+  const { isLoading, hasError } = useAppContext();
+  const { notification, setNotification } = useNotifier();
+  const location = useLocation();
 
-export function AppShell({
-  children,
-  currentView,
-  setCurrentView,
-  workspaces,
-  selectedWorkspace,
-  onSelectWorkspace,
-  visibleExecutables,
-  onSelectExecutable,
-  onLogoClick,
-  hasError,
-  isLoading,
-  refreshAll,
-  notification,
-  setNotification,
-}: AppShellProps) {
+  useEffect(() => {
+    if (hasError) {
+      setNotification({
+        title: "Unexpected error",
+        message: hasError.message || "An error occurred",
+        type: NotificationType.Error,
+        autoClose: false,
+      });
+    }
+  }, [hasError, setNotification]);
+
   return (
     <MantineAppShell
       header={{ height: "var(--app-header-height)" }}
@@ -65,32 +42,11 @@ export function AppShell({
       }}
     >
       <MantineAppShell.Header>
-        <Header
-          onCreateWorkspace={() => {}}
-          onRefreshWorkspaces={() => {
-            refreshAll();
-            setNotification({
-              title: "Refresh completed",
-              message: "flow data has synced and refreshed successfully",
-              type: NotificationType.Success,
-              autoClose: true,
-              autoCloseDelay: 3000,
-            });
-          }}
-        />
+        <Header />
       </MantineAppShell.Header>
 
       <MantineAppShell.Navbar>
-        <Sidebar
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          workspaces={workspaces}
-          selectedWorkspace={selectedWorkspace}
-          onSelectWorkspace={onSelectWorkspace}
-          visibleExecutables={visibleExecutables}
-          onSelectExecutable={onSelectExecutable}
-          onLogoClick={onLogoClick}
-        />
+        <Sidebar />
       </MantineAppShell.Navbar>
 
       <MantineAppShell.Main>
@@ -106,18 +62,11 @@ export function AppShell({
             }}
           >
             <Text c="red">Error loading data</Text>
-            <ActionIcon
-              color="red"
-              onClick={refreshAll}
-              title="Try again"
-              variant="light"
-            >
-              <IconRefresh size={16} />
-            </ActionIcon>
+            <Text c="red">{hasError.message}</Text>
           </div>
         ) : (
           <div style={{ position: "relative", height: "100%" }}>
-            {children}
+            <Outlet key={location.key} />
             {isLoading && (
               <div
                 style={{

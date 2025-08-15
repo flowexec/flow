@@ -1,13 +1,18 @@
 import "@mantine/core/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import {createHashRouter, Navigate} from "react-router";
+import {RouterProvider} from "react-router/dom";
 import "./App.css";
-import { useBackendData, useExecutable } from "./hooks/useBackendData";
-import { NotifierProvider, useNotifier } from "./hooks/useNotifier";
-import { SettingsProvider } from "./hooks/useSettings";
-import { AppShell, View, Viewer } from "./layout";
 import { ThemeProvider } from "./theme/ThemeProvider";
-import { NotificationType } from "./types/notification";
+import { AppProvider } from "./hooks/useAppContext.tsx";
+import { NotifierProvider } from "./hooks/useNotifier";
+import { SettingsProvider } from "./hooks/useSettings";
+import {AppShell} from "./layout";
+import {PageWrapper} from "./components/PageWrapper.tsx";
+import {Settings, Welcome, Data} from "./pages";
+import {WorkspaceRoute} from "./pages/Workspace/WorkspaceRoute.tsx";
+import {ExecutableRoute} from "./pages/Executable/ExecutableRoute.tsx";
+import {Text} from "@mantine/core";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,106 +23,66 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppContent() {
-  const [currentView, setCurrentView] = useState<View>(View.Welcome);
-  const [welcomeMessage, setWelcomeMessage] = useState<string>("");
-  const [selectedExecutable, setSelectedExecutable] = useState<string | null>(
-    null
-  );
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(
-    null
-  );
-  const { notification, setNotification } = useNotifier();
 
-  const { config, workspaces, executables, isLoading, hasError, refreshAll } =
-    useBackendData(selectedWorkspace);
-
-  const { executable, executableError } = useExecutable(
-    selectedExecutable || ""
-  );
-
-  // Set initial workspace from config when it loads
-  useEffect(() => {
-    if (config?.currentWorkspace && workspaces && workspaces.length > 0) {
-      // Only update if we don't have a selected workspace or if the config workspace is different
-      if (!selectedWorkspace || config.currentWorkspace !== selectedWorkspace) {
-        setSelectedWorkspace(config.currentWorkspace);
-      }
-    }
-  }, [config, workspaces]);
-
-  useEffect(() => {
-    if (hasError) {
-      setNotification({
-        title: "Unexpected error",
-        message: hasError.message || "An error occurred",
-        type: NotificationType.Error,
-        autoClose: false,
-      });
-    }
-  }, [hasError]);
-
-  useEffect(() => {
-    if (welcomeMessage === "" && executables?.length > 0) {
-      setWelcomeMessage("Select an executable to get started.");
-    }
-  }, [executables, welcomeMessage]);
-
-  const handleLogoClick = () => {
-    setCurrentView(View.Welcome);
-  };
-
-  return (
-    <AppShell
-      currentView={currentView}
-      setCurrentView={(view: string) => setCurrentView(view as View)}
-      workspaces={workspaces || []}
-      selectedWorkspace={selectedWorkspace}
-      onSelectWorkspace={(workspaceName) => {
-        setSelectedWorkspace(workspaceName);
-        setCurrentView(View.Workspace);
-      }}
-      visibleExecutables={executables || []}
-      onSelectExecutable={(executable) => {
-        if (executable === selectedExecutable) {
-          return;
-        }
-        setSelectedExecutable(executable);
-        if (currentView !== View.Executable) {
-          setCurrentView(View.Executable);
-        }
-      }}
-      onLogoClick={handleLogoClick}
-      hasError={hasError}
-      isLoading={isLoading}
-      refreshAll={refreshAll}
-      notification={notification}
-      setNotification={setNotification}
-    >
-      <Viewer
-        currentView={currentView}
-        selectedExecutable={executable}
-        executableError={executableError}
-        welcomeMessage={welcomeMessage}
-        workspace={
-          workspaces?.find((w) => w.name === selectedWorkspace) || null
-        }
-      />
-    </AppShell>
-  );
-}
+const router = createHashRouter([
+  {
+    path: "/",
+    element: (
+        <QueryClientProvider client={queryClient}>
+          <NotifierProvider>
+            <AppProvider>
+              <SettingsProvider>
+                <ThemeProvider>
+                  <AppShell />
+                </ThemeProvider>
+              </SettingsProvider>
+            </AppProvider>
+          </NotifierProvider>
+        </QueryClientProvider>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+            <PageWrapper>
+              <Welcome welcomeMessage="Hey!" />
+            </PageWrapper>
+        ),
+      },
+      {
+        path: "workspace/:workspaceName",
+        element: <WorkspaceRoute />,
+      },
+      {
+        path: "executable/:executableId",
+        element: <ExecutableRoute />,
+      },
+      {
+        path: "logs",
+        element: <PageWrapper><Text>Logs view coming soon...</Text></PageWrapper>,
+      },
+      {
+        path: "vault",
+        element: <Data />,
+      },
+      {
+        path: "cache",
+        element: <Data />,
+      },
+      {
+        path: "settings",
+        element: <Settings />,
+      },
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
+      },
+    ],
+  },
+]);
 
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NotifierProvider>
-        <SettingsProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </SettingsProvider>
-      </NotifierProvider>
-    </QueryClientProvider>
-  );
+  return <RouterProvider router={router} />
+
 }
 export default App;

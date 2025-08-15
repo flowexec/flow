@@ -8,7 +8,7 @@ import {
   Paper,
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { useConfig } from "../../hooks/useBackendData";
+import { useConfig } from "../../hooks/useConfig";
 import { useSettings } from "../../hooks/useSettings";
 import { useNotifier } from "../../hooks/useNotifier";
 import { ThemeName } from "../../theme/types";
@@ -16,6 +16,7 @@ import { NotificationType } from "../../types/notification";
 import { SettingRow, SettingSection } from "../../components/Settings";
 import styles from "./Settings.module.css";
 import { useState, useEffect } from "react";
+import { PageWrapper } from "../../components/PageWrapper";
 
 const themeOptions = [
   { value: "everforest", label: "Default" },
@@ -194,134 +195,136 @@ export function Settings() {
   }
 
   return (
-    <div className={styles.settings}>
-      <LoadingOverlay visible={isConfigLoading} />
-      
-      <Title order={2} mb="xl">
-        Settings
-      </Title>
+    <PageWrapper>
+      <div className={styles.settings}>
+        <LoadingOverlay visible={isConfigLoading} />
 
-      <Stack gap={0}>
-        <Paper className={styles.settingCard} mb="lg">
-          <SettingRow 
-            label="Theme" 
-            description="Choose your preferred color theme"
-          >
-            <Select
-              size="sm"
-              value={config?.theme || "everforest"}
-              onChange={(value) => value && handleThemeChange(value)}
-              data={themeOptions}
-              variant="filled"
-            />
-          </SettingRow>
+        <Title order={2} mb="xl">
+          Settings
+        </Title>
 
-          <SettingRow 
-            label="Default Log Mode" 
-            description="Default logging format for executable runs"
-          >
-            <Select
-              size="sm"
-              value={config?.defaultLogMode || "text"}
-              onChange={(value) => value && handleLogModeChange(value)}
-              data={logModeOptions}
-              variant="filled"
-            />
-          </SettingRow>
-          
-          <SettingRow 
-            label="Default Timeout" 
-            description="Default timeout for executable runs"
-          >
-            <TextInput
-              size="sm"
-              value={config?.defaultTimeout || ""}
-              onChange={(e) => handleDefaultTimeoutChange(e.currentTarget.value)}
-              placeholder="e.g., 30s, 5m, 1h"
-              variant="filled"
-            />
-          </SettingRow>
-        </Paper>
+        <Stack gap={0}>
+          <Paper className={styles.settingCard} mb="lg">
+            <SettingRow
+              label="Theme"
+              description="Choose your preferred color theme"
+            >
+              <Select
+                size="sm"
+                value={config?.theme || "everforest"}
+                onChange={(value) => value && handleThemeChange(value)}
+                data={themeOptions}
+                variant="filled"
+              />
+            </SettingRow>
 
-        <SettingSection title="Workspace">
-          <SettingRow 
-            label="Current Workspace" 
-            description="The currently active workspace"
-          >
-            <Select
-              size="sm"
-              value={config?.currentWorkspace || ""}
-              onChange={(value) => value && handleCurrentWorkspaceChange(value)}
-              data={Object.keys(config?.workspaces || {}).map(name => ({ value: name, label: name }))}
-              placeholder="Select workspace"
-              variant="filled"
-            />
-          </SettingRow>
-          
-          <SettingRow 
-            label="Workspace Mode" 
-            description="Dynamic mode changes global workspace when switching in sidebar"
-          >
-            <Select
-              size="sm"
-              value={config?.workspaceMode || "dynamic"}
-              onChange={(value) => value && handleWorkspaceModeChange(value)}
-              data={workspaceModeOptions}
-              variant="filled"
-            />
-          </SettingRow>
+            <SettingRow
+              label="Default Log Mode"
+              description="Default logging format for executable runs"
+            >
+              <Select
+                size="sm"
+                value={config?.defaultLogMode || "text"}
+                onChange={(value) => value && handleLogModeChange(value)}
+                data={logModeOptions}
+                variant="filled"
+              />
+            </SettingRow>
 
-          <SettingRow 
-            label="Current Namespace" 
-            description="Active namespace for executable discovery"
-          >
-            <TextInput
-              size="sm"
-              value={namespaceInput}
-              onChange={(e) => setNamespaceInput(e.currentTarget.value)}
-              onBlur={handleNamespaceSubmit}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleNamespaceSubmit();
-                }
-              }}
-              placeholder="Enter namespace"
-              variant="filled"
-              spellCheck={false}
-            />
-          </SettingRow>
-        </SettingSection>
+            <SettingRow
+              label="Default Timeout"
+              description="Default timeout for executable runs"
+            >
+              <TextInput
+                size="sm"
+                value={config?.defaultTimeout || ""}
+                onChange={(e) => handleDefaultTimeoutChange(e.currentTarget.value)}
+                placeholder="e.g., 30s, 5m, 1h"
+                variant="filled"
+              />
+            </SettingRow>
+          </Paper>
 
-        <SettingSection title="External Applications">
-          <SettingRow 
-            label="Workspace Command" 
-            description="Command to open workspace directories"
-          >
-            <TextInput
-              size="sm"
-              value={settings.workspaceApp}
-              onChange={(event) => updateWorkspaceApp(event.currentTarget.value)}
-              placeholder="System default"
-              variant="filled"
-              spellCheck={false}
-            />
-          </SettingRow>
-          
-          <SettingRow 
-            label="Executable Command" 
-            description="Command to open flow files"
-          >
-            <TextInput
-              size="sm"
-              value={settings.executableApp}
-              onChange={(event) => updateExecutableApp(event.currentTarget.value)}
-              placeholder="System default"
-              variant="filled"
-              spellCheck={false}
-            />
-          </SettingRow>
-        </SettingSection>
-      </Stack>
-    </div>
+          <SettingSection title="Workspace">
+            <SettingRow
+              label="Current Workspace"
+              description="The currently active workspace"
+            >
+              <Select
+                size="sm"
+                value={config?.currentWorkspace || ""}
+                onChange={(value) => value && handleCurrentWorkspaceChange(value)}
+                data={Object.keys(config?.workspaces || {}).map(name => ({ value: name, label: name }))}
+                placeholder="Select workspace"
+                variant="filled"
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Workspace Mode"
+              description="Dynamic mode changes global workspace when switching in sidebar"
+            >
+              <Select
+                size="sm"
+                value={config?.workspaceMode || "dynamic"}
+                onChange={(value) => value && handleWorkspaceModeChange(value)}
+                data={workspaceModeOptions}
+                variant="filled"
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Current Namespace"
+              description="Active namespace for executable discovery"
+            >
+              <TextInput
+                size="sm"
+                value={namespaceInput}
+                onChange={(e) => setNamespaceInput(e.currentTarget.value)}
+                onBlur={handleNamespaceSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNamespaceSubmit();
+                  }
+                }}
+                placeholder="Enter namespace"
+                variant="filled"
+                spellCheck={false}
+              />
+            </SettingRow>
+          </SettingSection>
+
+          <SettingSection title="External Applications">
+            <SettingRow
+              label="Workspace Command"
+              description="Command to open workspace directories"
+            >
+              <TextInput
+                size="sm"
+                value={settings.workspaceApp}
+                onChange={(event) => updateWorkspaceApp(event.currentTarget.value)}
+                placeholder="System default"
+                variant="filled"
+                spellCheck={false}
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Executable Command"
+              description="Command to open flow files"
+            >
+              <TextInput
+                size="sm"
+                value={settings.executableApp}
+                onChange={(event) => updateExecutableApp(event.currentTarget.value)}
+                placeholder="System default"
+                variant="filled"
+                spellCheck={false}
+              />
+            </SettingRow>
+          </SettingSection>
+        </Stack>
+      </div>
+    </PageWrapper>
   );
 }

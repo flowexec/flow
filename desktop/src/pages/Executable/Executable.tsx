@@ -96,7 +96,7 @@ function getVisibilityColor(visibility?: string) {
   }
 }
 
-export default function Executable({ executable }: ExecutableProps) {
+export function Executable({ executable }: ExecutableProps) {
   const typeInfo = getExecutableTypeInfo(executable);
   const { settings } = useSettings();
   const { setNotification } = useNotifier();
