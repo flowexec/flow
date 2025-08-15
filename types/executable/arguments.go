@@ -1,7 +1,6 @@
 package executable
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -23,17 +22,12 @@ func (a *Argument) Validate() error {
 	if err := utils.ValidateOneOf("argument type", a.Flag, a.Pos); err != nil {
 		return err
 	}
-
-	if a.EnvKey == "" {
-		return errors.New("must specify envKey for argument")
+	if err := utils.ValidateOneOf("argument destination", a.EnvKey, a.OutputFile); err != nil {
+		return err
 	}
+
 	if err := validateArgType(a.Type); err != nil {
 		return fmt.Errorf("%s - %w", a.EnvKey, err)
-	}
-	if a.Flag != "" && a.Pos != 0 {
-		return errors.New("either flag or pos must be set, but not both")
-	} else if a.Flag == "" && a.Pos == 0 {
-		return errors.New("either flag or pos must be set")
 	}
 	return nil
 }
@@ -59,7 +53,7 @@ func (a *Argument) ValidateValue() error {
 	case ArgumentTypeString, "":
 		// no-op
 	default:
-		return fmt.Errorf("unsupported argument type (%s)", a.Type)
+		// no-op, assume string
 	}
 	return nil
 }
@@ -68,16 +62,32 @@ func validateArgType(t ArgumentType) error {
 	switch t {
 	case ArgumentTypeString, ArgumentTypeInt, ArgumentTypeBool, ArgumentTypeFloat:
 		return nil
+	case "":
+		// type is assumed to be a string
+		return nil
 	default:
 		return fmt.Errorf("unsupported argument type (%s)", t)
 	}
+}
+
+func (al *ArgumentList) Flags() []string {
+	var flags []string
+	for _, arg := range *al {
+		if arg.Flag != "" {
+			flags = append(flags, arg.Flag)
+		}
+	}
+	return flags
 }
 
 func (al *ArgumentList) Validate() error {
 	var errs []error
 	for _, arg := range *al {
 		if err := arg.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf("argument %s validation failed - %w", arg.EnvKey, err))
+			errs = append(
+				errs,
+				fmt.Errorf("argument (envKey=%s outputFile=%s) validation failed - %w", arg.EnvKey, arg.OutputFile, err),
+			)
 		}
 	}
 	collectedFlags := make(map[string]struct{})
@@ -88,11 +98,11 @@ func (al *ArgumentList) Validate() error {
 				errs = append(errs, fmt.Errorf("flag %s is assigned to more than one argument", arg.Flag))
 			}
 			collectedFlags[arg.Flag] = struct{}{}
-		} else if arg.Pos != 0 {
-			if _, ok := collectedPos[arg.Pos]; ok {
-				errs = append(errs, fmt.Errorf("position %d is assigned to more than one argument", arg.Pos))
+		} else if arg.Pos != nil && *arg.Pos != 0 {
+			if _, ok := collectedPos[*arg.Pos]; ok {
+				errs = append(errs, fmt.Errorf("position %d is assigned to more than one argument", *arg.Pos))
 			}
-			collectedPos[arg.Pos] = struct{}{}
+			collectedPos[*arg.Pos] = struct{}{}
 		}
 	}
 	if len(errs) > 0 {
@@ -112,29 +122,4 @@ func (al *ArgumentList) ValidateValues() error {
 		return fmt.Errorf("%d argument validation errors: %v", len(errs), errs)
 	}
 	return nil
-}
-
-func (al *ArgumentList) ToEnvMap() map[string]string {
-	envMap := make(map[string]string)
-	for _, arg := range *al {
-		envMap[arg.EnvKey] = arg.Value()
-	}
-	return envMap
-}
-
-func (al *ArgumentList) SetValues(flagArgs map[string]string, posArgs []string) error {
-	for i, arg := range *al {
-		if arg.Flag != "" {
-			if val, ok := flagArgs[arg.Flag]; ok {
-				arg.Set(val)
-				(*al)[i] = arg
-			}
-		} else if arg.Pos != 0 {
-			if arg.Pos <= len(posArgs) {
-				arg.Set(posArgs[arg.Pos-1])
-				(*al)[i] = arg
-			}
-		}
-	}
-	return al.ValidateValues()
 }

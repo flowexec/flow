@@ -12,7 +12,7 @@ If the target executable accept arguments, they can be passed in the form of fla
 Flag arguments are specified with the format 'flag=value' and positional arguments are specified as values without any prefix.
 
 
-See https://flowexec.io/#/types/flowfile#executableverb for more information on executable verbs and https://flowexec.io/#/types/flowfile#executableref for more information on executable IDs.
+See https://flowexec.io/types/flowfile?id=executableverb for more information on executable verbs and https://flowexec.io/types/flowfile?id=executableref for more information on executable IDs.
 
 
 #### Examples
@@ -22,7 +22,7 @@ flow install
 
 **Execute a nameless flow in the 'ws' workspace with the 'test' verb**
 
-flow test ws
+flow test ws/
 
 **Execute the 'build' flow in the current workspace and namespace**
 

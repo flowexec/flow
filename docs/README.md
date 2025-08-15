@@ -7,8 +7,8 @@
   <a href="https://github.com/flowexec/flow"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/flowexec/flow"></a>
 </p>
 
-flow is your personal **workflow hub** - organize automation across all your projects with built-in secrets, templates, 
-and cross-project composition. Go beyond task running to workflow management that scales with your development ecosystem.
+flow is a local-first developer platform - organize automation across all your projects with built-in secrets, templates, and cross-project workflows. 
+Go beyond task running to workflow management that scales with your development ecosystem.
 
 #### _Why flow?_ <!-- {docsify-ignore} -->
 
@@ -26,6 +26,7 @@ and cross-project composition. Go beyond task running to workflow management tha
 - **Cross-Project Composition**: Reference and share workflows between different projects
 - **Visual Workflow Browser**: Discover and run workflows with powerful filtering and search
 - **Flexible Configuration**: YAML-based definitions with arguments, secrets, and conditional logic
+- **Platform Integrations**: GitHub Actions, AI assistants (MCP), and more
 
 **Ready to organize your automation?** → [Install flow](installation.md) → [Quick start guide](quickstart.md)
 

@@ -18,6 +18,7 @@ import (
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io"
 	workspaceIO "github.com/flowexec/flow/internal/io/workspace"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/workspace"
@@ -50,13 +51,12 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 }
 
 func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
 	name := args[0]
 	path := args[1]
 
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[name]; found {
-		logger.Fatalf("workspace %s already exists at %s", name, userConfig.Workspaces[name])
+		logger.Log().Fatalf("workspace %s already exists at %s", name, userConfig.Workspaces[name])
 	}
 
 	switch {
@@ -65,7 +65,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	case path == "." || strings.HasPrefix(path, "./"):
 		wd, err := os.Getwd()
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		if path == "." {
 			path = wd
@@ -75,7 +75,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	case path == "~" || strings.HasPrefix(path, "~/"):
 		hd, err := os.UserHomeDir()
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		if path == "~" {
 			path = hd
@@ -85,33 +85,33 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	case !filepath.IsAbs(path):
 		wd, err := os.Getwd()
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		path = fmt.Sprintf("%s/%s", wd, path)
 	}
 
 	if !filesystem.WorkspaceConfigExists(path) {
 		if err := filesystem.InitWorkspaceConfig(name, path); err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 	}
 	userConfig.Workspaces[name] = path
 
-	set := flags.ValueFor[bool](ctx, cmd, *flags.SetAfterCreateFlag, false)
+	set := flags.ValueFor[bool](cmd, *flags.SetAfterCreateFlag, false)
 	if set {
 		userConfig.CurrentWorkspace = name
-		logger.Infof("Workspace '%s' set as current workspace", name)
+		logger.Log().Infof("Workspace '%s' set as current workspace", name)
 	}
 
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
-	if err := cache.UpdateAll(logger); err != nil {
-		logger.FatalErr(errors.Wrap(err, "failure updating cache"))
+	if err := cache.UpdateAll(); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "failure updating cache"))
 	}
 
-	logger.PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
 }
 
 func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -120,29 +120,31 @@ func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 		Aliases: []string{"set", "use"},
 		Short:   "Switch the current workspace.",
 		Args:    cobra.ExactArgs(1),
-		Run:     func(cmd *cobra.Command, args []string) { switchWorkspaceFunc(ctx, cmd, args) },
+		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return maps.Keys(ctx.Config.Workspaces), cobra.ShellCompDirectiveNoFileComp
+		},
+		Run: func(cmd *cobra.Command, args []string) { switchWorkspaceFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, workspaceCmd, *flags.FixedWsModeFlag)
 	setCmd.AddCommand(workspaceCmd)
 }
 
 func switchWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
 	ws := args[0]
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[ws]; !found {
-		logger.Fatalf("workspace %s not found", ws)
+		logger.Log().Fatalf("workspace %s not found", ws)
 	}
 	userConfig.CurrentWorkspace = ws
-	fixedMode := flags.ValueFor[bool](ctx, cmd, *flags.FixedWsModeFlag, false)
+	fixedMode := flags.ValueFor[bool](cmd, *flags.FixedWsModeFlag, false)
 	if fixedMode {
 		userConfig.WorkspaceMode = config.ConfigWorkspaceModeFixed
 	}
 
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Workspace set to " + ws)
+	logger.Log().PlainTextSuccess("Workspace set to " + ws)
 }
 
 func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
@@ -162,7 +164,6 @@ func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 }
 
 func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	name := args[0]
 
 	form, err := views.NewForm(
@@ -175,34 +176,34 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 			Title: fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name),
 		})
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	if err := form.Run(ctx.Ctx); err != nil {
-		logger.FatalErr(err)
+	if err := form.Run(ctx); err != nil {
+		logger.Log().FatalErr(err)
 	}
 	resp := form.FindByKey("confirm").Value()
 	if truthy, _ := strconv.ParseBool(resp); !truthy {
-		logger.Warnf("Aborting")
+		logger.Log().Warnf("Aborting")
 		return
 	}
 
 	userConfig := ctx.Config
 	if name == userConfig.CurrentWorkspace {
-		logger.Fatalf("cannot remove the current workspace")
+		logger.Log().Fatalf("cannot remove the current workspace")
 	}
 	if _, found := userConfig.Workspaces[name]; !found {
-		logger.Fatalf("workspace %s was not found", name)
+		logger.Log().Fatalf("workspace %s was not found", name)
 	}
 
 	delete(userConfig.Workspaces, name)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
-	logger.Warnf("Workspace '%s' deleted", name)
+	logger.Log().Warnf("Workspace '%s' deleted", name)
 
-	if err := cache.UpdateAll(logger); err != nil {
-		logger.FatalErr(errors.Wrap(err, "unable to update cache"))
+	if err := cache.UpdateAll(); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to update cache"))
 	}
 }
 
@@ -222,13 +223,12 @@ func registerListWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 }
 
 func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
-	tagsFilter := flags.ValueFor[[]string](ctx, cmd, *flags.FilterTagFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
 
-	workspaceCache, err := ctx.WorkspacesCache.GetLatestData(logger)
+	workspaceCache, err := ctx.WorkspacesCache.GetLatestData()
 	if err != nil {
-		logger.Fatalx("failure loading workspace configs from cache", "err", err)
+		logger.Log().Fatalx("failure loading workspace configs from cache", "err", err)
 	}
 
 	filteredWorkspaces := make([]*workspace.Workspace, 0)
@@ -242,14 +242,14 @@ func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 
 	if len(filteredWorkspaces) == 0 {
-		logger.Fatalf("no workspaces found")
+		logger.Log().Fatalf("no workspaces found")
 	}
 
 	if TUIEnabled(ctx, cmd) {
 		view := workspaceIO.NewWorkspaceListView(ctx, filteredWorkspaces)
 		SetView(ctx, cmd, view)
 	} else {
-		workspaceIO.PrintWorkspaceList(logger, outputFormat, filteredWorkspaces)
+		workspaceIO.PrintWorkspaceList(outputFormat, filteredWorkspaces)
 	}
 }
 
@@ -271,7 +271,6 @@ func registerGetWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 }
 
 func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
 	var workspaceName, wsPath string
 	if len(args) == 1 {
 		workspaceName = args[0]
@@ -283,16 +282,16 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
 	if err != nil {
-		logger.FatalErr(errors.Wrap(err, "failure loading workspace config"))
+		logger.Log().FatalErr(errors.Wrap(err, "failure loading workspace config"))
 	} else if wsCfg == nil {
-		logger.Fatalf("config not found for workspace %s", workspaceName)
+		logger.Log().Fatalf("config not found for workspace %s", workspaceName)
 	}
 
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		view := workspaceIO.NewWorkspaceView(ctx, wsCfg)
 		SetView(ctx, cmd, view)
 	} else {
-		workspaceIO.PrintWorkspaceConfig(logger, outputFormat, wsCfg)
+		workspaceIO.PrintWorkspaceConfig(outputFormat, wsCfg)
 	}
 }

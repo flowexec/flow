@@ -9,6 +9,7 @@ import (
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io/executable"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/exec"
 	"github.com/flowexec/flow/internal/templates"
@@ -49,20 +50,19 @@ func registerGenerateTemplateCmd(ctx *context.Context, templateCmd *cobra.Comman
 }
 
 func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
-	outputPath := flags.ValueFor[string](ctx, cmd, *flags.TemplateOutputPathFlag, false)
-	template := flags.ValueFor[string](ctx, cmd, *flags.TemplateFlag, false)
-	templateFilePath := flags.ValueFor[string](ctx, cmd, *flags.TemplateFilePathFlag, false)
-	workspaceName := flags.ValueFor[string](ctx, cmd, *flags.TemplateWorkspaceFlag, false)
+	outputPath := flags.ValueFor[string](cmd, *flags.TemplateOutputPathFlag, false)
+	template := flags.ValueFor[string](cmd, *flags.TemplateFlag, false)
+	templateFilePath := flags.ValueFor[string](cmd, *flags.TemplateFilePathFlag, false)
+	workspaceName := flags.ValueFor[string](cmd, *flags.TemplateWorkspaceFlag, false)
 
 	ws := workspaceOrCurrent(ctx, workspaceName)
 	if ws == nil {
-		logger.Fatalf("workspace %s not found", workspaceName)
+		logger.Log().Fatalf("workspace %s not found", workspaceName)
 	}
 
 	tmpl := loadFlowfileTemplate(ctx, template, templateFilePath)
 	if tmpl == nil {
-		logger.Fatalf("unable to load flowfile template")
+		logger.Log().Fatalf("unable to load flowfile template")
 	}
 
 	flowFilename := tmpl.Name()
@@ -70,10 +70,10 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 		flowFilename = args[0]
 	}
 	if err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
-	logger.PlainTextSuccess(fmt.Sprintf("Template '%s' rendered successfully", flowFilename))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Template '%s' rendered successfully", flowFilename))
 }
 
 func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
@@ -88,15 +88,14 @@ func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 }
 
 func addTemplateFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	name := args[0]
 	flowFilePath := args[1]
 	loadedTemplates, err := filesystem.LoadFlowFileTemplate(name, flowFilePath)
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if err := loadedTemplates.Validate(); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	userConfig := ctx.Config
 	if userConfig.Templates == nil {
@@ -104,9 +103,9 @@ func addTemplateFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	}
 	userConfig.Templates[name] = flowFilePath
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess(fmt.Sprintf("Template %s set to %s", name, flowFilePath))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Template %s set to %s", name, flowFilePath))
 }
 
 func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
@@ -124,14 +123,13 @@ func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 }
 
 func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
 	// TODO: include unregistered templates within the current ws
 	tmpls, err := filesystem.LoadFlowFileTemplates(ctx.Config.Templates)
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		view := executable.NewTemplateListView(
 			ctx, tmpls,
@@ -145,13 +143,13 @@ func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 				if err := templates.ProcessTemplate(ctx, tmpl, ws, tmpl.Name(), "//"); err != nil {
 					return err
 				}
-				logger.PlainTextSuccess("Template rendered successfully")
+				logger.Log().PlainTextSuccess("Template rendered successfully")
 				return nil
 			},
 		)
 		SetView(ctx, cmd, view)
 	} else {
-		executable.PrintTemplateList(logger, outputFormat, tmpls)
+		executable.PrintTemplateList(outputFormat, tmpls)
 	}
 }
 
@@ -172,22 +170,21 @@ func registerGetTemplateCmd(ctx *context.Context, getCmd *cobra.Command) {
 }
 
 func getTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
-	template := flags.ValueFor[string](ctx, cmd, *flags.TemplateFlag, false)
-	templateFilePath := flags.ValueFor[string](ctx, cmd, *flags.TemplateFilePathFlag, false)
+	template := flags.ValueFor[string](cmd, *flags.TemplateFlag, false)
+	templateFilePath := flags.ValueFor[string](cmd, *flags.TemplateFilePathFlag, false)
 
 	tmpl := loadFlowfileTemplate(ctx, template, templateFilePath)
 	if tmpl == nil {
-		logger.Fatalf("unable to load flowfile template")
+		logger.Log().Fatalf("unable to load flowfile template")
 	}
 
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
 		view := executable.NewTemplateView(ctx, tmpl, runFunc)
 		SetView(ctx, cmd, view)
 	} else {
-		executable.PrintTemplate(logger, outputFormat, tmpl)
+		executable.PrintTemplate(outputFormat, tmpl)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/flowexec/flow/cmd/internal/version"
 	"github.com/flowexec/flow/internal/cache"
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/logger"
 )
 
 func NewRootCmd(ctx *context.Context) *cobra.Command {
@@ -21,20 +22,20 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			"It's driven by executables organized across workspaces and namespaces defined in a workspace.\n\n" +
 			"See https://flowexec.io for more information.",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			level := flags.ValueFor[string](ctx, cmd.Root(), *flags.LogLevel, true)
+			level := flags.ValueFor[string](cmd.Root(), *flags.LogLevel, true)
 			// TODO: make the tuikit less ambiguous about the log level
 			switch level {
 			case "debug":
-				ctx.Logger.SetLevel(1)
+				logger.Log().SetLevel(1)
 			case "info":
-				ctx.Logger.SetLevel(0)
+				logger.Log().SetLevel(0)
 			case "fatal":
-				ctx.Logger.SetLevel(-1)
+				logger.Log().SetLevel(-1)
 			}
-			sync := flags.ValueFor[bool](ctx, cmd.Root(), *flags.SyncCacheFlag, true)
+			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
-				if err := cache.UpdateAll(ctx.Logger); err != nil {
-					ctx.Logger.FatalErr(err)
+				if err := cache.UpdateAll(); err != nil {
+					logger.Log().FatalErr(err)
 				}
 			}
 		},
@@ -81,4 +82,5 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	internal.RegisterTemplateCmd(ctx, rootCmd)
 	internal.RegisterLogsCmd(ctx, rootCmd)
 	internal.RegisterSyncCmd(ctx, rootCmd)
+	internal.RegisterMCPCmd(ctx, rootCmd)
 }

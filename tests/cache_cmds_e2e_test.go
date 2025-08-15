@@ -19,12 +19,12 @@ var _ = Describe("cache e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {
@@ -85,7 +85,7 @@ var _ = Describe("cache e2e", Ordered, func() {
 	When("removing a cache entry (flow cache remove)", func() {
 		BeforeEach(func() {
 			Expect(run.Run(ctx.Context, "cache", "set", "remove-test-key", "remove-test-value")).To(Succeed())
-			utils.ResetTestContext(ctx, GinkgoT())
+			utils.ResetTestContext(ctx, GinkgoTB())
 		})
 
 		It("should remove the cache entry successfully", func() {
@@ -98,7 +98,7 @@ var _ = Describe("cache e2e", Ordered, func() {
 		It("should confirm the entry was removed", func() {
 			// First remove the entry
 			Expect(run.Run(ctx.Context, "cache", "remove", "remove-test-key")).To(Succeed())
-			utils.ResetTestContext(ctx, GinkgoT())
+			utils.ResetTestContext(ctx, GinkgoTB())
 			// Then verify it's gone from the list
 			stdOut := ctx.StdOut()
 			Expect(run.Run(ctx.Context, "cache", "list")).To(Succeed())
@@ -120,7 +120,7 @@ var _ = Describe("cache e2e", Ordered, func() {
 		It("should confirm all entries were cleared", func() {
 			// First clear the cache
 			Expect(run.Run(ctx.Context, "cache", "clear")).To(Succeed())
-			utils.ResetTestContext(ctx, GinkgoT())
+			utils.ResetTestContext(ctx, GinkgoTB())
 			// Then verify the list is empty
 			stdOut := ctx.StdOut()
 			Expect(run.Run(ctx.Context, "cache", "list")).To(Succeed())

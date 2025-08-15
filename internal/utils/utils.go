@@ -8,8 +8,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/flowexec/tuikit/io"
 	"github.com/pkg/errors"
+
+	"github.com/flowexec/flow/internal/logger"
 )
 
 // ExpandPath expands a general path to an absolute path with security validation.
@@ -20,7 +21,7 @@ import (
 // - /path -> absolute path
 // - relative path -> fallbackPath (directory portion) + path
 // - ${envVar} -> expanded to the value from env map.
-func ExpandPath(logger io.Logger, path, fallbackDir string, env map[string]string) string {
+func ExpandPath(path, fallbackDir string, env map[string]string) string {
 	var targetPath string
 	switch {
 	case path == "":
@@ -28,7 +29,7 @@ func ExpandPath(logger io.Logger, path, fallbackDir string, env map[string]strin
 	case path == "." || strings.HasPrefix(path, "./"):
 		wd, err := os.Getwd()
 		if err != nil {
-			logger.Warnx("unable to get working directory for relative path expansion", "err", err)
+			logger.Log().Warnx("unable to get working directory for relative path expansion", "err", err)
 			targetPath = filepath.Join(fallbackDir, path)
 		} else {
 			targetPath = filepath.Join(wd, path[1:])
@@ -36,12 +37,12 @@ func ExpandPath(logger io.Logger, path, fallbackDir string, env map[string]strin
 	case strings.HasPrefix(path, "~/"):
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			logger.Warnx("unable to get user home directory for relative path expansion", "err", err)
+			logger.Log().Warnx("unable to get user home directory for relative path expansion", "err", err)
 			targetPath = filepath.Join(fallbackDir, path)
 		} else {
 			targetPath = filepath.Join(homeDir, path[2:])
 		}
-	case strings.HasPrefix(path, "/"):
+	case strings.HasPrefix(path, "/"), strings.HasPrefix(path, "$"):
 		targetPath = path
 	default:
 		targetPath = filepath.Join(fallbackDir, path)
@@ -50,13 +51,13 @@ func ExpandPath(logger io.Logger, path, fallbackDir string, env map[string]strin
 	targetPath = os.Expand(targetPath, func(key string) string {
 		val, found := env[key]
 		if !found {
-			logger.Warnx("unable to find env key in path expansion", "key", key)
+			logger.Log().Warnx("unable to find env key in path expansion", "key", key)
 		}
 		return val
 	})
 
 	if err := validateSecurePath(targetPath); err != nil {
-		logger.Fatalx("path failed security validation", "path", targetPath, "err", err)
+		logger.Log().Fatalx("path failed security validation", "path", targetPath, "err", err)
 		return "" // Shouldn't get here with fatal logger, but just in case
 	}
 
@@ -69,12 +70,12 @@ func ExpandPath(logger io.Logger, path, fallbackDir string, env map[string]strin
 // - // -> wsPath + dir path (workspace-specific)
 // - all other paths -> delegated to ExpandPath
 // If the input contains a filename, returns just the directory portion.
-func ExpandDirectory(logger io.Logger, dir, wsPath, execPath string, env map[string]string) string {
+func ExpandDirectory(dir, wsPath, execPath string, env map[string]string) string {
 	var expandedPath string
 	if wsPath != "" && strings.HasPrefix(dir, "//") {
 		expandedPath = strings.Replace(dir, "//", wsPath+"/", 1)
 	} else {
-		expandedPath = ExpandPath(logger, dir, filepath.Dir(execPath), env)
+		expandedPath = ExpandPath(dir, filepath.Dir(execPath), env)
 	}
 
 	if ext := filepath.Ext(expandedPath); ext != "" && !isHiddenDir(expandedPath) {

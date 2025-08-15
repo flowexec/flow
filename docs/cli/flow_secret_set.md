@@ -9,7 +9,8 @@ flow secret set NAME [VALUE] [flags]
 ### Options
 
 ```
-  -h, --help   help for set
+      --file string   File to read the secret's value from
+  -h, --help          help for set
 ```
 
 ### Options inherited from parent commands

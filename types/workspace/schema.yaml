@@ -15,13 +15,18 @@ definitions:
         type: array
         items:
           type: string
-        description: A list of directories to include in the executable search.
+        description: |
+          A list of directories or file patterns to include in the executable search.
+          Supports directory paths (e.g., "src/", "scripts/") and glob patterns for filenames (e.g., "*.test.flow", "example*").
         default: []
       excluded:
         type: array
         items:
           type: string
-        description: A list of directories to exclude from the executable search.
+        description: |
+          A list of directories or file patterns to exclude from the executable search.
+          Supports directory paths (e.g., "node_modules/", "vendor/") and glob patterns for filenames (e.g., "*.js.flow", "*temp*").
+          Common exclusions like node_modules/, vendor/, third_party/, external/, and *.js.flow are excluded by default.
         default: []
   VerbAliases:
     type: object
@@ -62,6 +67,14 @@ properties:
     goJSONSchema:
       type: "map[string][]string"
       nillable: false
+  envFiles:
+    type: array
+    items:
+      type: string
+    description: |
+      A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.
+      By default, the `.env` file in the workspace root is loaded if it exists.
+    default: []
   assignedName:
     type: string
     goJSONSchema:

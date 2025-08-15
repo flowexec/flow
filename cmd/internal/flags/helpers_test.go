@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/context"
 )
 
 func TestFlags(t *testing.T) {
@@ -49,13 +48,11 @@ var _ = Describe("ToPflag", func() {
 
 var _ = Describe("ValueFor", func() {
 	var (
-		ctx      *context.Context
 		cmd      *cobra.Command
 		metadata flags.Metadata
 	)
 
 	BeforeEach(func() {
-		ctx = &context.Context{}
 		cmd = &cobra.Command{}
 	})
 
@@ -81,13 +78,13 @@ var _ = Describe("ValueFor", func() {
 			//nolint:exhaustive
 			switch reflect.TypeOf(expectedValue).Kind() {
 			case reflect.String:
-				Expect(flags.ValueFor[string](ctx, cmd, metadata, false)).To(Equal(expectedValue))
+				Expect(flags.ValueFor[string](cmd, metadata, false)).To(Equal(expectedValue))
 			case reflect.Bool:
-				Expect(flags.ValueFor[bool](ctx, cmd, metadata, false)).To(Equal(expectedValue))
+				Expect(flags.ValueFor[bool](cmd, metadata, false)).To(Equal(expectedValue))
 			case reflect.Slice:
-				Expect(flags.ValueFor[[]string](ctx, cmd, metadata, false)).To(Equal(expectedValue))
+				Expect(flags.ValueFor[[]string](cmd, metadata, false)).To(Equal(expectedValue))
 			case reflect.Int:
-				Expect(flags.ValueFor[int](ctx, cmd, metadata, false)).To(Equal(expectedValue))
+				Expect(flags.ValueFor[int](cmd, metadata, false)).To(Equal(expectedValue))
 			}
 		},
 		Entry("string", "default", "default"),

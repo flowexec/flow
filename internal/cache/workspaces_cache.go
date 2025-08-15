@@ -1,11 +1,11 @@
 package cache
 
 import (
-	"github.com/flowexec/tuikit/io"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/workspace"
 )
 
@@ -13,10 +13,10 @@ const wsCacheKey = "workspace"
 
 //go:generate mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/internal/cache WorkspaceCache
 type WorkspaceCache interface {
-	Update(logger io.Logger) error
+	Update() error
 	GetData() *WorkspaceCacheData
-	GetLatestData(logger io.Logger) (*WorkspaceCacheData, error)
-	GetWorkspaceConfigList(logger io.Logger) (workspace.WorkspaceList, error)
+	GetLatestData() (*WorkspaceCacheData, error)
+	GetWorkspaceConfigList() (workspace.WorkspaceList, error)
 }
 type WorkspaceCacheData struct {
 	// Map of workspace name to workspace config
@@ -39,8 +39,8 @@ func NewWorkspaceCache() WorkspaceCache {
 	return workspaceCache
 }
 
-func (c *WorkspaceCacheImpl) Update(logger io.Logger) error {
-	logger.Debugf("Updating workspace cache data")
+func (c *WorkspaceCacheImpl) Update() error {
+	logger.Log().Debugf("Updating workspace cache data")
 
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
@@ -53,7 +53,7 @@ func (c *WorkspaceCacheImpl) Update(logger io.Logger) error {
 		if err != nil {
 			return errors.Wrap(err, "failed loading workspace config")
 		} else if wsCfg == nil {
-			logger.Errorx("config not found for workspace", "name", name, "path", path)
+			logger.Log().Errorx("config not found for workspace", "name", name, "path", path)
 			continue
 		}
 		cacheData.Workspaces[name] = wsCfg
@@ -69,7 +69,7 @@ func (c *WorkspaceCacheImpl) Update(logger io.Logger) error {
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
-	logger.Debugx("Successfully updated workspace cache data", "count", len(cacheData.Workspaces))
+	logger.Log().Debugx("Successfully updated workspace cache data", "count", len(cacheData.Workspaces))
 	return nil
 }
 
@@ -77,12 +77,12 @@ func (c *WorkspaceCacheImpl) GetData() *WorkspaceCacheData {
 	return c.Data
 }
 
-func (c *WorkspaceCacheImpl) GetLatestData(logger io.Logger) (*WorkspaceCacheData, error) {
+func (c *WorkspaceCacheImpl) GetLatestData() (*WorkspaceCacheData, error) {
 	cacheData, err := filesystem.LoadLatestCachedData(wsCacheKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to load workspace cache data")
 	} else if cacheData == nil {
-		if err := c.Update(logger); err != nil {
+		if err := c.Update(); err != nil {
 			return nil, errors.Wrap(err, "unable to get updated workspace cache data")
 		}
 	}
@@ -94,11 +94,11 @@ func (c *WorkspaceCacheImpl) GetLatestData(logger io.Logger) (*WorkspaceCacheDat
 	return c.Data, nil
 }
 
-func (c *WorkspaceCacheImpl) GetWorkspaceConfigList(logger io.Logger) (workspace.WorkspaceList, error) {
+func (c *WorkspaceCacheImpl) GetWorkspaceConfigList() (workspace.WorkspaceList, error) {
 	var cache *WorkspaceCacheData
 	if len(c.Data.Workspaces) == 0 {
 		var err error
-		cache, err = c.GetLatestData(logger)
+		cache, err = c.GetLatestData()
 		if err != nil {
 			return nil, err
 		}

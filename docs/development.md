@@ -51,9 +51,9 @@ flow build binary ./bin/flow
 flow validate
 
 # Run specific checks
-flow test all             # All tests
+flow test                 # All tests
 flow generate             # Code generation
-flow run lint             # Linting only
+flow lint                 # Linting only
 
 # Install/update Go tools
 flow install tools

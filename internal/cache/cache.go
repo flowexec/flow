@@ -1,17 +1,13 @@
 package cache
 
-import (
-	"github.com/flowexec/tuikit/io"
-)
-
-func UpdateAll(logger io.Logger) error {
+func UpdateAll() error {
 	wsCache := NewWorkspaceCache()
-	if err := wsCache.Update(logger); err != nil {
+	if err := wsCache.Update(); err != nil {
 		return err
 	}
 
 	execCache := NewExecutableCache(wsCache)
-	if err := execCache.Update(logger); err != nil {
+	if err := execCache.Update(); err != nil {
 		return err
 	}
 

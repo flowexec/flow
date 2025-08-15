@@ -14,18 +14,23 @@ type Argument struct {
 	Default string `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// The name of the environment variable that will be assigned the value.
-	EnvKey string `json:"envKey" yaml:"envKey" mapstructure:"envKey"`
+	EnvKey string `json:"envKey,omitempty" yaml:"envKey,omitempty" mapstructure:"envKey,omitempty"`
 
 	// The flag to use when setting the argument from the command line.
 	// Either `flag` or `pos` must be set, but not both.
 	//
 	Flag string `json:"flag,omitempty" yaml:"flag,omitempty" mapstructure:"flag,omitempty"`
 
+	// A path where the argument value will be temporarily written to disk.
+	// The file will be created before execution and cleaned up afterwards.
+	//
+	OutputFile string `json:"outputFile,omitempty" yaml:"outputFile,omitempty" mapstructure:"outputFile,omitempty"`
+
 	// The position of the argument in the command line ArgumentList. Values start at
 	// 1.
 	// Either `flag` or `pos` must be set, but not both.
 	//
-	Pos int `json:"pos,omitempty" yaml:"pos,omitempty" mapstructure:"pos,omitempty"`
+	Pos *int `json:"pos,omitempty" yaml:"pos,omitempty" mapstructure:"pos,omitempty"`
 
 	// If the argument is required, the executable will fail if the argument is not
 	// provided.
@@ -115,12 +120,11 @@ type Executable struct {
 	// Launch corresponds to the JSON schema field "launch".
 	Launch *LaunchExecutableType `json:"launch,omitempty" yaml:"launch,omitempty" mapstructure:"launch,omitempty"`
 
-	// The name of the executable.
+	// An optional name for the executable.
 	//
 	// Name is used to reference the executable in the CLI using the format
 	// `workspace/namespace:name`.
 	// [Verb group + Name] must be unique within the namespace of the workspace.
-	// Name is required if the executable is defined within a namespace.
 	//
 	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 
@@ -150,6 +154,10 @@ type Executable struct {
 
 	// Verb corresponds to the JSON schema field "verb".
 	Verb Verb `json:"verb" yaml:"verb" mapstructure:"verb"`
+
+	// A list of aliases for the verb. This allows the executable to be referenced
+	// with multiple verbs.
+	VerbAliases []Verb `json:"verbAliases,omitempty" yaml:"verbAliases,omitempty" mapstructure:"verbAliases,omitempty"`
 
 	// Visibility corresponds to the JSON schema field "visibility".
 	Visibility *ExecutableVisibility `json:"visibility,omitempty" yaml:"visibility,omitempty" mapstructure:"visibility,omitempty"`
@@ -250,11 +258,26 @@ type ParallelRefConfigList []ParallelRefConfig
 
 // A parameter is a value that can be passed to an executable and all of its
 // sub-executables.
-// Only one of `text`, `secretRef`, or `prompt` must be set. Specifying more than
-// one will result in an error.
+// Only one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying
+// more than one will result in an error.
 type Parameter struct {
+	// A path to a file containing environment variables to be passed to the
+	// executable.
+	// The file should contain one variable per line in the format `KEY=VALUE`.
+	//
+	EnvFile string `json:"envFile,omitempty" yaml:"envFile,omitempty" mapstructure:"envFile,omitempty"`
+
 	// The name of the environment variable that will be assigned the value.
-	EnvKey string `json:"envKey" yaml:"envKey" mapstructure:"envKey"`
+	//
+	// When specified with `envFile`, only the environment variable with this name
+	// will be set.
+	//
+	EnvKey string `json:"envKey,omitempty" yaml:"envKey,omitempty" mapstructure:"envKey,omitempty"`
+
+	// A path where the parameter value will be temporarily written to disk.
+	// The file will be created before execution and cleaned up afterwards.
+	//
+	OutputFile string `json:"outputFile,omitempty" yaml:"outputFile,omitempty" mapstructure:"outputFile,omitempty"`
 
 	// A prompt to be displayed to the user when collecting an input value.
 	Prompt string `json:"prompt,omitempty" yaml:"prompt,omitempty" mapstructure:"prompt,omitempty"`
@@ -455,48 +478,83 @@ const VerbActivate Verb = "activate"
 const VerbAdd Verb = "add"
 const VerbAnalyze Verb = "analyze"
 const VerbApply Verb = "apply"
+const VerbArchive Verb = "archive"
+const VerbAudit Verb = "audit"
+const VerbBackup Verb = "backup"
+const VerbBenchmark Verb = "benchmark"
 const VerbBuild Verb = "build"
 const VerbBundle Verb = "bundle"
 const VerbCheck Verb = "check"
 const VerbClean Verb = "clean"
 const VerbClear Verb = "clear"
+const VerbCommit Verb = "commit"
 const VerbCompile Verb = "compile"
+const VerbCompress Verb = "compress"
 const VerbConfigure Verb = "configure"
+const VerbConnect Verb = "connect"
+const VerbCopy Verb = "copy"
 const VerbCreate Verb = "create"
 const VerbDeactivate Verb = "deactivate"
 const VerbDebug Verb = "debug"
+const VerbDecompress Verb = "decompress"
+const VerbDecrypt Verb = "decrypt"
 const VerbDelete Verb = "delete"
 const VerbDeploy Verb = "deploy"
 const VerbDestroy Verb = "destroy"
 const VerbDisable Verb = "disable"
+const VerbDisconnect Verb = "disconnect"
 const VerbEdit Verb = "edit"
 const VerbEnable Verb = "enable"
+const VerbEncrypt Verb = "encrypt"
 const VerbErase Verb = "erase"
 const VerbExec Verb = "exec"
 const VerbExecute Verb = "execute"
+const VerbExport Verb = "export"
+const VerbExpose Verb = "expose"
 const VerbFetch Verb = "fetch"
 const VerbFix Verb = "fix"
+const VerbFlush Verb = "flush"
+const VerbFormat Verb = "format"
 const VerbGenerate Verb = "generate"
 const VerbGet Verb = "get"
+const VerbImport Verb = "import"
+const VerbIndex Verb = "index"
 const VerbInit Verb = "init"
 const VerbInspect Verb = "inspect"
 const VerbInstall Verb = "install"
+const VerbJoin Verb = "join"
 const VerbKill Verb = "kill"
 const VerbLaunch Verb = "launch"
 const VerbLint Verb = "lint"
+const VerbList Verb = "list"
+const VerbLoad Verb = "load"
+const VerbLock Verb = "lock"
+const VerbLogin Verb = "login"
+const VerbLogout Verb = "logout"
 const VerbManage Verb = "manage"
+const VerbMerge Verb = "merge"
+const VerbMigrate Verb = "migrate"
 const VerbModify Verb = "modify"
 const VerbMonitor Verb = "monitor"
+const VerbMount Verb = "mount"
 const VerbNew Verb = "new"
+const VerbNotify Verb = "notify"
 const VerbOpen Verb = "open"
 const VerbPackage Verb = "package"
+const VerbPartition Verb = "partition"
 const VerbPatch Verb = "patch"
 const VerbPause Verb = "pause"
+const VerbPing Verb = "ping"
+const VerbPrefetch Verb = "prefetch"
+const VerbPreload Verb = "preload"
 const VerbProfile Verb = "profile"
+const VerbProvision Verb = "provision"
 const VerbPublish Verb = "publish"
 const VerbPurge Verb = "purge"
 const VerbPush Verb = "push"
+const VerbQueue Verb = "queue"
 const VerbReboot Verb = "reboot"
+const VerbRecover Verb = "recover"
 const VerbRefresh Verb = "refresh"
 const VerbRelease Verb = "release"
 const VerbReload Verb = "reload"
@@ -504,25 +562,36 @@ const VerbRemove Verb = "remove"
 const VerbRequest Verb = "request"
 const VerbReset Verb = "reset"
 const VerbRestart Verb = "restart"
+const VerbRestore Verb = "restore"
 const VerbRetrieve Verb = "retrieve"
+const VerbRollback Verb = "rollback"
 const VerbRun Verb = "run"
+const VerbSave Verb = "save"
+const VerbScale Verb = "scale"
 const VerbScan Verb = "scan"
+const VerbSchedule Verb = "schedule"
+const VerbSeed Verb = "seed"
 const VerbSend Verb = "send"
+const VerbServe Verb = "serve"
 const VerbSet Verb = "set"
 const VerbSetup Verb = "setup"
 const VerbShow Verb = "show"
+const VerbSnapshot Verb = "snapshot"
 const VerbStart Verb = "start"
+const VerbStash Verb = "stash"
 const VerbStop Verb = "stop"
+const VerbTag Verb = "tag"
 const VerbTeardown Verb = "teardown"
 const VerbTerminate Verb = "terminate"
 const VerbTest Verb = "test"
 const VerbTidy Verb = "tidy"
 const VerbTrace Verb = "trace"
-const VerbTrack Verb = "track"
 const VerbTransform Verb = "transform"
 const VerbTrigger Verb = "trigger"
+const VerbTunnel Verb = "tunnel"
 const VerbUndeploy Verb = "undeploy"
 const VerbUninstall Verb = "uninstall"
+const VerbUnmount Verb = "unmount"
 const VerbUnset Verb = "unset"
 const VerbUpdate Verb = "update"
 const VerbUpgrade Verb = "upgrade"

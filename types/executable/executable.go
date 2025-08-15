@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/types"
 	"gopkg.in/yaml.v3"
 
@@ -27,7 +26,6 @@ const (
 type ExecutableList []*Executable
 
 func (e Directory) ExpandDirectory(
-	logger io.Logger,
 	wsPath, execPath, processTmpDir string,
 	env map[string]string,
 ) (dir string, isTmpDir bool, err error) {
@@ -43,7 +41,7 @@ func (e Directory) ExpandDirectory(
 		return td, true, nil
 	}
 
-	return utils.ExpandDirectory(logger, string(e), wsPath, execPath, env), false, nil
+	return utils.ExpandDirectory(string(e), wsPath, execPath, env), false, nil
 }
 
 type ExecutableEnvironment struct {
@@ -249,10 +247,14 @@ func (e *Executable) Validate() error {
 	} else if err := e.Verb.Validate(); err != nil {
 		return err
 	}
-	if e.Name == "" && e.Namespace() != "" {
-		return fmt.Errorf("name cannot be empty when namespace is set")
-	} else if strings.Contains(e.Name, " ") {
+	if strings.Contains(e.Name, " ") {
 		return fmt.Errorf("name cannot contain spaces")
+	}
+
+	if e.Env() != nil {
+		if err := e.Env().Args.Validate(); err != nil {
+			return fmt.Errorf("args validation failed - %w", err)
+		}
 	}
 
 	err := utils.ValidateOneOf(

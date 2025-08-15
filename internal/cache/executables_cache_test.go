@@ -13,6 +13,7 @@ import (
 	"github.com/flowexec/flow/internal/cache"
 	cacheMocks "github.com/flowexec/flow/internal/cache/mocks"
 	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -20,7 +21,7 @@ import (
 
 var _ = Describe("ExecutableCacheImpl", func() {
 	var (
-		logger              *mocks.MockLogger
+		mockLogger          *mocks.MockLogger
 		execCache           *cache.ExecutableCacheImpl
 		wsCache             *cacheMocks.MockWorkspaceCache
 		wsName, wsPath      string
@@ -28,6 +29,9 @@ var _ = Describe("ExecutableCacheImpl", func() {
 	)
 
 	BeforeEach(func() {
+		mockLogger = mocks.NewMockLogger(gomock.NewController(GinkgoT()))
+		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
+
 		var err error
 		cacheDir, err = os.MkdirTemp("", "flow-cache-test")
 		Expect(err).NotTo(HaveOccurred())
@@ -43,7 +47,6 @@ var _ = Describe("ExecutableCacheImpl", func() {
 		wsConfig, err := filesystem.LoadWorkspaceConfig(wsName, wsPath)
 		Expect(err).NotTo(HaveOccurred())
 
-		logger = mocks.NewMockLogger(gomock.NewController(GinkgoT()))
 		v := executable.FlowFileVisibility(common.VisibilityPrivate)
 		execCfg := &executable.FlowFile{
 			Namespace:  "testdata",
@@ -61,7 +64,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 			ConfigMap:     make(map[string]cache.WorkspaceInfo),
 		}
 		wsCache = cacheMocks.NewMockWorkspaceCache(gomock.NewController(GinkgoT()))
-		wsCache.EXPECT().GetLatestData(gomock.Any()).Return(&cache.WorkspaceCacheData{
+		wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 			Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 			WorkspaceLocations: map[string]string{wsName: wsPath},
 		}, nil).AnyTimes()
@@ -78,14 +81,14 @@ var _ = Describe("ExecutableCacheImpl", func() {
 
 	Describe("Update and GetExecutableList", func() {
 		It("should update the executable cache from filesystem and retrieve the expected data", func() {
-			logger.EXPECT().Debugf(gomock.Any()).Times(1)
-			logger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-			logger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
-			err := execCache.Update(logger)
+			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
+			mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
+			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+			err := execCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 
 			var readData executable.ExecutableList
-			readData, err = execCache.GetExecutableList(logger)
+			readData, err = execCache.GetExecutableList()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readData).ToNot(BeNil())
 			execs := readData.FilterByWorkspace(wsName)
@@ -110,14 +113,14 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				err = filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)
 				Expect(err).NotTo(HaveOccurred())
 
-				logger.EXPECT().Debugf(gomock.Any()).Times(1)
-				logger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-				logger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
-				err = execCache.Update(logger)
+				mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
+				mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
+				mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+				err = execCache.Update()
 				Expect(err).ToNot(HaveOccurred())
 
 				var readData executable.ExecutableList
-				readData, err = execCache.GetExecutableList(logger)
+				readData, err = execCache.GetExecutableList()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(readData).ToNot(BeNil())
 				execs := readData.FilterByWorkspace(wsName)
@@ -128,15 +131,15 @@ var _ = Describe("ExecutableCacheImpl", func() {
 
 	Describe("Update and GetExecutableList", func() {
 		It("should update the executable cache from filesystem and retrieve the expected data", func() {
-			logger.EXPECT().Debugf(gomock.Any()).Times(1)
-			logger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-			logger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
-			err := execCache.Update(logger)
+			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
+			mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
+			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+			err := execCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 
 			var readData *executable.Executable
 			ref := executable.Ref("run test/testdata:exec")
-			readData, err = execCache.GetExecutableByRef(logger, ref)
+			readData, err = execCache.GetExecutableByRef(ref)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readData).ToNot(BeNil())
 			Expect(readData.Ref()).To(Equal(ref))
@@ -162,36 +165,71 @@ var _ = Describe("ExecutableCacheImpl", func() {
 			execCache.WorkspaceCache = wsCache
 		})
 
-		Context("when workspace has no verbAliases configured (nil)", func() {
-			It("should allow access via default verb aliases", func() {
+		Context("when the executable has verbAliases configured", func() {
+			It("should be accessible from the alias", func() {
 				wsConfig := &workspace.Workspace{VerbAliases: nil}
 				wsConfig.SetContext(wsName, wsPath)
-				wsCache.EXPECT().GetLatestData(gomock.Any()).Return(&cache.WorkspaceCacheData{
+				wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 					Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 					WorkspaceLocations: map[string]string{wsName: wsPath},
 				}, nil).AnyTimes()
 
-				logger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				logger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				Expect(execCache.Update(logger)).To(Succeed())
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "run-alias", VerbAliases: []executable.Verb{executable.VerbActivate}},
+					},
+				}
+				execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "verbaliases"+executable.FlowFileExt))
+				err := filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)
+				Expect(err).NotTo(HaveOccurred())
+
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				Expect(execCache.Update()).To(Succeed())
+
+				// Should be able to access via verb alias "activate"
+				execRef := executable.Ref("activate test/testdata:run-alias")
+				exec, err := execCache.GetExecutableByRef(execRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exec).NotTo(BeNil())
+				Expect(exec.Name).To(Equal("run-alias"))
+
+			})
+		})
+
+		Context("when workspace has no verbAliases configured (nil)", func() {
+			It("should allow access via default verb aliases", func() {
+				wsConfig := &workspace.Workspace{VerbAliases: nil}
+				wsConfig.SetContext(wsName, wsPath)
+				wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
+					Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
+					WorkspaceLocations: map[string]string{wsName: wsPath},
+				}, nil).AnyTimes()
+
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				Expect(execCache.Update()).To(Succeed())
 
 				// Should be able to access via default verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")
-				exec, err := execCache.GetExecutableByRef(logger, runRef)
+				exec, err := execCache.GetExecutableByRef(runRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
 
 				// Should also be able to access via default verb alias "exec"
 				execRef := executable.Ref("exec test/testdata:test-alias")
-				exec, err = execCache.GetExecutableByRef(logger, execRef)
+				exec, err = execCache.GetExecutableByRef(execRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
 
 				// Should also be able to access via alias
 				aliasRef := executable.Ref("exec test/testdata:alias1")
-				execFromAlias, err := execCache.GetExecutableByRef(logger, aliasRef)
+				execFromAlias, err := execCache.GetExecutableByRef(aliasRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(execFromAlias).NotTo(BeNil())
 				Expect(execFromAlias.Name).To(Equal("test-alias"))
@@ -203,24 +241,24 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				emptyAliases := &workspace.WorkspaceVerbAliases{}
 				wsConfig := &workspace.Workspace{VerbAliases: emptyAliases}
 				wsConfig.SetContext(wsName, wsPath)
-				wsCache.EXPECT().GetLatestData(gomock.Any()).Return(&cache.WorkspaceCacheData{
+				wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 					Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 					WorkspaceLocations: map[string]string{wsName: wsPath},
 				}, nil).AnyTimes()
 
-				logger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				logger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				Expect(execCache.Update(logger)).To(Succeed())
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				Expect(execCache.Update()).To(Succeed())
 
 				// Should NOT be able to access via default aliases like "exec"
 				execRef := executable.Ref("exec test/testdata:test-alias")
-				_, err := execCache.GetExecutableByRef(logger, execRef)
+				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")
-				exec, err := execCache.GetExecutableByRef(logger, runRef)
+				exec, err := execCache.GetExecutableByRef(runRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
@@ -232,38 +270,38 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				customAliases := &workspace.WorkspaceVerbAliases{"run": {"exec", "start"}}
 				wsConfig := &workspace.Workspace{VerbAliases: customAliases}
 				wsConfig.SetContext(wsName, wsPath)
-				wsCache.EXPECT().GetLatestData(gomock.Any()).Return(&cache.WorkspaceCacheData{
+				wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 					Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 					WorkspaceLocations: map[string]string{wsName: wsPath},
 				}, nil).AnyTimes()
 
-				logger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				logger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				Expect(execCache.Update(logger)).To(Succeed())
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				Expect(execCache.Update()).To(Succeed())
 
 				// Should be able to access via custom aliases
 				execAliasRef := executable.Ref("exec test/testdata:test-alias")
-				exec, err := execCache.GetExecutableByRef(logger, execAliasRef)
+				exec, err := execCache.GetExecutableByRef(execAliasRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
 
 				startRef := executable.Ref("start test/testdata:test-alias")
-				exec, err = execCache.GetExecutableByRef(logger, startRef)
+				exec, err = execCache.GetExecutableByRef(startRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
 
 				// Should also work with executable aliases
 				aliasExecRef := executable.Ref("exec test/testdata:alias1")
-				execFromAlias, err := execCache.GetExecutableByRef(logger, aliasExecRef)
+				execFromAlias, err := execCache.GetExecutableByRef(aliasExecRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(execFromAlias).NotTo(BeNil())
 				Expect(execFromAlias.Name).To(Equal("test-alias"))
 
 				// Should NOT be able to access via default aliases like "execute"
 				executeRef := executable.Ref("execute test/testdata:test-alias")
-				_, err = execCache.GetExecutableByRef(logger, executeRef)
+				_, err = execCache.GetExecutableByRef(executeRef)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
 			})
@@ -274,27 +312,144 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				customAliases := &workspace.WorkspaceVerbAliases{"view": {"show", "display"}}
 				wsConfig := &workspace.Workspace{VerbAliases: customAliases}
 				wsConfig.SetContext(wsName, wsPath)
-				wsCache.EXPECT().GetLatestData(gomock.Any()).Return(&cache.WorkspaceCacheData{
+				wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 					Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 					WorkspaceLocations: map[string]string{wsName: wsPath},
 				}, nil).AnyTimes()
 
-				logger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				logger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				Expect(execCache.Update(logger)).To(Succeed())
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				Expect(execCache.Update()).To(Succeed())
 
 				// Should NOT be able to access via any aliases since no aliases are configured for "run"
 				execRef := executable.Ref("exec test/testdata:test-alias")
-				_, err := execCache.GetExecutableByRef(logger, execRef)
+				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")
-				exec, err := execCache.GetExecutableByRef(logger, runRef)
+				exec, err := execCache.GetExecutableByRef(runRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
+			})
+		})
+	})
+
+	Describe("Duplicate executable warnings", func() {
+		Context("when duplicate executables exist in different flow files", func() {
+			It("should log warning for duplicate executable", func() {
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg1 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "duplicate-exec"},
+					},
+				}
+				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
+				err := filesystem.WriteFlowFile(execCfg1.ConfigPath(), execCfg1)
+				Expect(err).NotTo(HaveOccurred())
+
+				execCfg2 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "duplicate-exec"},
+					},
+				}
+				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
+				err = filesystem.WriteFlowFile(execCfg2.ConfigPath(), execCfg2)
+				Expect(err).NotTo(HaveOccurred())
+
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warnx(
+					"duplicate executable found during cache update",
+					"ref", "run test/testdata:duplicate-exec",
+					"conflictPath", execCfg1.ConfigPath(),
+					"newPath", execCfg2.ConfigPath(),
+					"workspace", wsName,
+				).Times(1)
+
+				err = execCache.Update()
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when duplicate executable aliases exist", func() {
+			It("should log warning for duplicate executable alias", func() {
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg1 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "first-exec"},
+					},
+				}
+				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
+				err := filesystem.WriteFlowFile(execCfg1.ConfigPath(), execCfg1)
+				Expect(err).NotTo(HaveOccurred())
+
+				execCfg2 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "exec", Name: "first-exec"},
+					},
+				}
+				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
+				err = filesystem.WriteFlowFile(execCfg2.ConfigPath(), execCfg2)
+				Expect(err).NotTo(HaveOccurred())
+
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warnx(
+					"duplicate executable alias found during cache update",
+					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
+				).AnyTimes()
+
+				err = execCache.Update()
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should log warning for duplicate name aliases", func() {
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg1 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "first-exec", Aliases: []string{"shared-alias"}},
+					},
+				}
+				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
+				err := filesystem.WriteFlowFile(execCfg1.ConfigPath(), execCfg1)
+				Expect(err).NotTo(HaveOccurred())
+
+				execCfg2 := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: "shared-alias"},
+					},
+				}
+				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
+				err = filesystem.WriteFlowFile(execCfg2.ConfigPath(), execCfg2)
+				Expect(err).NotTo(HaveOccurred())
+
+				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warnx(
+					"duplicate executable alias found during cache update",
+					"aliasRef", gomock.Any(),
+					"conflictRef", gomock.Any(),
+					"primaryRef", gomock.Any(),
+					"workspace", wsName,
+				).AnyTimes()
+
+				err = execCache.Update()
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

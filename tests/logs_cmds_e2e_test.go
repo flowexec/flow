@@ -18,12 +18,12 @@ var _ = Describe("logs e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {

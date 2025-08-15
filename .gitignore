@@ -23,6 +23,8 @@ executable_output.txt
 # IDE
 .idea
 
+.claude/*
+
 # build files
 .bin
 flow

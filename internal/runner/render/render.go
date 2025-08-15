@@ -1,22 +1,23 @@
 package render
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	stdio "io"
 	"os"
 	"path/filepath"
-	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/flowexec/tuikit/views"
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
+	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -42,23 +43,38 @@ func (r *renderRunner) Exec(
 	e *executable.Executable,
 	_ engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	if !ctx.Config.ShowTUI() {
 		return fmt.Errorf("unable to render when interactive mode is disabled")
 	}
 
 	renderSpec := e.Render
-	if err := runner.SetEnv(ctx.Logger, ctx.Config.CurrentVaultName(), e.Env(), inputEnv); err != nil {
+	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
-	envMap, err := runner.BuildEnvMap(
-		ctx.Logger, ctx.Config.CurrentVaultName(), e.Env(), inputEnv, runner.DefaultEnv(ctx, e),
+
+	if cb, err := env.CreateTempEnvFiles(
+		ctx.Config.CurrentVaultName(),
+		e.FlowFilePath(),
+		e.WorkspacePath(),
+		e.Env(),
+		inputArgs,
+		inputEnv,
+	); err != nil {
+		ctx.AddCallback(cb)
+		return errors.Wrap(err, "unable to create temporary env files")
+	} else {
+		ctx.AddCallback(cb)
+	}
+
+	envMap, err := env.BuildEnvMap(
+		ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, env.DefaultEnv(ctx, e),
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 	targetDir, isTmp, err := renderSpec.Dir.ExpandDirectory(
-		ctx.Logger,
 		e.WorkspacePath(),
 		e.FlowFilePath(),
 		ctx.ProcessTmpDir,
@@ -71,7 +87,7 @@ func (r *renderRunner) Exec(
 	}
 
 	contentFile := filepath.Clean(filepath.Join(targetDir, renderSpec.TemplateFile))
-	var templateData map[string]interface{}
+	var templateData interface{}
 	if renderSpec.TemplateDataFile != "" {
 		templateData, err = readDataFile(targetDir, renderSpec.TemplateDataFile)
 		if err != nil {
@@ -79,18 +95,24 @@ func (r *renderRunner) Exec(
 		}
 	}
 
-	tmpl, err := template.New(filepath.Base(renderSpec.TemplateFile)).Funcs(sprig.TxtFuncMap()).ParseFiles(contentFile)
+	tmpl := expression.NewTemplate(filepath.Base(renderSpec.TemplateFile), map[string]interface{}{"data": templateData})
+	if err = tmpl.ParseFile(contentFile); err != nil {
+		return errors.Wrapf(err, "unable to parse template file %s", contentFile)
+	}
+
+	data, err := tmpl.ExecuteToString()
 	if err != nil {
 		return errors.Wrapf(err, "unable to parse template file %s", contentFile)
 	}
 
-	var buff bytes.Buffer
-	if err = tmpl.Execute(&buff, templateData); err != nil {
-		return errors.Wrapf(err, "unable to execute template file %s", contentFile)
-	}
+	logger.Log().Infof("Rendering content from file %s", contentFile)
 
-	ctx.Logger.Infof("Rendering content from file %s", contentFile)
-	filename := filepath.Base(contentFile)
+	if os.Getenv(io.DisableInteractiveEnvKey) != "" {
+		logger.Log().Print("### Rendered Content Start ###")
+		logger.Log().Print(data)
+		logger.Log().Print("### Rendered Content End ###")
+		return nil
+	}
 
 	if err := ctx.TUIContainer.Start(); err != nil {
 		return errors.Wrapf(err, "unable to open viewer")
@@ -99,12 +121,13 @@ func (r *renderRunner) Exec(
 		ctx.TUIContainer.WaitForExit()
 	}()
 
+	filename := filepath.Base(contentFile)
 	ctx.TUIContainer.SetState("file", filename)
-	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), buff.String()))
+	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), data))
 }
 
-func readDataFile(dir, path string) (map[string]interface{}, error) {
-	templateData := map[string]interface{}{}
+func readDataFile(dir, path string) (interface{}, error) {
+	var templateData interface{}
 	dataFilePath := filepath.Clean(filepath.Join(dir, path))
 	if _, err := os.Stat(dataFilePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("template data file %s does not exist", dataFilePath)

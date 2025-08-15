@@ -5,10 +5,18 @@ package workspace
 import "github.com/flowexec/flow/types/common"
 
 type ExecutableFilter struct {
-	// A list of directories to exclude from the executable search.
+	// A list of directories or file patterns to exclude from the executable search.
+	// Supports directory paths (e.g., "node_modules/", "vendor/") and glob patterns
+	// for filenames (e.g., "*.js.flow", "*temp*").
+	// Common exclusions like node_modules/, vendor/, third_party/, external/, and
+	// *.js.flow are excluded by default.
+	//
 	Excluded []string `json:"excluded,omitempty" yaml:"excluded,omitempty" mapstructure:"excluded,omitempty"`
 
-	// A list of directories to include in the executable search.
+	// A list of directories or file patterns to include in the executable search.
+	// Supports directory paths (e.g., "src/", "scripts/") and glob patterns for
+	// filenames (e.g., "*.test.flow", "example*").
+	//
 	Included []string `json:"included,omitempty" yaml:"included,omitempty" mapstructure:"included,omitempty"`
 }
 
@@ -37,6 +45,12 @@ type Workspace struct {
 
 	// The display name of the workspace. This is used in the interactive UI.
 	DisplayName string `json:"displayName,omitempty" yaml:"displayName,omitempty" mapstructure:"displayName,omitempty"`
+
+	// A list of environment variable files to load for the workspace. These files
+	// should contain key-value pairs of environment variables.
+	// By default, the `.env` file in the workspace root is loaded if it exists.
+	//
+	EnvFiles []string `json:"envFiles,omitempty" yaml:"envFiles,omitempty" mapstructure:"envFiles,omitempty"`
 
 	// Executables corresponds to the JSON schema field "executables".
 	Executables *ExecutableFilter `json:"executables,omitempty" yaml:"executables,omitempty" mapstructure:"executables,omitempty"`

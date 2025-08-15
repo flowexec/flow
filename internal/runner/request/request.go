@@ -6,14 +6,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/services/expr"
 	"github.com/flowexec/flow/internal/services/rest"
+	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -39,10 +41,11 @@ func (r *requestRunner) Exec(
 	e *executable.Executable,
 	_ engine.Engine,
 	inputEnv map[string]string,
+	inputArgs []string,
 ) error {
 	requestSpec := e.Request
-	envMap, err := runner.BuildEnvMap(
-		ctx.Logger, ctx.Config.CurrentVaultName(), e.Env(), inputEnv, runner.DefaultEnv(ctx, e),
+	envMap, err := env.BuildEnvMap(
+		ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, env.DefaultEnv(ctx, e),
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
@@ -50,6 +53,13 @@ func (r *requestRunner) Exec(
 
 	url := expandEnvVars(envMap, requestSpec.URL)
 	body := expandEnvVars(envMap, requestSpec.Body)
+	if body != "" {
+		body, err = expression.EvaluateString(body, map[string]interface{}{"env": envMap})
+		if err != nil {
+			return errors.Wrap(err, "unable to evaluate request body expression")
+		}
+	}
+
 	for key, value := range requestSpec.Headers {
 		requestSpec.Headers[key] = expandEnvVars(envMap, value)
 	}
@@ -67,22 +77,21 @@ func (r *requestRunner) Exec(
 
 	respStr := resp.Body
 	if requestSpec.TransformResponse != "" {
-		respStr, err = expr.EvaluateString(requestSpec.TransformResponse, resp)
+		respStr, err = expression.EvaluateString(requestSpec.TransformResponse, resp)
 		if err != nil {
 			return errors.Wrap(err, "unable to transform response")
 		}
 	}
 
-	logger := ctx.Logger
+	log := logger.Log()
 	if requestSpec.LogResponse {
-		logger.Infox(fmt.Sprintf("Successfully sent request to %s", requestSpec.URL), "response", respStr)
+		log.Infox(fmt.Sprintf("Successfully sent request to %s", requestSpec.URL), "response", respStr)
 	} else {
-		logger.Infof("Successfully sent request to %s", requestSpec.URL)
+		log.Infof("Successfully sent request to %s", requestSpec.URL)
 	}
 
 	if requestSpec.ResponseFile != nil && requestSpec.ResponseFile.Filename != "" {
 		targetDir, isTmp, err := requestSpec.ResponseFile.Dir.ExpandDirectory(
-			ctx.Logger,
 			e.WorkspacePath(),
 			e.FlowFilePath(),
 			ctx.ProcessTmpDir,
@@ -102,7 +111,7 @@ func (r *requestRunner) Exec(
 		if err != nil {
 			return errors.Wrap(err, "unable to save response")
 		} else {
-			logger.Infof("Successfully saved response to %s", requestSpec.ResponseFile.Filename)
+			log.Infof("Successfully saved response to %s", requestSpec.ResponseFile.Filename)
 		}
 	}
 
@@ -111,39 +120,47 @@ func (r *requestRunner) Exec(
 
 func writeResponseToFile(resp, responseFile string, format executable.RequestResponseFileSaveAs) error {
 	var formattedResp string
+	var conversionErr error
 	switch format {
 	case "", executable.RequestResponseFileSaveAsRaw:
 		formattedResp = resp
 	case executable.RequestResponseFileSaveAsJson:
-		var js map[string]interface{}
-		if json.Unmarshal([]byte(resp), &js) != nil {
-			return errors.New("response is not a valid JSON string")
+		var js interface{}
+		if conversionErr = json.Unmarshal([]byte(resp), &js); conversionErr != nil {
+			break
 		}
 		formattedResp = resp
 	case executable.RequestResponseFileSaveAsIndentedJson, "formatted-json":
-		var respMap map[string]interface{}
-		err := json.Unmarshal([]byte(resp), &respMap)
-		if err != nil {
-			return errors.New("response is not a valid JSON string")
+		var respMap interface{}
+		conversionErr = json.Unmarshal([]byte(resp), &respMap)
+		if conversionErr != nil {
+			break
 		}
-		formattedStr, err := json.MarshalIndent(respMap, "", "  ")
-		if err != nil {
-			return err
+		var formattedStr []byte
+		formattedStr, conversionErr = json.MarshalIndent(respMap, "", "  ")
+		if conversionErr != nil {
+			break
 		}
 		formattedResp = string(formattedStr)
 	case executable.RequestResponseFileSaveAsYaml, executable.RequestResponseFileSaveAsYml:
-		var respMap map[string]interface{}
-		err := json.Unmarshal([]byte(resp), &respMap)
-		if err != nil {
-			return errors.New("response is not a valid JSON string")
+		var respMap interface{}
+		conversionErr = json.Unmarshal([]byte(resp), &respMap)
+		if conversionErr != nil {
+			break
 		}
-		yamlStr, err := yaml.Marshal(respMap)
-		if err != nil {
-			return err
+		var yamlStr []byte
+		yamlStr, conversionErr = yaml.Marshal(respMap)
+		if conversionErr != nil {
+			break
 		}
 		formattedResp = string(yamlStr)
 	default:
-		return fmt.Errorf("unsupported output format - %s", format)
+		logger.Log().Warnf("unknown output format; skipping conversion")
+		formattedResp = resp
+	}
+
+	if conversionErr != nil {
+		logger.Log().Error(conversionErr, "unable to convert response")
 	}
 
 	file, err := os.Create(filepath.Clean(responseFile))

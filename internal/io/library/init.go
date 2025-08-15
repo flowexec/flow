@@ -43,23 +43,22 @@ func (l *Library) Init() tea.Cmd {
 }
 
 func (l *Library) setVisibleExecs() {
+	l.mu.RLock()
 	if len(l.allExecutables) == 0 || len(l.visibleWorkspaces) == 0 {
+		l.mu.RUnlock()
 		return
 	}
 
 	curWs := l.filter.Workspace
 
-	l.mu.RLock()
 	if label := l.visibleWorkspaces[l.currentWorkspace]; label != "" && label != allWorkspacesLabel {
 		curWs = label
 	} else if curWs == allWorkspacesLabel {
 		curWs = ""
 	}
-	l.mu.RUnlock()
 
 	curNs := l.filter.Namespace
 	if l.showNamespaces && len(l.visibleNamespaces) > 0 {
-		l.mu.RLock()
 		if label := l.visibleNamespaces[l.currentNamespace]; label != "" {
 			switch label {
 			case withoutNamespaceLabel:
@@ -70,8 +69,8 @@ func (l *Library) setVisibleExecs() {
 				curNs = label
 			}
 		}
-		l.mu.RUnlock()
 	}
+	l.mu.RUnlock()
 
 	filter := l.filter
 	filteredExec := l.allExecutables
@@ -127,7 +126,9 @@ func (l *Library) setVisibleWorkspaces() {
 }
 
 func (l *Library) setVisibleNamespaces() {
+	l.mu.RLock()
 	if l.allExecutables == nil || len(l.visibleWorkspaces) == 0 {
+		l.mu.RUnlock()
 		return
 	}
 
@@ -135,7 +136,6 @@ func (l *Library) setVisibleNamespaces() {
 	var someWithoutNs bool
 	filter := l.filter
 
-	l.mu.RLock()
 	filterWs := l.visibleWorkspaces[l.currentWorkspace]
 	l.mu.RUnlock()
 

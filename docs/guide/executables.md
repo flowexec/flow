@@ -42,6 +42,7 @@ executables:
 ### Common Fields <!-- {docsify-ignore} -->
 
 - **verb**: Action type (run, build, test, deploy, etc.)
+- **verbAliases**: Alternative names for the verb
 - **name**: Unique identifier within the namespace
 - **description**: Markdown documentation for the executable
 - **tags**: Labels for categorization and filtering
@@ -58,11 +59,17 @@ executables:
 
 ## Environment Variables
 
-Customize executable behavior with environment variables using `params` or `args`.
+Customize executable behavior with environment variables or temporary files using `params` or `args`.
+
+> [!INFO]
+> Executables inherit environment variables from their parent executable, workspace, and system.
+> 
+> By default, values defined in the `.env` file at the workspace root are automatically loaded. This can be overriden
+> in the workspace configuration file with the `envFiles` field.
 
 ### Parameters (`params`) <!-- {docsify-ignore} -->
 
-Set environment variables from various sources:
+Set environment data from various sources:
 
 ```yaml
 executables:
@@ -84,12 +91,22 @@ executables:
         # Static values
         - text: "production"
           envKey: DEPLOY_ENV
+          
+        # Env File (key=value format)
+        - envFile: "development.env"
+        - envFile: "staging.env"
+          envKey: SHARED_KEYS  # Only load specific keys
+
+        # Saved to a file
+        - secretRef: tls-cert
+          outputFile: cert.pem
 ```
 
 **Parameter types:**
 - `secretRef`: Reference to vault secret
 - `prompt`: Interactive user input
 - `text`: Static value
+- `envFile`: Load environment variables from a file
 
 ### Arguments (`args`) <!-- {docsify-ignore} -->
 
@@ -116,6 +133,10 @@ executables:
         - flag: registry
           envKey: REGISTRY
           default: "docker.io"
+
+        # Saved to a file
+        - flag: version
+          outputFile: //version.txt
 ```
 
 **Run with arguments:**
@@ -126,7 +147,6 @@ flow build container v1.2.3 publish=true registry=my-registry.com
 **Argument types:**
 - `pos`: Positional argument (by position number, starting from 1)
 - `flag`: Named flag argument
-- `type`: Validation type (string, int, float, bool)
 
 ### Command-Line Overrides <!-- {docsify-ignore} -->
 
@@ -135,6 +155,9 @@ Override any environment variable with `--param`:
 ```shell
 flow deploy app --param API_TOKEN=override --param ENVIRONMENT=staging
 ```
+
+> [!NOTE]
+> If the `outputFile` field is used to save a value, it will automatically be cleaned up after the executable finishes running.
 
 ## Working Directories
 
@@ -316,11 +339,11 @@ executables:
 - `method`: HTTP method (GET, POST, PUT, PATCH, DELETE)
 - `url`: Request URL (required)
 - `headers`: Custom headers
-- `body`: Request body
+- `body`: Request body with Expr templating
 - `timeout`: Request timeout
 - `validStatusCodes`: Acceptable status codes
 - `logResponse`: Log response body
-- `transformResponse`: Transform response with Expr
+- `transformResponse`: Transform response with Expr templating
 - `responseFile`: Save response to file
 
 ### render - Dynamic Documentation
@@ -340,16 +363,16 @@ executables:
 ```markdown
 # System Status
 
-Current time: {{ .timestamp }}
+Current time: {{ data["timestamp"] }}
 
 ## Services
 {{- range .services }}
-- **{{ .name }}**: {{ .status }}
+- **{{ .name }}**: {{ data["status"] }}
 {{- end }}
 
 ## Metrics
-- CPU: {{ .cpu }}%
-- Memory: {{ .memory }}%
+- CPU: {{ data["cpu"] }}%
+- Memory: {{ data["memory"] }}%
 ```
 
 **Options:**

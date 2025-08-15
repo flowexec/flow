@@ -8,14 +8,19 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/themes"
 
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io/common"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/open"
 )
 
+var log io.Logger
+
 func (l *Library) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	log = logger.Log()
 	cmds := make([]tea.Cmd, 0)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -131,7 +136,7 @@ func (l *Library) updateWsPane(msg tea.Msg) (viewport.Model, tea.Cmd) {
 			}
 
 			if err := open.Open(curWsCfg.Location()); err != nil {
-				l.ctx.Logger.Error(err, "unable to open workspace")
+				log.Error(err, "unable to open workspace")
 				l.SetNotice("unable to open workspace", themes.OutputLevelError)
 			}
 		case "e":
@@ -144,7 +149,7 @@ func (l *Library) updateWsPane(msg tea.Msg) (viewport.Model, tea.Cmd) {
 				filepath.Join(curWsCfg.Location(), filesystem.WorkspaceConfigFileName),
 				l.ctx.StdIn(), l.ctx.StdOut(),
 			); err != nil {
-				l.ctx.Logger.Error(err, "unable to open workspace in editor")
+				log.Error(err, "unable to open workspace in editor")
 				l.SetNotice("unable to open workspace in editor", themes.OutputLevelError)
 			}
 		case "s":
@@ -155,7 +160,7 @@ func (l *Library) updateWsPane(msg tea.Msg) (viewport.Model, tea.Cmd) {
 
 			curCfg, err := filesystem.LoadConfig()
 			if err != nil {
-				l.ctx.Logger.Error(err, "unable to load user config")
+				log.Error(err, "unable to load user config")
 				l.SetNotice("unable to load user config", themes.OutputLevelError)
 				break
 			}
@@ -178,7 +183,7 @@ func (l *Library) updateWsPane(msg tea.Msg) (viewport.Model, tea.Cmd) {
 			}
 
 			if err := filesystem.WriteConfig(curCfg); err != nil {
-				l.ctx.Logger.Error(err, "unable to write user config")
+				log.Error(err, "unable to write user config")
 				l.SetNotice("unable to write user config", themes.OutputLevelError)
 				break
 			}
@@ -238,7 +243,7 @@ func (l *Library) updateExecPanes(msg tea.Msg) (viewport.Model, tea.Cmd) {
 			}
 
 			if err := common.OpenInEditor(curExec.FlowFilePath(), l.ctx.StdIn(), l.ctx.StdOut()); err != nil {
-				l.ctx.Logger.Error(err, "unable to open executable in editor")
+				log.Error(err, "unable to open executable in editor")
 				l.SetNotice("unable to open executable in editor", themes.OutputLevelError)
 			}
 		case "c":
@@ -248,7 +253,7 @@ func (l *Library) updateExecPanes(msg tea.Msg) (viewport.Model, tea.Cmd) {
 			}
 
 			if err := clipboard.WriteAll(curExec.Ref().String()); err != nil {
-				l.ctx.Logger.Error(err, "unable to copy reference to clipboard")
+				log.Error(err, "unable to copy reference to clipboard")
 				l.SetNotice("unable to copy reference to clipboard", themes.OutputLevelError)
 			} else {
 				l.SetNotice("copied reference to clipboard", themes.OutputLevelInfo)
@@ -261,7 +266,7 @@ func (l *Library) updateExecPanes(msg tea.Msg) (viewport.Model, tea.Cmd) {
 
 			l.ctx.TUIContainer.Shutdown(func() {
 				if err := l.cmdRunFunc(curExec.Ref().String()); err != nil {
-					l.ctx.Logger.Fatalx("unable to execute command", "error", err)
+					log.Fatalx("unable to execute command", "error", err)
 				}
 			})
 			os.Exit(0) // This is necessary to prevent the app from hanging after the command is run

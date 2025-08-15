@@ -285,7 +285,7 @@ func execEnvTable(env *ExecutableEnvironment) string {
 		for _, a := range env.Args {
 			var argType string
 			switch {
-			case a.Pos != 0:
+			case a.Pos != nil && *a.Pos > 0:
 				argType = "positional"
 			case a.Flag != "":
 				argType = "flag"

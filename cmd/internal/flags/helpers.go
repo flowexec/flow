@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/logger"
 )
 
 //nolint:errcheck
@@ -73,8 +73,7 @@ func HasFlag(cmd *cobra.Command, metadata Metadata) bool {
 	return flagSet.Lookup(flagName) != nil
 }
 
-func ValueFor[T any](ctx *context.Context, cmd *cobra.Command, metadata Metadata, persistent bool) T {
-	logger := ctx.Logger
+func ValueFor[T any](cmd *cobra.Command, metadata Metadata, persistent bool) T {
 	flagName := metadata.Name
 	flagSet := cmd.Flags()
 	if persistent {
@@ -82,7 +81,7 @@ func ValueFor[T any](ctx *context.Context, cmd *cobra.Command, metadata Metadata
 	}
 	flag := cmd.Flag(flagName)
 	if flag == nil {
-		logger.FatalErr(fmt.Errorf("flag %s not found", flagName))
+		logger.Log().FatalErr(fmt.Errorf("flag %s not found", flagName))
 	}
 
 	var val interface{}
@@ -90,29 +89,29 @@ func ValueFor[T any](ctx *context.Context, cmd *cobra.Command, metadata Metadata
 	case reflect.String:
 		s, err := flagSet.GetString(flagName)
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		val = s
 	case reflect.Bool:
 		b, err := flagSet.GetBool(flagName)
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		val = b
 	case reflect.Slice:
 		s, err := flagSet.GetStringArray(flagName)
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		val = s
 	case reflect.Int:
 		i, err := flagSet.GetInt(flagName)
 		if err != nil {
-			logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		val = i
 	default:
-		logger.Fatalf("unexpected flag default type (%v)", reflect.TypeOf(metadata.Default).Kind())
+		logger.Log().Fatalf("unexpected flag default type (%v)", reflect.TypeOf(metadata.Default).Kind())
 	}
 
 	//nolint:errcheck

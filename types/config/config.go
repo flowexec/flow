@@ -3,7 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"golang.org/x/exp/maps"
@@ -59,6 +63,49 @@ func (c *Config) CurrentVaultName() string {
 		return ""
 	}
 	return *c.CurrentVault
+}
+
+func (c *Config) CurrentWorkspaceName() (string, error) {
+	var ws string
+	mode := c.WorkspaceMode
+
+	switch mode {
+	case ConfigWorkspaceModeDynamic:
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		if runtime.GOOS == "darwin" {
+			// On macOS, paths that start with /tmp (and some other system directories)
+			// are actually symbolic links to paths under /private. The OS may return
+			// either form of the path - e.g., both "/tmp/file" and "/private/tmp/file"
+			// refer to the same location. We strip the "/private" prefix for consistent
+			// path comparison, while preserving the original paths for filesystem operations.
+			wd = strings.TrimPrefix(wd, "/private")
+		}
+
+		for wsName, path := range c.Workspaces {
+			rel, err := filepath.Rel(filepath.Clean(path), filepath.Clean(wd))
+			if err != nil {
+				return "", err
+			}
+			if !strings.HasPrefix(rel, "..") {
+				ws = wsName
+				break
+			}
+		}
+		fallthrough
+	case ConfigWorkspaceModeFixed:
+		if ws != "" {
+			break
+		}
+		ws = c.CurrentWorkspace
+	}
+	if ws == "" {
+		return "", fmt.Errorf("current workspace not found")
+	}
+
+	return ws, nil
 }
 
 func (c *Config) SendTextNotification() bool {

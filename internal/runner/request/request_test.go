@@ -2,6 +2,8 @@ package request_test
 
 import (
 	stdCtx "context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +32,7 @@ var _ = Describe("Request Runner", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = testUtils.NewContextWithMocks(stdCtx.Background(), GinkgoT())
+		ctx = testUtils.NewContextWithMocks(stdCtx.Background(), GinkgoTB())
 		requestRnr = request.NewRunner()
 		ctrl := gomock.NewController(GinkgoT())
 		mockEngine = mocks.NewMockEngine(ctrl)
@@ -61,24 +63,40 @@ var _ = Describe("Request Runner", func() {
 	})
 
 	Describe("Exec", func() {
+		var testServer *httptest.Server
+		BeforeEach(func() {
+			testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.Method {
+				case http.MethodGet:
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"message": "GET request successful"}`))
+				case http.MethodPost:
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"key": "value"}`))
+				default:
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				}
+			}))
+		})
+
 		It("should send a GET request and log the response", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:         "https://httpbin.org/get",
+					URL:         testServer.URL,
 					Method:      executable.RequestExecutableTypeMethodGET,
 					LogResponse: true,
 				},
 			}
 
 			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should send a POST request with a body and log the response", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:         "https://httpbin.org/post",
+					URL:         testServer.URL,
 					Method:      executable.RequestExecutableTypeMethodPOST,
 					Body:        `{"key": "value"}`,
 					LogResponse: true,
@@ -86,14 +104,14 @@ var _ = Describe("Request Runner", func() {
 			}
 
 			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("value")).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should save the response to a file", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:    "https://httpbin.org/get",
+					URL:    testServer.URL,
 					Method: executable.RequestExecutableTypeMethodGET,
 					ResponseFile: &executable.RequestResponseFile{
 						Filename: "response.json",
@@ -105,7 +123,7 @@ var _ = Describe("Request Runner", func() {
 			exec.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
 
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(2)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = os.Stat(filepath.Clean(filepath.Join(ctx.Ctx.CurrentWorkspace.Location(), "response.json")))
@@ -115,15 +133,15 @@ var _ = Describe("Request Runner", func() {
 		It("should transform the response when specified", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{
-					URL:               "https://httpbin.org/get",
+					URL:               testServer.URL,
 					Method:            executable.RequestExecutableTypeMethodGET,
 					TransformResponse: `upper(body)`,
 					LogResponse:       true,
 				},
 			}
 
-			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("HTTPS://HTTPBIN.ORG")).Times(1)
-			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string))
+			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("SUCCESSFUL")).Times(1)
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

@@ -23,6 +23,7 @@ See https://flowexec.io for more information.
 * [flow config](flow_config.md)	 - Update flow configuration values.
 * [flow exec](flow_exec.md)	 - Execute any executable by reference.
 * [flow logs](flow_logs.md)	 - View execution history and logs.
+* [flow mcp](flow_mcp.md)	 - Start Model Context Provider (MCP) server for AI assistant integration
 * [flow secret](flow_secret.md)	 - Manage secrets stored in a vault.
 * [flow sync](flow_sync.md)	 - Refresh workspace cache and discover new executables.
 * [flow template](flow_template.md)	 - Manage flowfile templates.

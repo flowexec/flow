@@ -228,7 +228,7 @@ impl ::std::default::Default for CommonVisibility {
 #[doc = "      \"$ref\": \"#/definitions/ExecutableLaunchExecutableType\""]
 #[doc = "    },"]
 #[doc = "    \"name\": {"]
-#[doc = "      \"description\": \"The name of the executable.\\n\\nName is used to reference the executable in the CLI using the format `workspace/namespace:name`.\\n[Verb group + Name] must be unique within the namespace of the workspace.\\nName is required if the executable is defined within a namespace.\\n\","]
+#[doc = "      \"description\": \"An optional name for the executable.\\n\\nName is used to reference the executable in the CLI using the format `workspace/namespace:name`.\\n[Verb group + Name] must be unique within the namespace of the workspace.\\n\","]
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
@@ -256,6 +256,14 @@ impl ::std::default::Default for CommonVisibility {
 #[doc = "      \"default\": \"exec\","]
 #[doc = "      \"$ref\": \"#/definitions/ExecutableVerb\""]
 #[doc = "    },"]
+#[doc = "    \"verbAliases\": {"]
+#[doc = "      \"description\": \"A list of aliases for the verb. This allows the executable to be referenced with multiple verbs.\","]
+#[doc = "      \"default\": [],"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/definitions/Verb\""]
+#[doc = "      }"]
+#[doc = "    },"]
 #[doc = "    \"visibility\": {"]
 #[doc = "      \"$ref\": \"#/definitions/CommonVisibility\""]
 #[doc = "    }"]
@@ -274,7 +282,7 @@ pub struct Executable {
     pub exec: ::std::option::Option<ExecutableExecExecutableType>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub launch: ::std::option::Option<ExecutableLaunchExecutableType>,
-    #[doc = "The name of the executable.\n\nName is used to reference the executable in the CLI using the format `workspace/namespace:name`.\n[Verb group + Name] must be unique within the namespace of the workspace.\nName is required if the executable is defined within a namespace.\n"]
+    #[doc = "An optional name for the executable.\n\nName is used to reference the executable in the CLI using the format `workspace/namespace:name`.\n[Verb group + Name] must be unique within the namespace of the workspace.\n"]
     #[serde(default)]
     pub name: ::std::string::String,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -291,6 +299,13 @@ pub struct Executable {
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub timeout: ::std::option::Option<::std::string::String>,
     pub verb: ExecutableVerb,
+    #[doc = "A list of aliases for the verb. This allows the executable to be referenced with multiple verbs."]
+    #[serde(
+        rename = "verbAliases",
+        default,
+        skip_serializing_if = "::std::vec::Vec::is_empty"
+    )]
+    pub verb_aliases: ::std::vec::Vec<Verb>,
     #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
     pub visibility: ::std::option::Option<CommonVisibility>,
 }
@@ -311,9 +326,6 @@ impl Executable {
 #[doc = r" ```json"]
 #[doc = "{"]
 #[doc = "  \"type\": \"object\","]
-#[doc = "  \"required\": ["]
-#[doc = "    \"envKey\""]
-#[doc = "  ],"]
 #[doc = "  \"properties\": {"]
 #[doc = "    \"default\": {"]
 #[doc = "      \"description\": \"The default value to use if the argument is not provided.\\nIf the argument is required and no default is provided, the executable will fail.\\n\","]
@@ -330,9 +342,13 @@ impl Executable {
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
+#[doc = "    \"outputFile\": {"]
+#[doc = "      \"description\": \"A path where the argument value will be temporarily written to disk.\\nThe file will be created before execution and cleaned up afterwards.\\n\","]
+#[doc = "      \"default\": \"\","]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
 #[doc = "    \"pos\": {"]
 #[doc = "      \"description\": \"The position of the argument in the command line ArgumentList. Values start at 1.\\nEither `flag` or `pos` must be set, but not both.\\n\","]
-#[doc = "      \"default\": 0,"]
 #[doc = "      \"type\": \"integer\""]
 #[doc = "    },"]
 #[doc = "    \"required\": {"]
@@ -361,14 +377,17 @@ pub struct ExecutableArgument {
     #[serde(default)]
     pub default: ::std::string::String,
     #[doc = "The name of the environment variable that will be assigned the value."]
-    #[serde(rename = "envKey")]
+    #[serde(rename = "envKey", default)]
     pub env_key: ::std::string::String,
     #[doc = "The flag to use when setting the argument from the command line.\nEither `flag` or `pos` must be set, but not both.\n"]
     #[serde(default)]
     pub flag: ::std::string::String,
+    #[doc = "A path where the argument value will be temporarily written to disk.\nThe file will be created before execution and cleaned up afterwards.\n"]
+    #[serde(rename = "outputFile", default)]
+    pub output_file: ::std::string::String,
     #[doc = "The position of the argument in the command line ArgumentList. Values start at 1.\nEither `flag` or `pos` must be set, but not both.\n"]
-    #[serde(default)]
-    pub pos: i64,
+    #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+    pub pos: ::std::option::Option<i64>,
     #[doc = "If the argument is required, the executable will fail if the argument is not provided.\nIf the argument is not required, the default value will be used if the argument is not provided.\n"]
     #[serde(default)]
     pub required: bool,
@@ -379,6 +398,19 @@ pub struct ExecutableArgument {
 impl ::std::convert::From<&ExecutableArgument> for ExecutableArgument {
     fn from(value: &ExecutableArgument) -> Self {
         value.clone()
+    }
+}
+impl ::std::default::Default for ExecutableArgument {
+    fn default() -> Self {
+        Self {
+            default: Default::default(),
+            env_key: Default::default(),
+            flag: Default::default(),
+            output_file: Default::default(),
+            pos: Default::default(),
+            required: Default::default(),
+            type_: defaults::executable_argument_type(),
+        }
     }
 }
 impl ExecutableArgument {
@@ -903,20 +935,27 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableParallelRefConfig>>
         Self(value)
     }
 }
-#[doc = "A parameter is a value that can be passed to an executable and all of its sub-executables.\nOnly one of `text`, `secretRef`, or `prompt` must be set. Specifying more than one will result in an error.\n"]
+#[doc = "A parameter is a value that can be passed to an executable and all of its sub-executables.\nOnly one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying more than one will result in an error.\n"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"description\": \"A parameter is a value that can be passed to an executable and all of its sub-executables.\\nOnly one of `text`, `secretRef`, or `prompt` must be set. Specifying more than one will result in an error.\\n\","]
+#[doc = "  \"description\": \"A parameter is a value that can be passed to an executable and all of its sub-executables.\\nOnly one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying more than one will result in an error.\\n\","]
 #[doc = "  \"type\": \"object\","]
-#[doc = "  \"required\": ["]
-#[doc = "    \"envKey\""]
-#[doc = "  ],"]
 #[doc = "  \"properties\": {"]
+#[doc = "    \"envFile\": {"]
+#[doc = "      \"description\": \"A path to a file containing environment variables to be passed to the executable.\\nThe file should contain one variable per line in the format `KEY=VALUE`.\\n\","]
+#[doc = "      \"default\": \"\","]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
 #[doc = "    \"envKey\": {"]
-#[doc = "      \"description\": \"The name of the environment variable that will be assigned the value.\","]
+#[doc = "      \"description\": \"The name of the environment variable that will be assigned the value.\\n\\nWhen specified with `envFile`, only the environment variable with this name will be set.\\n\","]
+#[doc = "      \"default\": \"\","]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"outputFile\": {"]
+#[doc = "      \"description\": \"A path where the parameter value will be temporarily written to disk.\\nThe file will be created before execution and cleaned up afterwards.\\n\","]
 #[doc = "      \"default\": \"\","]
 #[doc = "      \"type\": \"string\""]
 #[doc = "    },"]
@@ -941,9 +980,15 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableParallelRefConfig>>
 #[doc = r" </details>"]
 #[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
 pub struct ExecutableParameter {
-    #[doc = "The name of the environment variable that will be assigned the value."]
-    #[serde(rename = "envKey")]
+    #[doc = "A path to a file containing environment variables to be passed to the executable.\nThe file should contain one variable per line in the format `KEY=VALUE`.\n"]
+    #[serde(rename = "envFile", default)]
+    pub env_file: ::std::string::String,
+    #[doc = "The name of the environment variable that will be assigned the value.\n\nWhen specified with `envFile`, only the environment variable with this name will be set.\n"]
+    #[serde(rename = "envKey", default)]
     pub env_key: ::std::string::String,
+    #[doc = "A path where the parameter value will be temporarily written to disk.\nThe file will be created before execution and cleaned up afterwards.\n"]
+    #[serde(rename = "outputFile", default)]
+    pub output_file: ::std::string::String,
     #[doc = "A prompt to be displayed to the user when collecting an input value."]
     #[serde(default)]
     pub prompt: ::std::string::String,
@@ -957,6 +1002,18 @@ pub struct ExecutableParameter {
 impl ::std::convert::From<&ExecutableParameter> for ExecutableParameter {
     fn from(value: &ExecutableParameter) -> Self {
         value.clone()
+    }
+}
+impl ::std::default::Default for ExecutableParameter {
+    fn default() -> Self {
+        Self {
+            env_file: Default::default(),
+            env_key: Default::default(),
+            output_file: Default::default(),
+            prompt: Default::default(),
+            secret_ref: Default::default(),
+            text: Default::default(),
+        }
     }
 }
 impl ExecutableParameter {
@@ -1700,96 +1757,142 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableSerialRefConfig>>
         Self(value)
     }
 }
-#[doc = "Keywords that describe the action an executable performs. While executables are configured with a single verb,\nthe verb can be aliased to related verbs within its group. For example, the `activate` verb can be replaced\nwith \"enable\" or \"start\" when referencing an executable. This allows users to use the verb that best describes\nthe action they are performing.\n\n### Verb Groups\n\n- **Activation Group**: `activate`, `enable`, `start`, `trigger`\n- **Execution Group**: `exec`, `run`, `execute`\n- **Deactivation Group**: `deactivate`, `disable`, `stop`, `pause`\n- **Termination Group**: `kill`, `terminate`, `abort`\n- **Monitoring Group**: `watch`, `monitor`, `track`\n- **Restart Group**: `restart`, `reboot`, `reload`, `refresh`\n- **Installation Group**: `install`, `setup`, `deploy`\n- **Build Group**: `build`, `package`, `bundle`, `compile`\n- **Uninstallation Group**: `uninstall`, `teardown`, `undeploy`\n- **Update Group**: `update`, `upgrade`, `patch`\n- **Configuration Group**: `configure`, `manage`\n- **Edit Group**: `edit`, `transform`, `modify`, `fix`\n- **Publish Group**: `publish`, `release`\n- **Distribution Group**: `push`, `send`, `apply`\n- **Test Group**: `test`, `validate`, `check`, `verify`\n- **Analysis Group**: `analyze`, `scan`, `lint`, `inspect`\n- **Launch Group**: `open`, `launch`, `show`, `view`\n- **Creation Group**: `create`, `generate`, `add`, `new`, `init`\n- **Set Group**: `set`\n- **Destruction Group**: `remove`, `delete`, `destroy`, `erase`\n- **Unset Group**: `unset`, `reset`\n- **Cleanup Group**: `clean`, `clear`, `purge`, `tidy`\n- **Retrieval Group**: `retrieve`, `fetch`, `get`, `request`\n- **Debug Group**: `debug`, `trace`, `profile`\n\n### Usage Notes\n\n1. [Verb group + Name] must be unique within the namespace of the workspace.\n2. When referencing an executable, users can use any verb from the appropriate group.\n3. Choose the verb that most accurately describes the action being performed.\n4. Be consistent in verb usage within projects or teams to maintain clarity.\n\n### Examples\n\n- An executable configured with the `activate` verb could also be referenced using \"enable\" or \"start\".\n- A build process might use `build` as its primary verb, but could also be invoked with \"package\" or \"assemble\".\n- A cleanup routine configured with `clean` could be called using \"purge\" or \"sanitize\" for more specific connotations.\n\nBy organizing verbs into these groups, flow provides flexibility in how actions are described while maintaining a\nclear structure for executable operations.\n"]
+#[doc = "Keywords that describe the action an executable performs. Executables are configured with a single verb,\nbut core verbs have aliases that can be used interchangeably when referencing executables. This allows users \nto use the verb that best describes the action they are performing.\n\n### Default Verb Aliases\n\n- **Execution Group**: `exec`, `run`, `execute`\n- **Retrieval Group**: `get`, `fetch`, `retrieve`\n- **Display Group**: `show`, `view`, `list`\n- **Configuration Group**: `configure`, `setup`\n- **Update Group**: `update`, `upgrade`\n\n### Usage Notes\n\n1. [Verb + Name] must be unique within the namespace of the workspace.\n2. When referencing an executable, users can use any verb from the default or configured alias group.\n3. All other verbs are standalone and self-descriptive.\n\n### Examples\n\n- An executable configured with the `exec` verb can also be referenced using \"run\" or \"execute\".\n- An executable configured with `get` can also be called with \"list\", \"show\", or \"view\".\n- Operations like `backup`, `migrate`, `flush` are standalone verbs without aliases.\n- Use domain-specific verbs like `deploy`, `scale`, `tunnel` for clear operational intent.\n\nBy providing minimal aliasing with comprehensive verb coverage, flow enables natural language operations\nwhile maintaining simplicity and flexibility for diverse development and operations workflows.\n"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"description\": \"Keywords that describe the action an executable performs. While executables are configured with a single verb,\\nthe verb can be aliased to related verbs within its group. For example, the `activate` verb can be replaced\\nwith \\\"enable\\\" or \\\"start\\\" when referencing an executable. This allows users to use the verb that best describes\\nthe action they are performing.\\n\\n### Verb Groups\\n\\n- **Activation Group**: `activate`, `enable`, `start`, `trigger`\\n- **Execution Group**: `exec`, `run`, `execute`\\n- **Deactivation Group**: `deactivate`, `disable`, `stop`, `pause`\\n- **Termination Group**: `kill`, `terminate`, `abort`\\n- **Monitoring Group**: `watch`, `monitor`, `track`\\n- **Restart Group**: `restart`, `reboot`, `reload`, `refresh`\\n- **Installation Group**: `install`, `setup`, `deploy`\\n- **Build Group**: `build`, `package`, `bundle`, `compile`\\n- **Uninstallation Group**: `uninstall`, `teardown`, `undeploy`\\n- **Update Group**: `update`, `upgrade`, `patch`\\n- **Configuration Group**: `configure`, `manage`\\n- **Edit Group**: `edit`, `transform`, `modify`, `fix`\\n- **Publish Group**: `publish`, `release`\\n- **Distribution Group**: `push`, `send`, `apply`\\n- **Test Group**: `test`, `validate`, `check`, `verify`\\n- **Analysis Group**: `analyze`, `scan`, `lint`, `inspect`\\n- **Launch Group**: `open`, `launch`, `show`, `view`\\n- **Creation Group**: `create`, `generate`, `add`, `new`, `init`\\n- **Set Group**: `set`\\n- **Destruction Group**: `remove`, `delete`, `destroy`, `erase`\\n- **Unset Group**: `unset`, `reset`\\n- **Cleanup Group**: `clean`, `clear`, `purge`, `tidy`\\n- **Retrieval Group**: `retrieve`, `fetch`, `get`, `request`\\n- **Debug Group**: `debug`, `trace`, `profile`\\n\\n### Usage Notes\\n\\n1. [Verb group + Name] must be unique within the namespace of the workspace.\\n2. When referencing an executable, users can use any verb from the appropriate group.\\n3. Choose the verb that most accurately describes the action being performed.\\n4. Be consistent in verb usage within projects or teams to maintain clarity.\\n\\n### Examples\\n\\n- An executable configured with the `activate` verb could also be referenced using \\\"enable\\\" or \\\"start\\\".\\n- A build process might use `build` as its primary verb, but could also be invoked with \\\"package\\\" or \\\"assemble\\\".\\n- A cleanup routine configured with `clean` could be called using \\\"purge\\\" or \\\"sanitize\\\" for more specific connotations.\\n\\nBy organizing verbs into these groups, flow provides flexibility in how actions are described while maintaining a\\nclear structure for executable operations.\\n\","]
+#[doc = "  \"description\": \"Keywords that describe the action an executable performs. Executables are configured with a single verb,\\nbut core verbs have aliases that can be used interchangeably when referencing executables. This allows users \\nto use the verb that best describes the action they are performing.\\n\\n### Default Verb Aliases\\n\\n- **Execution Group**: `exec`, `run`, `execute`\\n- **Retrieval Group**: `get`, `fetch`, `retrieve`\\n- **Display Group**: `show`, `view`, `list`\\n- **Configuration Group**: `configure`, `setup`\\n- **Update Group**: `update`, `upgrade`\\n\\n### Usage Notes\\n\\n1. [Verb + Name] must be unique within the namespace of the workspace.\\n2. When referencing an executable, users can use any verb from the default or configured alias group.\\n3. All other verbs are standalone and self-descriptive.\\n\\n### Examples\\n\\n- An executable configured with the `exec` verb can also be referenced using \\\"run\\\" or \\\"execute\\\".\\n- An executable configured with `get` can also be called with \\\"list\\\", \\\"show\\\", or \\\"view\\\".\\n- Operations like `backup`, `migrate`, `flush` are standalone verbs without aliases.\\n- Use domain-specific verbs like `deploy`, `scale`, `tunnel` for clear operational intent.\\n\\nBy providing minimal aliasing with comprehensive verb coverage, flow enables natural language operations\\nwhile maintaining simplicity and flexibility for diverse development and operations workflows.\\n\","]
 #[doc = "  \"default\": \"exec\","]
 #[doc = "  \"type\": \"string\","]
 #[doc = "  \"enum\": ["]
-#[doc = "    \"activate\","]
-#[doc = "    \"enable\","]
-#[doc = "    \"start\","]
-#[doc = "    \"trigger\","]
-#[doc = "    \"exec\","]
-#[doc = "    \"run\","]
-#[doc = "    \"execute\","]
-#[doc = "    \"deactivate\","]
-#[doc = "    \"disable\","]
-#[doc = "    \"stop\","]
-#[doc = "    \"pause\","]
-#[doc = "    \"kill\","]
-#[doc = "    \"terminate\","]
 #[doc = "    \"abort\","]
-#[doc = "    \"watch\","]
-#[doc = "    \"monitor\","]
-#[doc = "    \"track\","]
-#[doc = "    \"restart\","]
-#[doc = "    \"reboot\","]
-#[doc = "    \"reload\","]
-#[doc = "    \"refresh\","]
-#[doc = "    \"install\","]
-#[doc = "    \"setup\","]
-#[doc = "    \"deploy\","]
-#[doc = "    \"build\","]
-#[doc = "    \"package\","]
-#[doc = "    \"bundle\","]
-#[doc = "    \"compile\","]
-#[doc = "    \"uninstall\","]
-#[doc = "    \"teardown\","]
-#[doc = "    \"undeploy\","]
-#[doc = "    \"update\","]
-#[doc = "    \"upgrade\","]
-#[doc = "    \"patch\","]
-#[doc = "    \"configure\","]
-#[doc = "    \"manage\","]
-#[doc = "    \"edit\","]
-#[doc = "    \"transform\","]
-#[doc = "    \"modify\","]
-#[doc = "    \"fix\","]
-#[doc = "    \"publish\","]
-#[doc = "    \"release\","]
-#[doc = "    \"push\","]
-#[doc = "    \"send\","]
-#[doc = "    \"apply\","]
-#[doc = "    \"test\","]
-#[doc = "    \"validate\","]
-#[doc = "    \"check\","]
-#[doc = "    \"verify\","]
-#[doc = "    \"analyze\","]
-#[doc = "    \"scan\","]
-#[doc = "    \"lint\","]
-#[doc = "    \"inspect\","]
-#[doc = "    \"open\","]
-#[doc = "    \"launch\","]
-#[doc = "    \"show\","]
-#[doc = "    \"view\","]
-#[doc = "    \"create\","]
-#[doc = "    \"generate\","]
+#[doc = "    \"activate\","]
 #[doc = "    \"add\","]
-#[doc = "    \"new\","]
-#[doc = "    \"init\","]
-#[doc = "    \"set\","]
-#[doc = "    \"remove\","]
-#[doc = "    \"delete\","]
-#[doc = "    \"destroy\","]
-#[doc = "    \"erase\","]
-#[doc = "    \"unset\","]
-#[doc = "    \"reset\","]
+#[doc = "    \"analyze\","]
+#[doc = "    \"apply\","]
+#[doc = "    \"archive\","]
+#[doc = "    \"audit\","]
+#[doc = "    \"backup\","]
+#[doc = "    \"benchmark\","]
+#[doc = "    \"build\","]
+#[doc = "    \"bundle\","]
+#[doc = "    \"check\","]
 #[doc = "    \"clean\","]
 #[doc = "    \"clear\","]
-#[doc = "    \"purge\","]
-#[doc = "    \"tidy\","]
-#[doc = "    \"retrieve\","]
-#[doc = "    \"fetch\","]
-#[doc = "    \"get\","]
-#[doc = "    \"request\","]
+#[doc = "    \"commit\","]
+#[doc = "    \"compile\","]
+#[doc = "    \"compress\","]
+#[doc = "    \"configure\","]
+#[doc = "    \"connect\","]
+#[doc = "    \"copy\","]
+#[doc = "    \"create\","]
+#[doc = "    \"deactivate\","]
 #[doc = "    \"debug\","]
+#[doc = "    \"decompress\","]
+#[doc = "    \"decrypt\","]
+#[doc = "    \"delete\","]
+#[doc = "    \"deploy\","]
+#[doc = "    \"destroy\","]
+#[doc = "    \"disable\","]
+#[doc = "    \"disconnect\","]
+#[doc = "    \"edit\","]
+#[doc = "    \"enable\","]
+#[doc = "    \"encrypt\","]
+#[doc = "    \"erase\","]
+#[doc = "    \"exec\","]
+#[doc = "    \"execute\","]
+#[doc = "    \"export\","]
+#[doc = "    \"expose\","]
+#[doc = "    \"fetch\","]
+#[doc = "    \"fix\","]
+#[doc = "    \"flush\","]
+#[doc = "    \"format\","]
+#[doc = "    \"generate\","]
+#[doc = "    \"get\","]
+#[doc = "    \"import\","]
+#[doc = "    \"index\","]
+#[doc = "    \"init\","]
+#[doc = "    \"inspect\","]
+#[doc = "    \"install\","]
+#[doc = "    \"join\","]
+#[doc = "    \"kill\","]
+#[doc = "    \"launch\","]
+#[doc = "    \"lint\","]
+#[doc = "    \"list\","]
+#[doc = "    \"load\","]
+#[doc = "    \"lock\","]
+#[doc = "    \"login\","]
+#[doc = "    \"logout\","]
+#[doc = "    \"manage\","]
+#[doc = "    \"merge\","]
+#[doc = "    \"migrate\","]
+#[doc = "    \"modify\","]
+#[doc = "    \"monitor\","]
+#[doc = "    \"mount\","]
+#[doc = "    \"new\","]
+#[doc = "    \"notify\","]
+#[doc = "    \"open\","]
+#[doc = "    \"package\","]
+#[doc = "    \"partition\","]
+#[doc = "    \"patch\","]
+#[doc = "    \"pause\","]
+#[doc = "    \"ping\","]
+#[doc = "    \"preload\","]
+#[doc = "    \"prefetch\","]
+#[doc = "    \"profile\","]
+#[doc = "    \"provision\","]
+#[doc = "    \"publish\","]
+#[doc = "    \"purge\","]
+#[doc = "    \"push\","]
+#[doc = "    \"queue\","]
+#[doc = "    \"reboot\","]
+#[doc = "    \"recover\","]
+#[doc = "    \"refresh\","]
+#[doc = "    \"release\","]
+#[doc = "    \"reload\","]
+#[doc = "    \"remove\","]
+#[doc = "    \"request\","]
+#[doc = "    \"reset\","]
+#[doc = "    \"restart\","]
+#[doc = "    \"restore\","]
+#[doc = "    \"retrieve\","]
+#[doc = "    \"rollback\","]
+#[doc = "    \"run\","]
+#[doc = "    \"save\","]
+#[doc = "    \"scale\","]
+#[doc = "    \"scan\","]
+#[doc = "    \"schedule\","]
+#[doc = "    \"seed\","]
+#[doc = "    \"send\","]
+#[doc = "    \"serve\","]
+#[doc = "    \"set\","]
+#[doc = "    \"setup\","]
+#[doc = "    \"show\","]
+#[doc = "    \"snapshot\","]
+#[doc = "    \"start\","]
+#[doc = "    \"stash\","]
+#[doc = "    \"stop\","]
+#[doc = "    \"tag\","]
+#[doc = "    \"teardown\","]
+#[doc = "    \"terminate\","]
+#[doc = "    \"test\","]
+#[doc = "    \"tidy\","]
 #[doc = "    \"trace\","]
-#[doc = "    \"profile\""]
+#[doc = "    \"transform\","]
+#[doc = "    \"trigger\","]
+#[doc = "    \"tunnel\","]
+#[doc = "    \"undeploy\","]
+#[doc = "    \"uninstall\","]
+#[doc = "    \"unmount\","]
+#[doc = "    \"unset\","]
+#[doc = "    \"update\","]
+#[doc = "    \"upgrade\","]
+#[doc = "    \"validate\","]
+#[doc = "    \"verify\","]
+#[doc = "    \"view\","]
+#[doc = "    \"watch\""]
 #[doc = "  ]"]
 #[doc = "}"]
 #[doc = r" ```"]
@@ -1807,166 +1910,258 @@ impl ::std::convert::From<::std::vec::Vec<ExecutableSerialRefConfig>>
     PartialOrd,
 )]
 pub enum ExecutableVerb {
-    #[serde(rename = "activate")]
-    Activate,
-    #[serde(rename = "enable")]
-    Enable,
-    #[serde(rename = "start")]
-    Start,
-    #[serde(rename = "trigger")]
-    Trigger,
-    #[serde(rename = "exec")]
-    Exec,
-    #[serde(rename = "run")]
-    Run,
-    #[serde(rename = "execute")]
-    Execute,
-    #[serde(rename = "deactivate")]
-    Deactivate,
-    #[serde(rename = "disable")]
-    Disable,
-    #[serde(rename = "stop")]
-    Stop,
-    #[serde(rename = "pause")]
-    Pause,
-    #[serde(rename = "kill")]
-    Kill,
-    #[serde(rename = "terminate")]
-    Terminate,
     #[serde(rename = "abort")]
     Abort,
-    #[serde(rename = "watch")]
-    Watch,
-    #[serde(rename = "monitor")]
-    Monitor,
-    #[serde(rename = "track")]
-    Track,
-    #[serde(rename = "restart")]
-    Restart,
-    #[serde(rename = "reboot")]
-    Reboot,
-    #[serde(rename = "reload")]
-    Reload,
-    #[serde(rename = "refresh")]
-    Refresh,
-    #[serde(rename = "install")]
-    Install,
-    #[serde(rename = "setup")]
-    Setup,
-    #[serde(rename = "deploy")]
-    Deploy,
-    #[serde(rename = "build")]
-    Build,
-    #[serde(rename = "package")]
-    Package,
-    #[serde(rename = "bundle")]
-    Bundle,
-    #[serde(rename = "compile")]
-    Compile,
-    #[serde(rename = "uninstall")]
-    Uninstall,
-    #[serde(rename = "teardown")]
-    Teardown,
-    #[serde(rename = "undeploy")]
-    Undeploy,
-    #[serde(rename = "update")]
-    Update,
-    #[serde(rename = "upgrade")]
-    Upgrade,
-    #[serde(rename = "patch")]
-    Patch,
-    #[serde(rename = "configure")]
-    Configure,
-    #[serde(rename = "manage")]
-    Manage,
-    #[serde(rename = "edit")]
-    Edit,
-    #[serde(rename = "transform")]
-    Transform,
-    #[serde(rename = "modify")]
-    Modify,
-    #[serde(rename = "fix")]
-    Fix,
-    #[serde(rename = "publish")]
-    Publish,
-    #[serde(rename = "release")]
-    Release,
-    #[serde(rename = "push")]
-    Push,
-    #[serde(rename = "send")]
-    Send,
-    #[serde(rename = "apply")]
-    Apply,
-    #[serde(rename = "test")]
-    Test,
-    #[serde(rename = "validate")]
-    Validate,
-    #[serde(rename = "check")]
-    Check,
-    #[serde(rename = "verify")]
-    Verify,
-    #[serde(rename = "analyze")]
-    Analyze,
-    #[serde(rename = "scan")]
-    Scan,
-    #[serde(rename = "lint")]
-    Lint,
-    #[serde(rename = "inspect")]
-    Inspect,
-    #[serde(rename = "open")]
-    Open,
-    #[serde(rename = "launch")]
-    Launch,
-    #[serde(rename = "show")]
-    Show,
-    #[serde(rename = "view")]
-    View,
-    #[serde(rename = "create")]
-    Create,
-    #[serde(rename = "generate")]
-    Generate,
+    #[serde(rename = "activate")]
+    Activate,
     #[serde(rename = "add")]
     Add,
-    #[serde(rename = "new")]
-    New,
-    #[serde(rename = "init")]
-    Init,
-    #[serde(rename = "set")]
-    Set,
-    #[serde(rename = "remove")]
-    Remove,
-    #[serde(rename = "delete")]
-    Delete,
-    #[serde(rename = "destroy")]
-    Destroy,
-    #[serde(rename = "erase")]
-    Erase,
-    #[serde(rename = "unset")]
-    Unset,
-    #[serde(rename = "reset")]
-    Reset,
+    #[serde(rename = "analyze")]
+    Analyze,
+    #[serde(rename = "apply")]
+    Apply,
+    #[serde(rename = "archive")]
+    Archive,
+    #[serde(rename = "audit")]
+    Audit,
+    #[serde(rename = "backup")]
+    Backup,
+    #[serde(rename = "benchmark")]
+    Benchmark,
+    #[serde(rename = "build")]
+    Build,
+    #[serde(rename = "bundle")]
+    Bundle,
+    #[serde(rename = "check")]
+    Check,
     #[serde(rename = "clean")]
     Clean,
     #[serde(rename = "clear")]
     Clear,
-    #[serde(rename = "purge")]
-    Purge,
-    #[serde(rename = "tidy")]
-    Tidy,
-    #[serde(rename = "retrieve")]
-    Retrieve,
-    #[serde(rename = "fetch")]
-    Fetch,
-    #[serde(rename = "get")]
-    Get,
-    #[serde(rename = "request")]
-    Request,
+    #[serde(rename = "commit")]
+    Commit,
+    #[serde(rename = "compile")]
+    Compile,
+    #[serde(rename = "compress")]
+    Compress,
+    #[serde(rename = "configure")]
+    Configure,
+    #[serde(rename = "connect")]
+    Connect,
+    #[serde(rename = "copy")]
+    Copy,
+    #[serde(rename = "create")]
+    Create,
+    #[serde(rename = "deactivate")]
+    Deactivate,
     #[serde(rename = "debug")]
     Debug,
-    #[serde(rename = "trace")]
-    Trace,
+    #[serde(rename = "decompress")]
+    Decompress,
+    #[serde(rename = "decrypt")]
+    Decrypt,
+    #[serde(rename = "delete")]
+    Delete,
+    #[serde(rename = "deploy")]
+    Deploy,
+    #[serde(rename = "destroy")]
+    Destroy,
+    #[serde(rename = "disable")]
+    Disable,
+    #[serde(rename = "disconnect")]
+    Disconnect,
+    #[serde(rename = "edit")]
+    Edit,
+    #[serde(rename = "enable")]
+    Enable,
+    #[serde(rename = "encrypt")]
+    Encrypt,
+    #[serde(rename = "erase")]
+    Erase,
+    #[serde(rename = "exec")]
+    Exec,
+    #[serde(rename = "execute")]
+    Execute,
+    #[serde(rename = "export")]
+    Export,
+    #[serde(rename = "expose")]
+    Expose,
+    #[serde(rename = "fetch")]
+    Fetch,
+    #[serde(rename = "fix")]
+    Fix,
+    #[serde(rename = "flush")]
+    Flush,
+    #[serde(rename = "format")]
+    Format,
+    #[serde(rename = "generate")]
+    Generate,
+    #[serde(rename = "get")]
+    Get,
+    #[serde(rename = "import")]
+    Import,
+    #[serde(rename = "index")]
+    Index,
+    #[serde(rename = "init")]
+    Init,
+    #[serde(rename = "inspect")]
+    Inspect,
+    #[serde(rename = "install")]
+    Install,
+    #[serde(rename = "join")]
+    Join,
+    #[serde(rename = "kill")]
+    Kill,
+    #[serde(rename = "launch")]
+    Launch,
+    #[serde(rename = "lint")]
+    Lint,
+    #[serde(rename = "list")]
+    List,
+    #[serde(rename = "load")]
+    Load,
+    #[serde(rename = "lock")]
+    Lock,
+    #[serde(rename = "login")]
+    Login,
+    #[serde(rename = "logout")]
+    Logout,
+    #[serde(rename = "manage")]
+    Manage,
+    #[serde(rename = "merge")]
+    Merge,
+    #[serde(rename = "migrate")]
+    Migrate,
+    #[serde(rename = "modify")]
+    Modify,
+    #[serde(rename = "monitor")]
+    Monitor,
+    #[serde(rename = "mount")]
+    Mount,
+    #[serde(rename = "new")]
+    New,
+    #[serde(rename = "notify")]
+    Notify,
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "package")]
+    Package,
+    #[serde(rename = "partition")]
+    Partition,
+    #[serde(rename = "patch")]
+    Patch,
+    #[serde(rename = "pause")]
+    Pause,
+    #[serde(rename = "ping")]
+    Ping,
+    #[serde(rename = "preload")]
+    Preload,
+    #[serde(rename = "prefetch")]
+    Prefetch,
     #[serde(rename = "profile")]
     Profile,
+    #[serde(rename = "provision")]
+    Provision,
+    #[serde(rename = "publish")]
+    Publish,
+    #[serde(rename = "purge")]
+    Purge,
+    #[serde(rename = "push")]
+    Push,
+    #[serde(rename = "queue")]
+    Queue,
+    #[serde(rename = "reboot")]
+    Reboot,
+    #[serde(rename = "recover")]
+    Recover,
+    #[serde(rename = "refresh")]
+    Refresh,
+    #[serde(rename = "release")]
+    Release,
+    #[serde(rename = "reload")]
+    Reload,
+    #[serde(rename = "remove")]
+    Remove,
+    #[serde(rename = "request")]
+    Request,
+    #[serde(rename = "reset")]
+    Reset,
+    #[serde(rename = "restart")]
+    Restart,
+    #[serde(rename = "restore")]
+    Restore,
+    #[serde(rename = "retrieve")]
+    Retrieve,
+    #[serde(rename = "rollback")]
+    Rollback,
+    #[serde(rename = "run")]
+    Run,
+    #[serde(rename = "save")]
+    Save,
+    #[serde(rename = "scale")]
+    Scale,
+    #[serde(rename = "scan")]
+    Scan,
+    #[serde(rename = "schedule")]
+    Schedule,
+    #[serde(rename = "seed")]
+    Seed,
+    #[serde(rename = "send")]
+    Send,
+    #[serde(rename = "serve")]
+    Serve,
+    #[serde(rename = "set")]
+    Set,
+    #[serde(rename = "setup")]
+    Setup,
+    #[serde(rename = "show")]
+    Show,
+    #[serde(rename = "snapshot")]
+    Snapshot,
+    #[serde(rename = "start")]
+    Start,
+    #[serde(rename = "stash")]
+    Stash,
+    #[serde(rename = "stop")]
+    Stop,
+    #[serde(rename = "tag")]
+    Tag,
+    #[serde(rename = "teardown")]
+    Teardown,
+    #[serde(rename = "terminate")]
+    Terminate,
+    #[serde(rename = "test")]
+    Test,
+    #[serde(rename = "tidy")]
+    Tidy,
+    #[serde(rename = "trace")]
+    Trace,
+    #[serde(rename = "transform")]
+    Transform,
+    #[serde(rename = "trigger")]
+    Trigger,
+    #[serde(rename = "tunnel")]
+    Tunnel,
+    #[serde(rename = "undeploy")]
+    Undeploy,
+    #[serde(rename = "uninstall")]
+    Uninstall,
+    #[serde(rename = "unmount")]
+    Unmount,
+    #[serde(rename = "unset")]
+    Unset,
+    #[serde(rename = "update")]
+    Update,
+    #[serde(rename = "upgrade")]
+    Upgrade,
+    #[serde(rename = "validate")]
+    Validate,
+    #[serde(rename = "verify")]
+    Verify,
+    #[serde(rename = "view")]
+    View,
+    #[serde(rename = "watch")]
+    Watch,
 }
 impl ::std::convert::From<&Self> for ExecutableVerb {
     fn from(value: &ExecutableVerb) -> Self {
@@ -1976,86 +2171,132 @@ impl ::std::convert::From<&Self> for ExecutableVerb {
 impl ::std::fmt::Display for ExecutableVerb {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match *self {
-            Self::Activate => write!(f, "activate"),
-            Self::Enable => write!(f, "enable"),
-            Self::Start => write!(f, "start"),
-            Self::Trigger => write!(f, "trigger"),
-            Self::Exec => write!(f, "exec"),
-            Self::Run => write!(f, "run"),
-            Self::Execute => write!(f, "execute"),
-            Self::Deactivate => write!(f, "deactivate"),
-            Self::Disable => write!(f, "disable"),
-            Self::Stop => write!(f, "stop"),
-            Self::Pause => write!(f, "pause"),
-            Self::Kill => write!(f, "kill"),
-            Self::Terminate => write!(f, "terminate"),
             Self::Abort => write!(f, "abort"),
-            Self::Watch => write!(f, "watch"),
-            Self::Monitor => write!(f, "monitor"),
-            Self::Track => write!(f, "track"),
-            Self::Restart => write!(f, "restart"),
-            Self::Reboot => write!(f, "reboot"),
-            Self::Reload => write!(f, "reload"),
-            Self::Refresh => write!(f, "refresh"),
-            Self::Install => write!(f, "install"),
-            Self::Setup => write!(f, "setup"),
-            Self::Deploy => write!(f, "deploy"),
-            Self::Build => write!(f, "build"),
-            Self::Package => write!(f, "package"),
-            Self::Bundle => write!(f, "bundle"),
-            Self::Compile => write!(f, "compile"),
-            Self::Uninstall => write!(f, "uninstall"),
-            Self::Teardown => write!(f, "teardown"),
-            Self::Undeploy => write!(f, "undeploy"),
-            Self::Update => write!(f, "update"),
-            Self::Upgrade => write!(f, "upgrade"),
-            Self::Patch => write!(f, "patch"),
-            Self::Configure => write!(f, "configure"),
-            Self::Manage => write!(f, "manage"),
-            Self::Edit => write!(f, "edit"),
-            Self::Transform => write!(f, "transform"),
-            Self::Modify => write!(f, "modify"),
-            Self::Fix => write!(f, "fix"),
-            Self::Publish => write!(f, "publish"),
-            Self::Release => write!(f, "release"),
-            Self::Push => write!(f, "push"),
-            Self::Send => write!(f, "send"),
-            Self::Apply => write!(f, "apply"),
-            Self::Test => write!(f, "test"),
-            Self::Validate => write!(f, "validate"),
-            Self::Check => write!(f, "check"),
-            Self::Verify => write!(f, "verify"),
-            Self::Analyze => write!(f, "analyze"),
-            Self::Scan => write!(f, "scan"),
-            Self::Lint => write!(f, "lint"),
-            Self::Inspect => write!(f, "inspect"),
-            Self::Open => write!(f, "open"),
-            Self::Launch => write!(f, "launch"),
-            Self::Show => write!(f, "show"),
-            Self::View => write!(f, "view"),
-            Self::Create => write!(f, "create"),
-            Self::Generate => write!(f, "generate"),
+            Self::Activate => write!(f, "activate"),
             Self::Add => write!(f, "add"),
-            Self::New => write!(f, "new"),
-            Self::Init => write!(f, "init"),
-            Self::Set => write!(f, "set"),
-            Self::Remove => write!(f, "remove"),
-            Self::Delete => write!(f, "delete"),
-            Self::Destroy => write!(f, "destroy"),
-            Self::Erase => write!(f, "erase"),
-            Self::Unset => write!(f, "unset"),
-            Self::Reset => write!(f, "reset"),
+            Self::Analyze => write!(f, "analyze"),
+            Self::Apply => write!(f, "apply"),
+            Self::Archive => write!(f, "archive"),
+            Self::Audit => write!(f, "audit"),
+            Self::Backup => write!(f, "backup"),
+            Self::Benchmark => write!(f, "benchmark"),
+            Self::Build => write!(f, "build"),
+            Self::Bundle => write!(f, "bundle"),
+            Self::Check => write!(f, "check"),
             Self::Clean => write!(f, "clean"),
             Self::Clear => write!(f, "clear"),
-            Self::Purge => write!(f, "purge"),
-            Self::Tidy => write!(f, "tidy"),
-            Self::Retrieve => write!(f, "retrieve"),
-            Self::Fetch => write!(f, "fetch"),
-            Self::Get => write!(f, "get"),
-            Self::Request => write!(f, "request"),
+            Self::Commit => write!(f, "commit"),
+            Self::Compile => write!(f, "compile"),
+            Self::Compress => write!(f, "compress"),
+            Self::Configure => write!(f, "configure"),
+            Self::Connect => write!(f, "connect"),
+            Self::Copy => write!(f, "copy"),
+            Self::Create => write!(f, "create"),
+            Self::Deactivate => write!(f, "deactivate"),
             Self::Debug => write!(f, "debug"),
-            Self::Trace => write!(f, "trace"),
+            Self::Decompress => write!(f, "decompress"),
+            Self::Decrypt => write!(f, "decrypt"),
+            Self::Delete => write!(f, "delete"),
+            Self::Deploy => write!(f, "deploy"),
+            Self::Destroy => write!(f, "destroy"),
+            Self::Disable => write!(f, "disable"),
+            Self::Disconnect => write!(f, "disconnect"),
+            Self::Edit => write!(f, "edit"),
+            Self::Enable => write!(f, "enable"),
+            Self::Encrypt => write!(f, "encrypt"),
+            Self::Erase => write!(f, "erase"),
+            Self::Exec => write!(f, "exec"),
+            Self::Execute => write!(f, "execute"),
+            Self::Export => write!(f, "export"),
+            Self::Expose => write!(f, "expose"),
+            Self::Fetch => write!(f, "fetch"),
+            Self::Fix => write!(f, "fix"),
+            Self::Flush => write!(f, "flush"),
+            Self::Format => write!(f, "format"),
+            Self::Generate => write!(f, "generate"),
+            Self::Get => write!(f, "get"),
+            Self::Import => write!(f, "import"),
+            Self::Index => write!(f, "index"),
+            Self::Init => write!(f, "init"),
+            Self::Inspect => write!(f, "inspect"),
+            Self::Install => write!(f, "install"),
+            Self::Join => write!(f, "join"),
+            Self::Kill => write!(f, "kill"),
+            Self::Launch => write!(f, "launch"),
+            Self::Lint => write!(f, "lint"),
+            Self::List => write!(f, "list"),
+            Self::Load => write!(f, "load"),
+            Self::Lock => write!(f, "lock"),
+            Self::Login => write!(f, "login"),
+            Self::Logout => write!(f, "logout"),
+            Self::Manage => write!(f, "manage"),
+            Self::Merge => write!(f, "merge"),
+            Self::Migrate => write!(f, "migrate"),
+            Self::Modify => write!(f, "modify"),
+            Self::Monitor => write!(f, "monitor"),
+            Self::Mount => write!(f, "mount"),
+            Self::New => write!(f, "new"),
+            Self::Notify => write!(f, "notify"),
+            Self::Open => write!(f, "open"),
+            Self::Package => write!(f, "package"),
+            Self::Partition => write!(f, "partition"),
+            Self::Patch => write!(f, "patch"),
+            Self::Pause => write!(f, "pause"),
+            Self::Ping => write!(f, "ping"),
+            Self::Preload => write!(f, "preload"),
+            Self::Prefetch => write!(f, "prefetch"),
             Self::Profile => write!(f, "profile"),
+            Self::Provision => write!(f, "provision"),
+            Self::Publish => write!(f, "publish"),
+            Self::Purge => write!(f, "purge"),
+            Self::Push => write!(f, "push"),
+            Self::Queue => write!(f, "queue"),
+            Self::Reboot => write!(f, "reboot"),
+            Self::Recover => write!(f, "recover"),
+            Self::Refresh => write!(f, "refresh"),
+            Self::Release => write!(f, "release"),
+            Self::Reload => write!(f, "reload"),
+            Self::Remove => write!(f, "remove"),
+            Self::Request => write!(f, "request"),
+            Self::Reset => write!(f, "reset"),
+            Self::Restart => write!(f, "restart"),
+            Self::Restore => write!(f, "restore"),
+            Self::Retrieve => write!(f, "retrieve"),
+            Self::Rollback => write!(f, "rollback"),
+            Self::Run => write!(f, "run"),
+            Self::Save => write!(f, "save"),
+            Self::Scale => write!(f, "scale"),
+            Self::Scan => write!(f, "scan"),
+            Self::Schedule => write!(f, "schedule"),
+            Self::Seed => write!(f, "seed"),
+            Self::Send => write!(f, "send"),
+            Self::Serve => write!(f, "serve"),
+            Self::Set => write!(f, "set"),
+            Self::Setup => write!(f, "setup"),
+            Self::Show => write!(f, "show"),
+            Self::Snapshot => write!(f, "snapshot"),
+            Self::Start => write!(f, "start"),
+            Self::Stash => write!(f, "stash"),
+            Self::Stop => write!(f, "stop"),
+            Self::Tag => write!(f, "tag"),
+            Self::Teardown => write!(f, "teardown"),
+            Self::Terminate => write!(f, "terminate"),
+            Self::Test => write!(f, "test"),
+            Self::Tidy => write!(f, "tidy"),
+            Self::Trace => write!(f, "trace"),
+            Self::Transform => write!(f, "transform"),
+            Self::Trigger => write!(f, "trigger"),
+            Self::Tunnel => write!(f, "tunnel"),
+            Self::Undeploy => write!(f, "undeploy"),
+            Self::Uninstall => write!(f, "uninstall"),
+            Self::Unmount => write!(f, "unmount"),
+            Self::Unset => write!(f, "unset"),
+            Self::Update => write!(f, "update"),
+            Self::Upgrade => write!(f, "upgrade"),
+            Self::Validate => write!(f, "validate"),
+            Self::Verify => write!(f, "verify"),
+            Self::View => write!(f, "view"),
+            Self::Watch => write!(f, "watch"),
         }
     }
 }
@@ -2063,86 +2304,132 @@ impl ::std::str::FromStr for ExecutableVerb {
     type Err = self::error::ConversionError;
     fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
         match value {
-            "activate" => Ok(Self::Activate),
-            "enable" => Ok(Self::Enable),
-            "start" => Ok(Self::Start),
-            "trigger" => Ok(Self::Trigger),
-            "exec" => Ok(Self::Exec),
-            "run" => Ok(Self::Run),
-            "execute" => Ok(Self::Execute),
-            "deactivate" => Ok(Self::Deactivate),
-            "disable" => Ok(Self::Disable),
-            "stop" => Ok(Self::Stop),
-            "pause" => Ok(Self::Pause),
-            "kill" => Ok(Self::Kill),
-            "terminate" => Ok(Self::Terminate),
             "abort" => Ok(Self::Abort),
-            "watch" => Ok(Self::Watch),
-            "monitor" => Ok(Self::Monitor),
-            "track" => Ok(Self::Track),
-            "restart" => Ok(Self::Restart),
-            "reboot" => Ok(Self::Reboot),
-            "reload" => Ok(Self::Reload),
-            "refresh" => Ok(Self::Refresh),
-            "install" => Ok(Self::Install),
-            "setup" => Ok(Self::Setup),
-            "deploy" => Ok(Self::Deploy),
-            "build" => Ok(Self::Build),
-            "package" => Ok(Self::Package),
-            "bundle" => Ok(Self::Bundle),
-            "compile" => Ok(Self::Compile),
-            "uninstall" => Ok(Self::Uninstall),
-            "teardown" => Ok(Self::Teardown),
-            "undeploy" => Ok(Self::Undeploy),
-            "update" => Ok(Self::Update),
-            "upgrade" => Ok(Self::Upgrade),
-            "patch" => Ok(Self::Patch),
-            "configure" => Ok(Self::Configure),
-            "manage" => Ok(Self::Manage),
-            "edit" => Ok(Self::Edit),
-            "transform" => Ok(Self::Transform),
-            "modify" => Ok(Self::Modify),
-            "fix" => Ok(Self::Fix),
-            "publish" => Ok(Self::Publish),
-            "release" => Ok(Self::Release),
-            "push" => Ok(Self::Push),
-            "send" => Ok(Self::Send),
-            "apply" => Ok(Self::Apply),
-            "test" => Ok(Self::Test),
-            "validate" => Ok(Self::Validate),
-            "check" => Ok(Self::Check),
-            "verify" => Ok(Self::Verify),
-            "analyze" => Ok(Self::Analyze),
-            "scan" => Ok(Self::Scan),
-            "lint" => Ok(Self::Lint),
-            "inspect" => Ok(Self::Inspect),
-            "open" => Ok(Self::Open),
-            "launch" => Ok(Self::Launch),
-            "show" => Ok(Self::Show),
-            "view" => Ok(Self::View),
-            "create" => Ok(Self::Create),
-            "generate" => Ok(Self::Generate),
+            "activate" => Ok(Self::Activate),
             "add" => Ok(Self::Add),
-            "new" => Ok(Self::New),
-            "init" => Ok(Self::Init),
-            "set" => Ok(Self::Set),
-            "remove" => Ok(Self::Remove),
-            "delete" => Ok(Self::Delete),
-            "destroy" => Ok(Self::Destroy),
-            "erase" => Ok(Self::Erase),
-            "unset" => Ok(Self::Unset),
-            "reset" => Ok(Self::Reset),
+            "analyze" => Ok(Self::Analyze),
+            "apply" => Ok(Self::Apply),
+            "archive" => Ok(Self::Archive),
+            "audit" => Ok(Self::Audit),
+            "backup" => Ok(Self::Backup),
+            "benchmark" => Ok(Self::Benchmark),
+            "build" => Ok(Self::Build),
+            "bundle" => Ok(Self::Bundle),
+            "check" => Ok(Self::Check),
             "clean" => Ok(Self::Clean),
             "clear" => Ok(Self::Clear),
-            "purge" => Ok(Self::Purge),
-            "tidy" => Ok(Self::Tidy),
-            "retrieve" => Ok(Self::Retrieve),
-            "fetch" => Ok(Self::Fetch),
-            "get" => Ok(Self::Get),
-            "request" => Ok(Self::Request),
+            "commit" => Ok(Self::Commit),
+            "compile" => Ok(Self::Compile),
+            "compress" => Ok(Self::Compress),
+            "configure" => Ok(Self::Configure),
+            "connect" => Ok(Self::Connect),
+            "copy" => Ok(Self::Copy),
+            "create" => Ok(Self::Create),
+            "deactivate" => Ok(Self::Deactivate),
             "debug" => Ok(Self::Debug),
-            "trace" => Ok(Self::Trace),
+            "decompress" => Ok(Self::Decompress),
+            "decrypt" => Ok(Self::Decrypt),
+            "delete" => Ok(Self::Delete),
+            "deploy" => Ok(Self::Deploy),
+            "destroy" => Ok(Self::Destroy),
+            "disable" => Ok(Self::Disable),
+            "disconnect" => Ok(Self::Disconnect),
+            "edit" => Ok(Self::Edit),
+            "enable" => Ok(Self::Enable),
+            "encrypt" => Ok(Self::Encrypt),
+            "erase" => Ok(Self::Erase),
+            "exec" => Ok(Self::Exec),
+            "execute" => Ok(Self::Execute),
+            "export" => Ok(Self::Export),
+            "expose" => Ok(Self::Expose),
+            "fetch" => Ok(Self::Fetch),
+            "fix" => Ok(Self::Fix),
+            "flush" => Ok(Self::Flush),
+            "format" => Ok(Self::Format),
+            "generate" => Ok(Self::Generate),
+            "get" => Ok(Self::Get),
+            "import" => Ok(Self::Import),
+            "index" => Ok(Self::Index),
+            "init" => Ok(Self::Init),
+            "inspect" => Ok(Self::Inspect),
+            "install" => Ok(Self::Install),
+            "join" => Ok(Self::Join),
+            "kill" => Ok(Self::Kill),
+            "launch" => Ok(Self::Launch),
+            "lint" => Ok(Self::Lint),
+            "list" => Ok(Self::List),
+            "load" => Ok(Self::Load),
+            "lock" => Ok(Self::Lock),
+            "login" => Ok(Self::Login),
+            "logout" => Ok(Self::Logout),
+            "manage" => Ok(Self::Manage),
+            "merge" => Ok(Self::Merge),
+            "migrate" => Ok(Self::Migrate),
+            "modify" => Ok(Self::Modify),
+            "monitor" => Ok(Self::Monitor),
+            "mount" => Ok(Self::Mount),
+            "new" => Ok(Self::New),
+            "notify" => Ok(Self::Notify),
+            "open" => Ok(Self::Open),
+            "package" => Ok(Self::Package),
+            "partition" => Ok(Self::Partition),
+            "patch" => Ok(Self::Patch),
+            "pause" => Ok(Self::Pause),
+            "ping" => Ok(Self::Ping),
+            "preload" => Ok(Self::Preload),
+            "prefetch" => Ok(Self::Prefetch),
             "profile" => Ok(Self::Profile),
+            "provision" => Ok(Self::Provision),
+            "publish" => Ok(Self::Publish),
+            "purge" => Ok(Self::Purge),
+            "push" => Ok(Self::Push),
+            "queue" => Ok(Self::Queue),
+            "reboot" => Ok(Self::Reboot),
+            "recover" => Ok(Self::Recover),
+            "refresh" => Ok(Self::Refresh),
+            "release" => Ok(Self::Release),
+            "reload" => Ok(Self::Reload),
+            "remove" => Ok(Self::Remove),
+            "request" => Ok(Self::Request),
+            "reset" => Ok(Self::Reset),
+            "restart" => Ok(Self::Restart),
+            "restore" => Ok(Self::Restore),
+            "retrieve" => Ok(Self::Retrieve),
+            "rollback" => Ok(Self::Rollback),
+            "run" => Ok(Self::Run),
+            "save" => Ok(Self::Save),
+            "scale" => Ok(Self::Scale),
+            "scan" => Ok(Self::Scan),
+            "schedule" => Ok(Self::Schedule),
+            "seed" => Ok(Self::Seed),
+            "send" => Ok(Self::Send),
+            "serve" => Ok(Self::Serve),
+            "set" => Ok(Self::Set),
+            "setup" => Ok(Self::Setup),
+            "show" => Ok(Self::Show),
+            "snapshot" => Ok(Self::Snapshot),
+            "start" => Ok(Self::Start),
+            "stash" => Ok(Self::Stash),
+            "stop" => Ok(Self::Stop),
+            "tag" => Ok(Self::Tag),
+            "teardown" => Ok(Self::Teardown),
+            "terminate" => Ok(Self::Terminate),
+            "test" => Ok(Self::Test),
+            "tidy" => Ok(Self::Tidy),
+            "trace" => Ok(Self::Trace),
+            "transform" => Ok(Self::Transform),
+            "trigger" => Ok(Self::Trigger),
+            "tunnel" => Ok(Self::Tunnel),
+            "undeploy" => Ok(Self::Undeploy),
+            "uninstall" => Ok(Self::Uninstall),
+            "unmount" => Ok(Self::Unmount),
+            "unset" => Ok(Self::Unset),
+            "update" => Ok(Self::Update),
+            "upgrade" => Ok(Self::Upgrade),
+            "validate" => Ok(Self::Validate),
+            "verify" => Ok(Self::Verify),
+            "view" => Ok(Self::View),
+            "watch" => Ok(Self::Watch),
             _ => Err("invalid value".into()),
         }
     }
@@ -2350,6 +2637,38 @@ impl ::std::convert::From<::serde_json::Value> for Ref {
         Self(value)
     }
 }
+#[doc = "`Verb`"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+#[serde(transparent)]
+pub struct Verb(pub ::serde_json::Value);
+impl ::std::ops::Deref for Verb {
+    type Target = ::serde_json::Value;
+    fn deref(&self) -> &::serde_json::Value {
+        &self.0
+    }
+}
+impl ::std::convert::From<Verb> for ::serde_json::Value {
+    fn from(value: Verb) -> Self {
+        value.0
+    }
+}
+impl ::std::convert::From<&Verb> for Verb {
+    fn from(value: &Verb) -> Self {
+        value.clone()
+    }
+}
+impl ::std::convert::From<::serde_json::Value> for Verb {
+    fn from(value: ::serde_json::Value) -> Self {
+        Self(value)
+    }
+}
 #[doc = r" Types for composing complex structures."]
 pub mod builder {
     #[derive(Clone, Debug)]
@@ -2387,6 +2706,7 @@ pub mod builder {
             ::std::string::String,
         >,
         verb: ::std::result::Result<super::ExecutableVerb, ::std::string::String>,
+        verb_aliases: ::std::result::Result<::std::vec::Vec<super::Verb>, ::std::string::String>,
         visibility: ::std::result::Result<
             ::std::option::Option<super::CommonVisibility>,
             ::std::string::String,
@@ -2407,6 +2727,7 @@ pub mod builder {
                 tags: Ok(super::defaults::executable_tags()),
                 timeout: Ok(Default::default()),
                 verb: Err("no value supplied for verb".to_string()),
+                verb_aliases: Ok(Default::default()),
                 visibility: Ok(Default::default()),
             }
         }
@@ -2542,6 +2863,16 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for verb: {}", e));
             self
         }
+        pub fn verb_aliases<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::vec::Vec<super::Verb>>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.verb_aliases = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for verb_aliases: {}", e));
+            self
+        }
         pub fn visibility<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<::std::option::Option<super::CommonVisibility>>,
@@ -2571,6 +2902,7 @@ pub mod builder {
                 tags: value.tags?,
                 timeout: value.timeout?,
                 verb: value.verb?,
+                verb_aliases: value.verb_aliases?,
                 visibility: value.visibility?,
             })
         }
@@ -2590,6 +2922,7 @@ pub mod builder {
                 tags: Ok(value.tags),
                 timeout: Ok(value.timeout),
                 verb: Ok(value.verb),
+                verb_aliases: Ok(value.verb_aliases),
                 visibility: Ok(value.visibility),
             }
         }
@@ -2599,7 +2932,8 @@ pub mod builder {
         default: ::std::result::Result<::std::string::String, ::std::string::String>,
         env_key: ::std::result::Result<::std::string::String, ::std::string::String>,
         flag: ::std::result::Result<::std::string::String, ::std::string::String>,
-        pos: ::std::result::Result<i64, ::std::string::String>,
+        output_file: ::std::result::Result<::std::string::String, ::std::string::String>,
+        pos: ::std::result::Result<::std::option::Option<i64>, ::std::string::String>,
         required: ::std::result::Result<bool, ::std::string::String>,
         type_: ::std::result::Result<super::ExecutableArgumentType, ::std::string::String>,
     }
@@ -2607,8 +2941,9 @@ pub mod builder {
         fn default() -> Self {
             Self {
                 default: Ok(Default::default()),
-                env_key: Err("no value supplied for env_key".to_string()),
+                env_key: Ok(Default::default()),
                 flag: Ok(Default::default()),
+                output_file: Ok(Default::default()),
                 pos: Ok(Default::default()),
                 required: Ok(Default::default()),
                 type_: Ok(super::defaults::executable_argument_type()),
@@ -2646,9 +2981,19 @@ pub mod builder {
                 .map_err(|e| format!("error converting supplied value for flag: {}", e));
             self
         }
+        pub fn output_file<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::string::String>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.output_file = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for output_file: {}", e));
+            self
+        }
         pub fn pos<T>(mut self, value: T) -> Self
         where
-            T: ::std::convert::TryInto<i64>,
+            T: ::std::convert::TryInto<::std::option::Option<i64>>,
             T::Error: ::std::fmt::Display,
         {
             self.pos = value
@@ -2686,6 +3031,7 @@ pub mod builder {
                 default: value.default?,
                 env_key: value.env_key?,
                 flag: value.flag?,
+                output_file: value.output_file?,
                 pos: value.pos?,
                 required: value.required?,
                 type_: value.type_?,
@@ -2698,6 +3044,7 @@ pub mod builder {
                 default: Ok(value.default),
                 env_key: Ok(value.env_key),
                 flag: Ok(value.flag),
+                output_file: Ok(value.output_file),
                 pos: Ok(value.pos),
                 required: Ok(value.required),
                 type_: Ok(value.type_),
@@ -3130,7 +3477,9 @@ pub mod builder {
     }
     #[derive(Clone, Debug)]
     pub struct ExecutableParameter {
+        env_file: ::std::result::Result<::std::string::String, ::std::string::String>,
         env_key: ::std::result::Result<::std::string::String, ::std::string::String>,
+        output_file: ::std::result::Result<::std::string::String, ::std::string::String>,
         prompt: ::std::result::Result<::std::string::String, ::std::string::String>,
         secret_ref: ::std::result::Result<::std::string::String, ::std::string::String>,
         text: ::std::result::Result<::std::string::String, ::std::string::String>,
@@ -3138,7 +3487,9 @@ pub mod builder {
     impl ::std::default::Default for ExecutableParameter {
         fn default() -> Self {
             Self {
-                env_key: Err("no value supplied for env_key".to_string()),
+                env_file: Ok(Default::default()),
+                env_key: Ok(Default::default()),
+                output_file: Ok(Default::default()),
                 prompt: Ok(Default::default()),
                 secret_ref: Ok(Default::default()),
                 text: Ok(Default::default()),
@@ -3146,6 +3497,16 @@ pub mod builder {
         }
     }
     impl ExecutableParameter {
+        pub fn env_file<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::string::String>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.env_file = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for env_file: {}", e));
+            self
+        }
         pub fn env_key<T>(mut self, value: T) -> Self
         where
             T: ::std::convert::TryInto<::std::string::String>,
@@ -3154,6 +3515,16 @@ pub mod builder {
             self.env_key = value
                 .try_into()
                 .map_err(|e| format!("error converting supplied value for env_key: {}", e));
+            self
+        }
+        pub fn output_file<T>(mut self, value: T) -> Self
+        where
+            T: ::std::convert::TryInto<::std::string::String>,
+            T::Error: ::std::fmt::Display,
+        {
+            self.output_file = value
+                .try_into()
+                .map_err(|e| format!("error converting supplied value for output_file: {}", e));
             self
         }
         pub fn prompt<T>(mut self, value: T) -> Self
@@ -3193,7 +3564,9 @@ pub mod builder {
             value: ExecutableParameter,
         ) -> ::std::result::Result<Self, super::error::ConversionError> {
             Ok(Self {
+                env_file: value.env_file?,
                 env_key: value.env_key?,
+                output_file: value.output_file?,
                 prompt: value.prompt?,
                 secret_ref: value.secret_ref?,
                 text: value.text?,
@@ -3203,7 +3576,9 @@ pub mod builder {
     impl ::std::convert::From<super::ExecutableParameter> for ExecutableParameter {
         fn from(value: super::ExecutableParameter) -> Self {
             Self {
+                env_file: Ok(value.env_file),
                 env_key: Ok(value.env_key),
+                output_file: Ok(value.output_file),
                 prompt: Ok(value.prompt),
                 secret_ref: Ok(value.secret_ref),
                 text: Ok(value.text),

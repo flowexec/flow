@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/utils"
 )
 
@@ -35,6 +36,7 @@ var _ = Describe("Utils", func() {
 
 	BeforeEach(func() {
 		mockLogger = mocks.NewMockLogger(gomock.NewController(GinkgoT()))
+		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
 		Expect(os.Chdir(testWorkingDir)).To(Succeed())
 		Expect(os.Setenv("HOME", testHomeDir)).To(Succeed())
 	})
@@ -42,7 +44,7 @@ var _ = Describe("Utils", func() {
 	Describe("ExpandDirectory", func() {
 		DescribeTable("with different inputs",
 			func(dir string, expected string) {
-				returnedDir := utils.ExpandDirectory(mockLogger, dir, wsDir, execPath, nil)
+				returnedDir := utils.ExpandDirectory(dir, wsDir, execPath, nil)
 				Expect(returnedDir).To(Equal(expected))
 			},
 			Entry("empty dir", "", execDir),
@@ -57,13 +59,13 @@ var _ = Describe("Utils", func() {
 		When("env vars are in the dir", func() {
 			It("expands the env vars", func() {
 				envMap := map[string]string{"VAR1": "one", "VAR2": "two"}
-				Expect(utils.ExpandDirectory(mockLogger, "/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
+				Expect(utils.ExpandDirectory("/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
 					To(Equal("/one/two"))
 			})
 			It("logs a warning if the env var is not found", func() {
 				envMap := map[string]string{"VAR1": "one"}
 				mockLogger.EXPECT().Warnx("unable to find env key in path expansion", "key", "VAR2")
-				Expect(utils.ExpandDirectory(mockLogger, "/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
+				Expect(utils.ExpandDirectory("/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
 					To(Equal("/one"))
 			})
 		})

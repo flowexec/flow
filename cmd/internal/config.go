@@ -16,6 +16,7 @@ import (
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io"
 	configIO "github.com/flowexec/flow/internal/io/config"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/config"
 )
 
@@ -42,7 +43,6 @@ func registerConfigResetCmd(ctx *context.Context, configCmd *cobra.Command) {
 }
 
 func resetConfigFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
-	logger := ctx.Logger
 	form, err := views.NewForm(
 		io.Theme(ctx.Config.Theme.String()),
 		ctx.StdIn(),
@@ -53,21 +53,21 @@ func resetConfigFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
 			Title: "This will overwrite your current flow configurations. Are you sure you want to continue?",
 		})
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	if err := form.Run(ctx.Ctx); err != nil {
-		logger.FatalErr(err)
+	if err := form.Run(ctx); err != nil {
+		logger.Log().FatalErr(err)
 	}
 	resp := form.FindByKey("confirm").Value()
 	if truthy, _ := strconv.ParseBool(resp); !truthy {
-		logger.Warnf("Aborting")
+		logger.Log().Warnf("Aborting")
 		return
 	}
 
 	if err := filesystem.InitConfig(); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Restored flow configurations")
+	logger.Log().PlainTextSuccess("Restored flow configurations")
 }
 
 func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
@@ -98,14 +98,13 @@ func registerSetNamespaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setNamespaceFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	namespace := args[0]
 	userConfig := ctx.Config
 	userConfig.CurrentNamespace = namespace
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Namespace set to " + namespace)
+	logger.Log().PlainTextSuccess("Namespace set to " + namespace)
 }
 
 func registerSetWorkspaceModeCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -120,7 +119,6 @@ func registerSetWorkspaceModeCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setWorkspaceModeFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	mode := config.ConfigWorkspaceMode(strings.ToLower(args[0]))
 
 	userConfig := ctx.Config
@@ -129,9 +127,9 @@ func setWorkspaceModeFunc(ctx *context.Context, _ *cobra.Command, args []string)
 	}
 	userConfig.WorkspaceMode = mode
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess(fmt.Sprintf("Workspace mode set to '%s'", string(mode)))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace mode set to '%s'", string(mode)))
 }
 
 func registerSetLogModeCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -146,15 +144,14 @@ func registerSetLogModeCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setLogModeFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	mode := tuikitIO.LogMode(strings.ToLower(args[0]))
 
 	userConfig := ctx.Config
 	userConfig.DefaultLogMode = mode
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess(fmt.Sprintf("Default log mode set to '%s'", mode))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Default log mode set to '%s'", mode))
 }
 
 func registerSetTUICmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -169,10 +166,9 @@ func registerSetTUICmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setInteractiveFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	enabled, err := strconv.ParseBool(args[0])
 	if err != nil {
-		logger.FatalErr(errors.Wrap(err, "invalid boolean value"))
+		logger.Log().FatalErr(errors.Wrap(err, "invalid boolean value"))
 	}
 
 	userConfig := ctx.Config
@@ -181,13 +177,13 @@ func setInteractiveFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	}
 	userConfig.Interactive.Enabled = enabled
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	strVal := "disabled"
 	if enabled {
 		strVal = "enabled"
 	}
-	logger.PlainTextSuccess("Interactive UI " + strVal)
+	logger.Log().PlainTextSuccess("Interactive UI " + strVal)
 }
 
 func registerSetNotificationsCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -203,12 +199,11 @@ func registerSetNotificationsCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setNotificationsFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
 	enabled, err := strconv.ParseBool(args[0])
 	if err != nil {
-		logger.FatalErr(errors.Wrap(err, "invalid boolean value"))
+		logger.Log().FatalErr(errors.Wrap(err, "invalid boolean value"))
 	}
-	sound := flags.ValueFor[bool](ctx, cmd, *flags.SetSoundNotificationFlag, false)
+	sound := flags.ValueFor[bool](cmd, *flags.SetSoundNotificationFlag, false)
 
 	userConfig := ctx.Config
 	if userConfig.Interactive == nil {
@@ -219,13 +214,13 @@ func setNotificationsFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 		userConfig.Interactive.SoundOnCompletion = &enabled
 	}
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	strVal := "disabled"
 	if enabled {
 		strVal = "enabled"
 	}
-	logger.PlainTextSuccess("Notifications " + strVal)
+	logger.Log().PlainTextSuccess("Notifications " + strVal)
 }
 
 func registerSetThemeCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -246,7 +241,6 @@ func registerSetThemeCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setThemeFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	themeName := args[0]
 
 	userConfig := ctx.Config
@@ -255,9 +249,9 @@ func setThemeFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	}
 	userConfig.Theme = config.ConfigTheme(themeName)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Theme set to " + themeName)
+	logger.Log().PlainTextSuccess("Theme set to " + themeName)
 }
 
 func registerSetTimeoutCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -271,19 +265,18 @@ func registerSetTimeoutCmd(ctx *context.Context, setCmd *cobra.Command) {
 }
 
 func setTimeoutFunc(ctx *context.Context, _ *cobra.Command, args []string) {
-	logger := ctx.Logger
 	timeoutStr := args[0]
 	timeout, err := time.ParseDuration(timeoutStr)
 	if err != nil {
-		logger.FatalErr(errors.Wrap(err, "invalid duration"))
+		logger.Log().FatalErr(errors.Wrap(err, "invalid duration"))
 	}
 
 	userConfig := ctx.Config
 	userConfig.DefaultTimeout = timeout
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Default timeout set to " + timeoutStr)
+	logger.Log().PlainTextSuccess("Default timeout set to " + timeoutStr)
 }
 
 func registerConfigGetCmd(ctx *context.Context, configCmd *cobra.Command) {
@@ -301,13 +294,12 @@ func registerConfigGetCmd(ctx *context.Context, configCmd *cobra.Command) {
 }
 
 func getConfigFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
 	userConfig := ctx.Config
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		view := configIO.NewUserConfigView(ctx.TUIContainer, *userConfig)
 		SetView(ctx, cmd, view)
 	} else {
-		configIO.PrintUserConfig(logger, outputFormat, userConfig)
+		configIO.PrintUserConfig(outputFormat, userConfig)
 	}
 }

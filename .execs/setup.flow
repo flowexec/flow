@@ -18,14 +18,6 @@ executables:
       dir: //
       cmd: go install ./...
 
-  - verb: install
-    name: npm
-    aliases: [node, modules]
-    tags: [npm, desktop]
-    exec:
-      dir: //desktop
-      cmd: npm install
-
   - verb: start
     name: site
     aliases: [docs]
@@ -45,22 +37,3 @@ executables:
           text: docs/_media/demo.gif
       dir: //
       cmd: vhs -o $OUTPUT docs/demo.tape
-
-  - verb: start
-    name: tauri
-    aliases: [desktop]
-    tags: [desktop]
-    description: Start the Tauri desktop app in development mode.
-    timeout: "24h"
-    exec:
-      dir: //desktop
-      cmd: npm run tauri dev
-
-  - verb: start
-    name: storybook
-    tags: [desktop]
-    description: Start the Tauri desktop app's Storybook server.
-    timeout: "24h"
-    exec:
-      dir: //desktop
-      cmd: npm run storybook

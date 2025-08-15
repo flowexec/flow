@@ -6,8 +6,8 @@ executables:
     serial:
       execs:
         - ref: generate
-        - ref: lint go
-        - ref: test all
+        - ref: lint
+        - ref: test
         - ref: validate generated
         - cmd: echo "✅ All development checks passed"
 
@@ -17,6 +17,11 @@ executables:
     exec:
       dir: //
       cmd: |
+        if [ "$CI" = "" ]; then
+          echo "Skipping diff validation"
+          exit 0
+        fi
+        
         echo "Checking for uncommitted generated files..."
 
         if [ -n "$(git status --porcelain)" ]; then
@@ -29,6 +34,11 @@ executables:
         else
           echo "✅ All generated files are up to date"
         fi
+
+  - verb: lint
+    parallel:
+      execs:
+        - ref: lint go
 
   - verb: lint
     name: go
@@ -54,15 +64,6 @@ executables:
             else
               golangci-lint run ./... --fix
             fi
-
-  - verb: lint
-    name: ts
-    aliases: [frontend]
-    tags: [npm, desktop]
-    description: Run eslint on the Tauri desktop app's frontend.
-    exec:
-      dir: //desktop
-      cmd: npm run lint
 
   - verb: scan
     name: security

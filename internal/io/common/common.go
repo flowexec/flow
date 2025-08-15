@@ -6,8 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flowexec/tuikit/io"
-
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/open"
 )
 
@@ -35,7 +34,7 @@ const (
 	JSONFormat = "json"
 )
 
-func NormalizeFormat(logger io.Logger, format string) string {
+func NormalizeFormat(format string) string {
 	switch strings.ToLower(format) {
 	case YAMLFormat, ymlFormat:
 		return YAMLFormat
@@ -44,7 +43,7 @@ func NormalizeFormat(logger io.Logger, format string) string {
 	default:
 		// tui is a special case, it's the default output mode and should not be logged as an unsupported format
 		if format != "" && format != "tui" {
-			logger.Warnf("Unsupported output format '%s', defaulting to YAML", format)
+			logger.Log().Warnf("Unsupported output format '%s', defaulting to YAML", format)
 		}
 		return YAMLFormat
 	}

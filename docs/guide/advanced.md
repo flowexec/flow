@@ -16,6 +16,8 @@ The expression language supports standard comparison and logical operators:
 - String: `+` (concatenation), `matches` (regex matching)
 - Length: `len()`
 
+**See the [Expr Language Definition](https://expr-lang.org/docs/language-definition) for all available operators and functions.**
+
 ### Basic Conditions <!-- {docsify-ignore} -->
 
 Use the `if` field to control when executables run:
@@ -61,6 +63,27 @@ executables:
           cmd: npm test
 ```
 
+### File System Conditions <!-- {docsify-ignore} -->
+Check for files or directories to control execution:
+
+```yaml
+executables:
+  - verb: deploy
+    name: app
+    serial:
+      execs:
+        # Only run if config file exists
+        - if: fileExists("config.yaml")
+          cmd: kubectl apply -f config.yaml
+        
+        # Abort deployment if no Dockerfile found
+        - if: not fileExists("Dockerfile")
+          cmd: echo "No Dockerfile found"; exit 1
+        
+        # Run deployment if Dockerfile exists
+        - cmd: docker build -t myapp .
+```
+
 ### Data-Driven Conditions <!-- {docsify-ignore} -->
 
 Use stored data to control execution flow:
@@ -103,6 +126,19 @@ Conditions have access to extensive runtime information:
 - `ctx.workspacePath` - Full path to workspace root
 - `ctx.flowFilePath` - Path to current flow file
 - `ctx.flowFileDir` - Directory containing current flow file
+
+Additionally the following functions are provided alongside the Expr language definition:
+
+- `fileExists(path)` - Check if file/directory exists
+- `dirExists(path)` - Check if path is a directory
+- `isFile(path)` - Check if path is a file
+- `isDir(path)` - Check if path is a directory
+- `basename(path)` - Get filename from path
+- `dirname(path)` - Get directory from path
+- `readFile(path)` - Read file contents as string
+- `fileSize(path)` - Get file size in bytes
+- `fileModTime(path)` - Get file modification time
+- `fileAge(path)` - Get duration since last modified
 
 ## Managing State
 
@@ -371,20 +407,24 @@ executables:
       cmd: ./deploy.sh
 ```
 
+> [!NOTE]
+> In serial and parallel executables, `params` and `args` that are defined at the parent level will apply to all 
+> child executables. Argument from the parent -> child executable should use matching `EnvKey` to ensure proper resolution.
+
 **Resolution example:**
 ```shell
 # Shell environment
-export ENVIRONMENT=development
 export API_KEY=shell-key
 export VERBOSE=true
+export ENVIRONMENT=development
 
 # Command execution
 flow deploy app verbose=false --param ENVIRONMENT=production
 
 # Final environment variables:
-# ENVIRONMENT=production    (--param override wins)
 # API_KEY=<secret-value>    (params wins over shell)
-# VERBOSE=false             (args wins over shell)
+# VERBOSE=false             (args wins over shell and params)
+# ENVIRONMENT=production    (--param override wins over all)
 ```
 
 ### Environment Variable Expansion <!-- {docsify-ignore} -->

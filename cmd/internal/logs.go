@@ -11,6 +11,7 @@ import (
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io/logs"
+	"github.com/flowexec/flow/internal/logger"
 )
 
 func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -31,10 +32,10 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 }
 
 func logFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	lastEntry := flags.ValueFor[bool](ctx, cmd, *flags.LastLogEntryFlag, false)
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	lastEntry := flags.ValueFor[bool](cmd, *flags.LastLogEntryFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if err := filesystem.EnsureLogsDir(); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if TUIEnabled(ctx, cmd) {
 		view := views.NewLogArchiveView(ctx.TUIContainer.RenderState(), filesystem.LogsDir(), lastEntry)
@@ -43,19 +44,19 @@ func logFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 	entries, err := tuikitIO.ListArchiveEntries(filesystem.LogsDir())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
 	if lastEntry {
 		if len(entries) == 0 {
-			ctx.Logger.Fatalf("No log entries found")
+			logger.Log().Fatalf("No log entries found")
 		}
 		data, err := entries[0].Read()
 		if err != nil {
-			ctx.Logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
 		_, _ = fmt.Fprint(ctx.StdOut(), data)
 	} else {
-		logs.PrintEntries(ctx, outputFormat, entries)
+		logs.PrintEntries(outputFormat, entries)
 	}
 }

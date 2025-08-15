@@ -5,6 +5,3 @@ description: |
    GitHub Repo: github.com/flowexec/flow
 descriptionFile: docs/development.md
 verbAliases: {}
-executables:
-  excluded:
-    - node_modules

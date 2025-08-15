@@ -32,14 +32,14 @@ var _ = Describe("browse TUI", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		runChan = make(chan string, 1)
 		runFunc = func(ref string) error {
 			runChan <- ref
 			return nil
 		}
 
-		container = newTUIContainer(ctx.Ctx)
+		container = newTUIContainer(ctx)
 		ctx.TUIContainer = container
 	})
 
@@ -52,9 +52,9 @@ var _ = Describe("browse TUI", func() {
 		container.Program().SetTeaProgram(tm.GetProgram())
 		container.SetSendFunc(tm.Send)
 
-		wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList(ctx.Logger)
+		wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
 		Expect(err).NotTo(HaveOccurred())
-		execList, err := ctx.ExecutableCache.GetExecutableList(ctx.Logger)
+		execList, err := ctx.ExecutableCache.GetExecutableList()
 		Expect(err).NotTo(HaveOccurred())
 
 		libraryView := library.NewLibraryView(
@@ -81,9 +81,9 @@ var _ = Describe("browse TUI", func() {
 		container.Program().SetTeaProgram(tm.GetProgram())
 		container.SetSendFunc(tm.Send)
 
-		wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList(ctx.Logger)
+		wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
 		Expect(err).NotTo(HaveOccurred())
-		execList, err := ctx.ExecutableCache.GetExecutableList(ctx.Logger)
+		execList, err := ctx.ExecutableCache.GetExecutableList()
 		Expect(err).NotTo(HaveOccurred())
 
 		libraryView := library.NewLibraryView(
@@ -111,7 +111,7 @@ var _ = Describe("browse TUI", func() {
 		container.SetSendFunc(tm.Send)
 		fmt.Println("Running executable list snapshot test...")
 
-		execList, err := ctx.ExecutableCache.GetExecutableList(ctx.Logger)
+		execList, err := ctx.ExecutableCache.GetExecutableList()
 		Expect(err).NotTo(HaveOccurred())
 		listView := execIO.NewExecutableListView(ctx.Context, execList, runFunc)
 		Expect(container.SetView(listView)).To(Succeed())
@@ -162,12 +162,12 @@ var _ = Describe("browse e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {

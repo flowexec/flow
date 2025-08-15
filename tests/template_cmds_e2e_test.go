@@ -24,7 +24,7 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 		workDir, err := os.MkdirTemp("", "flowfile-template-e2e")
 		Expect(err).NotTo(HaveOccurred())
@@ -94,7 +94,7 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {

@@ -12,6 +12,7 @@ import (
 	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/io/library"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -32,13 +33,17 @@ func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			),
 		Args: cobra.MaximumNArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			execList, err := ctx.ExecutableCache.GetExecutableList(ctx.Logger)
+			verbStr := cmd.CalledAs()
+			verb := executable.Verb(verbStr)
+			execList, err := ctx.ExecutableCache.GetExecutableList()
 			if err != nil {
 				return nil, cobra.ShellCompDirectiveError
 			}
 			execIDs := make([]string, 0, len(execList))
 			for _, e := range execList {
-				execIDs = append(execIDs, e.ID())
+				if e.Verb.Equals(verb) {
+					execIDs = append(execIDs, e.ID())
+				}
 			}
 			return execIDs, cobra.ShellCompDirectiveNoFileComp
 		},
@@ -63,7 +68,7 @@ func browseFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		return
 	}
 
-	listMode := flags.ValueFor[bool](ctx, cmd, *flags.ListFlag, false)
+	listMode := flags.ValueFor[bool](cmd, *flags.ListFlag, false)
 	if listMode || !TUIEnabled(ctx, cmd) {
 		listExecutables(ctx, cmd, args)
 		return
@@ -73,12 +78,11 @@ func browseFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 }
 
 func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
 	if !TUIEnabled(ctx, cmd) {
-		logger.FatalErr(errors.New("interactive discovery requires an interactive terminal"))
+		logger.Log().FatalErr(errors.New("interactive discovery requires an interactive terminal"))
 	}
 
-	wsFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterWorkspaceFlag, false)
+	wsFilter := flags.ValueFor[string](cmd, *flags.FilterWorkspaceFlag, false)
 	switch wsFilter {
 	case ".":
 		wsFilter = ctx.Config.CurrentWorkspace
@@ -86,11 +90,11 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		wsFilter = ""
 	}
 
-	nsFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterNamespaceFlag, false)
-	allNs := flags.ValueFor[bool](ctx, cmd, *flags.AllNamespacesFlag, false)
+	nsFilter := flags.ValueFor[string](cmd, *flags.FilterNamespaceFlag, false)
+	allNs := flags.ValueFor[bool](cmd, *flags.AllNamespacesFlag, false)
 	switch {
 	case allNs && nsFilter != "":
-		logger.PlainTextWarn("cannot use both --all and --namespace flags, ignoring --namespace")
+		logger.Log().PlainTextWarn("cannot use both --all and --namespace flags, ignoring --namespace")
 		fallthrough
 	case allNs:
 		nsFilter = executable.WildcardNamespace
@@ -98,17 +102,17 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		nsFilter = ctx.Config.CurrentNamespace
 	}
 
-	verbFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterVerbFlag, false)
-	tagsFilter := flags.ValueFor[[]string](ctx, cmd, *flags.FilterTagFlag, false)
-	subStr := flags.ValueFor[string](ctx, cmd, *flags.FilterExecSubstringFlag, false)
+	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)
+	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
+	subStr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
-	allExecs, err := ctx.ExecutableCache.GetExecutableList(logger)
+	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	allWs, err := ctx.WorkspacesCache.GetWorkspaceConfigList(logger)
+	allWs, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
 	runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
@@ -128,17 +132,16 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 }
 
 func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	logger := ctx.Logger
-	wsFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterWorkspaceFlag, false)
+	wsFilter := flags.ValueFor[string](cmd, *flags.FilterWorkspaceFlag, false)
 	if wsFilter == "." {
 		wsFilter = ctx.Config.CurrentWorkspace
 	}
 
-	nsFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterNamespaceFlag, false)
-	allNs := flags.ValueFor[bool](ctx, cmd, *flags.AllNamespacesFlag, false)
+	nsFilter := flags.ValueFor[string](cmd, *flags.FilterNamespaceFlag, false)
+	allNs := flags.ValueFor[bool](cmd, *flags.AllNamespacesFlag, false)
 	switch {
 	case allNs && nsFilter != "":
-		logger.PlainTextWarn("cannot use both --all and --namespace flags, ignoring --namespace")
+		logger.Log().PlainTextWarn("cannot use both --all and --namespace flags, ignoring --namespace")
 		fallthrough
 	case allNs:
 		nsFilter = executable.WildcardNamespace
@@ -146,14 +149,14 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		nsFilter = ctx.Config.CurrentNamespace
 	}
 
-	verbFilter := flags.ValueFor[string](ctx, cmd, *flags.FilterVerbFlag, false)
-	tagsFilter := flags.ValueFor[[]string](ctx, cmd, *flags.FilterTagFlag, false)
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
-	substr := flags.ValueFor[string](ctx, cmd, *flags.FilterExecSubstringFlag, false)
+	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)
+	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+	substr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
-	allExecs, err := ctx.ExecutableCache.GetExecutableList(logger)
+	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	filteredExec := allExecs
 	filteredExec = filteredExec.
@@ -168,17 +171,15 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		view := execIO.NewExecutableListView(ctx, filteredExec, runFunc)
 		SetView(ctx, cmd, view)
 	} else {
-		execIO.PrintExecutableList(logger, outputFormat, filteredExec)
+		execIO.PrintExecutableList(outputFormat, filteredExec)
 	}
 }
 
 func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
-	logger := ctx.Logger
-
 	verbStr := args[0]
 	verb := executable.Verb(verbStr)
 	if err := verb.Validate(); err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 
 	var execID string
@@ -195,26 +196,26 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 	ref := executable.NewRef(execID, verb)
 
-	exec, err := ctx.ExecutableCache.GetExecutableByRef(logger, ref)
+	exec, err := ctx.ExecutableCache.GetExecutableByRef(ref)
 	if err != nil && errors.Is(cache.NewExecutableNotFoundError(ref.String()), err) {
-		logger.Debugf("Executable %s not found in cache, syncing cache", ref)
-		if err := ctx.ExecutableCache.Update(logger); err != nil {
-			logger.FatalErr(err)
+		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
+		if err := ctx.ExecutableCache.Update(); err != nil {
+			logger.Log().FatalErr(err)
 		}
-		exec, err = ctx.ExecutableCache.GetExecutableByRef(logger, ref)
+		exec, err = ctx.ExecutableCache.GetExecutableByRef(ref)
 	}
 	if err != nil {
-		logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	} else if exec == nil {
-		logger.Fatalf("executable %s not found", ref)
+		logger.Log().Fatalf("executable %s not found", ref)
 	}
 
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
 		view := execIO.NewExecutableView(ctx, exec, runFunc)
 		SetView(ctx, cmd, view)
 	} else {
-		execIO.PrintExecutable(logger, outputFormat, exec)
+		execIO.PrintExecutable(outputFormat, exec)
 	}
 }

@@ -6,8 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flowexec/tuikit/io"
-
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/utils"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -15,7 +14,7 @@ import (
 const generatedTag = "generated"
 
 func ExecutablesFromImports(
-	logger io.Logger, wsName string, flowFile *executable.FlowFile,
+	wsName string, flowFile *executable.FlowFile,
 ) (executable.ExecutableList, error) {
 	executables := make(executable.ExecutableList, 0)
 	wsPath := flowFile.WorkspacePath()
@@ -25,13 +24,13 @@ func ExecutablesFromImports(
 
 	for _, file := range files {
 		fn := filepath.Base(file)
-		expandedFile := utils.ExpandPath(logger, file, filepath.Dir(flowFilePath), nil)
+		expandedFile := utils.ExpandPath(file, filepath.Dir(flowFilePath), nil)
 
 		if info, err := os.Stat(expandedFile); err != nil {
-			logger.Error(err, fmt.Sprintf("unable to import executables from file %s", file))
+			logger.Log().Error(err, fmt.Sprintf("unable to import executables from file %s", file))
 			continue
 		} else if info.IsDir() {
-			logger.Errorx("unable to import executables", "err", fmt.Sprintf("%s is not a file", file))
+			logger.Log().Errorx("unable to import executables", "err", fmt.Sprintf("%s is not a file", file))
 			continue
 		}
 
@@ -39,7 +38,7 @@ func ExecutablesFromImports(
 		case "package.json":
 			execs, err := ExecutablesFromPackageJSON(wsPath, expandedFile)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -49,7 +48,7 @@ func ExecutablesFromImports(
 		case "makefile":
 			execs, err := ExecutablesFromMakefile(wsPath, expandedFile)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -59,7 +58,7 @@ func ExecutablesFromImports(
 		case "docker-compose.yml", "docker-compose.yaml":
 			execs, err := ExecutablesFromDockerCompose(wsPath, expandedFile)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -69,12 +68,12 @@ func ExecutablesFromImports(
 		default:
 			ext := filepath.Ext(fn)
 			if ext != ".sh" {
-				logger.Warnx("unable to import executables - unsupported file type", "file", file)
+				logger.Log().Warnx("unable to import executables - unsupported file type", "file", file)
 				continue
 			}
 			exec, err := ExecutablesFromShFile(wsPath, expandedFile)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 				continue
 			}
 			exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -88,7 +87,7 @@ func ExecutablesFromImports(
 
 func shortenWsPath(wsPath string, path string) string {
 	if strings.HasPrefix(path, wsPath) {
-		return "//" + path[len(wsPath):]
+		return "//" + strings.TrimPrefix(path[len(wsPath):], "/")
 	}
 
 	return path

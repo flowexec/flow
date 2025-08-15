@@ -100,6 +100,81 @@ flow vault create team --type age --recipients key1,key2,key3 --identity-file ~/
 flow vault create team --type age --recipients key1,key2,key3 --identity-env MY_IDENTITY
 ```
 
+#### **Unencrypted**
+A simple vault that stores secrets in plain text JSON files.
+This is not recommended for production use but can be useful for development or testing.
+
+```shell
+# Create an unencrypted vault
+flow vault create dev --type unencrypted
+```
+
+
+#### **Keyring**
+
+A vault that uses your operating system's keyring for managing secrets. 
+This is a good option for personal use where you want seamless integration with your OS security.
+
+```shell
+# Create a keyring vault
+flow vault create dev --type keyring
+```
+
+#### **External (other CLI tools)**
+
+An external vault that uses executes an external CLI tool via shell commands to manage secrets. 
+This allows you to integrate with existing secret management systems.
+
+First you have to define the external vault configuration in JSON format. Here is a sample one that uses the `pass` CLI tool:
+
+```json
+{
+  "id": "pass",
+  "type": "external",
+  "external": {
+    "get": {
+      "cmd": "pass show {{key}}",
+      "output": "{{output}}"
+    },
+    "set": {
+      "cmd": "pass insert -e {{key}}",
+      "input": "{{value}}"
+    },
+    "delete": {
+      "cmd": "pass rm -f {{key}}"
+    },
+    "list": {
+      "cmd": "pass ls",
+      "output": "{{output}}"
+    },
+    "environment": {
+      "PASSWORD_STORE_DIR": "$PASSWORD_STORE_DIR"
+    },
+    "timeout": "30s"
+  }
+}
+```
+
+> [!INFO]
+> See the [flowexec/vault examples](https://github.com/flowexec/vault/tree/v0.2.1/examples) for sample configurations for popular CLI tools like Bitwarden, 1Password, AWS SSM, and more.
+
+
+```shell
+# Create an external vault
+flow vault create passwords --type external --config /path/to/config.json
+```
+
+**Template Variables**
+
+Available in `cmd` and `output` fields:
+
+- `{{key}}` - The secret key/name
+- `{{value}}` - The secret value (for set operations)
+- `{{env["VariableName"]}}`- Environment variable value
+- `{{output}}` - Raw command output (for output templates)
+
+All [Expr language](https://expr-lang.org/docs/language-definition) operators and functions can be used in the command templates, allowing for powerful dynamic secret management.
+
 <!-- tabs:end -->
 
 #### Authentication
@@ -109,6 +184,9 @@ If you did not provide a key or file, these default environment variables will b
 
 - For AES256 vaults: `FLOW_VAULT_KEY` environment variable
 - For Age vaults: `FLOW_VAULT_IDENTITY` environment variable
+- For Unencrypted vaults: no key is needed, it stores secrets in plain text
+- For Keyring vaults: no key is needed, it uses the OS keyring directly
+- For External vaults: no key is needed, it uses the external CLI tool directly. Auth may be required by the tool itself
 
 At least one of the key or file will be used. You can configure key storage during vault creation:
 
@@ -122,18 +200,6 @@ flow vault create myapp --key-file ~/mykeys/myapp.key
 # Age vault with identity file
 flow vault create team --type age --identity-file ~/identities/identity.txt --identity-env MY_IDENTITY
 ```
-
-#### Pre-v1 Migration
-
-If you have a (pre-v1.0) legacy vault, you can migrate it to a v1 vault:
-
-```shell
-flow vault create new-vault --key-env MY_NEW_VAULT_KEY
-# Be sure to set the new and old vault keys if needed
-flow vault migrate new-vault
-```
-
-This migrates secrets from the old vault format to the new named vault system. Note that this requires the old vault to be accessible with its key set in the `FLOW_VAULT_KEY` environment variable.
 
 ## Using Secrets in Workflows
 
@@ -182,6 +248,8 @@ flow secret set my-secret "secret-value"
 
 # From file
 cat secret.txt | flow secret set my-secret
+# OR
+flow secret set my-secret --file secret.txt
 ```
 
 ### Viewing Secrets <!-- {docsify-ignore} -->

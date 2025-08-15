@@ -12,6 +12,7 @@ import (
 
 	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io/common"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -28,7 +29,7 @@ func NewExecutableView(
 				ctx.TUIContainer.Shutdown(func() {
 					err := runFunc(exec.Ref().String())
 					if err != nil {
-						ctx.Logger.Error(err, "executable view runner error")
+						logger.Log().Error(err, "executable view runner error")
 					}
 				})
 				return nil

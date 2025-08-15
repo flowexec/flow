@@ -40,7 +40,7 @@ export interface Template {
 export interface Artifact {
   /**
    * If true, the artifact will be copied as a template file. The file will be rendered using Go templating from
-   * the form data. [Sprig functions](https://masterminds.github.io/sprig/) are available for use in the template.
+   * the form data. [Expr language functions](https://expr-lang.org/docs/language-definition) are available for use in the template.
    *
    */
   asTemplate?: boolean;
@@ -62,7 +62,7 @@ export interface Artifact {
    * The expression has access to OS/architecture information (os, arch), environment variables (env), form input
    * (form), and context information (name, workspace, directory, etc.).
    *
-   * See the [flow documentation](https://flowexec.io/#/guide/templating) for more information.
+   * See the [flow documentation](https://flowexec.io/guide/templating) for more information.
    *
    */
   if?: string;
@@ -138,7 +138,7 @@ export interface TemplateRefConfig {
    * The expression has access to OS/architecture information (os, arch), environment variables (env), form input
    * (form), and context information (name, workspace, directory, etc.).
    *
-   * See the [flow documentation](https://flowexec.io/#/guide/templating) for more information.
+   * See the [flow documentation](https://flowexec.io/guide/templating) for more information.
    *
    */
   if?: string;

@@ -7,8 +7,9 @@ package executable
 type Artifact struct {
 	// If true, the artifact will be copied as a template file. The file will be
 	// rendered using Go templating from
-	// the form data. [Sprig functions](https://masterminds.github.io/sprig/) are
-	// available for use in the template.
+	// the form data. [Expr language
+	// functions](https://expr-lang.org/docs/language-definition) are available for
+	// use in the template.
 	//
 	AsTemplate bool `json:"asTemplate,omitempty" yaml:"asTemplate,omitempty" mapstructure:"asTemplate,omitempty"`
 
@@ -32,7 +33,7 @@ type Artifact struct {
 	// environment variables (env), form input
 	// (form), and context information (name, workspace, directory, etc.).
 	//
-	// See the [flow documentation](https://flowexec.io/#/guide/templating) for more
+	// See the [flow documentation](https://flowexec.io/guide/templating) for more
 	// information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
@@ -138,7 +139,7 @@ type TemplateRefConfig struct {
 	// environment variables (env), form input
 	// (form), and context information (name, workspace, directory, etc.).
 	//
-	// See the [flow documentation](https://flowexec.io/#/guide/templating) for more
+	// See the [flow documentation](https://flowexec.io/guide/templating) for more
 	// information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`

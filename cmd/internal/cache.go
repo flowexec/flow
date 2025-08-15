@@ -9,8 +9,9 @@ import (
 
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/io"
+	flowIO "github.com/flowexec/flow/internal/io"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/store"
 )
 
@@ -53,7 +54,7 @@ func cacheSetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	switch {
 	case len(args) == 1:
 		form, err := views.NewForm(
-			io.Theme(ctx.Config.Theme.String()),
+			flowIO.Theme(ctx.Config.Theme.String()),
 			ctx.StdIn(),
 			ctx.StdOut(),
 			&views.FormField{
@@ -62,35 +63,35 @@ func cacheSetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 				Title: "Enter the value to store",
 			})
 		if err != nil {
-			ctx.Logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
-		if err = form.Run(ctx.Ctx); err != nil {
-			ctx.Logger.FatalErr(err)
+		if err = form.Run(ctx); err != nil {
+			logger.Log().FatalErr(err)
 		}
 		value = form.FindByKey("value").Value()
 	case len(args) == 2:
 		value = args[1]
 	default:
-		ctx.Logger.PlainTextWarn(fmt.Sprintf("merging multiple (%d) arguments into a single value", len(args)-1))
+		logger.Log().PlainTextWarn(fmt.Sprintf("merging multiple (%d) arguments into a single value", len(args)-1))
 		value = strings.Join(args[1:], " ")
 	}
 
 	s, err := store.NewStore(store.Path())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	defer func() {
 		if err = s.Close(); err != nil {
-			ctx.Logger.Error(err, "cleanup failure")
+			logger.Log().Error(err, "cleanup failure")
 		}
 	}()
 	if err = s.Set(key, value); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	ctx.Logger.PlainTextInfo(fmt.Sprintf("Key %q set in the cache", key))
+	logger.Log().PlainTextInfo(fmt.Sprintf("Key %q set in the cache", key))
 }
 
 func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -107,26 +108,26 @@ func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheGetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func cacheGetFunc(_ *context.Context, _ *cobra.Command, args []string) {
 	key := args[0]
 
 	s, err := store.NewStore(store.Path())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			ctx.Logger.Error(err, "cleanup failure")
+			logger.Log().Error(err, "cleanup failure")
 		}
 	}()
 	value, err := s.Get(key)
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	ctx.Logger.PlainTextSuccess(value)
+	logger.Log().PlainTextSuccess(value)
 }
 
 func registerCacheListCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -149,26 +150,26 @@ func registerCacheListCmd(ctx *context.Context, rootCmd *cobra.Command) {
 func cacheListFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	s, err := store.NewStore(store.Path())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			ctx.Logger.Error(err, "cleanup failure")
+			logger.Log().Error(err, "cleanup failure")
 		}
 	}()
 	data, err := s.GetAll()
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	outputFormat := flags.ValueFor[string](ctx, cmd, *flags.OutputFormatFlag, false)
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		view := cacheIO.NewCacheListView(ctx.TUIContainer, data)
 		SetView(ctx, cmd, view)
 	} else {
-		cacheIO.PrintCache(ctx, data, outputFormat)
+		cacheIO.PrintCache(data, outputFormat)
 	}
 }
 
@@ -186,25 +187,25 @@ func registerCacheRemoveCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheRemoveFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func cacheRemoveFunc(_ *context.Context, _ *cobra.Command, args []string) {
 	key := args[0]
 
 	s, err := store.NewStore(store.Path())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			ctx.Logger.Error(err, "cleanup failure")
+			logger.Log().Error(err, "cleanup failure")
 		}
 	}()
 	if err = s.Delete(key); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	ctx.Logger.PlainTextSuccess(fmt.Sprintf("Key %q removed from the cache", key))
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Key %q removed from the cache", key))
 }
 
 func registerCacheClearCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -222,28 +223,28 @@ func registerCacheClearCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheClearFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	full := flags.ValueFor[bool](ctx, cmd, *flags.StoreAllFlag, false)
+func cacheClearFunc(_ *context.Context, cmd *cobra.Command, _ []string) {
+	full := flags.ValueFor[bool](cmd, *flags.StoreAllFlag, false)
 	if full {
 		if err := store.DestroyStore(); err != nil {
-			ctx.Logger.FatalErr(err)
+			logger.Log().FatalErr(err)
 		}
-		ctx.Logger.PlainTextSuccess("Cache cleared")
+		logger.Log().PlainTextSuccess("Cache cleared")
 		return
 	}
 	s, err := store.NewStore(store.Path())
 	if err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			ctx.Logger.Error(err, "cleanup failure")
+			logger.Log().Error(err, "cleanup failure")
 		}
 	}()
 	if err := s.DeleteBucket(store.EnvironmentBucket()); err != nil {
-		ctx.Logger.FatalErr(err)
+		logger.Log().FatalErr(err)
 	}
-	ctx.Logger.PlainTextSuccess("Cache cleared")
+	logger.Log().PlainTextSuccess("Cache cleared")
 }
 
 var dataStoreDescription = "The data store is a key-value store that can be used to persist data across executions. " +

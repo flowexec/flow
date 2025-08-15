@@ -5,6 +5,7 @@ package tests_test
 import (
 	stdCtx "context"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,12 +21,12 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {
@@ -101,8 +102,20 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 		})
 	})
 	When("setting a secret (flow secret set)", func() {
+		// NOTE: these tests are using the demo vault so values aren't actually set in the vault
 		It("should save into the vault", func() {
 			Expect(run.Run(ctx.Context, "secret", "set", "message", "my-value")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Secret message set in vault"))
+		})
+
+		It("should read from file and save into the vault with the --file flag", func() {
+			dir := GinkgoTB().TempDir()
+			GinkgoTB().Setenv("SECRET_DIR", dir)
+			err := os.WriteFile(filepath.Join(dir, "secret.txt"), []byte("file data"), 0755)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(run.Run(ctx.Context, "secret", "set", "message", "--file=$SECRET_DIR/secret.txt")).To(Succeed())
 			out, err := readFileContent(ctx.StdOut())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring("Secret message set in vault"))

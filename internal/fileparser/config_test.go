@@ -107,6 +107,8 @@ var _ = Describe("ExtractExecConfig", func() {
 			}),
 	)
 
+	var pos1 = 1
+
 	DescribeTable("should correctly parse argument configurations",
 		func(file string, expectedFields map[string]string, expectedArgs executable.ArgumentList) {
 			filePath := filepath.Join("testdata", file)
@@ -132,7 +134,7 @@ var _ = Describe("ExtractExecConfig", func() {
 			},
 			executable.ArgumentList{
 				{Flag: "verbose", EnvKey: "VERBOSE"},
-				{Pos: 1, EnvKey: "FILENAME"},
+				{Pos: &pos1, EnvKey: "FILENAME"},
 				{Flag: "count", EnvKey: "COUNT"},
 			}),
 	)

@@ -10,20 +10,22 @@ import (
 
 	"github.com/flowexec/flow/internal/cache"
 	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/workspace"
 )
 
 var _ = Describe("WorkspaceCacheImpl", func() {
 	var (
-		logger    *mocks.MockLogger
-		wsCache   *cache.WorkspaceCacheImpl
-		cacheDir  string
-		configDir string
+		mockLogger *mocks.MockLogger
+		wsCache    *cache.WorkspaceCacheImpl
+		cacheDir   string
+		configDir  string
 	)
 
 	BeforeEach(func() {
 		ctrl := gomock.NewController(GinkgoT())
-		logger = mocks.NewMockLogger(ctrl)
+		mockLogger = mocks.NewMockLogger(ctrl)
+		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
 		wsCache = &cache.WorkspaceCacheImpl{
 			Data: &cache.WorkspaceCacheData{
 				Workspaces:         make(map[string]*workspace.Workspace),
@@ -54,13 +56,13 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 
 	Describe("Update and GetLatestData", func() {
 		It("should update the workspace cache and retrieve the same data", func() {
-			logger.EXPECT().Debugf(gomock.Any()).Times(1)
-			logger.EXPECT().Debugx(gomock.Any(), "count", 2).Times(1)
-			err := wsCache.Update(logger)
+			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
+			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 2).Times(1)
+			err := wsCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 
 			var readData *cache.WorkspaceCacheData
-			readData, err = wsCache.GetLatestData(logger)
+			readData, err = wsCache.GetLatestData()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(readData).To(Equal(wsCache.Data))
 		})
@@ -68,7 +70,7 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 
 	Describe("GetWorkspaceConfigList", func() {
 		It("returns the expected workspace configs", func() {
-			list, err := wsCache.GetWorkspaceConfigList(logger)
+			list, err := wsCache.GetWorkspaceConfigList()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(list).To(HaveLen(1))
 			Expect(list.FindByName("test")).To(Equal(wsCache.Data.Workspaces["test"]))

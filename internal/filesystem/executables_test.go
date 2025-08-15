@@ -10,6 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -80,7 +81,7 @@ var _ = Describe("Executables", func() {
 			logger := mocks.NewMockLogger(ctrl)
 			logger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
 
-			definitions, err := filesystem.LoadWorkspaceFlowFiles(logger, workspaceCfg)
+			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(definitions).To(HaveLen(1))
 			Expect(definitions[0].Namespace).To(Equal(executableDefinition.Namespace))
@@ -108,10 +109,11 @@ var _ = Describe("Executables", func() {
 			workspaceCfg.SetContext("test", tmpDir)
 
 			ctrl := gomock.NewController(GinkgoT())
-			logger := mocks.NewMockLogger(ctrl)
-			logger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+			mockLogger := mocks.NewMockLogger(ctrl)
+			logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
+			mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
 
-			definitions, err := filesystem.LoadWorkspaceFlowFiles(logger, workspaceCfg)
+			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(definitions).To(HaveLen(1))
 			Expect(definitions[0].Namespace).To(Equal(executableDefinition.Namespace))
@@ -143,10 +145,11 @@ var _ = Describe("Executables", func() {
 			workspaceCfg.SetContext("test", tmpDir)
 
 			ctrl := gomock.NewController(GinkgoT())
-			logger := mocks.NewMockLogger(ctrl)
-			logger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+			mockLogger := mocks.NewMockLogger(ctrl)
+			logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
+			mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
 
-			definitions, err := filesystem.LoadWorkspaceFlowFiles(logger, workspaceCfg)
+			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(definitions).To(BeEmpty())
 		})

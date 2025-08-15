@@ -190,6 +190,18 @@ verbAliases:
 verbAliases: {}
 ```
 
+You can also define verb aliases on individual executables:
+
+```yaml
+# In flow file
+executables:
+  - verb: deploy
+    name: app
+    verbAliases: ["release", "apply"]
+    exec:
+      cmd: ./deploy.sh
+```
+
 ### Discovery and Sync
 
 When you create, move, or delete flow files, update the executable index:

@@ -2,13 +2,12 @@ package logs
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/flowexec/tuikit/io"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io/common"
+	"github.com/flowexec/flow/internal/logger"
 )
 
 type entry struct {
@@ -47,21 +46,20 @@ func marshalEntriesYAML(entries []io.ArchiveEntry) ([]byte, error) {
 	return yaml.Marshal(entriesResponse)
 }
 
-func PrintEntries(ctx *context.Context, format string, entries []io.ArchiveEntry) {
-	logger := ctx.Logger
-	logger.Debugf("listing %d log entries", len(entries))
-	switch common.NormalizeFormat(logger, format) {
+func PrintEntries(format string, entries []io.ArchiveEntry) {
+	logger.Log().Debugf("listing %d log entries", len(entries))
+	switch common.NormalizeFormat(format) {
 	case common.YAMLFormat:
 		str, err := marshalEntriesYAML(entries)
 		if err != nil {
-			logger.Fatalf("Failed to marshal log entries - %v", err)
+			logger.Log().Fatalf("Failed to marshal log entries - %v", err)
 		}
-		_, _ = fmt.Fprint(ctx.StdOut(), string(str))
+		logger.Log().Println(string(str))
 	case common.JSONFormat:
 		str, err := marshalEntriesJSON(entries)
 		if err != nil {
-			logger.Fatalf("Failed to marshal log entries - %v", err)
+			logger.Log().Fatalf("Failed to marshal log entries - %v", err)
 		}
-		_, _ = fmt.Fprint(ctx.StdOut(), string(str))
+		logger.Log().Println(string(str))
 	}
 }

@@ -5,18 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
+	"time"
 
 	"github.com/flowexec/tuikit"
-	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
-	"golang.org/x/exp/slices"
 
 	"github.com/flowexec/flow/internal/cache"
 	"github.com/flowexec/flow/internal/filesystem"
 	flowIO "github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -28,23 +26,27 @@ const (
 )
 
 type Context struct {
-	Ctx              context.Context
-	CancelFunc       context.CancelFunc
-	Logger           io.Logger
+	ctx           context.Context
+	cancelFunc    context.CancelFunc
+	stdOut, stdIn *os.File
+	callbacks     []func(*Context) error
+
 	Config           *config.Config
 	CurrentWorkspace *workspace.Workspace
 	TUIContainer     *tuikit.Container
 	WorkspacesCache  cache.WorkspaceCache
 	ExecutableCache  cache.ExecutableCache
 
+	// RootExecutable is the executable that is being run in the current context.
+	// This will be nil if the context is not associated with an executable run.
+	RootExecutable *executable.Executable
+
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
 	ProcessTmpDir string
-
-	stdOut, stdIn *os.File
 }
 
-func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
+func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
 		panic(errors.Wrap(err, "user config load error"))
@@ -64,35 +66,17 @@ func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
 	}
 
 	workspaceCache := cache.NewWorkspaceCache()
-	if workspaceCache == nil {
-		panic("workspace cache initialization error")
-	}
 	executableCache := cache.NewExecutableCache(workspaceCache)
-	if executableCache == nil {
-		panic("executable cache initialization error")
-	}
 
-	ctxx, cancel := context.WithCancel(ctx)
-	logMode := cfg.DefaultLogMode
-	loggerOpts := []io.LoggerOptions{
-		io.WithOutput(stdOut),
-		io.WithTheme(flowIO.Theme(cfg.Theme.String())),
-		io.WithMode(logMode),
-	}
-	// only create a log archive file for exec commands
-	if args := os.Args; len(args) > 0 && slices.Contains(executable.ValidVerbs(), executable.Verb(args[0])) {
-		loggerOpts = append(loggerOpts, io.WithArchiveDirectory(filesystem.LogsDir()))
-	}
 	c := &Context{
-		Ctx:              ctxx,
-		CancelFunc:       cancel,
+		ctx:              ctx,
+		cancelFunc:       cancelFunc,
+		stdOut:           stdOut,
+		stdIn:            stdIn,
 		Config:           cfg,
 		CurrentWorkspace: wsConfig,
 		WorkspacesCache:  workspaceCache,
 		ExecutableCache:  executableCache,
-		Logger:           io.NewLogger(loggerOpts...),
-		stdOut:           stdOut,
-		stdIn:            stdIn,
 	}
 
 	app := tuikit.NewApplication(
@@ -115,6 +99,32 @@ func NewContext(ctx context.Context, stdIn, stdOut *os.File) *Context {
 		panic(errors.Wrap(err, "TUI container initialization error"))
 	}
 	return c
+}
+
+func (ctx *Context) Deadline() (deadline time.Time, ok bool) {
+	return ctx.ctx.Deadline()
+}
+
+func (ctx *Context) Done() <-chan struct{} {
+	return ctx.ctx.Done()
+}
+
+func (ctx *Context) Err() error {
+	return ctx.ctx.Err()
+}
+
+func (ctx *Context) Cancel() {
+	if ctx.cancelFunc != nil {
+		ctx.cancelFunc()
+	}
+}
+
+// TODO: Move access to various context fields to this function
+func (ctx *Context) Value(key any) any {
+	if key == HeaderCtxKey {
+		return ctx.String()
+	}
+	return ctx.ctx.Value(key)
 }
 
 func (ctx *Context) String() string {
@@ -145,35 +155,50 @@ func (ctx *Context) SetIO(stdIn, stdOut *os.File) {
 	ctx.stdOut = stdOut
 }
 
+// SetContext sets the context and cancel function for the Context.
+// This function should NOT be used outside of tests! The context and cancel function
+// should be set when creating the context.
+func (ctx *Context) SetContext(c context.Context, cancelFunc context.CancelFunc) {
+	ctx.ctx = c
+	ctx.cancelFunc = cancelFunc
+}
+
 func (ctx *Context) SetView(view tuikit.View) error {
 	return ctx.TUIContainer.SetView(view)
+}
+
+func (ctx *Context) AddCallback(callback func(*Context) error) {
+	if callback == nil {
+		return
+	}
+	ctx.callbacks = append(ctx.callbacks, callback)
 }
 
 func (ctx *Context) Finalize() {
 	_ = ctx.stdIn.Close()
 	_ = ctx.stdOut.Close()
 
+	for _, cb := range ctx.callbacks {
+		if err := cb(ctx); err != nil {
+			logger.Log().Error(err, "callback execution error")
+		}
+	}
+
 	if ctx.ProcessTmpDir != "" {
 		files, err := filepath.Glob(filepath.Join(ctx.ProcessTmpDir, "*"))
 		if err != nil {
-			ctx.Logger.Error(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().Error(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
 			return
 		}
 		for _, f := range files {
 			err = os.RemoveAll(f)
 			if err != nil {
-				ctx.Logger.Error(err, fmt.Sprintf("unable to remove file %s", f))
+				logger.Log().Error(err, fmt.Sprintf("unable to remove file %s", f))
 			}
 		}
 		if err := os.Remove(ctx.ProcessTmpDir); err != nil {
-			ctx.Logger.Error(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().Error(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
 		}
-	}
-	if err := ctx.Logger.Flush(); err != nil {
-		if errors.Is(err, os.ErrClosed) {
-			return
-		}
-		panic(err)
 	}
 }
 
@@ -190,43 +215,11 @@ func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 }
 
 func currentWorkspace(cfg *config.Config) (*workspace.Workspace, error) {
-	var ws, wsPath string
-	mode := cfg.WorkspaceMode
-
-	switch mode {
-	case config.ConfigWorkspaceModeDynamic:
-		wd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		if runtime.GOOS == "darwin" {
-			// On macOS, paths that start with /tmp (and some other system directories)
-			// are actually symbolic links to paths under /private. The OS may return
-			// either form of the path - e.g., both "/tmp/file" and "/private/tmp/file"
-			// refer to the same location. We strip the "/private" prefix for consistent
-			// path comparison, while preserving the original paths for filesystem operations.
-			wd = strings.TrimPrefix(wd, "/private")
-		}
-
-		for wsName, path := range cfg.Workspaces {
-			rel, err := filepath.Rel(filepath.Clean(path), filepath.Clean(wd))
-			if err != nil {
-				return nil, err
-			}
-			if !strings.HasPrefix(rel, "..") {
-				ws = wsName
-				wsPath = path
-				break
-			}
-		}
-		fallthrough
-	case config.ConfigWorkspaceModeFixed:
-		if ws != "" && wsPath != "" {
-			break
-		}
-		ws = cfg.CurrentWorkspace
-		wsPath = cfg.Workspaces[ws]
+	ws, err := cfg.CurrentWorkspaceName()
+	if err != nil {
+		return nil, err
 	}
+	wsPath := cfg.Workspaces[ws]
 	if ws == "" || wsPath == "" {
 		return nil, fmt.Errorf("current workspace not found")
 	}

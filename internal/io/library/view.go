@@ -10,6 +10,7 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/jahvon/glamour"
 
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -281,7 +282,7 @@ func (l *Library) footerContent() string {
 					}
 				}
 				if wsCfg == nil {
-					l.ctx.Logger.Errorf("unable to find workspace config for %s", ws)
+					logger.Log().Errorf("unable to find workspace config for %s", ws)
 					break
 				}
 

@@ -21,6 +21,8 @@ var verbPatterns = []struct {
 	{executable.VerbRemove, regexp.MustCompile(`^(remove|uninstall|delete)[\s:_-]?`)},
 	{executable.VerbUpdate, regexp.MustCompile(`^(update|upgrade)[\s:_-]?`)},
 	{executable.VerbAnalyze, regexp.MustCompile(`^(analyze|audit|inspect|scan)[\s:_-]?`)},
+	{executable.VerbConfigure, regexp.MustCompile(`^(configure|setup)[\s:_-]?`)},
+	{executable.VerbGenerate, regexp.MustCompile(`^(generate|gen)[\s:_-]?`)},
 }
 
 // InferVerb infers the most likely Executable verb from a script or makeTarget name.

@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/flowexec/flow/internal/fileparser"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -28,6 +29,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockLogger = mocks.NewMockLogger(ctrl)
+		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
 		mockLogger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 
 		wd, err := os.Getwd()
@@ -47,7 +49,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 			"complex.sh",
 		)
 
-		result, err := fileparser.ExecutablesFromImports(mockLogger, "ws", flowFile)
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(result)).To(BeNumerically(">", 10))
 
@@ -60,7 +62,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 	It("should log a warning for invalid file type", func() {
 		mockLogger.EXPECT().Warnx(gomock.Any(), "file", "invalidfile").AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "invalidfile")
-		result, err := fileparser.ExecutablesFromImports(mockLogger, "ws", flowFile)
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(BeEmpty())
 	})
@@ -68,7 +70,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 	It("should log an error for dir instead of file", func() {
 		mockLogger.EXPECT().Errorx(gomock.Any(), "err", "invaliddir is not a file").AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "invaliddir")
-		result, err := fileparser.ExecutablesFromImports(mockLogger, "ws", flowFile)
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(BeEmpty())
 	})
@@ -76,7 +78,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 	It("should log an error for non-existent file", func() {
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "nonexistent.sh")
-		result, err := fileparser.ExecutablesFromImports(mockLogger, "ws", flowFile)
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(BeEmpty())
 	})
@@ -84,7 +86,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 	It("should log an error when configuration key is not recognized", func() {
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any()).AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "unknownkey.sh")
-		result, err := fileparser.ExecutablesFromImports(mockLogger, "ws", flowFile)
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(result).ToNot(BeNil())
 	})

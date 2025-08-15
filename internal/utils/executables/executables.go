@@ -10,7 +10,7 @@ import (
 
 func ExecutableForRef(ctx *context.Context, ref executable.Ref) (*executable.Executable, error) {
 	executableRef := context.ExpandRef(ctx, ref)
-	exec, err := ctx.ExecutableCache.GetExecutableByRef(ctx.Logger, executableRef)
+	exec, err := ctx.ExecutableCache.GetExecutableByRef(executableRef)
 	if err != nil {
 		return nil, err
 	} else if exec == nil {

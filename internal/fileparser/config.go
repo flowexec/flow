@@ -336,7 +336,7 @@ func parseArgs(value string) (executable.ArgumentList, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid position number: %s", typeVal)
 			}
-			arg.Pos = pos
+			arg.Pos = &pos
 		default:
 			return nil, fmt.Errorf("invalid argument type: %s (expected flag or pos)", argType)
 		}

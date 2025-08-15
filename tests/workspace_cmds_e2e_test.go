@@ -22,7 +22,7 @@ var _ = Describe("workspace e2e", Ordered, func() {
 	)
 
 	BeforeAll(func() {
-		ctx = utils.NewContext(stdCtx.Background(), GinkgoT())
+		ctx = utils.NewContext(stdCtx.Background(), GinkgoTB())
 		run = utils.NewE2ECommandRunner()
 		tmp, err := os.MkdirTemp("", "flow-test-*")
 		Expect(err).NotTo(HaveOccurred())
@@ -32,7 +32,7 @@ var _ = Describe("workspace e2e", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		utils.ResetTestContext(ctx, GinkgoT())
+		utils.ResetTestContext(ctx, GinkgoTB())
 	})
 
 	AfterEach(func() {

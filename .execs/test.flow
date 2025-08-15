@@ -2,7 +2,6 @@
 tags: [development, test]
 executables:
   - verb: test
-    name: all
     description: Run all Go tests (unit + e2e) in parallel
     parallel:
       failFast: false
@@ -119,43 +118,3 @@ executables:
         fi
         
         echo "Coverage reports combined into merged-coverage.out"
-
-  - verb: test
-    name: form-demo
-    visibility: internal
-    description: Test executable to demonstrate the new form functionality with parameters and arguments.
-    exec:
-      dir: //
-      cmd: echo "Testing form functionality"
-      params:
-        - prompt: "What is your name?"
-          envKey: "USER_NAME"
-        - prompt: "What is your favorite color?"
-          envKey: "FAVORITE_COLOR"
-        - text: "demo"
-          envKey: "DEMO_MODE"
-      args:
-        - pos: 1
-          envKey: "MESSAGE"
-          required: true
-          type: "string"
-        - flag: "verbose"
-          envKey: "VERBOSE"
-          type: "bool"
-          default: "false"
-        - flag: "count"
-          envKey: "COUNT"
-          type: "int"
-          default: "1"
-
-  - verb: test
-    name: colored-output
-    visibility: internal
-    description: Test executable to demonstrate colored output in the terminal.
-    exec:
-      dir: //
-      cmd: |
-        echo -e "\033[32mThis is green text\033[0m"
-        echo -e "\033[31mThis is red text\033[0m"
-        echo -e "\033[34mThis is blue text\033[0m"
-        echo -e "\033[33mThis is yellow text\033[0m"

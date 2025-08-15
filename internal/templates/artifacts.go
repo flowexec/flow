@@ -7,16 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	tuikitIO "github.com/flowexec/tuikit/io"
+	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
 	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/services/expr"
+	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 
 func copyAllArtifacts(
-	logger tuikitIO.Logger,
 	artifacts []executable.Artifact,
 	wsDir, srcDir, dstDir string,
 	templateData expressionData,
@@ -24,7 +23,7 @@ func copyAllArtifacts(
 	var errs []error
 	for i, a := range artifacts {
 		if err := copyArtifact(
-			logger, fmt.Sprintf("artifact-%d", i), wsDir, srcDir, dstDir, a, templateData,
+			fmt.Sprintf("artifact-%d", i), wsDir, srcDir, dstDir, a, templateData,
 		); err != nil {
 			errs = append(errs, err)
 		}
@@ -37,23 +36,22 @@ func copyAllArtifacts(
 
 //nolint:gocognit
 func copyArtifact(
-	logger tuikitIO.Logger,
 	name, wsPath, srcDir, dstDir string,
 	artifact executable.Artifact,
 	templateData expressionData,
 ) error {
-	srcPath, err := parseSourcePath(logger, name, srcDir, wsPath, artifact, templateData)
+	srcPath, err := parseSourcePath(name, srcDir, wsPath, artifact, templateData)
 	if err != nil {
 		return errors.Wrap(err, "unable to parse source path")
 	}
 
 	if artifact.If != "" {
-		eval, err := expr.IsTruthy(artifact.If, templateData)
+		eval, err := expression.IsTruthy(artifact.If, templateData)
 		if err != nil {
 			return errors.Wrap(err, "unable to evaluate if condition")
 		}
 		if !eval {
-			logger.Debugf("skipping artifact %s", name)
+			logger.Log().Debugf("skipping artifact %s", name)
 			return nil
 		}
 	}
@@ -69,7 +67,7 @@ func copyArtifact(
 			m := artifact
 			m.SrcName = filepath.Base(match)
 			m.SrcDir = filepath.Dir(match)
-			mErr := copyArtifact(logger, fmt.Sprintf("%s-%d", name, i), wsPath, srcDir, dstDir, m, templateData)
+			mErr := copyArtifact(fmt.Sprintf("%s-%d", name, i), wsPath, srcDir, dstDir, m, templateData)
 			if mErr != nil {
 				errs = append(errs, mErr)
 			}
@@ -97,7 +95,7 @@ func copyArtifact(
 			a.SrcName = filepath.Base(path)
 			a.SrcDir = filepath.Dir(path)
 			aName := fmt.Sprintf("%s-%s", name, a.SrcName)
-			return copyArtifact(logger, aName, wsPath, srcDir, dstDir, a, templateData)
+			return copyArtifact(aName, wsPath, srcDir, dstDir, a, templateData)
 		})
 		if err != nil {
 			return errors.Wrap(err, "unable to walk directory")
@@ -107,7 +105,6 @@ func copyArtifact(
 		artifact.DstName = srcName
 	}
 	dstPath, err := parseDestinationPath(
-		logger,
 		name,
 		dstDir, srcDir, wsPath,
 		artifact,
@@ -124,10 +121,10 @@ func copyArtifact(
 		return errors.Wrap(err, "unable to create destination directory")
 	}
 
-	logger.Debugx("copying artifact", "name", name, "src", srcPath, "dst", dstPath)
+	logger.Log().Debugx("copying artifact", "name", name, "src", srcPath, "dst", dstPath)
 	if _, e := os.Stat(dstPath); e == nil {
 		// TODO: Add a flag to overwrite existing files
-		logger.Warnx("Overwriting existing file", "dst", dstPath)
+		logger.Log().Warnx("Overwriting existing file", "dst", dstPath)
 	}
 	if err := filesystem.CopyFile(srcPath, dstPath); err != nil {
 		return errors.Wrap(err, "unable to copy artifact")

@@ -4,166 +4,166 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"golang.org/x/exp/maps"
 )
 
 const (
-	ActivateGroupID     = "activate"
-	DeactivateGroupID   = "deactivate"
-	ExecutionGroupID    = "execute"
-	TerminationGroupID  = "terminate"
-	MonitoringGroupID   = "monitor"
-	RestartGroupID      = "restart"
-	InstallGroupID      = "install"
-	BuildGroupID        = "build"
-	UninstallGroupID    = "uninstall"
-	PublishGroupID      = "publish"
-	DistributionGroupID = "distribute"
-	TestGroupID         = "test"
-	AnalyzeGroupID      = "analyze"
-	LaunchGroupID       = "launch"
-	CreationGroupID     = "create"
-	SetGroupID          = "set"
-	DestructionGroupID  = "destroy"
-	UnsetGroupID        = "unset"
-	CleanupGroupID      = "cleanup"
-	RetrievalGroupID    = "retrieve"
-	UpdateGroupID       = "update"
-	EditGroupID         = "edit"
-	DebugGroupID        = "debug"
+	ExecutionGroupID = "execute"
+	RetrievalGroupID = "retrieve"
+	ViewGroupID      = "view"
+	ConfigGroupID    = "config"
+	UpdateGroupID    = "update"
 )
 
 var (
-	ValidVerbToGroupID = map[Verb]string{
-		// Activation verbs
-		VerbActivate: ActivateGroupID,
-		VerbEnable:   ActivateGroupID,
-		VerbStart:    ActivateGroupID,
-		VerbTrigger:  ActivateGroupID,
-
-		// Execution verbs
+	DefaultVerbAliasGroup = map[Verb]string{
 		VerbExec:    ExecutionGroupID,
 		VerbRun:     ExecutionGroupID,
 		VerbExecute: ExecutionGroupID,
 
-		// Deactivation verbs
-		VerbDeactivate: DeactivateGroupID,
-		VerbDisable:    DeactivateGroupID,
-		VerbStop:       DeactivateGroupID,
-		VerbPause:      DeactivateGroupID,
-
-		// Termination verbs
-		VerbKill:      TerminationGroupID,
-		VerbTerminate: TerminationGroupID,
-		VerbAbort:     TerminationGroupID,
-
-		// Monitoring verbs
-		VerbWatch:   MonitoringGroupID,
-		VerbMonitor: MonitoringGroupID,
-		VerbTrack:   MonitoringGroupID,
-
-		// Restart verbs
-		VerbRestart: RestartGroupID,
-		VerbReboot:  RestartGroupID,
-		VerbReload:  RestartGroupID,
-		VerbRefresh: RestartGroupID,
-
-		// Installation verbs
-		VerbInstall: InstallGroupID,
-		VerbSetup:   InstallGroupID,
-		VerbDeploy:  InstallGroupID,
-
-		// Build verbs
-		VerbBuild:   BuildGroupID,
-		VerbPackage: BuildGroupID,
-		VerbBundle:  BuildGroupID,
-		VerbCompile: BuildGroupID,
-
-		// Uninstallation verbs
-		VerbUninstall: UninstallGroupID,
-		VerbTeardown:  UninstallGroupID,
-		VerbUndeploy:  UninstallGroupID,
-
-		// Update verbs
-		VerbUpdate:  UpdateGroupID,
-		VerbUpgrade: UpdateGroupID,
-		VerbPatch:   UpdateGroupID,
-
-		// Publish verbs
-		VerbPublish: PublishGroupID,
-		VerbRelease: PublishGroupID,
-
-		// Distribution verbs
-		VerbPush:  DistributionGroupID,
-		VerbSend:  DistributionGroupID,
-		VerbApply: DistributionGroupID,
-
-		// Test verbs
-		VerbTest:     TestGroupID,
-		VerbValidate: TestGroupID,
-		VerbCheck:    TestGroupID,
-		VerbVerify:   TestGroupID,
-
-		// Analysis verbs
-		VerbAnalyze: AnalyzeGroupID,
-		VerbScan:    AnalyzeGroupID,
-		VerbLint:    AnalyzeGroupID,
-		VerbInspect: AnalyzeGroupID,
-
-		// Launch verbs
-		VerbOpen:   LaunchGroupID,
-		VerbLaunch: LaunchGroupID,
-		VerbShow:   LaunchGroupID,
-		VerbView:   LaunchGroupID,
-
-		// Creation verbs
-		VerbCreate:   CreationGroupID,
-		VerbGenerate: CreationGroupID,
-		VerbAdd:      CreationGroupID,
-		VerbNew:      CreationGroupID,
-		VerbInit:     CreationGroupID,
-
-		// Edit verbs
-		VerbEdit:      EditGroupID,
-		VerbModify:    EditGroupID,
-		VerbFix:       EditGroupID,
-		VerbTransform: EditGroupID,
-
-		// Set verbs
-		VerbSet: SetGroupID,
-
-		// Destruction verbs
-		VerbRemove:  DestructionGroupID,
-		VerbDelete:  DestructionGroupID,
-		VerbDestroy: DestructionGroupID,
-		VerbErase:   DestructionGroupID,
-
-		// Unset verbs
-		VerbUnset: UnsetGroupID,
-		VerbReset: UnsetGroupID,
-
-		// Cleanup verbs
-		VerbClean: CleanupGroupID,
-		VerbClear: CleanupGroupID,
-		VerbPurge: CleanupGroupID,
-		VerbTidy:  CleanupGroupID,
-
-		// Retrieval verbs
 		VerbRetrieve: RetrievalGroupID,
 		VerbFetch:    RetrievalGroupID,
 		VerbGet:      RetrievalGroupID,
-		VerbRequest:  RetrievalGroupID,
 
-		// Debug verbs
-		VerbDebug:   DebugGroupID,
-		VerbTrace:   DebugGroupID,
-		VerbProfile: DebugGroupID,
+		VerbView: ViewGroupID,
+		VerbShow: ViewGroupID,
+		VerbList: ViewGroupID,
+
+		VerbSetup:     ConfigGroupID,
+		VerbConfigure: ConfigGroupID,
+
+		VerbUpdate:  UpdateGroupID,
+		VerbUpgrade: UpdateGroupID,
 	}
 )
 
+//nolint:funlen
 func ValidVerbs() []Verb {
-	return maps.Keys(ValidVerbToGroupID)
+	return []Verb{
+		VerbAbort,
+		VerbActivate,
+		VerbAdd,
+		VerbAnalyze,
+		VerbApply,
+		VerbArchive,
+		VerbAudit,
+		VerbBackup,
+		VerbBenchmark,
+		VerbBuild,
+		VerbBundle,
+		VerbCheck,
+		VerbClean,
+		VerbClear,
+		VerbCommit,
+		VerbCompile,
+		VerbCompress,
+		VerbConfigure,
+		VerbConnect,
+		VerbCreate,
+		VerbDeactivate,
+		VerbDebug,
+		VerbDecompress,
+		VerbDecrypt,
+		VerbDelete,
+		VerbDeploy,
+		VerbDestroy,
+		VerbDisable,
+		VerbDisconnect,
+		VerbEdit,
+		VerbEnable,
+		VerbEncrypt,
+		VerbErase,
+		VerbExec,
+		VerbExecute,
+		VerbExport,
+		VerbExpose,
+		VerbFetch,
+		VerbFix,
+		VerbFlush,
+		VerbFormat,
+		VerbGenerate,
+		VerbGet,
+		VerbImport,
+		VerbIndex,
+		VerbInit,
+		VerbInspect,
+		VerbInstall,
+		VerbJoin,
+		VerbKill,
+		VerbLaunch,
+		VerbLint,
+		VerbList,
+		VerbLoad,
+		VerbLock,
+		VerbLogin,
+		VerbLogout,
+		VerbManage,
+		VerbMerge,
+		VerbMigrate,
+		VerbModify,
+		VerbMonitor,
+		VerbMount,
+		VerbNew,
+		VerbNotify,
+		VerbOpen,
+		VerbPackage,
+		VerbPartition,
+		VerbPatch,
+		VerbPause,
+		VerbPing,
+		VerbPreload,
+		VerbPrefetch,
+		VerbProfile,
+		VerbProvision,
+		VerbPublish,
+		VerbPurge,
+		VerbPush,
+		VerbQueue,
+		VerbReboot,
+		VerbRecover,
+		VerbRefresh,
+		VerbRelease,
+		VerbReload,
+		VerbRemove,
+		VerbRequest,
+		VerbReset,
+		VerbRestart,
+		VerbRestore,
+		VerbRetrieve,
+		VerbRollback,
+		VerbRun,
+		VerbScale,
+		VerbScan,
+		VerbSchedule,
+		VerbSeed,
+		VerbSend,
+		VerbServe,
+		VerbSet,
+		VerbSetup,
+		VerbShow,
+		VerbSnapshot,
+		VerbStart,
+		VerbStash,
+		VerbStop,
+		VerbTag,
+		VerbTeardown,
+		VerbTerminate,
+		VerbTest,
+		VerbTidy,
+		VerbTrace,
+		VerbTransform,
+		VerbTrigger,
+		VerbTunnel,
+		VerbUndeploy,
+		VerbUninstall,
+		VerbUnmount,
+		VerbUnset,
+		VerbUpdate,
+		VerbUpgrade,
+		VerbValidate,
+		VerbVerify,
+		VerbView,
+		VerbWatch,
+	}
 }
 
 func SortedValidVerbs() []string {
@@ -187,13 +187,14 @@ func (v Verb) Validate() error {
 }
 
 func (v Verb) Equals(other Verb) bool {
-	return ValidVerbToGroupID[v] == ValidVerbToGroupID[other]
+	return v.String() == other.String() ||
+		(DefaultVerbAliasGroup[v] != "" && DefaultVerbAliasGroup[v] == DefaultVerbAliasGroup[other])
 }
 
 func RelatedVerbs(verb Verb) []Verb {
 	verbs := make([]Verb, 0)
 	for _, v := range ValidVerbs() {
-		if ValidVerbToGroupID[v] == ValidVerbToGroupID[verb] {
+		if DefaultVerbAliasGroup[v] != "" && DefaultVerbAliasGroup[v] == DefaultVerbAliasGroup[verb] {
 			verbs = append(verbs, v)
 		}
 	}

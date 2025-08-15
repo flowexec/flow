@@ -17,6 +17,9 @@ func (p *Parameter) Validate() error {
 	if err := utils.ValidateOneOf("parameter type", p.Text, p.SecretRef, p.Prompt); err != nil {
 		return err
 	}
+	if err := utils.ValidateOneOf("parameter destination", p.EnvKey, p.OutputFile); err != nil {
+		return err
+	}
 
 	if p.EnvKey == "" {
 		return errors.New("must specify envKey for parameter")

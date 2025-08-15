@@ -5,6 +5,7 @@ import (
 
 	"github.com/flowexec/flow/internal/cache"
 	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/internal/logger"
 )
 
 func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -22,10 +23,9 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func syncFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
-	logger := ctx.Logger
-	if err := cache.UpdateAll(ctx.Logger); err != nil {
-		logger.FatalErr(err)
+func syncFunc(_ *context.Context, _ *cobra.Command, _ []string) {
+	if err := cache.UpdateAll(); err != nil {
+		logger.Log().FatalErr(err)
 	}
-	logger.PlainTextSuccess("Synced flow cache")
+	logger.Log().PlainTextSuccess("Synced flow cache")
 }
