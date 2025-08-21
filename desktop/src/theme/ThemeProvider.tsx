@@ -96,7 +96,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     },
   });
 
-  return (
+return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       {children}
     </MantineProvider>

@@ -7,6 +7,7 @@ import { Welcome } from "../Welcome/Welcome";
 
 export function WorkspaceRoute() {
     const { workspaceName } = useParams();
+    console.log('WorkspaceRoute params:', { workspaceName });
     const { workspace, workspaceError, isWorkspaceLoading } = useWorkspace(workspaceName || "");
 
     return (

@@ -7,6 +7,7 @@ import  { Executable } from "./Executable";
 
 export function ExecutableRoute() {
     const { executableId } = useParams();
+    console.log('ExecutableRoute params:', { executableId });
     const { executable, executableError, isExecutableLoading } = useExecutable(executableId || "");
 
     return (

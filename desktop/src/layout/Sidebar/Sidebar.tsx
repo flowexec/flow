@@ -35,14 +35,15 @@ export function Sidebar() {
             }
 
           }}>Testing</Button>
-          <NavLink
+          {/* Direct RouterNavLink A/B test to rule out composition issues */}
+          <RouterNavLink to={`/workspace/${selectedWorkspace || ''}`} style={{ textDecoration: 'none' }}>
+            <NavLink
               label="Workspace"
               leftSection={<IconFolders size={16} />}
-              component={RouterNavLink}
-              to={`/workspace/${selectedWorkspace}`}
               active={location.pathname.startsWith('/workspace')}
               variant="filled"
-          />
+            />
+          </RouterNavLink>
           <NavLink
               label="Logs"
               leftSection={<IconLogs size={16} />}

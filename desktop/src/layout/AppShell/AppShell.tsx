@@ -11,12 +11,11 @@ import { Sidebar } from "../Sidebar/Sidebar";
 import styles from "./AppShell.module.css";
 import {useAppContext} from "../../hooks/useAppContext.tsx";
 import {useNotifier} from "../../hooks/useNotifier.tsx";
-import {Outlet, useLocation} from "react-router";
+import {Outlet, ScrollRestoration} from "react-router";
 
 export function AppShell() {
   const { isLoading, hasError } = useAppContext();
   const { notification, setNotification } = useNotifier();
-  const location = useLocation();
 
   useEffect(() => {
     if (hasError) {
@@ -66,7 +65,8 @@ export function AppShell() {
           </div>
         ) : (
           <div style={{ position: "relative", height: "100%" }}>
-            <Outlet key={location.key} />
+            <Outlet />
+            <ScrollRestoration />
             {isLoading && (
               <div
                 style={{
