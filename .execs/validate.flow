@@ -30,6 +30,8 @@ executables:
           echo ""
           echo "Uncommitted changes:"
           git status --porcelain
+          echo "Difference:"
+          git --no-pager diff
           exit 1
         else
           echo "✅ All generated files are up to date"

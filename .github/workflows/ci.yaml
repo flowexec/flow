@@ -17,7 +17,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -36,7 +36,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -56,7 +56,7 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -81,14 +81,15 @@ jobs:
   coverage:
     needs: [unit-tests, e2e-tests]
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Download unit test coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: unit-coverage
       - name: Download E2E test coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: e2e-coverage
       - name: Upload to codecov
@@ -102,7 +103,7 @@ jobs:
   validate-generated:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -127,7 +128,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -146,7 +147,7 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
         uses: actions/setup-go@v5
         with:

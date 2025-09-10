@@ -366,12 +366,12 @@ impl ::std::convert::From<&Self> for ConfigTheme {
 impl ::std::fmt::Display for ConfigTheme {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match *self {
-            Self::Default => write!(f, "default"),
-            Self::Everforest => write!(f, "everforest"),
-            Self::Dark => write!(f, "dark"),
-            Self::Light => write!(f, "light"),
-            Self::Dracula => write!(f, "dracula"),
-            Self::TokyoNight => write!(f, "tokyo-night"),
+            Self::Default => f.write_str("default"),
+            Self::Everforest => f.write_str("everforest"),
+            Self::Dark => f.write_str("dark"),
+            Self::Light => f.write_str("light"),
+            Self::Dracula => f.write_str("dracula"),
+            Self::TokyoNight => f.write_str("tokyo-night"),
         }
     }
 }
@@ -458,8 +458,8 @@ impl ::std::convert::From<&Self> for ConfigWorkspaceMode {
 impl ::std::fmt::Display for ConfigWorkspaceMode {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match *self {
-            Self::Fixed => write!(f, "fixed"),
-            Self::Dynamic => write!(f, "dynamic"),
+            Self::Fixed => f.write_str("fixed"),
+            Self::Dynamic => f.write_str("dynamic"),
         }
     }
 }
