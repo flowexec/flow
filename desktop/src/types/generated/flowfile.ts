@@ -38,7 +38,7 @@ export type Verb = unknown;
  * `hidden` executables cannot be executed or listed.
  *
  */
-export type CommonVisibility = 'public' | 'private' | 'internal' | 'hidden';
+export type CommonVisibility = "public" | "private" | "internal" | "hidden";
 /**
  * DEPRECATED: Use `imports` instead
  */
@@ -149,132 +149,132 @@ export interface Executable {
    *
    */
   verb:
-    | 'abort'
-    | 'activate'
-    | 'add'
-    | 'analyze'
-    | 'apply'
-    | 'archive'
-    | 'audit'
-    | 'backup'
-    | 'benchmark'
-    | 'build'
-    | 'bundle'
-    | 'check'
-    | 'clean'
-    | 'clear'
-    | 'commit'
-    | 'compile'
-    | 'compress'
-    | 'configure'
-    | 'connect'
-    | 'copy'
-    | 'create'
-    | 'deactivate'
-    | 'debug'
-    | 'decompress'
-    | 'decrypt'
-    | 'delete'
-    | 'deploy'
-    | 'destroy'
-    | 'disable'
-    | 'disconnect'
-    | 'edit'
-    | 'enable'
-    | 'encrypt'
-    | 'erase'
-    | 'exec'
-    | 'execute'
-    | 'export'
-    | 'expose'
-    | 'fetch'
-    | 'fix'
-    | 'flush'
-    | 'format'
-    | 'generate'
-    | 'get'
-    | 'import'
-    | 'index'
-    | 'init'
-    | 'inspect'
-    | 'install'
-    | 'join'
-    | 'kill'
-    | 'launch'
-    | 'lint'
-    | 'list'
-    | 'load'
-    | 'lock'
-    | 'login'
-    | 'logout'
-    | 'manage'
-    | 'merge'
-    | 'migrate'
-    | 'modify'
-    | 'monitor'
-    | 'mount'
-    | 'new'
-    | 'notify'
-    | 'open'
-    | 'package'
-    | 'partition'
-    | 'patch'
-    | 'pause'
-    | 'ping'
-    | 'preload'
-    | 'prefetch'
-    | 'profile'
-    | 'provision'
-    | 'publish'
-    | 'purge'
-    | 'push'
-    | 'queue'
-    | 'reboot'
-    | 'recover'
-    | 'refresh'
-    | 'release'
-    | 'reload'
-    | 'remove'
-    | 'request'
-    | 'reset'
-    | 'restart'
-    | 'restore'
-    | 'retrieve'
-    | 'rollback'
-    | 'run'
-    | 'save'
-    | 'scale'
-    | 'scan'
-    | 'schedule'
-    | 'seed'
-    | 'send'
-    | 'serve'
-    | 'set'
-    | 'setup'
-    | 'show'
-    | 'snapshot'
-    | 'start'
-    | 'stash'
-    | 'stop'
-    | 'tag'
-    | 'teardown'
-    | 'terminate'
-    | 'test'
-    | 'tidy'
-    | 'trace'
-    | 'transform'
-    | 'trigger'
-    | 'tunnel'
-    | 'undeploy'
-    | 'uninstall'
-    | 'unmount'
-    | 'unset'
-    | 'update'
-    | 'upgrade'
-    | 'validate'
-    | 'verify'
-    | 'view'
-    | 'watch';
+    | "abort"
+    | "activate"
+    | "add"
+    | "analyze"
+    | "apply"
+    | "archive"
+    | "audit"
+    | "backup"
+    | "benchmark"
+    | "build"
+    | "bundle"
+    | "check"
+    | "clean"
+    | "clear"
+    | "commit"
+    | "compile"
+    | "compress"
+    | "configure"
+    | "connect"
+    | "copy"
+    | "create"
+    | "deactivate"
+    | "debug"
+    | "decompress"
+    | "decrypt"
+    | "delete"
+    | "deploy"
+    | "destroy"
+    | "disable"
+    | "disconnect"
+    | "edit"
+    | "enable"
+    | "encrypt"
+    | "erase"
+    | "exec"
+    | "execute"
+    | "export"
+    | "expose"
+    | "fetch"
+    | "fix"
+    | "flush"
+    | "format"
+    | "generate"
+    | "get"
+    | "import"
+    | "index"
+    | "init"
+    | "inspect"
+    | "install"
+    | "join"
+    | "kill"
+    | "launch"
+    | "lint"
+    | "list"
+    | "load"
+    | "lock"
+    | "login"
+    | "logout"
+    | "manage"
+    | "merge"
+    | "migrate"
+    | "modify"
+    | "monitor"
+    | "mount"
+    | "new"
+    | "notify"
+    | "open"
+    | "package"
+    | "partition"
+    | "patch"
+    | "pause"
+    | "ping"
+    | "preload"
+    | "prefetch"
+    | "profile"
+    | "provision"
+    | "publish"
+    | "purge"
+    | "push"
+    | "queue"
+    | "reboot"
+    | "recover"
+    | "refresh"
+    | "release"
+    | "reload"
+    | "remove"
+    | "request"
+    | "reset"
+    | "restart"
+    | "restore"
+    | "retrieve"
+    | "rollback"
+    | "run"
+    | "save"
+    | "scale"
+    | "scan"
+    | "schedule"
+    | "seed"
+    | "send"
+    | "serve"
+    | "set"
+    | "setup"
+    | "show"
+    | "snapshot"
+    | "start"
+    | "stash"
+    | "stop"
+    | "tag"
+    | "teardown"
+    | "terminate"
+    | "test"
+    | "tidy"
+    | "trace"
+    | "transform"
+    | "trigger"
+    | "tunnel"
+    | "undeploy"
+    | "uninstall"
+    | "unmount"
+    | "unset"
+    | "update"
+    | "upgrade"
+    | "validate"
+    | "verify"
+    | "view"
+    | "watch";
   /**
    * A list of aliases for the verb. This allows the executable to be referenced with multiple verbs.
    */
@@ -356,7 +356,7 @@ export interface ExecutableArgument {
   /**
    * The type of the argument. This is used to determine how to parse the value of the argument.
    */
-  type?: 'string' | 'int' | 'float' | 'bool';
+  type?: "string" | "int" | "float" | "bool";
   [k: string]: unknown;
 }
 /**
@@ -527,7 +527,7 @@ export interface ExecutableRequestExecutableType {
   /**
    * The HTTP method to use when making the request.
    */
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   params?: ExecutableParameterList;
   responseFile?: ExecutableRequestResponseFile;
   /**
@@ -581,7 +581,7 @@ export interface ExecutableRequestResponseFile {
   /**
    * The format to save the response as.
    */
-  saveAs?: 'raw' | 'json' | 'indented-json' | 'yaml' | 'yml';
+  saveAs?: "raw" | "json" | "indented-json" | "yaml" | "yml";
   [k: string]: unknown;
 }
 /**

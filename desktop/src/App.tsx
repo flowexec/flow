@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createHashRouter, Navigate, RouterProvider } from "react-router";
+import { Route, Switch } from "wouter";
 import "./App.css";
 import { AppProvider } from "./hooks/useAppContext.tsx";
 import { NotifierProvider } from "./hooks/useNotifier";
@@ -19,65 +19,41 @@ const queryClient = new QueryClient({
   },
 });
 
-const router = createHashRouter([
-  {
-    element: <AppShell />,
-    children: [
-      {
-        path: "/",
-        children: [
-          {
-            index: true,
-            element: (
-              <PageWrapper>
-                <Welcome welcomeMessage="Hey!" />
-              </PageWrapper>
-            ),
-          },
-          {
-            path: "workspace/:workspaceName",
-            element: <WorkspaceRoute />,
-          },
-          {
-            path: "executable/:executableId",
-            element: <ExecutableRoute />,
-          },
-          {
-            path: "logs",
-            element: (
-              <PageWrapper>
-                <Text>Logs view coming soon...</Text>
-              </PageWrapper>
-            ),
-          },
-          {
-            path: "vault",
-            element: <Data />,
-          },
-          {
-            path: "cache",
-            element: <Data />,
-          },
-          {
-            path: "settings",
-            element: <Settings />,
-          },
-          {
-            path: "*",
-            element: <Navigate to="/" replace />,
-          },
-        ],
-      },
-    ],
-  },
-]);
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <NotifierProvider>
         <AppProvider>
-          <RouterProvider router={router} />
+          <AppShell>
+            <Switch>
+              <Route path="/">
+                <PageWrapper>
+                  <Welcome />
+                </PageWrapper>
+              </Route>
+              <Route
+                path="/workspace/:workspaceName"
+                component={WorkspaceRoute}
+              />
+              <Route
+                path="/executable/:executableId"
+                component={ExecutableRoute}
+              />
+              <Route path="/logs">
+                <PageWrapper>
+                  <Text>Logs view coming soon...</Text>
+                </PageWrapper>
+              </Route>
+              <Route path="/vault" component={Data} />
+              <Route path="/cache" component={Data} />
+              <Route path="/settings" component={Settings} />
+              <Route>
+                <PageWrapper>
+                  <Welcome welcomeMessage="404: What you are looking for couldn't be found" />
+                </PageWrapper>
+              </Route>
+            </Switch>
+          </AppShell>
         </AppProvider>
       </NotifierProvider>
     </QueryClientProvider>

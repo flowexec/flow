@@ -4,16 +4,19 @@ import {
   Notification as MantineNotification,
   Text,
 } from "@mantine/core";
-import {useEffect} from "react";
-import {colorFromType, NotificationType,} from "../../types/notification";
+import { ReactNode, useEffect } from "react";
+import { colorFromType, NotificationType } from "../../types/notification";
 import { Header } from "../Header/Header";
 import { Sidebar } from "../Sidebar/Sidebar";
 import styles from "./AppShell.module.css";
-import {useAppContext} from "../../hooks/useAppContext.tsx";
-import {useNotifier} from "../../hooks/useNotifier.tsx";
-import {Outlet, ScrollRestoration} from "react-router";
+import { useAppContext } from "../../hooks/useAppContext.tsx";
+import { useNotifier } from "../../hooks/useNotifier.tsx";
 
-export function AppShell() {
+interface AppShellProps {
+  children: ReactNode;
+}
+
+export function AppShell({ children }: AppShellProps) {
   const { isLoading, hasError } = useAppContext();
   const { notification, setNotification } = useNotifier();
 
@@ -65,8 +68,7 @@ export function AppShell() {
           </div>
         ) : (
           <div style={{ position: "relative", height: "100%" }}>
-            <Outlet />
-            <ScrollRestoration />
+            {children}
             {isLoading && (
               <div
                 style={{

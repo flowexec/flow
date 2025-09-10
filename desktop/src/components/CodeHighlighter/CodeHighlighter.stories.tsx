@@ -51,12 +51,12 @@ NC='\\033[0m' # No Color
 
 # Function to log messages
 log() {
-    echo -e "\${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]\${NC} \$1" | tee -a "\$LOG_FILE"
+    echo -e "\${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')]\${NC} $1" | tee -a "\$LOG_FILE"
 }
 
 # Function to handle errors
 error() {
-    echo -e "\${RED}[ERROR]\${NC} \$1" >&2
+    echo -e "\${RED}[ERROR]\${NC} $1" >&2
     exit 1
 }
 

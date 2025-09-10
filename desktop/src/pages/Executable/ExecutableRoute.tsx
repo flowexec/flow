@@ -1,24 +1,31 @@
 import { Text, LoadingOverlay } from "@mantine/core";
-import { useParams } from "react-router";
+import { useParams } from "wouter";
 import { useExecutable } from "../../hooks/useExecutable";
 import { PageWrapper } from "../../components/PageWrapper.tsx";
 import { Welcome } from "../Welcome/Welcome";
-import  { Executable } from "./Executable";
+import { Executable } from "./Executable";
 
 export function ExecutableRoute() {
-    const { executableId } = useParams();
-    console.log('ExecutableRoute params:', { executableId });
-    const { executable, executableError, isExecutableLoading } = useExecutable(executableId || "");
+  const params = useParams();
+  const executableId = decodeURIComponent(params.executableId || "");
+  const { executable, executableError, isExecutableLoading } =
+    useExecutable(executableId);
 
-    return (
-        <PageWrapper>
-            {isExecutableLoading && <LoadingOverlay visible={isExecutableLoading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />}
-            {executableError && <Text c="red">Error: {executableError.message}</Text>}
-            {executable ? (
-                <Executable executable={executable} />
-            ) : (
-                <Welcome welcomeMessage="Select an executable to get started." />
-            )}
-        </PageWrapper>
-    );
+  return (
+    <PageWrapper>
+      {isExecutableLoading && (
+        <LoadingOverlay
+          visible={isExecutableLoading}
+          zIndex={1000}
+          overlayProps={{ radius: "sm", blur: 2 }}
+        />
+      )}
+      {executableError && <Text c="red">Error: {executableError.message}</Text>}
+      {executable ? (
+        <Executable executable={executable} />
+      ) : (
+        <Welcome welcomeMessage="Select an executable to get started." />
+      )}
+    </PageWrapper>
+  );
 }

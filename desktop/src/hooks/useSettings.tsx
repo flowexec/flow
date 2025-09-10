@@ -22,7 +22,7 @@ const defaultSettings: Settings = {
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function SettingsProvider({ children }: { children: ReactNode }) {

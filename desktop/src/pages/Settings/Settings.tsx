@@ -1,7 +1,7 @@
-import { 
-  Select, 
+import {
+  Select,
   Stack,
-  TextInput, 
+  TextInput,
   Title,
   LoadingOverlay,
   Alert,
@@ -40,7 +40,7 @@ const logModeOptions = [
 
 export function Settings() {
   const { settings, updateWorkspaceApp, updateExecutableApp, updateTheme } =
-      useSettings();
+    useSettings();
   const {
     config,
     isConfigLoading,
@@ -54,18 +54,20 @@ export function Settings() {
     updateDefaultTimeout,
   } = useConfig();
   const { setNotification } = useNotifier();
-  const [namespaceInput, setNamespaceInput] = useState<string>('');
+  const [namespaceInput, setNamespaceInput] = useState<string>("");
 
   useEffect(() => {
     if (config) {
-      setNamespaceInput(config.currentNamespace || '');
+      setNamespaceInput(config.currentNamespace || "");
     }
   }, [config]);
 
   if (configError) {
     return (
       <div className={styles.settings}>
-        <Title order={2} mb="md">Settings</Title>
+        <Title order={2} mb="md">
+          Settings
+        </Title>
         <Alert variant="light" color="red" icon={<IconInfoCircle />}>
           Error loading configuration: {configError.message}
         </Alert>
@@ -75,121 +77,133 @@ export function Settings() {
 
   async function handleThemeChange(value: string) {
     updateTheme(value as ThemeName);
-    return updateConfigTheme(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Theme updated',
-        message: 'Theme has been successfully updated',
-        autoClose: true,
+    return updateConfigTheme(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Theme updated",
+          message: "Theme has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating theme",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating theme',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
   async function handleLogModeChange(value: string) {
-    return updateLogMode(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Log mode updated',
-        message: 'Log mode has been successfully updated',
-        autoClose: true,
+    return updateLogMode(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Log mode updated",
+          message: "Log mode has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating log mode",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating log mode',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
-  async function handleDefaultTimeoutChange(value: string){
-    return updateDefaultTimeout(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Default timeout updated',
-        message: 'Default timeout has been successfully updated',
-        autoClose: true,
+  async function handleDefaultTimeoutChange(value: string) {
+    return updateDefaultTimeout(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Default timeout updated",
+          message: "Default timeout has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating default timeout",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating default timeout',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
-  async function handleCurrentWorkspaceChange(value: string){
-    return updateCurrentWorkspace(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Current workspace updated',
-        message: 'Current workspace has been successfully updated',
-        autoClose: true,
+  async function handleCurrentWorkspaceChange(value: string) {
+    return updateCurrentWorkspace(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Current workspace updated",
+          message: "Current workspace has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating current workspace",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating current workspace',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
-  async function handleWorkspaceModeChange(value: string){
-    return updateWorkspaceMode(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Workspace mode updated',
-        message: 'Workspace mode has been successfully updated',
-        autoClose: true,
+  async function handleWorkspaceModeChange(value: string) {
+    return updateWorkspaceMode(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Workspace mode updated",
+          message: "Workspace mode has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating workspace mode",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating workspace mode',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
-  async function handleNamespaceChange(value: string){
-    return updateNamespace(value).then(() => {
-      refreshConfig();
-      setNotification({
-        type: NotificationType.Success,
-        title: 'Namespace updated',
-        message: 'Namespace has been successfully updated',
-        autoClose: true,
+  async function handleNamespaceChange(value: string) {
+    return updateNamespace(value)
+      .then(() => {
+        refreshConfig();
+        setNotification({
+          type: NotificationType.Success,
+          title: "Namespace updated",
+          message: "Namespace has been successfully updated",
+          autoClose: true,
+        });
+      })
+      .catch((error) => {
+        setNotification({
+          type: NotificationType.Error,
+          title: "Error updating namespace",
+          message: error.message,
+          autoClose: true,
+        });
       });
-    }).catch((error) => {
-      setNotification({
-        type: NotificationType.Error,
-        title: 'Error updating namespace',
-        message: error.message,
-        autoClose: true,
-      });
-    });
   }
 
   function handleNamespaceSubmit() {
-    if (namespaceInput !== (config?.currentNamespace || '')) {
+    if (namespaceInput !== (config?.currentNamespace || "")) {
       handleNamespaceChange(namespaceInput);
     }
   }
@@ -238,7 +252,9 @@ export function Settings() {
               <TextInput
                 size="sm"
                 value={config?.defaultTimeout || ""}
-                onChange={(e) => handleDefaultTimeoutChange(e.currentTarget.value)}
+                onChange={(e) =>
+                  handleDefaultTimeoutChange(e.currentTarget.value)
+                }
                 placeholder="e.g., 30s, 5m, 1h"
                 variant="filled"
               />
@@ -253,8 +269,13 @@ export function Settings() {
               <Select
                 size="sm"
                 value={config?.currentWorkspace || ""}
-                onChange={(value) => value && handleCurrentWorkspaceChange(value)}
-                data={Object.keys(config?.workspaces || {}).map(name => ({ value: name, label: name }))}
+                onChange={(value) =>
+                  value && handleCurrentWorkspaceChange(value)
+                }
+                data={Object.keys(config?.workspaces || {}).map((name) => ({
+                  value: name,
+                  label: name,
+                }))}
                 placeholder="Select workspace"
                 variant="filled"
               />
@@ -283,7 +304,7 @@ export function Settings() {
                 onChange={(e) => setNamespaceInput(e.currentTarget.value)}
                 onBlur={handleNamespaceSubmit}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleNamespaceSubmit();
                   }
                 }}
@@ -302,7 +323,9 @@ export function Settings() {
               <TextInput
                 size="sm"
                 value={settings.workspaceApp}
-                onChange={(event) => updateWorkspaceApp(event.currentTarget.value)}
+                onChange={(event) =>
+                  updateWorkspaceApp(event.currentTarget.value)
+                }
                 placeholder="System default"
                 variant="filled"
                 spellCheck={false}
@@ -316,7 +339,9 @@ export function Settings() {
               <TextInput
                 size="sm"
                 value={settings.executableApp}
-                onChange={(event) => updateExecutableApp(event.currentTarget.value)}
+                onChange={(event) =>
+                  updateExecutableApp(event.currentTarget.value)
+                }
                 placeholder="System default"
                 variant="filled"
                 spellCheck={false}

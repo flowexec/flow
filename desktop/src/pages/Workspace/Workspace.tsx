@@ -150,7 +150,7 @@ export function Workspace({ workspace }: WorkspaceProps) {
                                 >
                                   {path}
                                 </Badge>
-                              )
+                              ),
                             )}
                           </Group>
                         </div>
@@ -167,7 +167,7 @@ export function Workspace({ workspace }: WorkspaceProps) {
                                 <Badge key={index} variant="light" color="red">
                                   {path}
                                 </Badge>
-                              )
+                              ),
                             )}
                           </Group>
                         </div>

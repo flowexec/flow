@@ -77,7 +77,7 @@ export function ExecutableRequestDetails({
                         </Text>
                         <Code>{value}</Code>
                       </div>
-                    )
+                    ),
                   )}
                 </Stack>
               </div>

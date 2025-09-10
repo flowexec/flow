@@ -5,5 +5,5 @@ import { Layout } from "./layout/Layout";
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <Layout>
     <App />
-  </Layout>
+  </Layout>,
 );

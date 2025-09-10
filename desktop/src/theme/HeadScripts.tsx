@@ -15,7 +15,6 @@ export function HeadScripts() {
     <>
       <ColorSchemeScript />
     </>,
-    head
+    head,
   );
 }
-

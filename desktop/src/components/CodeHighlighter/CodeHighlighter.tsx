@@ -53,6 +53,7 @@ export function CodeHighlighter({
         type: NotificationType.Error,
         autoClose: true,
       });
+      console.error(error);
     }
   };
 

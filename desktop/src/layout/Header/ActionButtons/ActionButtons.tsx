@@ -6,7 +6,10 @@ interface ActionButtonsProps {
   onRefreshWorkspaces: () => void;
 }
 
-export function ActionButtons({ onCreateWorkspace, onRefreshWorkspaces }: ActionButtonsProps) {
+export function ActionButtons({
+  onCreateWorkspace,
+  onRefreshWorkspaces,
+}: ActionButtonsProps) {
   return (
     <Group>
       <ActionIcon
@@ -26,5 +29,5 @@ export function ActionButtons({ onCreateWorkspace, onRefreshWorkspaces }: Action
         <IconRefresh />
       </ActionIcon>
     </Group>
-  )
+  );
 }

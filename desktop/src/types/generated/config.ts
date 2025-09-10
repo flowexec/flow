@@ -60,7 +60,13 @@ export interface Config {
   /**
    * The theme of the interactive UI.
    */
-  theme?: 'default' | 'everforest' | 'dark' | 'light' | 'dracula' | 'tokyo-night';
+  theme?:
+    | "default"
+    | "everforest"
+    | "dark"
+    | "light"
+    | "dracula"
+    | "tokyo-night";
   /**
    * A map of vault names to their paths. The path should be a valid absolute path to the vault file created by flow.
    */
@@ -74,7 +80,7 @@ export interface Config {
    * If the current directory is within a workspace, that workspace is used.
    *
    */
-  workspaceMode?: 'fixed' | 'dynamic';
+  workspaceMode?: "fixed" | "dynamic";
   /**
    * Map of workspace names to their paths. The path should be a valid absolute path to the workspace directory.
    *
