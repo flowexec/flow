@@ -36,5 +36,3 @@ This project uses Tauri v2 with React and TypeScript for the frontend, and Rust 
 - `npm run preview` - Preview the built application
 - `npm run tauri` - Run Tauri CLI commands
 - `npm run generate-types` - Generate TypeScript types from JSON schemas
-- `npm run storybook` - Start Storybook for component development
-- `npm run build-storybook` - Build Storybook for production

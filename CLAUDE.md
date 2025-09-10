@@ -42,7 +42,7 @@ flow/
 - **UI Library**: Mantine v8 (@mantine/core)
 - **Backend**: Rust with Tauri v2
 - **Build Tool**: Vite
-- **Testing**: Vitest with Storybook for component development
+- **Testing**: Vitest for component development
 
 ## Development Workflow
 
