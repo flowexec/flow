@@ -109,7 +109,7 @@ export interface Field {
   /**
    * The type of input field to display.
    */
-  type?: "text" | "masked" | "multiline" | "confirm";
+  type?: 'text' | 'masked' | 'multiline' | 'confirm';
   /**
    * A regular expression to validate the input value against.
    */
