@@ -18,7 +18,7 @@ generate_schema() {
 
     if ! cargo typify --version &>/dev/null; then
         echo -e "Installing cargo-typify..."
-        cargo install cargo-typify
+        cargo install cargo-typify@v0.4.3
     fi
 
     if cargo typify "$schema_path" --output "$output_file"; then

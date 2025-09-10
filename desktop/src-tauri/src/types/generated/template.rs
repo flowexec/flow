@@ -305,10 +305,10 @@ impl ::std::convert::From<&Self> for FieldType {
 impl ::std::fmt::Display for FieldType {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match *self {
-            Self::Text => write!(f, "text"),
-            Self::Masked => write!(f, "masked"),
-            Self::Multiline => write!(f, "multiline"),
-            Self::Confirm => write!(f, "confirm"),
+            Self::Text => f.write_str("text"),
+            Self::Masked => f.write_str("masked"),
+            Self::Multiline => f.write_str("multiline"),
+            Self::Confirm => f.write_str("confirm"),
         }
     }
 }
