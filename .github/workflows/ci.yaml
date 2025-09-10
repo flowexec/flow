@@ -81,6 +81,7 @@ jobs:
   coverage:
     needs: [unit-tests, e2e-tests]
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v4
       - name: Download unit test coverage
