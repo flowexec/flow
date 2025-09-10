@@ -96,7 +96,7 @@ function getVisibilityColor(visibility?: string) {
   }
 }
 
-export default function Executable({ executable }: ExecutableProps) {
+export function Executable({ executable }: ExecutableProps) {
   const typeInfo = getExecutableTypeInfo(executable);
   const { settings } = useSettings();
   const { setNotification } = useNotifier();
@@ -108,10 +108,8 @@ export default function Executable({ executable }: ExecutableProps) {
     let unlistenComplete: (() => void) | undefined;
 
     const setupListeners = async () => {
-      console.log("Setting up listeners for executable:", executable.ref);
       unlistenOutput = await listen("command-output", (event) => {
         const payload = event.payload as LogLine;
-        console.log("Received output:", payload);
         setOutput((prev) => [...prev, payload]);
       });
 
@@ -146,7 +144,6 @@ export default function Executable({ executable }: ExecutableProps) {
 
   const onOpenFile = async () => {
     try {
-      console.log(executable.flowfile);
       await openPath(executable.flowfile, settings.executableApp || undefined);
     } catch (error) {
       console.error(error);
@@ -155,7 +152,7 @@ export default function Executable({ executable }: ExecutableProps) {
 
   const onExecute = async () => {
     const hasPromptParams = executable.exec?.params?.some(
-      (param) => param.prompt
+      (param) => param.prompt,
     );
     const hasArgs = executable.exec?.args && executable.exec.args.length > 0;
 
@@ -183,7 +180,12 @@ export default function Executable({ executable }: ExecutableProps) {
         ? formData.args.trim().split(/\s+/)
         : [];
 
-      const invokeParams: any = {
+      const invokeParams: {
+        verb: string;
+        executableId: string;
+        args: string[];
+        params?: Record<string, string>;
+      } = {
         verb: executable.verb,
         executableId: executable.id,
         args: argsArray,

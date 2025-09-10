@@ -12,14 +12,16 @@ export function SettingRow({ label, description, children }: SettingRowProps) {
     <Box py="md">
       <Group align="flex-start" gap="xl">
         <Box className={styles.settingLabel}>
-          <Text size="sm" fw={500}>{label}</Text>
+          <Text size="sm" fw={500}>
+            {label}
+          </Text>
           {description && (
-            <Text size="xs" c="dimmed" mt={2}>{description}</Text>
+            <Text size="xs" c="dimmed" mt={2}>
+              {description}
+            </Text>
           )}
         </Box>
-        <Box className={styles.settingControl}>
-          {children}
-        </Box>
+        <Box className={styles.settingControl}>{children}</Box>
       </Group>
     </Box>
   );
@@ -33,12 +35,17 @@ interface SettingSectionProps {
 export function SettingSection({ title, children }: SettingSectionProps) {
   return (
     <Box mb="lg">
-      <Text size="xs" fw={500} mb="xs" c="dimmed" tt="uppercase" className={styles.sectionTitle}>
+      <Text
+        size="xs"
+        fw={500}
+        mb="xs"
+        c="dimmed"
+        tt="uppercase"
+        className={styles.sectionTitle}
+      >
         {title}
       </Text>
-      <Paper className={styles.settingCard}>
-        {children}
-      </Paper>
+      <Paper className={styles.settingCard}>{children}</Paper>
     </Box>
   );
 }

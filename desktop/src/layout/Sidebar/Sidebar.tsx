@@ -1,71 +1,97 @@
 import { Group, Image, NavLink, Stack } from "@mantine/core";
-import type { EnrichedExecutable } from "../../types/executable";
-import { EnrichedWorkspace } from "../../types/workspace";
-import { View } from "../Viewer/Viewer";
-import { ViewLinks } from "../Viewer/ViewLinks";
 import { ExecutableTree } from "./ExecutableTree/ExecutableTree";
 import styles from "./Sidebar.module.css";
 import { WorkspaceSelector } from "./WorkspaceSelector/WorkspaceSelector";
 import iconImage from "/logo-dark.png";
+import {
+  IconDatabase,
+  IconFolders,
+  IconLogs,
+  IconSettings,
+} from "@tabler/icons-react";
+import { Link, useLocation } from "wouter";
+import { useAppContext } from "../../hooks/useAppContext.tsx";
+import { useCallback } from "react";
 
-interface SidebarProps {
-  currentView: View;
-  setCurrentView: (view: View) => void;
-  workspaces: EnrichedWorkspace[];
-  selectedWorkspace: string | null;
-  onSelectWorkspace: (workspaceName: string) => void;
-  visibleExecutables: EnrichedExecutable[];
-  onSelectExecutable: (executableId: string) => void;
-  onLogoClick: () => void;
-}
+export function Sidebar() {
+  const [location, setLocation] = useLocation();
+  const { executables, selectedWorkspace } = useAppContext();
 
-export function Sidebar({
-  currentView,
-  setCurrentView,
-  workspaces,
-  selectedWorkspace,
-  onSelectWorkspace,
-  visibleExecutables,
-  onSelectExecutable,
-  onLogoClick,
-}: SidebarProps) {
+  const navigateToWorkspace = useCallback(() => {
+    setLocation(`/workspace/${selectedWorkspace || ""}`);
+  }, [setLocation, selectedWorkspace]);
+
+  const navigateToLogs = useCallback(() => {
+    setLocation("/logs");
+  }, [setLocation]);
+
+  const navigateToCache = useCallback(() => {
+    setLocation("/cache");
+  }, [setLocation]);
+
+  const navigateToVault = useCallback(() => {
+    setLocation("/vault");
+  }, [setLocation]);
+
+  const navigateToSettings = useCallback(() => {
+    setLocation("/settings");
+  }, [setLocation]);
+
   return (
     <div className={styles.sidebar}>
-      <div className={styles.sidebar__logo}>
-        <Image
-          src={iconImage}
-          alt="flow"
-          fit="contain"
-          onClick={onLogoClick}
-          style={{ cursor: "pointer" }}
-        />
-      </div>
+      <Link to="/" className={styles.sidebar__logo}>
+        <Image src={iconImage} alt="flow" fit="contain" />
+      </Link>
       <Stack gap="xs">
-        <WorkspaceSelector
-          workspaces={workspaces}
-          selectedWorkspace={selectedWorkspace}
-          onSelectWorkspace={onSelectWorkspace}
-        />
+        <WorkspaceSelector />
 
         <Group gap="xs" mt="md">
-          {ViewLinks.map((link) => (
+          <NavLink
+            label="Workspace"
+            leftSection={<IconFolders size={16} />}
+            active={location.startsWith("/workspace")}
+            variant="filled"
+            onClick={navigateToWorkspace}
+          />
+
+          <NavLink
+            label="Logs"
+            leftSection={<IconLogs size={16} />}
+            active={location.startsWith("/logs")}
+            variant="filled"
+            onClick={navigateToLogs}
+          />
+
+          <NavLink
+            label="Data"
+            leftSection={<IconDatabase size={16} />}
+            variant="filled"
+            childrenOffset={28}
+          >
             <NavLink
-              key={link.view}
-              label={link.label}
-              leftSection={<link.icon size={16} />}
-              active={currentView === link.view}
-              onClick={() => setCurrentView(link.view)}
+              label="Cache"
               variant="filled"
+              active={location.startsWith("/cache")}
+              onClick={navigateToCache}
             />
-          ))}
+            <NavLink
+              label="Vault"
+              variant="filled"
+              active={location.startsWith("/vault")}
+              onClick={navigateToVault}
+            />
+          </NavLink>
+
+          <NavLink
+            label="Settings"
+            leftSection={<IconSettings size={16} />}
+            active={location.startsWith("/settings")}
+            variant="filled"
+            onClick={navigateToSettings}
+          />
         </Group>
 
-        {visibleExecutables && visibleExecutables.length > 0 && (
-          <ExecutableTree
-            visibleExecutables={visibleExecutables}
-            onSelectExecutable={onSelectExecutable}
-          />
-        )}
+        {executables && executables.length > 0 && <ExecutableTree />}
       </Stack>
     </div>
   );

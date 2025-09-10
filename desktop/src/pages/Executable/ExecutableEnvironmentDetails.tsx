@@ -96,7 +96,7 @@ export function ExecutableEnvironmentDetails({
                           </Table.Td>
                         </Table.Tr>
                       );
-                    }
+                    },
                   )}
                 </Table.Tbody>
               </Table>

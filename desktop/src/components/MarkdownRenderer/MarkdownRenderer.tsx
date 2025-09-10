@@ -47,7 +47,11 @@ export function MarkdownRenderer({
           pre: (props: ComponentPropsWithoutRef<typeof Code>) => {
             const codeElement = props.children as React.ReactElement;
             const codeContent = codeElement?.props?.children || "";
-            return <CodeHighlighter theme={settings.theme}>{codeContent}</CodeHighlighter>;
+            return (
+              <CodeHighlighter theme={settings.theme}>
+                {codeContent}
+              </CodeHighlighter>
+            );
           },
         }}
       >

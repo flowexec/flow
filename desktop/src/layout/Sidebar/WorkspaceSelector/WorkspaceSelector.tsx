@@ -1,49 +1,44 @@
 import { ComboboxItem, Group, OptionsFilter, Select } from "@mantine/core";
-import { useConfig } from "../../../hooks/useBackendData";
+import { useConfig } from "../../../hooks/useConfig";
 import { useNotifier } from "../../../hooks/useNotifier";
-import { EnrichedWorkspace } from "../../../types/workspace";
 import { NotificationType } from "../../../types/notification";
-
-interface WorkspaceSelectorProps {
-  workspaces: EnrichedWorkspace[];
-  selectedWorkspace: string | null;
-  onSelectWorkspace: (workspaceName: string) => void;
-}
+import { useAppContext } from "../../../hooks/useAppContext.tsx";
 
 const filter: OptionsFilter = ({ options, search }) => {
   const filtered = (options as ComboboxItem[]).filter((option) =>
-    option.label.toLowerCase().trim().includes(search.toLowerCase().trim())
+    option.label.toLowerCase().trim().includes(search.toLowerCase().trim()),
   );
 
   filtered.sort((a, b) => a.label.localeCompare(b.label));
   return filtered;
 };
 
-export function WorkspaceSelector({
-  workspaces,
-  selectedWorkspace,
-  onSelectWorkspace,
-}: WorkspaceSelectorProps) {
-  const { config, updateCurrentWorkspace } = useConfig();
+export function WorkspaceSelector() {
+  const { selectedWorkspace, setSelectedWorkspace, workspaces, config } =
+    useAppContext();
+  const { updateCurrentWorkspace } = useConfig();
   const { setNotification } = useNotifier();
 
   const handleWorkspaceChange = async (workspaceName: string) => {
-    onSelectWorkspace(workspaceName);
+    setSelectedWorkspace(workspaceName);
 
-    if (config?.workspaceMode === 'dynamic') {
+    if (config?.workspaceMode === "dynamic") {
       try {
         await updateCurrentWorkspace(workspaceName);
         setNotification({
           type: NotificationType.Success,
-          title: 'Workspace switched',
+          title: "Workspace switched",
           message: `Switched to workspace: ${workspaceName}`,
           autoClose: true,
         });
       } catch (error) {
         setNotification({
           type: NotificationType.Error,
-          title: 'Error switching workspace',
-          message: error instanceof Error ? error.message : 'An unknown error occurred',
+          title: "Error switching workspace",
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
           autoClose: true,
         });
       }
@@ -83,10 +78,10 @@ export function WorkspaceSelector({
             },
             option: {
               color: "var(--mantine-color-white)",
-              "&[data-selected]": {
+              "&[dataSelected]": {
                 backgroundColor: "var(--mantine-color-dark-5)",
               },
-              "&[data-hovered]": {
+              "&[dataHovered]": {
                 backgroundColor: "var(--mantine-color-dark-5)",
               },
             },

@@ -22,7 +22,7 @@ import {
   IconSettingsAutomation,
   IconWindowMaximize,
 } from "@tabler/icons-react";
-import React from "react";
+import { useMemo, useCallback } from "react";
 import {
   BuildVerbType,
   ConfigurationVerbType,
@@ -37,11 +37,8 @@ import {
   UpdateVerbType,
   ValidationVerbType,
 } from "../../../types/executable";
-
-interface ExecutableTreeProps {
-  visibleExecutables: EnrichedExecutable[];
-  onSelectExecutable: (executable: string) => void;
-}
+import { useAppContext } from "../../../hooks/useAppContext.tsx";
+import { useLocation } from "wouter";
 
 interface CustomTreeNodeData extends TreeNodeData {
   isNamespace: boolean;
@@ -111,106 +108,89 @@ function Leaf({
   elementProps,
 }: RenderTreeNodePayload) {
   const customNode = node as CustomTreeNodeData;
-  let icon: React.ReactNode;
-  if (customNode.isNamespace && hasChildren) {
-    if (selected && expanded) {
-      icon = <IconFolderOpen size={16} />;
+  const [, setLocation] = useLocation();
+
+  const icon = useMemo(() => {
+    if (customNode.isNamespace && hasChildren) {
+      if (selected && expanded) {
+        return <IconFolderOpen size={16} />;
+      } else {
+        return <IconFolder size={16} />;
+      }
     } else {
-      icon = <IconFolder size={16} />;
+      switch (customNode.verbType) {
+        case DeactivationVerbType:
+          return <IconOctagon size={16} />;
+        case ConfigurationVerbType:
+          return <IconSettingsAutomation size={16} />;
+        case DestructionVerbType:
+          return <IconProgressX size={16} />;
+        case RetrievalVerbType:
+          return <IconProgressDown size={16} />;
+        case UpdateVerbType:
+          return <IconRefresh size={16} />;
+        case ValidationVerbType:
+          return <IconCircleCheckFilled size={16} />;
+        case LaunchVerbType:
+          return <IconWindowMaximize size={16} />;
+        case CreationVerbType:
+          return <IconCirclePlus size={16} />;
+        case RestartVerbType:
+          return <IconReload size={16} />;
+        case BuildVerbType:
+          return <IconBlocks size={16} />;
+        default:
+          return <IconPlayerPlayFilled size={16} />;
+      }
     }
-  } else {
-    switch (customNode.verbType) {
-      case DeactivationVerbType:
-        icon = <IconOctagon size={16} />;
-        break;
-      case ConfigurationVerbType:
-        icon = <IconSettingsAutomation size={16} />;
-        break;
-      case DestructionVerbType:
-        icon = <IconProgressX size={16} />;
-        break;
-      case RetrievalVerbType:
-        icon = <IconProgressDown size={16} />;
-        break;
-      case UpdateVerbType:
-        icon = <IconRefresh size={16} />;
-        break;
-      case ValidationVerbType:
-        icon = <IconCircleCheckFilled size={16} />;
-        break;
-      case LaunchVerbType:
-        icon = <IconWindowMaximize size={16} />;
-        break;
-      case CreationVerbType:
-        icon = <IconCirclePlus size={16} />;
-        break;
-      case RestartVerbType:
-        icon = <IconReload size={16} />;
-        break;
-      case BuildVerbType:
-        icon = <IconBlocks size={16} />;
-        break;
-      default:
-        icon = <IconPlayerPlayFilled size={16} />;
-    }
+  }, [hasChildren, selected, expanded]);
+
+  const handleExecutableClick = useCallback(() => {
+    const encodedId = encodeURIComponent(customNode.value);
+    setLocation(`/executable/${encodedId}`);
+  }, [setLocation]);
+
+  if (customNode.isNamespace) {
+    return (
+      <Group gap="xs" {...elementProps} key={customNode.value} mb="3">
+        {icon}
+        <Text>{customNode.label}</Text>
+      </Group>
+    );
   }
 
   return (
-    <Group gap="xs" {...elementProps} key={customNode.value} mb="3">
+    <Group
+      gap="xs"
+      {...elementProps}
+      mb="3"
+      onClick={handleExecutableClick}
+      style={{ cursor: "pointer" }}
+    >
       {icon}
       <Text>{customNode.label}</Text>
     </Group>
   );
 }
 
-export function ExecutableTree({
-  visibleExecutables,
-  onSelectExecutable,
-}: ExecutableTreeProps) {
+export function ExecutableTree() {
+  const { executables } = useAppContext();
   const tree = useTree();
 
-  React.useEffect(() => {
-    const selectedValue = tree.selectedState[0];
-    if (selectedValue) {
-      const findNode = (
-        nodes: CustomTreeNodeData[]
-      ): CustomTreeNodeData | undefined => {
-        for (const node of nodes) {
-          if (node.value === selectedValue) {
-            return node;
-          }
-          if (node.children) {
-            const found = findNode(node.children as CustomTreeNodeData[]);
-            if (found) return found;
-          }
-        }
-        return undefined;
-      };
-
-      const node = findNode(getTreeData(visibleExecutables));
-      if (node && !node.isNamespace) {
-        onSelectExecutable(selectedValue);
-      }
-    }
-  }, [tree.selectedState, visibleExecutables, onSelectExecutable]);
+  const treeData = useMemo(() => getTreeData(executables), [executables]);
 
   return (
     <>
       <Text size="xs" fw={700} c="dimmed" mb="0" mt="md">
-        EXECUTABLES ({visibleExecutables.length})
+        EXECUTABLES ({executables.length})
       </Text>
-      {visibleExecutables.length === 0 ? (
+      {executables.length === 0 ? (
         <Text size="xs" c="red">
           No executables found
         </Text>
       ) : (
         <ScrollArea scrollbarSize={6} scrollHideDelay={100}>
-          <Tree
-            data={getTreeData(visibleExecutables)}
-            selectOnClick
-            tree={tree}
-            renderNode={Leaf}
-          />
+          <Tree data={treeData} selectOnClick tree={tree} renderNode={Leaf} />
         </ScrollArea>
       )}
     </>

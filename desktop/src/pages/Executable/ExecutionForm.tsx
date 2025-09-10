@@ -44,7 +44,6 @@ export function ExecutionForm({
   const args = executable.exec?.args || [];
 
   const handleSubmit = () => {
-    console.log("Form submitted with data:", formData);
     onSubmit(formData);
     onClose();
   };
@@ -129,11 +128,11 @@ export function ExecutionForm({
                 <TextInput
                   key={index}
                   label={param.prompt}
-                  value={formData.params[param.envKey] || ""}
+                  value={formData.params[param.envKey || ""] || ""}
                   onChange={(event) => {
                     const target = event.target as HTMLInputElement;
                     if (target) {
-                      handleParamChange(param.envKey, target.value);
+                      handleParamChange(param.envKey || "", target.value);
                     }
                   }}
                   required={true}

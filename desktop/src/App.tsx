@@ -1,13 +1,14 @@
-import "@mantine/core/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { Route, Switch } from "wouter";
 import "./App.css";
-import { useBackendData, useExecutable } from "./hooks/useBackendData";
-import { NotifierProvider, useNotifier } from "./hooks/useNotifier";
-import { SettingsProvider } from "./hooks/useSettings";
-import { AppShell, View, Viewer } from "./layout";
-import { ThemeProvider } from "./theme/ThemeProvider";
-import { NotificationType } from "./types/notification";
+import { AppProvider } from "./hooks/useAppContext.tsx";
+import { NotifierProvider } from "./hooks/useNotifier";
+import { AppShell } from "./layout";
+import { PageWrapper } from "./components/PageWrapper.tsx";
+import { Settings, Welcome, Data } from "./pages";
+import { WorkspaceRoute } from "./pages/Workspace/WorkspaceRoute.tsx";
+import { ExecutableRoute } from "./pages/Executable/ExecutableRoute.tsx";
+import { Text } from "@mantine/core";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,104 +19,42 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppContent() {
-  const [currentView, setCurrentView] = useState<View>(View.Welcome);
-  const [welcomeMessage, setWelcomeMessage] = useState<string>("");
-  const [selectedExecutable, setSelectedExecutable] = useState<string | null>(
-    null
-  );
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(
-    null
-  );
-  const { notification, setNotification } = useNotifier();
-
-  const { config, workspaces, executables, isLoading, hasError, refreshAll } =
-    useBackendData(selectedWorkspace);
-
-  const { executable, executableError } = useExecutable(
-    selectedExecutable || ""
-  );
-
-  // Set initial workspace from config when it loads
-  useEffect(() => {
-    if (config?.currentWorkspace && workspaces && workspaces.length > 0) {
-      // Only update if we don't have a selected workspace or if the config workspace is different
-      if (!selectedWorkspace || config.currentWorkspace !== selectedWorkspace) {
-        setSelectedWorkspace(config.currentWorkspace);
-      }
-    }
-  }, [config, workspaces]);
-
-  useEffect(() => {
-    if (hasError) {
-      setNotification({
-        title: "Unexpected error",
-        message: hasError.message || "An error occurred",
-        type: NotificationType.Error,
-        autoClose: false,
-      });
-    }
-  }, [hasError]);
-
-  useEffect(() => {
-    if (welcomeMessage === "" && executables?.length > 0) {
-      setWelcomeMessage("Select an executable to get started.");
-    }
-  }, [executables, welcomeMessage]);
-
-  const handleLogoClick = () => {
-    setCurrentView(View.Welcome);
-  };
-
-  return (
-    <AppShell
-      currentView={currentView}
-      setCurrentView={(view: string) => setCurrentView(view as View)}
-      workspaces={workspaces || []}
-      selectedWorkspace={selectedWorkspace}
-      onSelectWorkspace={(workspaceName) => {
-        setSelectedWorkspace(workspaceName);
-        setCurrentView(View.Workspace);
-      }}
-      visibleExecutables={executables || []}
-      onSelectExecutable={(executable) => {
-        if (executable === selectedExecutable) {
-          return;
-        }
-        setSelectedExecutable(executable);
-        if (currentView !== View.Executable) {
-          setCurrentView(View.Executable);
-        }
-      }}
-      onLogoClick={handleLogoClick}
-      hasError={hasError}
-      isLoading={isLoading}
-      refreshAll={refreshAll}
-      notification={notification}
-      setNotification={setNotification}
-    >
-      <Viewer
-        currentView={currentView}
-        selectedExecutable={executable}
-        executableError={executableError}
-        welcomeMessage={welcomeMessage}
-        workspace={
-          workspaces?.find((w) => w.name === selectedWorkspace) || null
-        }
-      />
-    </AppShell>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <NotifierProvider>
-        <SettingsProvider>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </SettingsProvider>
+        <AppProvider>
+          <AppShell>
+            <Switch>
+              <Route path="/">
+                <PageWrapper>
+                  <Welcome />
+                </PageWrapper>
+              </Route>
+              <Route
+                path="/workspace/:workspaceName"
+                component={WorkspaceRoute}
+              />
+              <Route
+                path="/executable/:executableId"
+                component={ExecutableRoute}
+              />
+              <Route path="/logs">
+                <PageWrapper>
+                  <Text>Logs view coming soon...</Text>
+                </PageWrapper>
+              </Route>
+              <Route path="/vault" component={Data} />
+              <Route path="/cache" component={Data} />
+              <Route path="/settings" component={Settings} />
+              <Route>
+                <PageWrapper>
+                  <Welcome welcomeMessage="404: What you are looking for couldn't be found" />
+                </PageWrapper>
+              </Route>
+            </Switch>
+          </AppShell>
+        </AppProvider>
       </NotifierProvider>
     </QueryClientProvider>
   );
