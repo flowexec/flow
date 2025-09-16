@@ -24,7 +24,9 @@ import {
   IconTags,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { Hero } from "../../components/Hero";
+import { PageWrapper } from "../../components/PageWrapper.tsx";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
 import { useWorkspaceExecutableCounts } from "../../hooks/useWorkspaceExecutableCounts";
 import { EnrichedWorkspace } from "../../types/workspace";
@@ -39,8 +41,11 @@ export function Workspaces() {
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
 
   // Get executable counts for all workspaces efficiently
-  const { getCountForWorkspace, isLoadingForWorkspace, totalCount } =
+  const { getCountForWorkspace, isLoadingForWorkspace } =
     useWorkspaceExecutableCounts(workspaces || []);
+
+  // Navigation hook for row clicks
+  const [, setLocation] = useLocation();
 
   // Estimate location column width (roughly 35% of table width, minus padding and margins)
   const locationColumnWidth = Math.max(150, tableWidth * 0.35 - 60);
@@ -99,6 +104,11 @@ export function Workspaces() {
     return `${count} executable${count !== 1 ? "s" : ""}`;
   };
 
+  // Handle row click to navigate to workspace page
+  const handleRowClick = (workspaceName: string) => {
+    setLocation(`/workspace/${workspaceName}`);
+  };
+
   const rows = filteredWorkspaces.map((workspace) => (
     <Table.Tr key={workspace.name}>
       <Table.Td>
@@ -113,7 +123,10 @@ export function Workspaces() {
       </Table.Td>
       <Table.Td className={classes.workspaceCell}>
         <Box className={classes.workspaceDetails}>
-          <Text className={classes.workspaceName}>
+          <Text
+            className={classes.workspaceNameLink}
+            onClick={() => handleRowClick(workspace.name)}
+          >
             {workspace.displayName || workspace.name}
           </Text>
           <Text className={classes.executableCount}>
@@ -182,75 +195,77 @@ export function Workspaces() {
 
   return (
     <>
-      <Hero variant="split" pattern="subtle">
-        <Hero.Header>
-          <Title order={2}>Workspaces</Title>
-          <Text c="dimmed">Organize your automation workflows</Text>
-        </Hero.Header>
-        <Hero.Actions>
-          <Badge variant="light" size="sm" c="dimmed">
-            {workspaces.length} registered
-          </Badge>
-          <Button leftSection={<IconPlus size={14} />} variant="filled">
-            Create workspace
-          </Button>
-        </Hero.Actions>
-      </Hero>
+      <PageWrapper>
+        <Hero variant="split" pattern="subtle">
+          <Hero.Header>
+            <Title order={2}>Workspaces</Title>
+            <Text c="dimmed">Organize your automation workflows</Text>
+          </Hero.Header>
+          <Hero.Actions>
+            <Badge variant="light" size="sm" c="dimmed">
+              {workspaces.length} registered
+            </Badge>
+            <Button leftSection={<IconPlus size={14} />} variant="filled">
+              Create workspace
+            </Button>
+          </Hero.Actions>
+        </Hero>
 
-      <Box className={classes.filterSection}>
-        <Group gap="md" className={classes.filterGroup}>
-          <TextInput
-            className={classes.searchInput}
-            placeholder="Search workspaces..."
-            leftSection={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.currentTarget.value)}
-          />
-          <MultiSelect
-            className={classes.tagFilter}
-            placeholder="Filter by tags..."
-            leftSection={<IconTags size={16} />}
-            data={allTags}
-            value={selectedTags}
-            onChange={setSelectedTags}
-            clearable
-            searchable
-            maxDropdownHeight={200}
-          />
-        </Group>
-      </Box>
+        <Box className={classes.filterSection}>
+          <Group gap="md" className={classes.filterGroup}>
+            <TextInput
+              className={classes.searchInput}
+              placeholder="Search workspaces..."
+              leftSection={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            />
+            <MultiSelect
+              className={classes.tagFilter}
+              placeholder="Filter by tags..."
+              leftSection={<IconTags size={16} />}
+              data={allTags}
+              value={selectedTags}
+              onChange={setSelectedTags}
+              clearable
+              searchable
+              maxDropdownHeight={200}
+            />
+          </Group>
+        </Box>
 
-      <Box className={classes.tableContainer}>
-        <Table ref={tableRef} className={classes.table} stickyHeader>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th style={{ width: 40 }}></Table.Th>
-              <Table.Th>Workspace</Table.Th>
-              <Table.Th>Location</Table.Th>
-              <Table.Th>Tags</Table.Th>
-              <Table.Th style={{ width: 80 }}></Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {rows.length > 0 ? (
-              rows
-            ) : (
+        <Box className={classes.tableContainer}>
+          <Table ref={tableRef} className={classes.table} stickyHeader>
+            <Table.Thead>
               <Table.Tr>
-                <Table.Td colSpan={5}>
-                  <Box className={classes.emptyState}>
-                    <IconSearch size={48} stroke={1.5} />
-                    <Text className={classes.emptyStateText}>
-                      {searchQuery || selectedTags.length > 0
-                        ? "No workspaces match your filters"
-                        : "No workspaces found"}
-                    </Text>
-                  </Box>
-                </Table.Td>
+                <Table.Th style={{ width: 40 }}></Table.Th>
+                <Table.Th>Workspace</Table.Th>
+                <Table.Th>Location</Table.Th>
+                <Table.Th>Tags</Table.Th>
+                <Table.Th style={{ width: 80 }}></Table.Th>
               </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
-      </Box>
+            </Table.Thead>
+            <Table.Tbody>
+              {rows.length > 0 ? (
+                rows
+              ) : (
+                <Table.Tr>
+                  <Table.Td colSpan={5}>
+                    <Box className={classes.emptyState}>
+                      <IconSearch size={48} stroke={1.5} />
+                      <Text className={classes.emptyStateText}>
+                        {searchQuery || selectedTags.length > 0
+                          ? "No workspaces match your filters"
+                          : "No workspaces found"}
+                      </Text>
+                    </Box>
+                  </Table.Td>
+                </Table.Tr>
+              )}
+            </Table.Tbody>
+          </Table>
+        </Box>
+      </PageWrapper>
     </>
   );
 }

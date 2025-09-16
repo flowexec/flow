@@ -59,9 +59,7 @@
   border-bottom: 1px solid var(--mantine-color-gray-3);
 }
 
-.table tbody tr:hover {
-  background: var(--mantine-color-gray-0);
-}
+/* Removed clickableRow styles - using name-only clicking now */
 
 [data-mantine-color-scheme="dark"] .table tbody tr {
   border-bottom-color: var(--mantine-color-dark-4);
@@ -74,6 +72,8 @@
 [data-mantine-color-scheme="dark"] .table tbody tr:hover {
   background: var(--mantine-color-dark-6);
 }
+
+/* Removed dark mode clickableRow styles */
 
 .table tbody td {
   padding: 0.875rem 0.75rem;
@@ -90,14 +90,31 @@
   gap: 0.25rem;
 }
 
-.workspaceName {
+.workspaceNameLink {
   font-size: var(--mantine-font-size-sm);
   font-weight: 500;
-  color: var(--mantine-color-text);
+  color: var(--mantine-color-blue-6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: var(--mantine-radius-sm);
+  padding: 0.125rem 0.25rem;
+  margin: -0.125rem -0.25rem;
+  display: inline-block;
 }
 
-[data-mantine-color-scheme="dark"] .workspaceName {
-  color: var(--mantine-color-dark-0);
+.workspaceNameLink:hover {
+  color: var(--mantine-color-blue-7);
+  background: var(--mantine-color-blue-0);
+  text-decoration: underline;
+}
+
+[data-mantine-color-scheme="dark"] .workspaceNameLink {
+  color: var(--mantine-color-blue-4);
+}
+
+[data-mantine-color-scheme="dark"] .workspaceNameLink:hover {
+  color: var(--mantine-color-blue-3);
+  background: var(--mantine-color-dark-6);
 }
 
 .executableCount {
