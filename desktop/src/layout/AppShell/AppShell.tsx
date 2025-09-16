@@ -5,12 +5,11 @@ import {
   Text,
 } from "@mantine/core";
 import { ReactNode, useEffect } from "react";
-import { colorFromType, NotificationType } from "../../types/notification";
-import { Header } from "../Header/Header";
-import { Sidebar } from "../Sidebar/Sidebar";
-import styles from "./AppShell.module.css";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
 import { useNotifier } from "../../hooks/useNotifier.tsx";
+import { colorFromType, NotificationType } from "../../types/notification";
+import { Sidebar } from "../Sidebar/Sidebar";
+import styles from "./AppShell.module.css";
 
 interface AppShellProps {
   children: ReactNode;
@@ -43,10 +42,6 @@ export function AppShell({ children }: AppShellProps) {
         navbar: styles.navbar,
       }}
     >
-      <MantineAppShell.Header>
-        <Header />
-      </MantineAppShell.Header>
-
       <MantineAppShell.Navbar>
         <Sidebar />
       </MantineAppShell.Navbar>
