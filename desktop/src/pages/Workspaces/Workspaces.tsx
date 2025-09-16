@@ -17,7 +17,7 @@ import {
   IconStar,
   IconSwitch3,
 } from "@tabler/icons-react";
-import { Hero, PatternLines } from "../../components/Hero";
+import { Hero } from "../../components/Hero";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
 import { shortenPath } from "../../utils/paths";
 
@@ -27,7 +27,7 @@ export function Workspaces() {
   const { ref: tableRef, width: tableWidth } = useElementSize();
 
   // Estimate location column width (roughly 35% of table width, minus padding and margins)
-  const locationColumnWidth = Math.max(150, (tableWidth * 0.35) - 60);
+  const locationColumnWidth = Math.max(150, tableWidth * 0.35 - 60);
 
   const rows = workspaces.map((workspace) => (
     <Table.Tr key={workspace.name}>
@@ -46,10 +46,10 @@ export function Workspaces() {
         <Tooltip label={workspace.path} position="top" withArrow>
           <Text
             style={{
-              cursor: 'default',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              cursor: "default",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {shortenPath(workspace.path, locationColumnWidth)}
@@ -75,14 +75,19 @@ export function Workspaces() {
 
   return (
     <>
-      <Hero pattern={PatternLines}>
-        <Title order={1}>Workspaces</Title>
-        <Group justify="space-between">
-          <Text size="xs">{workspaces.length} registered</Text>
-          <Button leftSection={<IconPlus size={14} />} variant="default">
+      <Hero variant="split" pattern="subtle">
+        <Hero.Header>
+          <Title order={2}>Workspaces</Title>
+          <Text c="dimmed">Organize your automation workflows</Text>
+        </Hero.Header>
+        <Hero.Actions>
+          <Badge variant="light" size="sm" c="dimmed">
+            {workspaces.length} registered
+          </Badge>
+          <Button leftSection={<IconPlus size={14} />} variant="filled">
             Create workspace
           </Button>
-        </Group>
+        </Hero.Actions>
       </Hero>
 
       <Table ref={tableRef}>
