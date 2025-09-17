@@ -1,8 +1,8 @@
-import { useQueries } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { EnrichedWorkspace } from "../types/workspace";
+import { useMemo } from "react";
 import { EnrichedExecutable } from "../types/executable";
+import { EnrichedWorkspace } from "../types/workspace";
 
 interface WorkspaceExecutableCount {
   workspace: string;
@@ -11,37 +11,31 @@ interface WorkspaceExecutableCount {
   error: Error | null;
 }
 
-/**
- * Custom hook to efficiently fetch and cache executable counts for all workspaces.
- * Uses React Query with intelligent caching to avoid redundant API calls.
- *
- * @param workspaces - Array of workspace objects to count executables for
- * @returns Map of workspace name to executable count, plus loading/error states
- */
 export function useWorkspaceExecutableCounts(workspaces: EnrichedWorkspace[]) {
-  // Create queries for each workspace
   const executableQueries = useQueries({
     queries: workspaces.map((workspace) => ({
       queryKey: ["workspace-executable-count", workspace.name],
       queryFn: async (): Promise<number> => {
         try {
-          const executables = await invoke<EnrichedExecutable[]>("list_executables", {
-            workspace: workspace.name,
-          });
+          const executables = await invoke<EnrichedExecutable[]>(
+            "list_executables",
+            {
+              workspace: workspace.name,
+            }
+          );
           return executables.length;
         } catch (error) {
-          console.warn(`Failed to fetch executables for workspace ${workspace.name}:`, error);
+          console.warn(
+            `Failed to fetch executables for workspace ${workspace.name}:`,
+            error
+          );
           return 0;
         }
       },
-      staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh for 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes after last use
-      refetchOnWindowFocus: false, // Don't refetch on window focus for performance
-      retry: 1, // Only retry once on failure
+      retry: 1,
     })),
   });
 
-  // Transform query results into a more usable format
   const workspaceExecutableCounts = useMemo(() => {
     const countsMap = new Map<string, WorkspaceExecutableCount>();
 
@@ -58,35 +52,23 @@ export function useWorkspaceExecutableCounts(workspaces: EnrichedWorkspace[]) {
     return countsMap;
   }, [workspaces, executableQueries]);
 
-  // Overall loading state - true if any workspace is still loading
-  const isLoading = executableQueries.some(query => query.isLoading);
-
-  // Check if there are any errors
-  const hasErrors = executableQueries.some(query => query.error);
-
-  // Get total executable count across all workspaces
+  const isLoading = executableQueries.some((query) => query.isLoading);
+  const hasErrors = executableQueries.some((query) => query.error);
   const totalCount = useMemo(() => {
-    return Array.from(workspaceExecutableCounts.values())
-      .reduce((sum, { count }) => sum + count, 0);
+    return Array.from(workspaceExecutableCounts.values()).reduce(
+      (sum, { count }) => sum + count,
+      0
+    );
   }, [workspaceExecutableCounts]);
 
-  /**
-   * Get executable count for a specific workspace
-   */
   const getCountForWorkspace = (workspaceName: string): number => {
     return workspaceExecutableCounts.get(workspaceName)?.count ?? 0;
   };
 
-  /**
-   * Get loading state for a specific workspace
-   */
   const isLoadingForWorkspace = (workspaceName: string): boolean => {
     return workspaceExecutableCounts.get(workspaceName)?.isLoading ?? false;
   };
 
-  /**
-   * Get error state for a specific workspace
-   */
   const getErrorForWorkspace = (workspaceName: string): Error | null => {
     return workspaceExecutableCounts.get(workspaceName)?.error ?? null;
   };
@@ -104,5 +86,35 @@ export function useWorkspaceExecutableCounts(workspaces: EnrichedWorkspace[]) {
     isLoading,
     hasErrors,
     totalCount,
+  };
+}
+
+export function useWorkspaceExecutableCount(
+  workspace: EnrichedWorkspace | string | null | undefined
+) {
+  const workspaceName = typeof workspace === "string" ? workspace : workspace?.name;
+
+  const query = useQuery<number, Error>({
+    queryKey: ["workspace-executable-count", workspaceName],
+    queryFn: async (): Promise<number> => {
+      if (!workspaceName) return 0;
+      try {
+        const executables = await invoke<EnrichedExecutable[]>("list_executables", {
+          workspace: workspaceName,
+        });
+        return executables.length;
+      } catch (error) {
+        console.warn(`Failed to fetch executables for workspace ${workspaceName}:`, error);
+        return 0;
+      }
+    },
+    enabled: !!workspaceName,
+    retry: 1,
+  });
+
+  return {
+    count: query.data ?? 0,
+    isLoading: !!workspaceName && query.isLoading,
+    error: query.error ?? null,
   };
 }

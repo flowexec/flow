@@ -8,7 +8,7 @@ export function PageWrapper({ children }: { children: React.ReactNode }) {
       type="auto"
       scrollbarSize={6}
       scrollHideDelay={100}
-      offsetScrollbars
+      offsetScrollbars="present"
     >
       {children}
     </ScrollArea>

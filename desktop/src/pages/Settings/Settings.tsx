@@ -1,22 +1,23 @@
 import {
+  Alert,
+  LoadingOverlay,
+  Paper,
   Select,
   Stack,
   TextInput,
   Title,
-  LoadingOverlay,
-  Alert,
-  Paper,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { PageWrapper } from "../../components/PageWrapper";
+import { SettingRow, SettingSection } from "../../components/Settings";
 import { useConfig } from "../../hooks/useConfig";
-import { useSettings } from "../../hooks/useSettings";
 import { useNotifier } from "../../hooks/useNotifier";
+import { useSettings } from "../../hooks/useSettings";
 import { ThemeName } from "../../theme/types";
 import { NotificationType } from "../../types/notification";
-import { SettingRow, SettingSection } from "../../components/Settings";
 import styles from "./Settings.module.css";
-import { useState, useEffect } from "react";
-import { PageWrapper } from "../../components/PageWrapper";
 
 const themeOptions = [
   { value: "everforest", label: "Default" },
@@ -55,6 +56,7 @@ export function Settings() {
   } = useConfig();
   const { setNotification } = useNotifier();
   const [namespaceInput, setNamespaceInput] = useState<string>("");
+  const { setColorScheme } = useMantineColorScheme();
 
   useEffect(() => {
     if (config) {
@@ -77,6 +79,12 @@ export function Settings() {
 
   async function handleThemeChange(value: string) {
     updateTheme(value as ThemeName);
+    if (value === "everforest" || value === "light") {
+      setColorScheme("light");
+    } else {
+      setColorScheme("dark");
+    }
+
     return updateConfigTheme(value)
       .then(() => {
         refreshConfig();

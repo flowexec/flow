@@ -1,47 +1,24 @@
-/* CSS Custom Properties for theming */
 .root {
-  --hero-bg-primary: var(--mantine-color-gray-0);
-  --hero-bg-secondary: var(--mantine-color-gray-1);
-  --hero-text-primary: var(--mantine-color-dark-9);
-  --hero-text-secondary: var(--mantine-color-dark-6);
-  --hero-border: var(--mantine-color-gray-3);
-  --hero-pattern-color: var(--mantine-color-blue-2);
-
-  /* Dark theme overrides */
-  [data-mantine-color-scheme="dark"] & {
-    --hero-bg-primary: var(--mantine-color-dark-7);
-    --hero-bg-secondary: var(--mantine-color-dark-6);
-    --hero-text-primary: var(--mantine-color-gray-0);
-    --hero-text-secondary: var(--mantine-color-gray-4);
-    --hero-border: var(--mantine-color-dark-4);
-    --hero-pattern-color: var(--mantine-color-blue-9);
-  }
+  --hero-bg-primary: var(--mantine-color-appshell-0);
+  --hero-bg-secondary: var(--mantine-color-primary-0);
+  --hero-text-primary: var(--mantine-color-secondary-0);
+  --hero-text-secondary: var(--mantine-color-tertiary-0);
+  --hero-border: var(--mantine-color-border-0);
+  --hero-pattern-color: var(--mantine-color-emphasis-1);
 
   position: relative;
-  isolation: isolate;
   color: var(--hero-text-primary);
-  background: linear-gradient(135deg, var(--hero-bg-primary) 0%, var(--hero-bg-secondary) 100%);
+  background: linear-gradient(
+    150deg,
+    var(--hero-bg-primary) 0%,
+    var(--hero-bg-secondary) 100%
+  );
   border-bottom: 1px solid var(--hero-border);
   overflow: hidden;
+  margin-bottom: var(--mantine-spacing-lg);
 }
 
-/* Pattern backgrounds */
 .pattern {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.patternSvg {
-  height: 100%;
-  opacity: 0.15;
-  color: var(--hero-pattern-color);
-}
-
-.patternSubtle {
   position: absolute;
   inset: 0;
   opacity: 0.12;
@@ -49,9 +26,20 @@
 }
 
 .pattern-subtle {
-  background: radial-gradient(circle at 30% 20%, var(--hero-pattern-color) 2px, transparent 2px),
-              radial-gradient(circle at 70% 80%, var(--hero-pattern-color) 1.5px, transparent 1.5px);
-  background-size: 50px 50px, 70px 70px;
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      var(--hero-pattern-color) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      var(--hero-pattern-color) 1.5px,
+      transparent 1.5px
+    );
+  background-size:
+    50px 50px,
+    70px 70px;
 }
 
 .pattern-lines {
@@ -61,7 +49,6 @@
   background-size: 40px 40px;
 }
 
-/* Layout variants */
 .variant-center .inner {
   text-align: center;
 }
@@ -78,7 +65,6 @@
   text-align: left;
 }
 
-/* Content container */
 .contentContainer {
   position: relative;
   z-index: 1;
@@ -94,7 +80,6 @@
   align-items: center;
 }
 
-/* Layout components */
 .stackedContent {
   width: 100%;
 }
@@ -116,7 +101,6 @@
   align-self: center;
 }
 
-/* Component styling */
 .header {
   margin-bottom: 0.5rem;
 }
@@ -154,34 +138,8 @@
   justify-content: flex-end;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .inner {
-    padding: 2rem 1rem;
-    min-height: 100px;
-  }
-
-  .splitLayout {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .splitActions {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .actions {
-    justify-content: flex-start !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .inner {
-    padding: 1.5rem 1rem;
-  }
-
-  .actions {
-    gap: 0.5rem;
-  }
+.root :global(.Mantine-Badge-root) {
+  --badge-bg: var(--mantine-color-gray-1) !important;
+  --badge-color: var(--mantine-color-gray-8) !important;
+  --badge-bd: transparent !important;
 }

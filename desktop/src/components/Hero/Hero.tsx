@@ -1,91 +1,75 @@
-import React from 'react';
-import { Box, Container, Group, Stack } from '@mantine/core';
-import classes from './Hero.module.css';
+import { Box, Container, Group, Stack } from "@mantine/core";
+import React from "react";
+import classes from "./Hero.module.css";
 
-interface BasePatternProps extends React.ComponentPropsWithoutRef<'svg'> {
-  size?: number;
-  className?: string;
-}
+export type HeroVariant = "center" | "split" | "left";
+export type PatternType = "lines" | "subtle" | "none";
 
-type HeroVariant = 'center' | 'split' | 'left';
-type PatternType = 'lines' | 'subtle' | 'none';
-
-interface HeroProps {
+export interface HeroProps {
   children: React.ReactNode;
   variant?: HeroVariant;
-  pattern?: PatternType | React.ComponentType<BasePatternProps>;
-  patternProps?: Partial<BasePatternProps>;
+  pattern?: PatternType;
   className?: string;
   containerSize?: string | number;
 }
 
-interface HeroHeaderProps {
+export interface HeroHeaderProps {
   children: React.ReactNode;
   className?: string;
 }
 
-interface HeroContentProps {
+export interface HeroContentProps {
   children: React.ReactNode;
   className?: string;
 }
 
-interface HeroActionsProps {
+export interface HeroActionsProps {
   children: React.ReactNode;
   className?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
 }
 
-// Compound component parts
-function HeroHeader({ children, className }: HeroHeaderProps) {
+export function HeroHeader({ children, className }: HeroHeaderProps) {
   return (
-    <Box className={`${classes.header} ${className ?? ''}`}>
-      {children}
-    </Box>
+    <Box className={`${classes.header} ${className ?? ""}`}>{children}</Box>
   );
 }
 
-function HeroContent({ children, className }: HeroContentProps) {
+export function HeroContent({ children, className }: HeroContentProps) {
   return (
-    <Box className={`${classes.content} ${className ?? ''}`}>
-      {children}
-    </Box>
+    <Box className={`${classes.content} ${className ?? ""}`}>{children}</Box>
   );
 }
 
-function HeroActions({ children, className, align = 'right' }: HeroActionsProps) {
+export function HeroActions({
+  children,
+  className,
+  align = "right",
+}: HeroActionsProps) {
   return (
-    <Group className={`${classes.actions} ${classes[`actions-${align}`]} ${className ?? ''}`} gap="sm">
+    <Group
+      className={`${classes.actions} ${classes[`actions-${align}`]} ${className ?? ""}`}
+      gap="sm"
+    >
       {children}
     </Group>
   );
 }
 
-// Main Hero component
 export function Hero({
   children,
-  variant = 'center',
-  pattern = 'subtle',
-  patternProps,
+  variant = "center",
+  pattern = "subtle",
   className,
-  containerSize = 'xl',
+  containerSize = "xl",
 }: HeroProps) {
   const renderPattern = () => {
-    if (pattern === 'none') return null;
-
-    if (typeof pattern === 'string') {
-      // Use built-in subtle pattern
-      return (
-        <Box className={classes.pattern} aria-hidden="true">
-          <Box className={`${classes.patternSubtle} ${classes[`pattern-${pattern}`]}`} />
-        </Box>
-      );
-    }
-
-    // Use custom pattern component
-    const Pattern = pattern;
+    if (pattern === "none") return null;
     return (
-      <Box className={classes.pattern} aria-hidden="true">
-        <Pattern size={600} className={classes.patternSvg} {...patternProps} />
+      <Box aria-hidden="true">
+        <Box
+          className={`${classes.pattern} ${classes[`pattern-${pattern}`]}`}
+        />
       </Box>
     );
   };
@@ -93,38 +77,45 @@ export function Hero({
   const getLayoutClasses = () => {
     const baseClasses = [classes.root, classes[`variant-${variant}`]];
     if (className) baseClasses.push(className);
-    return baseClasses.join(' ');
+    return baseClasses.join(" ");
   };
 
   const renderContent = () => {
-    if (variant === 'split') {
+    if (variant === "split") {
       const headerChild = React.Children.toArray(children).find(
-        child => React.isValidElement(child) && child.type === HeroHeader
+        (child) => React.isValidElement(child) && child.type === HeroHeader
       );
       const actionsChild = React.Children.toArray(children).find(
-        child => React.isValidElement(child) && child.type === HeroActions
+        (child) => React.isValidElement(child) && child.type === HeroActions
       );
       const otherChildren = React.Children.toArray(children).filter(
-        child => React.isValidElement(child) &&
-        child.type !== HeroHeader &&
-        child.type !== HeroActions
+        (child) =>
+          React.isValidElement(child) &&
+          child.type !== HeroHeader &&
+          child.type !== HeroActions
       );
 
       return (
-        <Group className={classes.splitLayout} align="flex-start" justify="space-between">
+        <Group
+          className={classes.splitLayout}
+          align="flex-start"
+          justify="space-between"
+        >
           <Stack gap="xs" className={classes.splitContent}>
             {headerChild}
             {otherChildren}
           </Stack>
-          <Box className={classes.splitActions}>
-            {actionsChild}
-          </Box>
+          <Box className={classes.splitActions}>{actionsChild}</Box>
         </Group>
       );
     }
 
     return (
-      <Stack gap="md" className={classes.stackedContent} align={variant === 'center' ? 'center' : 'flex-start'}>
+      <Stack
+        gap="md"
+        className={classes.stackedContent}
+        align={variant === "center" ? "center" : "flex-start"}
+      >
         {children}
       </Stack>
     );
@@ -135,18 +126,12 @@ export function Hero({
       {renderPattern()}
 
       <Container size={containerSize} className={classes.contentContainer}>
-        <Box className={classes.inner}>
-          {renderContent()}
-        </Box>
+        <Box className={classes.inner}>{renderContent()}</Box>
       </Container>
     </Box>
   );
 }
 
-// Attach compound components
 Hero.Header = HeroHeader;
 Hero.Content = HeroContent;
 Hero.Actions = HeroActions;
-
-// Export types for external use
-export type { HeroProps, HeroHeaderProps, HeroContentProps, HeroActionsProps, HeroVariant, PatternType };

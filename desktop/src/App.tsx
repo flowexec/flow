@@ -6,7 +6,7 @@ import { NotifierProvider } from "./hooks/useNotifier";
 import { AppShell } from "./layout";
 import { PageWrapper } from "./components/PageWrapper.tsx";
 import {Settings, Welcome, Data, Workspaces} from "./pages";
-import { WorkspaceRoute } from "./pages/Workspace/WorkspaceRoute.tsx";
+import { Workspace } from "./pages/Workspace/Workspace.tsx";
 import { ExecutableRoute } from "./pages/Executable/ExecutableRoute.tsx";
 import { Text } from "@mantine/core";
 
@@ -37,7 +37,7 @@ function App() {
               />
               <Route
                 path="/workspace/:workspaceName"
-                component={WorkspaceRoute}
+                component={Workspace}
               />
               <Route
                 path="/executable/:executableId"

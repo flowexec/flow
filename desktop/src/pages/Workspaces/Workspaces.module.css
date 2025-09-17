@@ -1,7 +1,7 @@
 /* Workspaces Table Styling */
 .filterSection {
   margin-bottom: 1rem;
-  padding: 0 1rem;
+  width: 75%;
 }
 
 .filterGroup {
@@ -10,22 +10,16 @@
 }
 
 .searchInput {
-  flex: 1;
-  min-width: 250px;
-  max-width: 400px;
+  flex: 2;
 }
 
 .tagFilter {
   flex: 1;
-  min-width: 200px;
-  max-width: 300px;
 }
 
 .tableContainer {
   position: relative;
-  border-radius: var(--mantine-radius-md);
   overflow: hidden;
-  border: 1px solid var(--mantine-color-default-border);
 }
 
 .table {
@@ -33,55 +27,21 @@
   border-spacing: 0;
 }
 
-.table thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
 .table thead th {
   font-weight: 600;
-  font-size: var(--mantine-font-size-sm);
-  padding: 1rem 0.75rem;
-  background: var(--mantine-color-body);
-  border-bottom: 1px solid var(--mantine-color-default-border);
-  color: var(--mantine-color-text);
-}
-
-[data-mantine-color-scheme="dark"] .table thead th {
-  background: var(--mantine-color-dark-7);
-  border-bottom-color: var(--mantine-color-dark-4);
-  color: var(--mantine-color-dark-0);
+  font-size: var(--mantine-font-size-md);
+  border-bottom: 1px solid var(--mantine-color-border-0);
+  color: var(--mantine-color-primary-0);
 }
 
 .table tbody tr {
   transition: background-color 0.15s ease;
-  border-bottom: 1px solid var(--mantine-color-gray-3);
+  border-bottom: 1px dashed var(--mantine-color-border-0);
 }
-
-/* Removed clickableRow styles - using name-only clicking now */
-
-[data-mantine-color-scheme="dark"] .table tbody tr {
-  border-bottom-color: var(--mantine-color-dark-4);
-}
-
-[data-mantine-color-scheme="dark"] .table tbody tr {
-  border-bottom-color: var(--mantine-color-dark-5);
-}
-
-[data-mantine-color-scheme="dark"] .table tbody tr:hover {
-  background: var(--mantine-color-dark-6);
-}
-
-/* Removed dark mode clickableRow styles */
 
 .table tbody td {
   padding: 0.875rem 0.75rem;
   vertical-align: middle;
-}
-
-.workspaceCell {
-  font-weight: 500;
 }
 
 .workspaceDetails {
@@ -91,50 +51,27 @@
 }
 
 .workspaceNameLink {
-  font-size: var(--mantine-font-size-sm);
-  font-weight: 500;
-  color: var(--mantine-color-blue-6);
+  font-size: var(--mantine-font-size-sm) !important;
+  font-weight: 600 !important;
+  color: var(--mantine-color-tertiary-0) !important;
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-radius: var(--mantine-radius-sm);
-  padding: 0.125rem 0.25rem;
-  margin: -0.125rem -0.25rem;
-  display: inline-block;
 }
 
 .workspaceNameLink:hover {
-  color: var(--mantine-color-blue-7);
-  background: var(--mantine-color-blue-0);
+  color: var(--mantine-color-primary-0) !important;
   text-decoration: underline;
 }
 
-[data-mantine-color-scheme="dark"] .workspaceNameLink {
-  color: var(--mantine-color-blue-4);
-}
-
-[data-mantine-color-scheme="dark"] .workspaceNameLink:hover {
-  color: var(--mantine-color-blue-3);
-  background: var(--mantine-color-dark-6);
-}
-
 .executableCount {
-  font-size: var(--mantine-font-size-xs);
-  color: var(--mantine-color-dimmed);
-}
-
-[data-mantine-color-scheme="dark"] .executableCount {
-  color: var(--mantine-color-dark-2);
+  font-size: var(--mantine-font-size-xs) !important;
+  color: var(--mantine-color-dimmed) !important;
 }
 
 .locationCell {
-  max-width: 200px;
+  max-width: 300px;
   font-family: var(--mantine-font-family-monospace);
   font-size: var(--mantine-font-size-xs);
   color: var(--mantine-color-dimmed);
-}
-
-[data-mantine-color-scheme="dark"] .locationCell {
-  color: var(--mantine-color-dark-2);
 }
 
 .pathText {
@@ -164,31 +101,8 @@
   text-align: center;
 }
 
-.actionButton {
-  color: var(--mantine-color-gray-6);
-  transition: color 0.15s ease;
-}
-
-.actionButton:hover {
-  color: var(--mantine-color-gray-9);
-  background: var(--mantine-color-gray-0);
-}
-
-[data-mantine-color-scheme="dark"] .actionButton {
-  color: var(--mantine-color-gray-5);
-}
-
-[data-mantine-color-scheme="dark"] .actionButton:hover {
-  color: var(--mantine-color-dark-0);
-  background: var(--mantine-color-dark-6);
-}
-
 .currentWorkspaceIndicator {
-  color: var(--mantine-color-blue-6);
-}
-
-[data-mantine-color-scheme="dark"] .currentWorkspaceIndicator {
-  color: var(--mantine-color-blue-4);
+  color: var(--mantine-color-emphasis-0);
 }
 
 .emptyState {

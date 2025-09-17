@@ -14,11 +14,7 @@ import iconImage from "/logo-dark.png";
 
 export function Sidebar() {
   const [location, setLocation] = useLocation();
-  const { executables, selectedWorkspace } = useAppContext();
-
-  const navigateToWorkspace = useCallback(() => {
-    setLocation(`/workspace/${selectedWorkspace || ""}`);
-  }, [setLocation, selectedWorkspace]);
+  const { executables } = useAppContext();
 
   const navigateToWorkspaces = useCallback(() => {
     setLocation(`/workspaces`);
@@ -47,14 +43,6 @@ export function Sidebar() {
       </Link>
       <Stack gap="xs">
         <Group gap="xs" mt="md">
-          <NavLink
-            label="Workspace"
-            leftSection={<IconFolders size={16} />}
-            active={location.startsWith("/workspace")}
-            variant="filled"
-            onClick={navigateToWorkspace}
-          />
-
           <NavLink
             label="Workspaces"
             leftSection={<IconFolders size={16} />}

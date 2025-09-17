@@ -14,37 +14,40 @@ import {
 } from "@mantine/core";
 import { useDebouncedValue, useElementSize } from "@mantine/hooks";
 import {
-  IconCircleDashedCheck,
-  IconDotsVertical,
-  IconExternalLink,
-  IconPlus,
-  IconSearch,
-  IconStar,
-  IconSwitch3,
-  IconTags,
+    IconArrowRight,
+    IconCircleDashedCheck,
+    IconDotsVertical,
+    IconExternalLink,
+    IconFileSettings,
+    IconPlus,
+    IconSearch,
+    IconStar,
+    IconSwitch3,
+    IconTags,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Hero } from "../../components/Hero";
 import { PageWrapper } from "../../components/PageWrapper.tsx";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
+import { useConfig } from "../../hooks/useConfig";
+import { useNotifier } from "../../hooks/useNotifier";
 import { useWorkspaceExecutableCounts } from "../../hooks/useWorkspaceExecutableCounts";
+import { NotificationType } from "../../types/notification.ts";
 import { EnrichedWorkspace } from "../../types/workspace";
+import { stringToColor } from "../../utils/colors.ts";
 import { shortenPath } from "../../utils/paths";
 import classes from "./Workspaces.module.css";
 
 export function Workspaces() {
-  const { workspaces, config } = useAppContext();
+  const { workspaces, config, setSelectedWorkspace } = useAppContext();
+  const { updateCurrentWorkspace } = useConfig();
+  const { getCountForWorkspace, isLoadingForWorkspace } = useWorkspaceExecutableCounts(workspaces || []);
   const { ref: tableRef, width: tableWidth } = useElementSize();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
-
-  // Get executable counts for all workspaces efficiently
-  const { getCountForWorkspace, isLoadingForWorkspace } =
-    useWorkspaceExecutableCounts(workspaces || []);
-
-  // Navigation hook for row clicks
+  const { setNotification } = useNotifier();
   const [, setLocation] = useLocation();
 
   // Estimate location column width (roughly 35% of table width, minus padding and margins)
@@ -63,38 +66,58 @@ export function Workspaces() {
   const filteredWorkspaces = useMemo(() => {
     let filtered = workspaces || [];
 
-    // Apply text search filter
     if (debouncedSearch.trim()) {
       const query = debouncedSearch.toLowerCase().trim();
       filtered = filtered.filter(
         (workspace) =>
           workspace.name.toLowerCase().includes(query) ||
           workspace.displayName?.toLowerCase().includes(query) ||
-          workspace.description?.toLowerCase().includes(query) ||
+          workspace.fullDescription?.toLowerCase().includes(query) ||
           workspace.tags?.some((tag) => tag.toLowerCase().includes(query))
       );
     }
 
-    // Apply tag filter
     if (selectedTags.length > 0) {
       filtered = filtered.filter((workspace) =>
         workspace.tags?.some((tag) => selectedTags.includes(tag))
       );
     }
 
-    // Sort alphabetically by name
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [workspaces, debouncedSearch, selectedTags]);
 
-  const handleWorkspaceAction = (
+  const handleWorkspaceAction = async (
     action: string,
     workspace: EnrichedWorkspace
   ) => {
     console.log(`Action: ${action} on workspace:`, workspace.name);
-    // TODO: Implement actual actions
+    // TODO: Implement all actions
+    switch (action) {
+      case "switch":
+        setSelectedWorkspace(workspace.name);
+
+        try {
+          await updateCurrentWorkspace(workspace.name);
+          setNotification({
+            type: NotificationType.Success,
+            title: "Workspace switched",
+            message: `Switched to workspace: ${workspace.name}`,
+            autoClose: true,
+          });
+        } catch (error) {
+          setNotification({
+            type: NotificationType.Error,
+            title: "Error switching workspace",
+            message:
+              error instanceof Error
+                ? error.message
+                : "An unknown error occurred",
+            autoClose: true,
+          });
+        }
+    }
   };
 
-  // Helper function to render executable count with loading/error states
   const renderExecutableCount = (workspaceName: string) => {
     if (isLoadingForWorkspace(workspaceName)) {
       return "loading...";
@@ -104,39 +127,38 @@ export function Workspaces() {
     return `${count} executable${count !== 1 ? "s" : ""}`;
   };
 
-  // Handle row click to navigate to workspace page
-  const handleRowClick = (workspaceName: string) => {
+  const handleWorkspaceSelection = (workspaceName: string) => {
     setLocation(`/workspace/${workspaceName}`);
   };
 
   const rows = filteredWorkspaces.map((workspace) => (
     <Table.Tr key={workspace.name}>
-      <Table.Td>
+      <Table.Td align="center">
         {config != undefined && config.currentWorkspace == workspace.name && (
           <Tooltip label="Current workspace" position="right" withArrow>
             <IconCircleDashedCheck
               className={classes.currentWorkspaceIndicator}
-              size={18}
+              size={20}
             />
           </Tooltip>
         )}
       </Table.Td>
-      <Table.Td className={classes.workspaceCell}>
+      <Table.Td>
         <Box className={classes.workspaceDetails}>
           <Text
             className={classes.workspaceNameLink}
-            onClick={() => handleRowClick(workspace.name)}
+            onClick={() => handleWorkspaceSelection(workspace.name)}
           >
             {workspace.displayName || workspace.name}
           </Text>
-          <Text className={classes.executableCount}>
+          <Text className={classes.executableCount} size="xs">
             ({renderExecutableCount(workspace.name)})
           </Text>
         </Box>
       </Table.Td>
       <Table.Td className={classes.locationCell}>
         <Tooltip label={workspace.path} position="top" withArrow>
-          <Text className={classes.pathText}>
+          <Text className={classes.pathText} size="xs">
             {shortenPath(workspace.path, locationColumnWidth)}
           </Text>
         </Tooltip>
@@ -147,8 +169,9 @@ export function Workspaces() {
             <Badge
               key={index}
               className={classes.tag}
-              size="sm"
-              variant="light"
+              size="xs"
+              variant="outline"
+              color={stringToColor(tag)}
             >
               {tag}
             </Badge>
@@ -159,7 +182,7 @@ export function Workspaces() {
         <Menu shadow="md" width={200} position="bottom-end">
           <Menu.Target>
             <ActionIcon
-              variant="subtle"
+              variant="light"
               className={classes.actionButton}
               aria-label="Workspace actions"
             >
@@ -169,23 +192,36 @@ export function Workspaces() {
 
           <Menu.Dropdown>
             <Menu.Item
+                leftSection={<IconArrowRight size={14} />}
+                onClick={() => handleWorkspaceSelection(workspace.name)}
+            >
+              View documentation
+            </Menu.Item>
+            <Menu.Item
               leftSection={<IconSwitch3 size={14} />}
               onClick={() => handleWorkspaceAction("switch", workspace)}
             >
               Switch to workspace
             </Menu.Item>
+            <Menu.Divider />
             <Menu.Item
               leftSection={<IconExternalLink size={14} />}
               onClick={() => handleWorkspaceAction("open", workspace)}
             >
-              Open in explorer
+              Open directory
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconFileSettings size={14} />}
+              onClick={() => handleWorkspaceAction("open", workspace)}
+            >
+              Edit configuration
             </Menu.Item>
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconStar size={14} />}
               onClick={() => handleWorkspaceAction("star", workspace)}
             >
-              Star workspace
+              Save as favorite
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>
@@ -202,11 +238,15 @@ export function Workspaces() {
             <Text c="dimmed">Organize your automation workflows</Text>
           </Hero.Header>
           <Hero.Actions>
-            <Badge variant="light" size="sm" c="dimmed">
+            <Badge size="sm" c="dimmed" color="tertiary" variant="dot">
               {workspaces.length} registered
             </Badge>
-            <Button leftSection={<IconPlus size={14} />} variant="filled">
-              Create workspace
+            <Button
+              leftSection={<IconPlus size={12} />}
+              size="compact-xs"
+              color="tertiary"
+            >
+              Add Workspace
             </Button>
           </Hero.Actions>
         </Hero>
@@ -214,6 +254,7 @@ export function Workspaces() {
         <Box className={classes.filterSection}>
           <Group gap="md" className={classes.filterGroup}>
             <TextInput
+              size="xs"
               className={classes.searchInput}
               placeholder="Search workspaces..."
               leftSection={<IconSearch size={16} />}
@@ -221,6 +262,7 @@ export function Workspaces() {
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
             />
             <MultiSelect
+              size="xs"
               className={classes.tagFilter}
               placeholder="Filter by tags..."
               leftSection={<IconTags size={16} />}
@@ -235,14 +277,14 @@ export function Workspaces() {
         </Box>
 
         <Box className={classes.tableContainer}>
-          <Table ref={tableRef} className={classes.table} stickyHeader>
+          <Table ref={tableRef} className={classes.table} highlightOnHover>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th style={{ width: 40 }}></Table.Th>
                 <Table.Th>Workspace</Table.Th>
                 <Table.Th>Location</Table.Th>
                 <Table.Th>Tags</Table.Th>
-                <Table.Th style={{ width: 80 }}></Table.Th>
+                <Table.Th style={{ width: 40 }}></Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
