@@ -1,25 +1,24 @@
 import { Group, Image, NavLink, Stack } from "@mantine/core";
-import { ExecutableTree } from "./ExecutableTree/ExecutableTree";
-import styles from "./Sidebar.module.css";
-import { WorkspaceSelector } from "./WorkspaceSelector/WorkspaceSelector";
-import iconImage from "/logo-dark.png";
 import {
   IconDatabase,
   IconFolders,
   IconLogs,
   IconSettings,
 } from "@tabler/icons-react";
+import { useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
-import { useCallback } from "react";
+import { ExecutableTree } from "./ExecutableTree/ExecutableTree";
+import styles from "./Sidebar.module.css";
+import iconImage from "/logo-dark.png";
 
 export function Sidebar() {
   const [location, setLocation] = useLocation();
-  const { executables, selectedWorkspace } = useAppContext();
+  const { executables } = useAppContext();
 
-  const navigateToWorkspace = useCallback(() => {
-    setLocation(`/workspace/${selectedWorkspace || ""}`);
-  }, [setLocation, selectedWorkspace]);
+  const navigateToWorkspaces = useCallback(() => {
+    setLocation(`/workspaces`);
+  }, [setLocation]);
 
   const navigateToLogs = useCallback(() => {
     setLocation("/logs");
@@ -43,15 +42,13 @@ export function Sidebar() {
         <Image src={iconImage} alt="flow" fit="contain" />
       </Link>
       <Stack gap="xs">
-        <WorkspaceSelector />
-
         <Group gap="xs" mt="md">
           <NavLink
-            label="Workspace"
+            label="Workspaces"
             leftSection={<IconFolders size={16} />}
-            active={location.startsWith("/workspace")}
+            active={location.startsWith("/workspaces")}
             variant="filled"
-            onClick={navigateToWorkspace}
+            onClick={navigateToWorkspaces}
           />
 
           <NavLink
