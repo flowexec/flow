@@ -4,15 +4,11 @@
 import { ThemeName } from "../../theme/types";
 
 export interface CodeHighlighterConfig {
-  // Whether to show copy button by default
   defaultCopyButton: boolean;
 
-  // Default theme for syntax highlighting
   defaultTheme: string;
 
-  // Custom styling options
   styling: {
-    borderRadius: string;
     padding: string;
     fontSize: string;
     lineHeight: string;
@@ -41,11 +37,10 @@ export const defaultConfig: CodeHighlighterConfig = {
   defaultTheme: "default",
 
   styling: {
-    borderRadius: "var(--mantine-radius-sm)",
     padding: "var(--mantine-spacing-md)",
     fontSize: "var(--mantine-font-size-sm)",
     lineHeight: "1.5",
-    backgroundColor: "var(--mantine-color-dark-7)",
+    backgroundColor: "var(--mantine-color-gray-7)",
     copyButtonStyle: {
       background: "rgba(255, 255, 255, 0.1)",
       border: "1px solid rgba(255, 255, 255, 0.2)",
@@ -62,7 +57,7 @@ export const darkThemeConfig: CodeHighlighterConfig = {
   defaultTheme: "dark",
   styling: {
     ...defaultConfig.styling,
-    backgroundColor: "var(--mantine-color-dark-8)",
+    backgroundColor: "var(--mantine-color-appshell-0)",
     copyButtonStyle: {
       ...defaultConfig.styling.copyButtonStyle,
       background: "rgba(255, 255, 255, 0.15)",
@@ -101,5 +96,4 @@ export function getConfigForTheme(theme?: ThemeName): CodeHighlighterConfig {
   }
 }
 
-// Export the current configuration (you can change this to switch themes)
 export const currentConfig = defaultConfig;

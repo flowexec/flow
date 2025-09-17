@@ -1,0 +1,117 @@
+/* Workspaces Table Styling */
+.filterSection {
+  margin-bottom: 1rem;
+  width: 75%;
+}
+
+.filterGroup {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchInput {
+  flex: 2;
+}
+
+.tagFilter {
+  flex: 1;
+}
+
+.tableContainer {
+  position: relative;
+  overflow: hidden;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  font-weight: 600;
+  font-size: var(--mantine-font-size-md);
+  border-bottom: 1px solid var(--mantine-color-border-0);
+  color: var(--mantine-color-primary-0);
+}
+
+.table tbody tr {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px dashed var(--mantine-color-border-0);
+}
+
+.table tbody td {
+  padding: 0.875rem 0.75rem;
+  vertical-align: middle;
+}
+
+.workspaceDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.workspaceNameLink {
+  font-size: var(--mantine-font-size-sm) !important;
+  font-weight: 600 !important;
+  color: var(--mantine-color-tertiary-0) !important;
+  cursor: pointer;
+}
+
+.workspaceNameLink:hover {
+  color: var(--mantine-color-primary-0) !important;
+  text-decoration: underline;
+}
+
+.executableCount {
+  font-size: var(--mantine-font-size-xs) !important;
+  color: var(--mantine-color-dimmed) !important;
+}
+
+.locationCell {
+  max-width: 300px;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+}
+
+.pathText {
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.tagsCell {
+  max-width: 150px;
+}
+
+.tagsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag {
+  font-size: var(--mantine-font-size-xs);
+}
+
+.actionsCell {
+  width: 80px;
+  text-align: center;
+}
+
+.currentWorkspaceIndicator {
+  color: var(--mantine-color-emphasis-0);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.emptyStateText {
+  margin-top: 0.5rem;
+  font-size: var(--mantine-font-size-sm);
+}

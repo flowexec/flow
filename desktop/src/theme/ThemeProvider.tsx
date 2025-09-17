@@ -39,6 +39,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       body: createColorArray(currentTheme.colors.body),
       border: createColorArray(currentTheme.colors.border),
       emphasis: createColorArray(currentTheme.colors.emphasis),
+      section: createColorArray(currentTheme.colors.background.hero),
+      appshell: createColorArray(currentTheme.colors.background.sidebar),
     },
     primaryColor: "primary",
     primaryShade: 0,
@@ -87,6 +89,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         sidebar: currentTheme.colors.background.sidebar,
         header: currentTheme.colors.background.header,
         card: currentTheme.colors.background.card,
+        hero: currentTheme.colors.background.header,
       },
       colors: {
         body: currentTheme.colors.body,
@@ -97,7 +100,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   });
 
   return (
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider
+      theme={theme}
+      defaultColorScheme={currentTheme.darkMode ? "dark" : "light"}
+    >
       {children}
     </MantineProvider>
   );
