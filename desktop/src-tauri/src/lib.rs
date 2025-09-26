@@ -105,11 +105,26 @@ async fn get_executable(executable_ref: String) -> Result<enriched::Executable, 
 async fn list_executables(
     workspace: Option<String>,
     namespace: Option<String>,
+    tags: Option<Vec<String>>,
+    verb: Option<String>,
+    filter: Option<String>,
 ) -> Result<Vec<enriched::Executable>, String> {
     let runner = cli::cli_executor();
+
+    // Convert owned Strings into borrowed &str slices expected by the command layer
+    let tags_ref_vec: Option<Vec<&str>> = tags
+        .as_ref()
+        .map(|v| v.iter().map(|s| s.as_str()).collect());
+
     runner
         .executable
-        .list(workspace.as_deref(), namespace.as_deref())
+        .list(
+            workspace.as_deref(),
+            namespace.as_deref(),
+            tags_ref_vec.as_deref(),
+            verb.as_deref(),
+            filter.as_deref(),
+        )
         .await
         .map_err(|e| e.to_string())
 }

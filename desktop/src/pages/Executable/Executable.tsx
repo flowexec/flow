@@ -12,6 +12,7 @@ import {
   ThemeIcon,
   Title,
   Tooltip,
+  LoadingOverlay,
 } from "@mantine/core";
 import {
   IconClock,
@@ -27,9 +28,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
+import { useParams } from "wouter";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import { useNotifier } from "../../hooks/useNotifier";
 import { useSettings } from "../../hooks/useSettings";
+import { useExecutable } from "../../hooks/useExecutable";
+import { PageWrapper } from "../../components/PageWrapper.tsx";
+import { Welcome } from "../Welcome/Welcome";
 import { EnrichedExecutable } from "../../types/executable";
 import { NotificationType } from "../../types/notification";
 import { LogLine, LogViewer } from "../Logs/LogViewer";
@@ -96,8 +101,13 @@ function getVisibilityColor(visibility?: string) {
   }
 }
 
-export function Executable({ executable }: ExecutableProps) {
-  const typeInfo = getExecutableTypeInfo(executable);
+export function Executable() {
+  const params = useParams();
+  const executableId = decodeURIComponent(params.executableId || "");
+  const { executable, executableError, isExecutableLoading } =
+    useExecutable(executableId);
+
+  // Local UI state and helpers formerly in ExecutableView
   const { settings } = useSettings();
   const { setNotification } = useNotifier();
   const [output, setOutput] = useState<LogLine[]>([]);
@@ -133,16 +143,13 @@ export function Executable({ executable }: ExecutableProps) {
     setupListeners();
 
     return () => {
-      if (unlistenOutput) {
-        unlistenOutput();
-      }
-      if (unlistenComplete) {
-        unlistenComplete();
-      }
+      if (unlistenOutput) unlistenOutput();
+      if (unlistenComplete) unlistenComplete();
     };
   }, [setNotification]);
 
   const onOpenFile = async () => {
+    if (!executable) return;
     try {
       await openPath(executable.flowfile, settings.executableApp || undefined);
     } catch (error) {
@@ -150,21 +157,8 @@ export function Executable({ executable }: ExecutableProps) {
     }
   };
 
-  const onExecute = async () => {
-    const hasPromptParams = executable.exec?.params?.some(
-      (param) => param.prompt,
-    );
-    const hasArgs = executable.exec?.args && executable.exec.args.length > 0;
-
-    if (hasPromptParams || hasArgs) {
-      setFormOpened(true);
-      return;
-    }
-
-    await executeWithData({ params: {}, args: "" });
-  };
-
   const executeWithData = async (formData: ExecutionFormData) => {
+    if (!executable) return;
     try {
       setOutput([]);
 
@@ -208,149 +202,165 @@ export function Executable({ executable }: ExecutableProps) {
     }
   };
 
+  const onExecute = async () => {
+    if (!executable) return;
+    const hasPromptParams = executable.exec?.params?.some((param) => param.prompt);
+    const hasArgs = executable.exec?.args && executable.exec.args.length > 0;
+
+    if (hasPromptParams || hasArgs) {
+      setFormOpened(true);
+      return;
+    }
+
+    await executeWithData({ params: {}, args: "" });
+  };
+
+  const typeInfo = executable && getExecutableTypeInfo(executable);
+
   return (
-    <Stack gap="lg">
-      <Card withBorder>
-        <Stack gap="md">
-          <Group justify="space-between" align="flex-start">
-            <Stack gap="xs">
-              <Group gap="sm" align="center">
-                <ThemeIcon variant="light" size="lg">
-                  <typeInfo.icon size={20} />
-                </ThemeIcon>
-                <div>
-                  <Title order={2}>{executable.ref}</Title>
-                  <Text size="sm" c="dimmed">
-                    {typeInfo.description}
-                  </Text>
-                </div>
-              </Group>
-
-              <Group gap="xs">
-                <Tooltip label={`Defined in ${executable.flowfile}`}>
-                  <Badge variant="light" size="sm">
-                    <Group gap={4}>
-                      <IconFile size={12} />
-                      {executable.flowfile.split("/").pop() ||
-                        executable.flowfile}
-                    </Group>
-                  </Badge>
-                </Tooltip>
-                <Badge
-                  variant="light"
-                  color={getVisibilityColor(executable.visibility)}
-                >
-                  <Group gap={4}>
-                    <IconEye size={12} />
-                    {executable.visibility || "public"}
-                  </Group>
-                </Badge>
-                {executable.timeout && (
-                  <Badge variant="light" color="gray">
-                    <Group gap={4}>
-                      <IconClock size={12} />
-                      {executable.timeout}
-                    </Group>
-                  </Badge>
-                )}
-              </Group>
-            </Stack>
-
-            <Group gap="sm">
-              <Button
-                leftSection={<IconPlayerPlay size={16} />}
-                onClick={onExecute}
-                size="md"
-              >
-                Execute
-              </Button>
-              <Button
-                variant="light"
-                leftSection={<IconExternalLink size={16} />}
-                onClick={onOpenFile}
-                size="md"
-              >
-                Edit
-              </Button>
-            </Group>
-          </Group>
-
-          {executable.description && (
-            <>
-              <Divider />
-              <MarkdownRenderer>{executable.description}</MarkdownRenderer>
-            </>
-          )}
-        </Stack>
-      </Card>
-
-      <Grid>
-        {executable.aliases && executable.aliases.length > 0 && (
-          <Grid.Col span={6}>
-            <Card withBorder>
-              <Stack gap="sm">
-                <Title order={4}>
-                  <Group gap="xs">
-                    <IconLabel size={16} />
-                    Aliases
-                  </Group>
-                </Title>
-                <Group gap="xs">
-                  {executable.aliases.map((alias, index) => (
-                    <Code key={index}>{alias}</Code>
-                  ))}
-                </Group>
-              </Stack>
-            </Card>
-          </Grid.Col>
-        )}
-
-        {executable.tags && executable.tags.length > 0 && (
-          <Grid.Col span={6}>
-            <Card withBorder>
-              <Stack gap="sm">
-                <Title order={4}>
-                  <Group gap="xs">
-                    <IconTag size={16} />
-                    Tags
-                  </Group>
-                </Title>
-                <Group gap="xs">
-                  {executable.tags.map((tag, index) => (
-                    <Badge key={index} variant="dot">
-                      {tag}
-                    </Badge>
-                  ))}
-                </Group>
-              </Stack>
-            </Card>
-          </Grid.Col>
-        )}
-      </Grid>
-
-      <ExecutableEnvironmentDetails executable={executable} />
-      <ExecutableTypeDetails executable={executable} />
-
-      {output.length > 0 && (
-        <Drawer
-          opened={true}
-          onClose={() => setOutput([])}
-          title={<Text size="sm">Execution Output</Text>}
-          size="33%"
-          position="bottom"
-        >
-          <LogViewer logs={output} formatted={true} fontSize={12} />
-        </Drawer>
-      )}
-
-      {formOpened && (
-        <ExecutionForm
-          opened={formOpened}
-          onClose={() => setFormOpened(false)}
-          onSubmit={executeWithData}
-          executable={executable}
+    <PageWrapper>
+      {isExecutableLoading && (
+        <LoadingOverlay
+          visible={isExecutableLoading}
+          zIndex={1000}
+          overlayProps={{ radius: "sm", blur: 2 }}
         />
       )}
-    </Stack>
+      {executableError && <Text c="red">Error: {executableError.message}</Text>}
+      {executable ? (
+        <Stack gap="lg">
+          <Card withBorder>
+            <Stack gap="md">
+              <Group justify="space-between" align="flex-start">
+                <Stack gap="xs">
+                  <Group gap="sm" align="center">
+                    <ThemeIcon variant="light" size="lg">
+                      {typeInfo && <typeInfo.icon size={20} />}
+                    </ThemeIcon>
+                    <div>
+                      <Title order={2}>{executable.ref}</Title>
+                      <Text size="sm" c="dimmed">
+                        {typeInfo?.description}
+                      </Text>
+                    </div>
+                  </Group>
+
+                  <Group gap="xs">
+                    <Tooltip label={`Defined in ${executable.flowfile}`}>
+                      <Badge variant="light" size="sm">
+                        <Group gap={4}>
+                          <IconFile size={12} />
+                          {executable.flowfile.split("/").pop() || executable.flowfile}
+                        </Group>
+                      </Badge>
+                    </Tooltip>
+                    <Badge variant="light" color={getVisibilityColor(executable.visibility)}>
+                      <Group gap={4}>
+                        <IconEye size={12} />
+                        {executable.visibility || "public"}
+                      </Group>
+                    </Badge>
+                    {executable.timeout && (
+                      <Badge variant="light" color="gray">
+                        <Group gap={4}>
+                          <IconClock size={12} />
+                          {executable.timeout}
+                        </Group>
+                      </Badge>
+                    )}
+                  </Group>
+                </Stack>
+
+                <Group gap="sm">
+                  <Button leftSection={<IconPlayerPlay size={16} />} onClick={onExecute} size="md">
+                    Execute
+                  </Button>
+                  <Button variant="light" leftSection={<IconExternalLink size={16} />} onClick={onOpenFile} size="md">
+                    Edit
+                  </Button>
+                </Group>
+              </Group>
+
+              {executable.description && (
+                <>
+                  <Divider />
+                  <MarkdownRenderer>{executable.description}</MarkdownRenderer>
+                </>
+              )}
+            </Stack>
+          </Card>
+
+          <Grid>
+            {executable.aliases && executable.aliases.length > 0 && (
+              <Grid.Col span={6}>
+                <Card withBorder>
+                  <Stack gap="sm">
+                    <Title order={4}>
+                      <Group gap="xs">
+                        <IconLabel size={16} />
+                        Aliases
+                      </Group>
+                    </Title>
+                    <Group gap="xs">
+                      {executable.aliases.map((alias, index) => (
+                        <Code key={index}>{alias}</Code>
+                      ))}
+                    </Group>
+                  </Stack>
+                </Card>
+              </Grid.Col>
+            )}
+
+            {executable.tags && executable.tags.length > 0 && (
+              <Grid.Col span={6}>
+                <Card withBorder>
+                  <Stack gap="sm">
+                    <Title order={4}>
+                      <Group gap="xs">
+                        <IconTag size={16} />
+                        Tags
+                      </Group>
+                    </Title>
+                    <Group gap="xs">
+                      {executable.tags.map((tag, index) => (
+                        <Badge key={index} variant="dot">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </Group>
+                  </Stack>
+                </Card>
+              </Grid.Col>
+            )}
+          </Grid>
+
+          <ExecutableEnvironmentDetails executable={executable} />
+          <ExecutableTypeDetails executable={executable} />
+
+          {output.length > 0 && (
+            <Drawer
+              opened={true}
+              onClose={() => setOutput([])}
+              title={<Text size="sm">Execution Output</Text>}
+              size="33%"
+              position="bottom"
+            >
+              <LogViewer logs={output} formatted={true} fontSize={12} />
+            </Drawer>
+          )}
+
+          {formOpened && (
+            <ExecutionForm
+              opened={formOpened}
+              onClose={() => setFormOpened(false)}
+              onSubmit={executeWithData}
+              executable={executable}
+            />
+          )}
+        </Stack>
+      ) : (
+        <Welcome welcomeMessage="Select an executable to get started." />
+      )}
+    </PageWrapper>
   );
 }
