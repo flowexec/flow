@@ -47,32 +47,50 @@ export function useExecutable(executableRef: string) {
 }
 
 export function useExecutables(
-  selectedWorkspace: string | null,
-  enabled: boolean = true,
+  workspace: string | null,
+  namespace: string | null,
+  tags: string[] | null,
+  verb: string | null,
+  filter: string | null,
 ) {
   const queryClient = useQueryClient();
+
+  const normalizedParams = React.useMemo(() => {
+    return {
+      workspace: workspace || undefined,
+      namespace: namespace || undefined,
+      tags: tags && tags.length > 0 ? tags : undefined,
+      verb: verb || undefined,
+      filter: filter || undefined,
+    };
+  }, [workspace, namespace, tags, verb, filter]);
+
+  const queryKey = React.useMemo(() => {
+    return ["executables", normalizedParams];
+  }, [normalizedParams]);
 
   const {
     data: executables,
     isLoading: isExecutablesLoading,
     error: executablesError,
   } = useQuery({
-    queryKey: ["executables", selectedWorkspace],
+    queryKey,
     queryFn: async () => {
-      if (!selectedWorkspace) return [];
+      console.log('Fetching executables with params:', normalizedParams);
       return await invoke<EnrichedExecutable[]>("list_executables", {
-        workspace: selectedWorkspace,
+        workspace: normalizedParams.workspace,
+        namespace: normalizedParams.namespace,
+        tags: normalizedParams.tags,
+        verb: normalizedParams.verb,
+        filter: normalizedParams.filter,
       });
     },
-    enabled: enabled && !!selectedWorkspace, // Only run when workspace is selected AND enabled
   });
 
   const refreshExecutables = () => {
-    if (selectedWorkspace) {
-      queryClient.invalidateQueries({
-        queryKey: ["executables", selectedWorkspace],
-      });
-    }
+    void queryClient.invalidateQueries({
+      queryKey,
+    });
   };
 
   return {

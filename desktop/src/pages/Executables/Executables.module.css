@@ -1,0 +1,50 @@
+.tableContainer {
+  position: relative;
+  overflow: hidden;
+}
+
+.tableContainer tr {
+    padding-top: var(--mantine-spacing-sm);
+    padding-bottom: var(--mantine-spacing-sm);
+}
+
+.cell {
+    vertical-align: top;
+}
+
+.iconCell {
+    width: 20px;
+}
+
+.tag {
+  font-size: var(--mantine-font-size-xs);
+}
+
+.verbIcon {
+    padding-top: 4px;
+    color: var(--mantine-color-emphasis-0);
+}
+
+.executableRef {
+    font-size: var(--mantine-font-size-sm) !important;
+    font-weight: 600 !important;
+    font-family: var(--mantine-font-family-monospace);
+    color: var(--mantine-color-tertiary-0) !important;
+    cursor: pointer;
+}
+
+.filterTitle{
+    font-weight: 600 !important;
+    color: var(--mantine-color-primary-0) !important;
+}
+
+.filterLabel {
+    font-weight: 600 !important;
+    color: var(--mantine-color-tertiary-0) !important;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--mantine-color-dimmed);
+}

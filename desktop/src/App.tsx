@@ -1,13 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Switch } from "wouter";
 import "./App.css";
-import { AppProvider } from "./hooks/useAppContext.tsx";
+import { AppProvider } from "./hooks/useAppContext";
 import { NotifierProvider } from "./hooks/useNotifier";
 import { AppShell } from "./layout";
-import { PageWrapper } from "./components/PageWrapper.tsx";
-import {Settings, Welcome, Data, Workspaces} from "./pages";
-import { Workspace } from "./pages/Workspace/Workspace.tsx";
-import { ExecutableRoute } from "./pages/Executable/ExecutableRoute.tsx";
+import { PageWrapper } from "./components/PageWrapper";
+import {Settings, Welcome, Data, Workspaces, Executables, Executable} from "./pages";
+import { Workspace } from "./pages/Workspace/Workspace";
 import { Text } from "@mantine/core";
 
 const queryClient = new QueryClient({
@@ -36,12 +35,16 @@ function App() {
                   component={Workspaces}
               />
               <Route
+                  path="/executables"
+                  component={Executables}
+              />
+              <Route
                 path="/workspace/:workspaceName"
                 component={Workspace}
               />
               <Route
                 path="/executable/:executableId"
-                component={ExecutableRoute}
+                component={Executable}
               />
               <Route path="/logs">
                 <PageWrapper>

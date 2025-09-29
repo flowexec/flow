@@ -4,20 +4,22 @@ import {
   IconFolders,
   IconLogs,
   IconSettings,
+  IconTerminal2,
 } from "@tabler/icons-react";
 import { useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { useAppContext } from "../../hooks/useAppContext.tsx";
-import { ExecutableTree } from "./ExecutableTree/ExecutableTree";
 import styles from "./Sidebar.module.css";
 import iconImage from "/logo-dark.png";
 
 export function Sidebar() {
   const [location, setLocation] = useLocation();
-  const { executables } = useAppContext();
 
   const navigateToWorkspaces = useCallback(() => {
     setLocation(`/workspaces`);
+  }, [setLocation]);
+
+  const navigateToExecutables = useCallback(() => {
+    setLocation(`/executables`);
   }, [setLocation]);
 
   const navigateToLogs = useCallback(() => {
@@ -49,6 +51,14 @@ export function Sidebar() {
             active={location.startsWith("/workspaces")}
             variant="filled"
             onClick={navigateToWorkspaces}
+          />
+
+          <NavLink
+            label="Executables"
+            leftSection={<IconTerminal2 size={16} />}
+            active={location.startsWith("/executables")}
+            variant="filled"
+            onClick={navigateToExecutables}
           />
 
           <NavLink
@@ -88,7 +98,6 @@ export function Sidebar() {
           />
         </Group>
 
-        {executables && executables.length > 0 && <ExecutableTree />}
       </Stack>
     </div>
   );
