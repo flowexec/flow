@@ -4,7 +4,7 @@ import {
   IconFolders,
   IconLogs,
   IconSettings,
-  IconPlayerPlay,
+  IconTerminal2,
 } from "@tabler/icons-react";
 import { useCallback } from "react";
 import { Link, useLocation } from "wouter";
@@ -55,7 +55,7 @@ export function Sidebar() {
 
           <NavLink
             label="Executables"
-            leftSection={<IconPlayerPlay size={16} />}
+            leftSection={<IconTerminal2 size={16} />}
             active={location.startsWith("/executables")}
             variant="filled"
             onClick={navigateToExecutables}

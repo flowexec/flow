@@ -1,4 +1,5 @@
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -49,9 +50,9 @@ export function Workspace() {
           overlayProps={{ radius: "sm", blur: 2 }}
         />
       )}
-      {workspaceError && <Text c="red">Error: {workspaceError.message}</Text>}
+      {workspaceError && <Alert variant="light" color="red.5">Error: {workspaceError.message}</Alert>}
       {workspace ? (
-        <>
+        <Stack gap="sm">
           <Hero variant="split" pattern="subtle">
             <Hero.Header>
               <Group gap="xs">
@@ -250,9 +251,9 @@ export function Workspace() {
               </>
             )}
           </Stack>
-        </>
+        </Stack>
       ) : (
-        <Text c="red">Error: Workspace not found</Text>
+        <Alert c="red.5">Error: Workspace not found</Alert>
       )}
     </PageWrapper>
   );
