@@ -73,3 +73,22 @@ func (v Visibility) IsInternal() bool {
 func (v Visibility) IsHidden() bool {
 	return v == VisibilityHidden
 }
+
+// Level returns the hierarchical level of the visibility for filtering comparisons.
+// Hierarchy (most to least visible):
+// 1: public, 2: private, 3: internal, 4: hidden
+// Defaults to private when unknown.
+func (v Visibility) Level() int {
+	switch v {
+	case VisibilityPublic:
+		return 1
+	case VisibilityPrivate:
+		return 2
+	case VisibilityInternal:
+		return 3
+	case VisibilityHidden:
+		return 4
+	default:
+		return 2
+	}
+}

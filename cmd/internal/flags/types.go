@@ -72,6 +72,13 @@ var FilterVerbFlag = &Metadata{
 	Required:  false,
 }
 
+var VisibilityFlag = &Metadata{
+	Name:     "visibility",
+	Usage:    "Filter by visibility level (hierarchical). Valid: public, private, internal, hidden. Default: private",
+	Default:  "",
+	Required: false,
+}
+
 var FilterTagFlag = &Metadata{
 	Name:      "tag",
 	Shorthand: "t",

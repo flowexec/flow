@@ -19,15 +19,16 @@ flow browse [EXECUTABLE-REFERENCE] [flags]
 ### Options
 
 ```
-  -a, --all                List from all namespaces.
-  -f, --filter string      Filter executable by reference substring.
-  -h, --help               help for browse
-  -l, --list               Show a simple list view of executables instead of interactive discovery.
-  -n, --namespace string   Filter executables by namespace.
-  -o, --output string      Output format. One of: yaml, json, or tui. (default "tui")
-  -t, --tag stringArray    Filter by tags.
-  -v, --verb string        Filter executables by verb.
-  -w, --workspace string   Filter executables by workspace.
+  -a, --all                 List from all namespaces.
+  -f, --filter string       Filter executable by reference substring.
+  -h, --help                help for browse
+  -l, --list                Show a simple list view of executables instead of interactive discovery.
+  -n, --namespace string    Filter executables by namespace.
+  -o, --output string       Output format. One of: yaml, json, or tui. (default "tui")
+  -t, --tag stringArray     Filter by tags.
+  -v, --verb string         Filter executables by verb.
+      --visibility string   Filter by visibility level (hierarchical). Valid: public, private, internal, hidden. Default: private
+  -w, --workspace string    Filter executables by workspace.
 ```
 
 ### Options inherited from parent commands

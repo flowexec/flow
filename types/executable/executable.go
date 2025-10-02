@@ -288,19 +288,25 @@ func (e *Executable) MergeTags(tags common.Tags) {
 	e.Tags = slices.Compact(append(e.Tags, tags...))
 }
 
-// IsVisibleFromWorkspace returns true if the executable should be shown in terminal output for the given workspace.
-func (e *Executable) IsVisibleFromWorkspace(workspaceFilter string) bool {
-	matchesWsFiler := e.Workspace() == workspaceFilter || workspaceFilter == "" || workspaceFilter == WildcardWorkspace
-	if e.Visibility == nil {
-		return matchesWsFiler
+// IsVisibleFromWorkspace returns true if the executable should be shown in the UI for the given workspace
+// and visibility filter.
+func (e *Executable) IsVisibleFromWorkspace(workspaceFilter string, visibilityFilter common.Visibility) bool {
+	matchesWs := e.Workspace() == workspaceFilter || workspaceFilter == "" || workspaceFilter == WildcardWorkspace
+
+	execVis := common.VisibilityPrivate
+	if e.Visibility != nil {
+		execVis = common.Visibility(*e.Visibility)
 	}
-	switch common.Visibility(*e.Visibility) {
-	case common.VisibilityPrivate:
-		return matchesWsFiler
+
+	switch execVis {
 	case common.VisibilityPublic:
-		return true
-	case common.VisibilityInternal, common.VisibilityHidden:
-		return false
+		return visibilityFilter.Level() >= common.VisibilityPublic.Level()
+	case common.VisibilityPrivate:
+		return matchesWs && visibilityFilter.Level() >= common.VisibilityPrivate.Level()
+	case common.VisibilityInternal:
+		return matchesWs && visibilityFilter.Level() >= common.VisibilityInternal.Level()
+	case common.VisibilityHidden:
+		return matchesWs && visibilityFilter.Level() >= common.VisibilityHidden.Level()
 	default:
 		return false
 	}
@@ -444,9 +450,13 @@ func (l ExecutableList) FilterBySubstring(str string) ExecutableList {
 }
 
 func (l ExecutableList) FilterByWorkspace(ws string) ExecutableList {
+	return l.FilterByWorkspaceWithVisibility(ws, common.VisibilityPrivate)
+}
+
+func (l ExecutableList) FilterByWorkspaceWithVisibility(ws string, vis common.Visibility) ExecutableList {
 	executables := make(ExecutableList, 0)
 	for _, exec := range l {
-		if exec.IsVisibleFromWorkspace(ws) {
+		if exec.IsVisibleFromWorkspace(ws, vis) {
 			executables = append(executables, exec)
 		}
 	}
