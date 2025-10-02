@@ -8,8 +8,17 @@ import (
 	"github.com/flowexec/flow/types/executable"
 )
 
-func ExecutableForRef(ctx *context.Context, ref executable.Ref) (*executable.Executable, error) {
-	executableRef := context.ExpandRef(ctx, ref)
+func ExecutableForRef(
+	ctx *context.Context,
+	parent *executable.Executable,
+	ref executable.Ref,
+) (*executable.Executable, error) {
+	var executableRef executable.Ref
+	if parent != nil {
+		executableRef = context.ExpandRefFromParent(parent, ref)
+	} else {
+		executableRef = context.ExpandRef(ctx, ref)
+	}
 	exec, err := ctx.ExecutableCache.GetExecutableByRef(executableRef)
 	if err != nil {
 		return nil, err
