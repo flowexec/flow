@@ -66,22 +66,7 @@ func (r *parallelRunner) Exec(
 	}
 
 	if len(parallelSpec.Execs) > 0 {
-		str, err := store.NewStore(store.Path())
-		if err != nil {
-			return err
-		}
-		if err := str.CreateBucket(store.EnvironmentBucket()); err != nil {
-			return err
-		}
-		cacheData, err := str.GetAll()
-		if err != nil {
-			return err
-		}
-		if err := str.Close(); err != nil {
-			logger.Log().Error(err, "unable to close store")
-		}
-
-		return handleExec(ctx, e, eng, parallelSpec, inputEnv, cacheData)
+		return handleExec(ctx, e, eng, parallelSpec, inputEnv)
 	}
 
 	return fmt.Errorf("no parallel executables to run")
@@ -92,7 +77,6 @@ func handleExec(
 	eng engine.Engine,
 	parallelSpec *executable.ParallelExecutableType,
 	inputEnv map[string]string,
-	cacheData map[string]string,
 ) error {
 	groupCtx, cancel := stdCtx.WithCancel(ctx)
 	defer cancel()
@@ -127,19 +111,8 @@ func handleExec(
 
 	// Build the list of steps to execute
 	var execs []engine.Exec
-	conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
 
 	for i, refConfig := range parallelSpec.Execs {
-		// Skip over steps that do not match the condition
-		if refConfig.If != "" {
-			if truthy, err := expression.IsTruthy(refConfig.If, conditionalData); err != nil {
-				return err
-			} else if !truthy {
-				logger.Log().Debugf("skipping execution %d/%d", i+1, len(parallelSpec.Execs))
-				continue
-			}
-		}
-
 		// Get the executable for the step
 		var exec *executable.Executable
 		switch {
@@ -225,7 +198,50 @@ func handleExec(
 			return nil
 		}
 
-		execs = append(execs, engine.Exec{ID: exec.Ref().String(), Function: runExec, MaxRetries: refConfig.Retries})
+		// Create condition function if needed
+		var conditionFunc func() (bool, error)
+		if refConfig.If != "" {
+			ifCondition := refConfig.If
+			stepNum := i + 1
+			totalSteps := len(parallelSpec.Execs)
+			conditionFunc = func() (bool, error) {
+				str, err := store.NewStore(store.Path())
+				if err != nil {
+					return false, err
+				}
+				if _, err := str.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
+					_ = str.Close()
+					return false, err
+				}
+				cacheData, err := str.GetAll()
+				if err != nil {
+					_ = str.Close()
+					return false, err
+				}
+				if err := str.Close(); err != nil {
+					logger.Log().Error(err, "unable to close store")
+				}
+
+				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+				truthy, err := expression.IsTruthy(ifCondition, conditionalData)
+				if err != nil {
+					return false, err
+				}
+				if !truthy {
+					logger.Log().Debugf("skipping execution %d/%d", stepNum, totalSteps)
+				} else {
+					logger.Log().Debugf("condition %s is true", ifCondition)
+				}
+				return truthy, nil
+			}
+		}
+
+		execs = append(execs, engine.Exec{
+			ID:         exec.Ref().String(),
+			Function:   runExec,
+			Condition:  conditionFunc,
+			MaxRetries: refConfig.Retries,
+		})
 	}
 
 	results := eng.Execute(

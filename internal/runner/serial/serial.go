@@ -64,22 +64,7 @@ func (r *serialRunner) Exec(
 	}
 
 	if len(serialSpec.Execs) > 0 {
-		str, err := store.NewStore(store.Path())
-		if err != nil {
-			return err
-		}
-		if err := str.CreateBucket(store.EnvironmentBucket()); err != nil {
-			return err
-		}
-		cacheData, err := str.GetAll()
-		if err != nil {
-			return err
-		}
-		if err := str.Close(); err != nil {
-			logger.Log().Error(err, "unable to close store")
-		}
-
-		return handleExec(ctx, e, eng, serialSpec, inputEnv, cacheData)
+		return handleExec(ctx, e, eng, serialSpec, inputEnv)
 	}
 	return fmt.Errorf("no serial executables to run")
 }
@@ -90,7 +75,6 @@ func handleExec(
 	eng engine.Engine,
 	serialSpec *executable.SerialExecutableType,
 	inputEnv map[string]string,
-	cacheData map[string]string,
 ) error {
 	// Expand the directory of the serial execution. The root / parent's directory is used if one is not specified.
 	var root *executable.Executable
@@ -116,22 +100,8 @@ func handleExec(
 
 	// Build the list of steps to execute
 	var execs []engine.Exec
-	conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
 
 	for i, refConfig := range serialSpec.Execs {
-		// Skip over steps that do not match the condition
-		if refConfig.If != "" {
-			truthy, err := expression.IsTruthy(refConfig.If, conditionalData)
-			if err != nil {
-				return err
-			}
-			if !truthy {
-				logger.Log().Debugf("skipping execution %d/%d", i+1, len(serialSpec.Execs))
-				continue
-			}
-			logger.Log().Debugf("condition %s is true", refConfig.If)
-		}
-
 		// Get the executable for the step
 		var exec *executable.Executable
 		switch {
@@ -146,7 +116,6 @@ func handleExec(
 		default:
 			return errors.New("serial executable must have a ref or cmd")
 		}
-		logger.Log().Debugf("executing %s (%d/%d)", exec.Ref(), i+1, len(serialSpec.Execs))
 
 		// Prepare the environment and arguments for the child executable
 		childEnv := make(map[string]string)
@@ -214,7 +183,50 @@ func handleExec(
 			return runSerialExecFunc(ctx, i, refConfig, exec, eng, childEnv, childArgs, serialSpec)
 		}
 
-		execs = append(execs, engine.Exec{ID: exec.Ref().String(), Function: runExec, MaxRetries: refConfig.Retries})
+		// Create condition function if needed
+		var conditionFunc func() (bool, error)
+		if refConfig.If != "" {
+			ifCondition := refConfig.If
+			stepNum := i + 1
+			totalSteps := len(serialSpec.Execs)
+			conditionFunc = func() (bool, error) {
+				str, err := store.NewStore(store.Path())
+				if err != nil {
+					return false, err
+				}
+				if _, err := str.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
+					_ = str.Close()
+					return false, err
+				}
+				cacheData, err := str.GetAll()
+				if err != nil {
+					_ = str.Close()
+					return false, err
+				}
+				if err := str.Close(); err != nil {
+					logger.Log().Error(err, "unable to close store")
+				}
+
+				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+				truthy, err := expression.IsTruthy(ifCondition, conditionalData)
+				if err != nil {
+					return false, err
+				}
+				if !truthy {
+					logger.Log().Debugf("skipping execution %d/%d", stepNum, totalSteps)
+				} else {
+					logger.Log().Debugf("condition %s is true", ifCondition)
+				}
+				return truthy, nil
+			}
+		}
+
+		execs = append(execs, engine.Exec{
+			ID:         exec.Ref().String(),
+			Function:   runExec,
+			Condition:  conditionFunc,
+			MaxRetries: refConfig.Retries,
+		})
 	}
 
 	results := eng.Execute(ctx, execs, engine.WithMode(engine.Serial), engine.WithFailFast(parent.Serial.FailFast))
