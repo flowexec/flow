@@ -74,6 +74,8 @@ dockers_v2:
       - linux/arm64
     flags:
       - "--pull"
+      - "--attest=type=sbom,disabled=true"
+      - "--attest=type=provenance,disabled=true"
 
 changelog:
   sort: asc
