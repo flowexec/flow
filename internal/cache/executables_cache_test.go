@@ -270,6 +270,13 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exec).NotTo(BeNil())
 				Expect(exec.Name).To(Equal("test-alias"))
+
+				// And should still be able to access via name alias using the primary verb
+				aliasRunRef := executable.Ref("run test/testdata:alias1")
+				execFromAlias, err := execCache.GetExecutableByRef(aliasRunRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(execFromAlias).NotTo(BeNil())
+				Expect(execFromAlias.Name).To(Equal("test-alias"))
 			})
 		})
 
