@@ -2,6 +2,31 @@
 visibility: public
 tags: [docs]
 executables:
+  - verb: start
+    name: site
+    aliases: [docs]
+    description: Run the documentation site locally (from prerendered content)
+    serial:
+      dir: //
+      execs:
+        - ref: build docs
+        - cmd: npx serve dist -l 3000
+
+  - verb: start
+    name: docsify
+    description: Run the documentation site locally using the docsify CLI
+    exec:
+      dir: //
+      cmd: docsify serve docs --open
+
+  - verb: build
+    name: docs
+    description: Prerender docsify documentation site for the project
+    exec:
+      dir: //
+      cmd:
+        node ./scripts/prerender.js
+
   - verb: show
     name: flowfile
     aliases: [executables, exec, executable]
