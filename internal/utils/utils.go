@@ -42,7 +42,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 		} else {
 			targetPath = filepath.Join(homeDir, path[2:])
 		}
-	case strings.HasPrefix(path, "/"), strings.HasPrefix(path, "$"):
+	case strings.HasPrefix(path, "/"), strings.HasPrefix(path, "$"), strings.Contains(path, "://"):
 		targetPath = path
 	default:
 		targetPath = filepath.Join(fallbackDir, path)
