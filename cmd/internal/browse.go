@@ -13,6 +13,7 @@ import (
 	execIO "github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/io/library"
 	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -59,6 +60,7 @@ func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, browseCmd, *flags.FilterTagFlag)
 	RegisterFlag(ctx, browseCmd, *flags.FilterExecSubstringFlag)
 	RegisterFlag(ctx, browseCmd, *flags.AllNamespacesFlag)
+	RegisterFlag(ctx, browseCmd, *flags.VisibilityFlag)
 	rootCmd.AddCommand(browseCmd)
 }
 
@@ -106,6 +108,15 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
 	subStr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
+	visStr := flags.ValueFor[string](cmd, *flags.VisibilityFlag, false)
+	visibilityFilter := common.VisibilityPrivate
+	if visStr != "" {
+		visibilityFilter = common.Visibility(visStr)
+		if !isValidVisibility(visibilityFilter) {
+			logger.Log().Fatalf("invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
+		}
+	}
+
 	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
 		logger.Log().FatalErr(err)
@@ -119,11 +130,12 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	libraryModel := library.NewLibraryView(
 		ctx, allWs, allExecs,
 		library.Filter{
-			Workspace: wsFilter,
-			Namespace: nsFilter,
-			Verb:      executable.Verb(verbFilter),
-			Tags:      tagsFilter,
-			Substring: subStr,
+			Workspace:  wsFilter,
+			Namespace:  nsFilter,
+			Verb:       executable.Verb(verbFilter),
+			Tags:       tagsFilter,
+			Substring:  subStr,
+			Visibility: visibilityFilter,
 		},
 		io.Theme(ctx.Config.Theme.String()),
 		runFunc,
@@ -154,13 +166,22 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	substr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
+	visStr := flags.ValueFor[string](cmd, *flags.VisibilityFlag, false)
+	visibilityFilter := common.VisibilityPrivate
+	if visStr != "" {
+		visibilityFilter = common.Visibility(visStr)
+		if !isValidVisibility(visibilityFilter) {
+			logger.Log().Fatalf("invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
+		}
+	}
+
 	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
 	filteredExec := allExecs
 	filteredExec = filteredExec.
-		FilterByWorkspace(wsFilter).
+		FilterByWorkspaceWithVisibility(wsFilter, visibilityFilter).
 		FilterByNamespace(nsFilter).
 		FilterByVerb(executable.Verb(verbFilter)).
 		FilterByTags(tagsFilter).
@@ -217,5 +238,14 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 		SetView(ctx, cmd, view)
 	} else {
 		execIO.PrintExecutable(outputFormat, exec)
+	}
+}
+
+func isValidVisibility(v common.Visibility) bool {
+	switch v {
+	case common.VisibilityPublic, common.VisibilityPrivate, common.VisibilityInternal, common.VisibilityHidden:
+		return true
+	default:
+		return false
 	}
 }

@@ -48,6 +48,7 @@ type Filter struct {
 	Verb                 executable.Verb
 	Tags                 common.Tags
 	Substring            string
+	Visibility           common.Visibility
 }
 
 func NewLibrary(

@@ -122,9 +122,9 @@ var _ = Describe("Executable", func() {
 		v := executable.ExecutableVisibility(*visibility)
 		exec.Visibility = &v
 		if wsMatch {
-			Expect(exec.IsVisibleFromWorkspace(testWsName)).To(Equal(expected))
+			Expect(exec.IsVisibleFromWorkspace(testWsName, common.VisibilityPrivate)).To(Equal(expected))
 		} else {
-			Expect(exec.IsVisibleFromWorkspace("another-ws")).To(Equal(expected))
+			Expect(exec.IsVisibleFromWorkspace("another-ws", common.VisibilityPrivate)).To(Equal(expected))
 		}
 	},
 		Entry("public from ws", common.VisibilityPublic.NewPointer(), true, true),
@@ -330,3 +330,58 @@ var _ = DescribeTable("HasFlowFileTemplateExt", func(file string, expected bool)
 	Entry("ends with .flow.tmpl + something else", "development.flow.tmpl.txt", false),
 	Entry("ends with something else", "development.flow.txt", false),
 )
+
+var _ = Describe("Executable Visibility", func() {
+	It("should show public executables with any filter", func() {
+		ws := "ws1"
+		vis := common.VisibilityPublic
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace("ws2", common.VisibilityPublic)).To(BeTrue())
+		Expect(ex.IsVisibleFromWorkspace("ws2", common.VisibilityPrivate)).To(BeTrue())
+		Expect(ex.IsVisibleFromWorkspace("ws2", common.VisibilityInternal)).To(BeTrue())
+	})
+
+	It("should respect workspace scoping for private", func() {
+		ws := "ws1"
+		vis := common.VisibilityPrivate
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityPrivate)).To(BeTrue())
+		Expect(ex.IsVisibleFromWorkspace("ws2", common.VisibilityPrivate)).To(BeFalse())
+	})
+
+	It("should hide private with public filter", func() {
+		ws := "ws1"
+		vis := common.VisibilityPrivate
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityPublic)).To(BeFalse())
+	})
+
+	It("should hide internal without internal+ filter", func() {
+		ws := "ws1"
+		vis := common.VisibilityInternal
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityPrivate)).To(BeFalse())
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityInternal)).To(BeTrue())
+	})
+
+	It("should respect workspace scoping for internal", func() {
+		ws := "ws1"
+		vis := common.VisibilityInternal
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace("ws2", common.VisibilityInternal)).To(BeFalse())
+	})
+
+	It("should only show hidden with hidden filter", func() {
+		ws := "ws1"
+		vis := common.VisibilityHidden
+		ex := &executable.Executable{Visibility: (*executable.ExecutableVisibility)(&vis)}
+		ex.SetContext(ws, "path", "", "file.flow")
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityInternal)).To(BeFalse())
+		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityHidden)).To(BeTrue())
+	})
+})

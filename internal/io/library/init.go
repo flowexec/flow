@@ -75,7 +75,7 @@ func (l *Library) setVisibleExecs() {
 	filter := l.filter
 	filteredExec := l.allExecutables
 	filteredExec = filteredExec.
-		FilterByWorkspace(curWs).
+		FilterByWorkspaceWithVisibility(curWs, filter.Visibility).
 		FilterByNamespace(curNs).
 		FilterByVerb(filter.Verb).
 		FilterByTags(filter.Tags).
