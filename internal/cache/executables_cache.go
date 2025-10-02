@@ -88,6 +88,16 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 				continue
 			}
 			for _, e := range flowFile.Executables {
+				if vErr := e.Validate(); vErr != nil {
+					logger.Log().Warnx(
+						"invalid executable found during cache update",
+						"ref", e.Ref().String(),
+						"workspace", wsCfg.AssignedName(),
+						"err", vErr,
+					)
+					continue
+				}
+
 				if e == nil || (e.Visibility != nil && common.Visibility(*e.Visibility).IsHidden()) {
 					continue
 				}
