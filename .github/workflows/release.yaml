@@ -37,7 +37,7 @@ jobs:
           node-version: '24'
       - run: npm install docsify-server-renderer@^4
       - name: Prerender Docsify
-        run: node tools/prerender.js
+        run: node scripts/prerender.js
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
