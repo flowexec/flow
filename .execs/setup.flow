@@ -19,14 +19,6 @@ executables:
       cmd: go install ./...
 
   - verb: start
-    name: site
-    aliases: [docs]
-    description: Run the documentation site locally
-    exec:
-      dir: //
-      cmd: docsify serve docs --open
-
-  - verb: start
     name: recording
     aliases: [vhs]
     description: Record a demo of the Flow CLI and save it
