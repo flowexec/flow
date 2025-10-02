@@ -4,7 +4,7 @@ export function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
     <ScrollArea
       h="calc(100vh - var(--app-shell-padding-total))"
-      w="calc(100vw - var(--app-navbar-width) - var(--app-shell-padding-total))"
+      w="100%"
       type="auto"
       scrollbarSize={6}
       scrollHideDelay={100}

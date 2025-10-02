@@ -4,7 +4,7 @@ import {
   Notification as MantineNotification,
   Text,
 } from "@mantine/core";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAppContext } from "../../hooks/useAppContext.tsx";
 import { useNotifier } from "../../hooks/useNotifier.tsx";
 import { colorFromType, NotificationType } from "../../types/notification";
@@ -18,6 +18,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { isLoading, hasError } = useAppContext();
   const { notification, setNotification } = useNotifier();
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (hasError) {
@@ -33,7 +34,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <MantineAppShell
       header={{ height: "var(--app-header-height)" }}
-      navbar={{ width: "var(--app-navbar-width)", breakpoint: "sm" }}
+      navbar={{ width: collapsed ? 56 : 250, breakpoint: "sm" }}
       padding="md"
       classNames={{
         root: styles.appShell,
@@ -43,7 +44,7 @@ export function AppShell({ children }: AppShellProps) {
       }}
     >
       <MantineAppShell.Navbar>
-        <Sidebar />
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       </MantineAppShell.Navbar>
 
       <MantineAppShell.Main>
@@ -62,7 +63,7 @@ export function AppShell({ children }: AppShellProps) {
             <Text c="red">{hasError.message}</Text>
           </div>
         ) : (
-          <div style={{ position: "relative", height: "100%" }}>
+          <div style={{ position: "relative", height: "100%", flex: 1, minHeight: 0 }}>
             {children}
             {isLoading && (
               <div
