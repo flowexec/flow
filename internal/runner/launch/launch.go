@@ -70,7 +70,7 @@ func (r *launchRunner) Exec(
 
 	launchSpec.URI = os.ExpandEnv(launchSpec.URI)
 	targetURI := launchSpec.URI
-	if !strings.HasPrefix(targetURI, "http") {
+	if !strings.Contains(targetURI, "://") {
 		targetURI = utils.ExpandDirectory(
 			launchSpec.URI,
 			e.WorkspacePath(),
