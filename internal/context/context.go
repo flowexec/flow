@@ -214,6 +214,18 @@ func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 	return executable.NewRef(executable.NewExecutableID(ws, ns, name), ref.Verb())
 }
 
+func ExpandRefFromParent(parent *executable.Executable, ref executable.Ref) executable.Ref {
+	id := ref.ID()
+	ws, ns, name := executable.MustParseExecutableID(id)
+	if ws == "" || ws == executable.WildcardWorkspace {
+		ws = parent.Workspace()
+	}
+	if ns == "" {
+		ns = parent.Namespace()
+	}
+	return executable.NewRef(executable.NewExecutableID(ws, ns, name), ref.Verb())
+}
+
 func currentWorkspace(cfg *config.Config) (*workspace.Workspace, error) {
 	ws, err := cfg.CurrentWorkspaceName()
 	if err != nil {

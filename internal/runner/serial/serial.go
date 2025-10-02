@@ -107,7 +107,7 @@ func handleExec(
 		switch {
 		case refConfig.Ref != "":
 			var err error
-			exec, err = execUtils.ExecutableForRef(ctx, refConfig.Ref)
+			exec, err = execUtils.ExecutableForRef(ctx, parent, refConfig.Ref)
 			if err != nil {
 				return err
 			}

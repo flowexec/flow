@@ -131,7 +131,7 @@ func runExecutables(
 			if err != nil {
 				return errors.Wrap(err, fmt.Sprintf("unable to process %s executable %d", stage, i))
 			}
-			exec, err = execUtils.ExecutableForRef(ctx, executable.Ref(ref.String()))
+			exec, err = execUtils.ExecutableForRef(ctx, nil, executable.Ref(ref.String()))
 			if err != nil {
 				return err
 			}
