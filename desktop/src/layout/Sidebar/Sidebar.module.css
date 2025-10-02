@@ -1,20 +1,57 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  padding: 0 1rem 1rem 1rem;
+  padding: var(--mantine-spacing-sm);
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+/* Collapsed state */
+.sidebarCollapsed {
+  width: 56px;
+}
+
+/* Hide labels when collapsed */
+.sidebarCollapsed :global(.mantine-NavLink-label) {
+  display: none;
+}
+
+/* Center icons in collapsed state */
+.sidebarCollapsed :global(.mantine-NavLink-root) {
+  justify-content: center;
+  padding-left: var(--mantine-spacing-sm);
+  padding-right: var(--mantine-spacing-sm);
+}
+
+
+.sidebarCollapsed :global(.mantine-NavLink-section) {
+    margin-inline-end: 0;
+}
+/* Hide caret/chevron if any in collapsed state */
+.sidebarCollapsed :global(.mantine-NavLink-rightSection) {
+  display: none;
+}
+
+/* Reduce logo area when collapsed */
+.sidebarCollapsed .sidebar__logo {
+  height: 56px;
+  padding: 0.5rem;
+}
+
+.sidebar__context {
+    background-color: var(--mantine-color-gray-3);
+    color: var(--mantine-color-body-0);
+    padding: var(--mantine-spacing-xs);
+    margin: var(--mantine-spacing-xs);
+    border-radius: var(--mantine-radius-sm);
 }
 
 .sidebar__logo {
-  margin: -1rem -1rem 1rem -1rem;
   padding: 1rem;
-  background-color: var(--mantine-color-other-backgroundColors-header);
-  border-bottom: 1px solid var(--mantine-color-other-colors-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 64px;
+  height: 100px;
 }
 
 .sidebar__logo img {
@@ -22,6 +59,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--mantine-color-pink-0) 10%, transparent));
 }
 
 .sidebar__content {
@@ -35,11 +73,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-
-.sidebar__tree {
-  flex: 1;
-  overflow-y: auto;
 }
 
 .sidebar__section {

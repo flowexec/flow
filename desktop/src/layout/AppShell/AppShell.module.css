@@ -17,4 +17,7 @@
 
 .main {
   background-color: var(--mantine-color-other-backgroundColors-main);
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow nested ScrollArea to compute height */
 }
