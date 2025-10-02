@@ -43,8 +43,6 @@ archives:
 homebrew_casks:
   - name: flow
     binary: flow
-    conflicts:
-      - formula: flow
     homepage: https://flowexec.io
     license: Apache-2.0
     repository:
@@ -63,32 +61,19 @@ homebrew_casks:
           if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/flow"]
           end
-  
-dockers:
-  - image_templates:
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-amd64"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/amd64"
-    goarch: amd64
-  - image_templates:
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-arm64"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-    goarch: arm64
 
-docker_manifests:
-  - name_template: "ghcr.io/flowexec/flow:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-amd64"
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-arm64"
-  - name_template: "ghcr.io/flowexec/flow:latest"
-    image_templates:
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-amd64"
-      - "ghcr.io/flowexec/flow:{{ .Tag }}-arm64"
+dockers_v2:
+  - id: flow
+    images:
+      - "ghcr.io/flowexec/flow"
+    tags:
+      - "{{ .Tag }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    flags:
+      - "--pull"
 
 changelog:
   sort: asc

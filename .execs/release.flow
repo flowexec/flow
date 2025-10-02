@@ -3,8 +3,62 @@ tags: [development, test]
 executables:
   - verb: create
     name: snapshot
-    description: Create a snapshot release
+    description: Create a snapshot release locally (skips Docker builds by default)
     aliases: [release, snap]
+    exec:
+      dir: //
+      params:
+        - envKey: SKIP_DOCKER
+          text: "true"
+      cmd: |
+        if ! command -v goreleaser &> /dev/null; then
+          echo "goreleaser is not installed. Please install it first."
+          exit 1
+        fi
+
+        SKIP_FLAG=""
+        if [ "$SKIP_DOCKER" = "true" ]; then
+          echo "Creating snapshot release (skipping Docker builds)..."
+          SKIP_FLAG="--skip=docker"
+        else
+          echo "Creating snapshot release (including Docker builds)..."
+        fi
+
+        goreleaser release --snapshot --clean $SKIP_FLAG
+
+        echo ""
+        echo "Snapshot build complete!"
+        echo ""
+        echo "Binaries built for:"
+        ls -1 dist/ | grep -E "^flow_.*_(linux|darwin)_(amd64|arm64)" | sed 's/^/  - /'
+
+        if [ "$SKIP_DOCKER" = "false" ]; then
+          echo ""
+          echo "Docker images built:"
+          echo "  - ghcr.io/flowexec/flow:{{ .Tag }}"
+          echo "  - ghcr.io/flowexec/flow:latest"
+          echo ""
+          echo "Test Docker image locally:"
+          echo "  docker run --rm ghcr.io/flowexec/flow:latest --version"
+        fi
+
+        echo ""
+        echo "Test your platform's binary:"
+        CURRENT_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        CURRENT_ARCH=$(uname -m)
+        if [ "$CURRENT_ARCH" = "x86_64" ]; then CURRENT_ARCH="amd64"; fi
+        if [ "$CURRENT_ARCH" = "aarch64" ]; then CURRENT_ARCH="arm64"; fi
+
+        BINARY_DIR=$(ls -d dist/flow_${CURRENT_OS}_${CURRENT_ARCH}* 2>/dev/null | head -1)
+        if [ -n "$BINARY_DIR" ]; then
+          echo "  ${BINARY_DIR}/flow --version"
+          echo ""
+          ${BINARY_DIR}/flow --version
+        fi
+
+  - verb: check
+    name: release
+    description: Check goreleaser configuration without building
     exec:
       dir: //
       cmd: |
@@ -12,6 +66,6 @@ executables:
           echo "goreleaser is not installed. Please install it first."
           exit 1
         fi
-        
-        echo "creating snapshot release..."
-        goreleaser release --snapshot --clean
+
+        echo "Checking goreleaser configuration..."
+        goreleaser check
