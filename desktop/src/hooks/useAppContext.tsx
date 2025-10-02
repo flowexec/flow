@@ -2,10 +2,8 @@ import React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 import { Config } from "../types/generated/config";
 import { EnrichedWorkspace } from "../types/workspace";
-import { EnrichedExecutable } from "../types/executable";
 import { useConfig } from "./useConfig";
 import { useWorkspaces } from "./useWorkspace";
-import { useExecutables } from "./useExecutable";
 import { invoke } from "@tauri-apps/api/core";
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,7 +12,6 @@ interface AppContextType {
   selectedWorkspace: string | null;
   setSelectedWorkspace: (workspaceName: string | null) => void;
   workspaces: EnrichedWorkspace[];
-  executables: EnrichedExecutable[];
   isLoading: boolean;
   hasError: Error | null;
   refreshAll: () => void;
@@ -78,16 +75,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [config, workspaces, selectedWorkspace]);
 
-  const {
-    executables,
-    isExecutablesLoading,
-    executablesError,
-    refreshExecutables,
-  } = useExecutables(selectedWorkspace, enabled);
-
   const isLoading =
-    isConfigLoading || isWorkspacesLoading || isExecutablesLoading;
-  const hasError = configError || workspacesError || executablesError;
+    isConfigLoading || isWorkspacesLoading;
+  const hasError = configError || workspacesError;
   if (hasError) {
     console.error("Error", hasError);
   }
@@ -95,7 +85,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshAll = () => {
     refreshConfig();
     refreshWorkspaces();
-    refreshExecutables();
   };
 
   // If flow binary is not available, return early with error state
@@ -107,7 +96,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           workspaces: [],
           selectedWorkspace,
           setSelectedWorkspace,
-          executables: [],
           isLoading: false,
           hasError: binaryCheckError,
           refreshAll: () => {},
@@ -127,7 +115,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           workspaces: [],
           selectedWorkspace,
           setSelectedWorkspace,
-          executables: [],
           isLoading: true,
           hasError: null,
           refreshAll: () => {},
@@ -145,7 +132,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         workspaces: workspaces || [],
         selectedWorkspace,
         setSelectedWorkspace,
-        executables,
         isLoading,
         hasError,
         refreshAll,

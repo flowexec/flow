@@ -1,5 +1,5 @@
-import { Badge, Card, Code, Group, Stack, Title } from "@mantine/core";
-import { IconTerminal } from "@tabler/icons-react";
+import { Badge, Card, Code, Divider, Group, Stack, Title } from "@mantine/core";
+import { IconHash } from "@tabler/icons-react";
 import { useSettings } from "../../../hooks/useSettings";
 import { EnrichedExecutable } from "../../../types/executable";
 import { CodeHighlighter } from "../../../components/CodeHighlighter";
@@ -14,42 +14,50 @@ export function ExecutableExecDetails({
   const { settings } = useSettings();
 
   return (
-    <Card withBorder>
+    <Card withBorder shadow="sm" padding="md">
       <Stack gap="sm">
-        <Title order={4}>
+        <Group justify="space-between" align="center">
+          <Title order={4}>
+            <Group gap="xs">
+              <IconHash size={16} />
+              Execution Configuration
+            </Group>
+          </Title>
           <Group gap="xs">
-            <IconTerminal size={16} />
-            Execution Details
+            {executable.exec?.cmd && (
+              <Badge variant="light" color="green.5">cmd</Badge>
+            )}
+            {executable.exec?.file && (
+              <Badge variant="light" color="blue.5">file</Badge>
+            )}
+            {executable.exec?.logMode && (
+              <Badge variant="light" color="gray.5">format: {executable.exec?.logMode}</Badge>
+            )}
           </Group>
-        </Title>
-        <Stack gap="xs">
-          {executable.exec?.cmd && (
-            <div>
-              <Title order={5}>Command:</Title>
-              <CodeHighlighter theme={settings.theme} copyButton={false}>
-                {executable.exec.cmd}
-              </CodeHighlighter>
-            </div>
-          )}
-          {executable.exec?.file && (
-            <div>
-              <Title order={5}>File:</Title>
-              <Code>{executable.exec.file}</Code>
-            </div>
-          )}
-          {executable.exec?.dir && (
-            <div>
-              <Title order={5}>Directory:</Title>
-              <Code>{executable.exec.dir}</Code>
-            </div>
-          )}
-          {executable.exec?.logMode && (
-            <div>
-              <Title order={5}>Log Mode:</Title>
-              <Badge variant="light">{executable.exec.logMode}</Badge>
-            </div>
-          )}
-        </Stack>
+        </Group>
+
+        {executable.exec?.cmd && (
+          <>
+            <Divider label="Command" labelPosition="left" my="xs" />
+            <CodeHighlighter theme={settings.theme} copyButton={false}>
+              {executable.exec.cmd}
+            </CodeHighlighter>
+          </>
+        )}
+
+        {executable.exec?.file && (
+          <>
+            <Divider label="File" labelPosition="left" my="xs" />
+            <Code>{executable.exec.file}</Code>
+          </>
+        )}
+
+        {executable.exec?.dir && (
+          <>
+            <Divider label="Working directory" labelPosition="left" my="xs" />
+            <Code>{executable.exec.dir}</Code>
+          </>
+        )}
       </Stack>
     </Card>
   );

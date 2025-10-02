@@ -1,0 +1,145 @@
+.root {
+  --hero-bg-primary: var(--mantine-color-appshell-0);
+  --hero-bg-secondary: var(--mantine-color-primary-0);
+  --hero-text-primary: var(--mantine-color-secondary-0);
+  --hero-text-secondary: var(--mantine-color-tertiary-0);
+  --hero-border: var(--mantine-color-border-0);
+  --hero-pattern-color: var(--mantine-color-emphasis-1);
+
+  position: relative;
+  color: var(--hero-text-primary);
+  background: linear-gradient(
+    150deg,
+    var(--hero-bg-primary) 0%,
+    var(--hero-bg-secondary) 100%
+  );
+  border-bottom: 1px solid var(--hero-border);
+  overflow: hidden;
+  margin-bottom: var(--mantine-spacing-lg);
+}
+
+.pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.pattern-subtle {
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      var(--hero-pattern-color) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      var(--hero-pattern-color) 1.5px,
+      transparent 1.5px
+    );
+  background-size:
+    50px 50px,
+    70px 70px;
+}
+
+.pattern-lines {
+  background-image:
+    linear-gradient(90deg, var(--hero-pattern-color) 1px, transparent 1px),
+    linear-gradient(0deg, var(--hero-pattern-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.variant-center .inner {
+  text-align: center;
+}
+
+.variant-left .inner {
+  text-align: left;
+}
+
+.variant-split .inner {
+  text-align: left;
+}
+
+.variant-split .header {
+  text-align: left;
+}
+
+.contentContainer {
+  position: relative;
+  z-index: 1;
+}
+
+.inner {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: 2.5rem 2rem;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+}
+
+.stackedContent {
+  width: 100%;
+}
+
+.splitLayout {
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.splitContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.splitActions {
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
+}
+
+.header {
+  margin-bottom: 0.5rem;
+}
+
+.header :global(.mantine-Title-root) {
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.header :global(.mantine-Text-root) {
+  color: var(--hero-text-secondary);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.4;
+}
+
+.content {
+  margin: 1rem 0;
+}
+
+.actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.actions-left {
+  justify-content: flex-start;
+}
+
+.actions-center {
+  justify-content: center;
+}
+
+.actions-right {
+  justify-content: flex-end;
+}
+
+.root :global(.Mantine-Badge-root) {
+  --badge-bg: var(--mantine-color-gray-1) !important;
+  --badge-color: var(--mantine-color-gray-8) !important;
+  --badge-bd: transparent !important;
+}

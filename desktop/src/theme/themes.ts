@@ -3,7 +3,7 @@ import { Theme, ThemeName } from "./types";
 export const themes: Record<ThemeName, Theme> = {
   everforest: {
     name: "everforest",
-    darkMode: true,
+    darkMode: false,
     colors: {
       primary: "#7FBBB3",
       secondary: "#83C092",
@@ -18,6 +18,7 @@ export const themes: Record<ThemeName, Theme> = {
         sidebar: "#1E2326",
         header: "#1E2326",
         card: "#F8F8F8",
+        hero: "#D3C6AA",
       },
     },
   },
@@ -38,6 +39,7 @@ export const themes: Record<ThemeName, Theme> = {
         sidebar: "#141517",
         header: "#141517",
         card: "#25262B",
+        hero: "#252",
       },
     },
   },
@@ -58,6 +60,7 @@ export const themes: Record<ThemeName, Theme> = {
         sidebar: "#1E1F29",
         header: "#1E1F29",
         card: "#44475A",
+        hero: "#f8f8f2",
       },
     },
   },
@@ -78,6 +81,7 @@ export const themes: Record<ThemeName, Theme> = {
         sidebar: "#2D333B",
         header: "#2D333B",
         card: "#F8F8F8",
+        hero: "#373737",
       },
     },
   },
@@ -98,6 +102,7 @@ export const themes: Record<ThemeName, Theme> = {
         sidebar: "#16161E",
         header: "#16161E",
         card: "#24283B",
+        hero: "#a9b1d6",
       },
     },
   },

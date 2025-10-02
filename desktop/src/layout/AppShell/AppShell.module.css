@@ -1,6 +1,5 @@
 :root {
-  --app-header-height: 48px;
-  --app-navbar-width: 300px;
+  --app-navbar-width: 250px;
   --app-shell-padding: 16px;
   --app-shell-padding-total: 30px; /* 16px top + 16px bottom */
 }
@@ -9,11 +8,6 @@
   background-color: var(--mantine-color-other-backgroundColors-main);
   height: 100vh;
   width: 100vw;
-}
-
-.header {
-  background-color: var(--mantine-color-other-backgroundColors-header);
-  border-bottom: 1px solid var(--mantine-color-other-colors-border);
 }
 
 .navbar {
