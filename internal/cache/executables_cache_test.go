@@ -52,7 +52,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 			Namespace:  "testdata",
 			Visibility: &v,
 			Executables: executable.ExecutableList{
-				{Verb: "run", Name: "exec"},
+				{Verb: "run", Name: "exec", Exec: &executable.ExecExecutableType{}},
 			},
 		}
 		execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "test"+executable.FlowFileExt))
@@ -153,7 +153,11 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Namespace:  "testdata",
 				Visibility: &v,
 				Executables: executable.ExecutableList{
-					{Verb: "run", Name: "test-alias", Aliases: []string{"alias1"}},
+					{
+						Verb: "run", Name: "test-alias",
+						Aliases: []string{"alias1"},
+						Exec:    &executable.ExecExecutableType{},
+					},
 				},
 			}
 			execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "aliases-test"+executable.FlowFileExt))
@@ -179,7 +183,11 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "run-alias", VerbAliases: []executable.Verb{executable.VerbActivate}},
+						{
+							Verb: "run", Name: "run-alias",
+							VerbAliases: []executable.Verb{executable.VerbActivate},
+							Exec:        &executable.ExecExecutableType{},
+						},
 					},
 				}
 				execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "verbaliases"+executable.FlowFileExt))
@@ -345,7 +353,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "duplicate-exec"},
+						{Verb: "run", Name: "duplicate-exec", Exec: &executable.ExecExecutableType{}},
 					},
 				}
 				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
@@ -356,7 +364,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "duplicate-exec"},
+						{Verb: "run", Name: "duplicate-exec", Exec: &executable.ExecExecutableType{}},
 					},
 				}
 				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
@@ -385,7 +393,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "first-exec"},
+						{Verb: "run", Name: "first-exec", Exec: &executable.ExecExecutableType{}},
 					},
 				}
 				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
@@ -396,7 +404,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "exec", Name: "first-exec"},
+						{Verb: "exec", Name: "first-exec", Exec: &executable.ExecExecutableType{}},
 					},
 				}
 				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
@@ -420,7 +428,11 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "first-exec", Aliases: []string{"shared-alias"}},
+						{
+							Verb: "run", Name: "first-exec",
+							Aliases: []string{"shared-alias"},
+							Exec:    &executable.ExecExecutableType{},
+						},
 					},
 				}
 				execCfg1.SetContext(wsName, wsPath, filepath.Join(wsPath, "first"+executable.FlowFileExt))
@@ -431,7 +443,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 					Namespace:  "testdata",
 					Visibility: &v,
 					Executables: executable.ExecutableList{
-						{Verb: "run", Name: "shared-alias"},
+						{Verb: "run", Name: "shared-alias", Exec: &executable.ExecExecutableType{}},
 					},
 				}
 				execCfg2.SetContext(wsName, wsPath, filepath.Join(wsPath, "second"+executable.FlowFileExt))
