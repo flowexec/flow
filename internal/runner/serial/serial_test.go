@@ -3,6 +3,7 @@ package serial_test
 import (
 	stdCtx "context"
 	"errors"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -129,14 +130,24 @@ var _ = Describe("SerialRunner", func() {
 			serialSpec.Execs[0].If = "false"
 			serialSpec.Execs[1].If = "true"
 			mockCache := ctx.ExecutableCache
+			// Only the first two execs use Ref (third uses Cmd, so no cache call)
 			for i, e := range subExecs {
-				if i == 1 {
+				if i < 2 {
 					mockCache.EXPECT().GetExecutableByRef(e.Ref()).Return(e, nil).Times(1)
 				}
 			}
+
 			results := engine.ResultSummary{Results: []engine.Result{{}}}
 			mockEngine.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(results).Times(1)
+				DoAndReturn(func(_ stdCtx.Context, execs []engine.Exec, _ ...engine.OptionFunc) engine.ResultSummary {
+					// Verify all execs from rootExec are in the list (conditions included)
+					Expect(execs).To(HaveLen(len(serialSpec.Execs)))
+					// Verify first two have conditions, third doesn't
+					Expect(execs[0].Condition).ToNot(BeNil())
+					Expect(execs[1].Condition).ToNot(BeNil())
+					Expect(execs[2].Condition).To(BeNil())
+					return results
+				}).Times(1)
 			Expect(serialRnr.Exec(ctx.Ctx, rootExec, mockEngine, make(map[string]string), nil)).To(Succeed())
 		})
 
@@ -192,6 +203,65 @@ var _ = Describe("SerialRunner", func() {
 
 			Expect(serialRnr.Exec(ctx.Ctx, parentExec, mockEngine, make(map[string]string), []string{"test_value"})).
 				To(Succeed())
+		})
+
+		It("refreshes cache between steps so later conditions see updates", func() {
+			ns := "examples"
+			parentExec := &executable.Executable{
+				Serial: &executable.SerialExecutableType{
+					Execs: []executable.SerialRefConfig{
+						{Ref: executable.Ref(fmt.Sprintf("exec %s:first", ns))},
+						{Ref: executable.Ref(fmt.Sprintf("exec %s:second", ns)), If: `store["flow-test_serial_updated"] == 'true'`},
+					},
+				},
+			}
+			parentExec.SetContext(
+				ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(),
+				ns, "/test/parent.flow",
+			)
+
+			firstChild := &executable.Executable{
+				Verb: "exec", Name: "first",
+				Exec: &executable.ExecExecutableType{Cmd: "echo first"},
+			}
+			firstChild.SetContext(
+				ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(),
+				ns, "/test/first.flow")
+
+			secondChild := &executable.Executable{
+				Verb: "exec", Name: "second",
+				Exec: &executable.ExecExecutableType{Cmd: "echo second"},
+			}
+			secondChild.SetContext(
+				ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(),
+				ns, "/test/second.flow")
+
+			mockCache := ctx.ExecutableCache
+			mockCache.EXPECT().GetExecutableByRef(firstChild.Ref()).Return(firstChild, nil).Times(1)
+			mockCache.EXPECT().GetExecutableByRef(secondChild.Ref()).Return(secondChild, nil).Times(1)
+
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).AnyTimes()
+			ctx.RunnerMock.EXPECT().Exec(gomock.Any(), firstChild, gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(
+					func(_ *context.Context, _ *executable.Executable, _ engine.Engine, _ map[string]string, _ []string) error {
+						return nil
+					}).Times(1)
+			ctx.RunnerMock.
+				EXPECT().
+				Exec(gomock.Any(), secondChild, gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).
+				Times(1)
+
+			results := engine.ResultSummary{Results: []engine.Result{{}, {}}}
+			mockEngine.EXPECT().Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ stdCtx.Context, execs []engine.Exec, _ ...engine.OptionFunc) engine.ResultSummary {
+					for _, ex := range execs {
+						Expect(ex.Function()).To(Succeed())
+					}
+					return results
+				}).Times(1)
+
+			Expect(serialRnr.Exec(ctx.Ctx, parentExec, mockEngine, make(map[string]string), nil)).To(Succeed())
 		})
 	})
 })

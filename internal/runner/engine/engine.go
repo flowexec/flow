@@ -50,6 +50,7 @@ func (rs ResultSummary) String() string {
 type Exec struct {
 	ID         string
 	Function   func() error
+	Condition  func() (bool, error) // Optional condition evaluated before execution
 	MaxRetries int
 }
 
@@ -127,6 +128,26 @@ func (e *execEngine) executeParallel(ctx context.Context, execs []Exec, opts Opt
 
 	for i, exec := range execs {
 		runExec := func() error {
+			// Evaluate condition before execution
+			if exec.Condition != nil {
+				shouldRun, err := exec.Condition()
+				if err != nil {
+					results[i] = Result{
+						ID:    exec.ID,
+						Error: fmt.Errorf("condition evaluation failed: %w", err),
+					}
+					ff := opts.FailFast == nil || *opts.FailFast
+					if ff {
+						return err
+					}
+					return nil
+				}
+				if !shouldRun {
+					// Skip this execution - leave result empty/zero value
+					return nil
+				}
+			}
+
 			rh := retry.NewRetryHandler(exec.MaxRetries, 0)
 			err := rh.Execute(exec.Function)
 			results[i] = Result{
@@ -153,27 +174,47 @@ func (e *execEngine) executeParallel(ctx context.Context, execs []Exec, opts Opt
 }
 
 func (e *execEngine) executeSerial(ctx context.Context, execs []Exec, opts Options) []Result {
-	results := make([]Result, len(execs))
-	for i, exec := range execs {
+	results := make([]Result, 0, len(execs))
+	for _, exec := range execs {
 		select {
 		case <-ctx.Done():
-			results[i] = Result{
+			results = append(results, Result{
 				ID:    exec.ID,
 				Error: ctx.Err(),
-			}
+			})
 			return results
 		default:
+			// Evaluate condition before execution
+			if exec.Condition != nil {
+				shouldRun, err := exec.Condition()
+				if err != nil {
+					results = append(results, Result{
+						ID:    exec.ID,
+						Error: fmt.Errorf("condition evaluation failed: %w", err),
+					})
+					ff := opts.FailFast == nil || *opts.FailFast
+					if ff {
+						return results
+					}
+					continue
+				}
+				if !shouldRun {
+					// Skip this execution - don't add to results
+					continue
+				}
+			}
+
 			rh := retry.NewRetryHandler(exec.MaxRetries, 0)
 			err := rh.Execute(exec.Function)
-			results[i] = Result{
+			results = append(results, Result{
 				ID:      exec.ID,
 				Error:   err,
 				Retries: rh.GetStats().Attempts - 1,
-			}
+			})
 
 			ff := opts.FailFast == nil || *opts.FailFast
 			if err != nil && ff {
-				return results[:i+1]
+				return results
 			}
 		}
 	}

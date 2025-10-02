@@ -137,15 +137,23 @@ var _ = Describe("ParallelRunner", func() {
 			parallelSpec.Execs[0].If = "false"
 			parallelSpec.Execs[1].If = "true"
 			mockCache := ctx.ExecutableCache
+			// Only the first two execs use Ref (third uses Cmd, so no cache call)
 			for i, e := range subExecs {
-				if i == 1 {
+				if i < 2 {
 					mockCache.EXPECT().GetExecutableByRef(e.Ref()).Return(e, nil).Times(1)
 				}
 			}
+
 			results := engine.ResultSummary{Results: []engine.Result{{}}}
 			mockEngine.EXPECT().
 				Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				Return(results).Times(1)
+				DoAndReturn(func(_ stdCtx.Context, execs []engine.Exec, _ ...engine.OptionFunc) engine.ResultSummary {
+					Expect(execs).To(HaveLen(len(parallelSpec.Execs)))
+					Expect(execs[0].Condition).ToNot(BeNil())
+					Expect(execs[1].Condition).ToNot(BeNil())
+					Expect(execs[2].Condition).To(BeNil())
+					return results
+				}).Times(1)
 			Expect(parallelRnr.Exec(ctx.Ctx, rootExec, mockEngine, make(map[string]string), nil)).To(Succeed())
 		})
 
