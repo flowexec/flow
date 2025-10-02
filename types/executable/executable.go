@@ -523,7 +523,7 @@ func NewExecutableID(workspace, namespace, name string) string {
 	case ns == "" && name == "":
 		return ws + "/" // nameless executable
 	case ns != "" && name == "":
-		return fmt.Sprintf("%s:", ns)
+		return fmt.Sprintf("%s/%s:", ws, ns)
 	case ns != "":
 		return fmt.Sprintf("%s/%s:%s", ws, ns, name)
 	default:
