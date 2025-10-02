@@ -71,12 +71,11 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 // - all other paths -> delegated to ExpandPath
 // If the input contains a filename, returns just the directory portion.
 func ExpandDirectory(dir, wsPath, execPath string, env map[string]string) string {
-	var expandedPath string
+	expandedPath := dir
 	if wsPath != "" && strings.HasPrefix(dir, "//") {
-		expandedPath = strings.Replace(dir, "//", wsPath+"/", 1)
-	} else {
-		expandedPath = ExpandPath(dir, filepath.Dir(execPath), env)
+		expandedPath = strings.Replace(expandedPath, "//", wsPath+"/", 1)
 	}
+	expandedPath = ExpandPath(expandedPath, filepath.Dir(execPath), env)
 
 	if ext := filepath.Ext(expandedPath); ext != "" && !isHiddenDir(expandedPath) {
 		return filepath.Dir(expandedPath)
