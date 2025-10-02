@@ -277,6 +277,7 @@ func enumerateExecutableAliasRefs(
 ) executable.RefList {
 	refs := make(executable.RefList, 0)
 
+	// Always include explicit verb aliases defined on the executable itself
 	for _, v := range exec.VerbAliases {
 		if err := v.Validate(); err != nil {
 			continue
@@ -287,9 +288,14 @@ func enumerateExecutableAliasRefs(
 		}
 	}
 
+	// Always include name (ID) aliases for the executable's primary verb
+	for _, id := range exec.AliasesIDs() {
+		refs = append(refs, executable.NewRef(id, exec.Verb))
+	}
+
 	switch {
 	case override == nil:
-		// use default aliases
+		// use default aliases (related verbs for the primary verb)
 		for _, verb := range executable.RelatedVerbs(exec.Verb) {
 			refs = append(refs, executable.NewRef(exec.ID(), verb))
 			for _, id := range exec.AliasesIDs() {
@@ -297,8 +303,8 @@ func enumerateExecutableAliasRefs(
 			}
 		}
 	case len(*override) == 0:
-		// disable all aliases if override is set but empty
-		return refs
+		// verb overrides explicitly disable verb aliases; keep only name aliases and explicit verb aliases
+		// nothing more to add
 	default:
 		// use overrides if provided
 		o := *override
@@ -306,7 +312,6 @@ func enumerateExecutableAliasRefs(
 			for _, v := range verbs {
 				vv := executable.Verb(v)
 				if err := vv.Validate(); err != nil {
-					// If the verb is not valid, skip it
 					continue
 				}
 				refs = append(refs, executable.NewRef(exec.ID(), vv))
