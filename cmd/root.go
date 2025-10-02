@@ -3,6 +3,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -40,7 +42,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			}
 		},
 		PersistentPostRun: func(cmd *cobra.Command, args []string) { ctx.Finalize() },
-		Version:           version.String(),
+		Version:           func() string { if v := os.Getenv("FLOW_VERSION_ONLY"); v == "1" || strings.EqualFold(v, "true") { return version.Plain() } ; return version.String() }(),
 	}
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.LogLevel)
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.SyncCacheFlag)
