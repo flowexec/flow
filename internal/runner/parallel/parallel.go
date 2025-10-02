@@ -209,7 +209,7 @@ func handleExec(
 				if err != nil {
 					return false, err
 				}
-				if err := str.CreateBucket(store.EnvironmentBucket()); err != nil {
+				if _, err := str.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
 					_ = str.Close()
 					return false, err
 				}
