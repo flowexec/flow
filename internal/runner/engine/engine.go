@@ -50,7 +50,7 @@ func (rs ResultSummary) String() string {
 type Exec struct {
 	ID         string
 	Function   func() error
-	Condition  func() (bool, error) // Optional condition evaluated before execution
+	Condition  func() (bool, error)
 	MaxRetries int
 }
 
@@ -128,7 +128,6 @@ func (e *execEngine) executeParallel(ctx context.Context, execs []Exec, opts Opt
 
 	for i, exec := range execs {
 		runExec := func() error {
-			// Evaluate condition before execution
 			if exec.Condition != nil {
 				shouldRun, err := exec.Condition()
 				if err != nil {
@@ -184,7 +183,6 @@ func (e *execEngine) executeSerial(ctx context.Context, execs []Exec, opts Optio
 			})
 			return results
 		default:
-			// Evaluate condition before execution
 			if exec.Condition != nil {
 				shouldRun, err := exec.Condition()
 				if err != nil {
@@ -199,7 +197,6 @@ func (e *execEngine) executeSerial(ctx context.Context, execs []Exec, opts Optio
 					continue
 				}
 				if !shouldRun {
-					// Skip this execution - don't add to results
 					continue
 				}
 			}
