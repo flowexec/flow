@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM golang:1.25.1-bookworm
+FROM golang:1.25.1-bookworm
 
 ENV DISABLE_FLOW_INTERACTIVE="true"
 

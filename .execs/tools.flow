@@ -23,12 +23,12 @@ executables:
         - cmd: |
             if ! command -v goreleaser &> /dev/null; then
               echo "goreleaser is not installed. Installing..."
-              go install github.com/goreleaser/goreleaser@v2.2.0
+              go install github.com/goreleaser/goreleaser@v2.12.5
             fi
         - cmd: |
             if ! command -v golangci-lint &> /dev/null; then
               echo "golangci-lint is not installed. Installing..."
-              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s v2.2.1
+              curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s v2.2.2
             fi
         - cmd: |
             if ! command -v ginkgo &> /dev/null; then

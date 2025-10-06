@@ -62,20 +62,9 @@ homebrew_casks:
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/flow"]
           end
 
-dockers_v2:
-  - id: flow
-    images:
-      - "ghcr.io/flowexec/flow"
-    tags:
-      - "{{ .Tag }}"
-      - latest
-    platforms:
-      - linux/amd64
-      - linux/arm64
-    flags:
-      - "--pull"
-      - "--attest=type=sbom,disabled=true"
-      - "--attest=type=provenance,disabled=true"
+# Docker builds migrated to ko via flow executables
+# Use: flow build multiarch --dry-run (local testing)
+#      flow publish docker --tag=vX.Y.Z (CI only)
 
 changelog:
   sort: asc

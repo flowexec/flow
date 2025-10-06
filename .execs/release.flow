@@ -1,46 +1,33 @@
 # yaml-language-server: $schema=https://flowexec.io/schemas/flowfile_schema.json
 tags: [development, test]
 executables:
-  - verb: create
+  - verb: build
     name: snapshot
-    description: Create a snapshot release locally (skips Docker builds by default)
-    aliases: [release, snap]
+    description: Create a local snapshot release (binaries + archives, no publish)
+    aliases: [release, snap, test-release]
     exec:
       dir: //
-      params:
-        - envKey: SKIP_DOCKER
-          text: "true"
       cmd: |
+        set -euo pipefail
         if ! command -v goreleaser &> /dev/null; then
-          echo "goreleaser is not installed. Please install it first."
+          echo "goreleaser is not installed. Run 'flow install tools' first."
           exit 1
         fi
 
-        SKIP_FLAG=""
-        if [ "$SKIP_DOCKER" = "true" ]; then
-          echo "Creating snapshot release (skipping Docker builds)..."
-          SKIP_FLAG="--skip=docker"
-        else
-          echo "Creating snapshot release (including Docker builds)..."
-        fi
+        echo "Creating snapshot release (local dry-run)..."
+        echo "  - Builds binaries for all platforms"
+        echo "  - Creates archives with completions"
+        echo "  - Generates changelog"
+        echo "  - Does NOT push to GitHub or registries"
+        echo ""
 
-        goreleaser release --snapshot --clean $SKIP_FLAG
+        goreleaser release --snapshot --clean
 
         echo ""
-        echo "Snapshot build complete!"
+        echo "✓ Snapshot build complete!"
         echo ""
         echo "Binaries built for:"
         ls -1 dist/ | grep -E "^flow_.*_(linux|darwin)_(amd64|arm64)" | sed 's/^/  - /'
-
-        if [ "$SKIP_DOCKER" = "false" ]; then
-          echo ""
-          echo "Docker images built:"
-          echo "  - ghcr.io/flowexec/flow:{{ .Tag }}"
-          echo "  - ghcr.io/flowexec/flow:latest"
-          echo ""
-          echo "Test Docker image locally:"
-          echo "  docker run --rm ghcr.io/flowexec/flow:latest --version"
-        fi
 
         echo ""
         echo "Test your platform's binary:"
@@ -56,6 +43,144 @@ executables:
           ${BINARY_DIR}/flow --version
         fi
 
+  - verb: build
+    name: artifacts
+    description: Build release artifacts (binaries, archives, changelog) without publishing
+    aliases: [binaries]
+    exec:
+      dir: //
+      args:
+        - envKey: VERSION
+          flag: version
+          required: false
+      cmd: |
+        set -euo pipefail
+        if ! command -v goreleaser &> /dev/null; then
+          echo "goreleaser is not installed. Run 'flow install tools' first."
+          exit 1
+        fi
+
+        if [ -n "${VERSION:-}" ]; then
+          echo "Building release artifacts for version: ${VERSION}"
+          echo "Note: This is a DRY RUN. Use 'flow publish release' in CI for actual releases."
+        else
+          echo "Building release artifacts from current state"
+          echo "Note: This is a DRY RUN (snapshot mode)"
+        fi
+        echo ""
+
+        goreleaser release --snapshot --clean --skip=publish
+
+        echo ""
+        echo "✓ Release artifacts built in dist/"
+        echo ""
+        echo "To test Docker multi-arch build locally:"
+        echo "  flow build multiarch --dry-run"
+
+  - verb: build
+    name: docker-local
+    description: Build Docker image locally for current platform (dry-run, no push)
+    aliases: [docker-test]
+    exec:
+      dir: //
+      args:
+        - envKey: IMAGE_TAG
+          default: dev
+          flag: tag
+      cmd: |
+        set -euo pipefail
+        echo "Building Docker image for local platform (dry-run)..."
+        echo ""
+        
+        flow build multiarch -p IMAGE_REPO=ghcr.io/flowexec/flow -p IMAGE_TAG="${IMAGE_TAG}" -p DRY_RUN=true
+
+        echo ""
+        echo "✓ Local Docker build complete"
+        echo "  To publish multi-arch: flow publish docker -p IMAGE_TAG=${IMAGE_TAG}"
+
+  - verb: publish
+    name: docker
+    aliases: [image]
+    description: Publish multi-arch Docker images to ghcr.io (CI only)
+    visibility: private
+    exec:
+      dir: //
+      args:
+        - envKey: IMAGE_TAG
+          flag: tag
+          required: true
+        - envKey: REGISTRY
+          default: ghcr.io
+          flag: registry
+      cmd: |
+        set -euo pipefail
+
+        echo "Publishing multi-arch Docker images to ${REGISTRY}..."
+        echo "  Tag: ${IMAGE_TAG}"
+        echo ""
+
+        if [ -z "${CI:-}" ]; then
+          echo "⚠️  WARNING: This should typically only be run in CI"
+          echo "   For local testing, use: flow build docker-local"
+          echo ""
+          read -p "Continue with publish? (y/N) " -n 1 -r
+          echo
+          if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Publish cancelled"
+            exit 1
+          fi
+        fi
+
+        flow build multiarch -p IMAGE_REPO=${REGISTRY}/flowexec/flow -p IMAGE_TAG="${IMAGE_TAG}" -p DRY_RUN=false
+
+        echo ""
+        echo "✓ Docker images published"
+        echo "  ${REGISTRY}/flowexec/flow:${IMAGE_TAG}"
+        echo "  ${REGISTRY}/flowexec/flow:latest"
+
+  - verb: publish
+    name: release
+    description: Full release pipeline (artifacts + docker + GitHub) - CI only
+    visibility: private
+    serial:
+      dir: //
+      failFast: true
+      args:
+        - envKey: VERSION
+          flag: version
+          required: true
+      execs:
+        - name: Validate CI environment
+          cmd: |
+            if [ -z "${CI:-}" ]; then
+              echo "❌ ERROR: This executable must only be run in CI"
+              echo "   For local testing, use:"
+              echo "   - flow build snapshot         # Test binaries/archives"
+              echo "   - flow build docker-local     # Test Docker builds"
+              exit 1
+            fi
+            echo "Starting full release pipeline for version ${VERSION}..."
+        - name: Build and publish release artifacts
+          cmd: |
+            set -euo pipefail
+            if ! command -v goreleaser &> /dev/null; then
+              echo "goreleaser is not installed"
+              exit 1
+            fi
+            echo "Building and publishing release artifacts with goreleaser..."
+            goreleaser release --clean
+        - name: Publish multi-arch Docker images
+          ref: publish docker
+          args:
+            - IMAGE_TAG=${VERSION}
+        - name: Release complete
+          cmd: |
+            echo ""
+            echo "✓ Release ${VERSION} complete!"
+            echo "  - Binaries published to GitHub Releases"
+            echo "  - Homebrew tap updated"
+            echo "  - Docker images published to ghcr.io"
+
   - verb: check
     name: release
     description: Check goreleaser configuration without building
@@ -63,7 +188,7 @@ executables:
       dir: //
       cmd: |
         if ! command -v goreleaser &> /dev/null; then
-          echo "goreleaser is not installed. Please install it first."
+          echo "goreleaser is not installed. Run 'flow install tools' first."
           exit 1
         fi
 

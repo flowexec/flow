@@ -70,12 +70,23 @@ jobs:
           git push origin ${{ github.event.inputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Releasing version: ${VERSION}"
+      - name: Install release tools
+        run: go install github.com/goreleaser/goreleaser@v2.12.5
+      - uses: flowexec/action@v1
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+          executable: 'publish release --param VERSION=${{ steps.version.outputs.version }}'
+          timeout: '30m'
+          flow-version: 'main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_FLOW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_FLOW_GITHUB_TOKEN }}

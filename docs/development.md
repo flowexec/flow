@@ -131,5 +131,25 @@ These are installed automatically by `flow install tools`:
 
 ### Additional Tools <!-- {docsify-ignore} -->
 
-- [goreleaser](https://goreleaser.com/) - Release automation
+- [goreleaser](https://goreleaser.com/) - Binary builds and package distribution
+- [Docker Buildx](https://docs.docker.com/buildx/) - Multi-arch container builds (included with Docker Desktop)
 - [ginkgo](https://onsi.github.io/ginkgo/) - BDD testing framework
+
+## Testing Releases Locally
+
+flow uses a hybrid release system combining goreleaser (for binaries) and Docker buildx (for multi-arch containers):
+
+```sh
+# Test binary builds locally (no publish)
+flow build snapshot
+
+# Test Docker build locally for current platform (no push)
+flow build docker-local -p IMAGE_TAG=dev
+
+# Verify release configuration
+flow check release
+```
+
+**Dry-Run Safety**: All `build` executables are safe to run locally. They create artifacts in `dist/` without publishing to GitHub or container registries.
+
+**CI-Only Publishing**: The `publish` executables are restricted to CI environments and will refuse to run locally unless explicitly confirmed.

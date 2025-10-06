@@ -3,7 +3,7 @@ tags: [development, container]
 executables:
   - verb: build
     name: container
-    description: Build the flow container image
+    description: Build the flow container image (single-arch, local testing)
     aliases: [docker, image]
     exec:
       dir: //
@@ -23,6 +23,140 @@ executables:
         echo "building container image..."
         $BUILDER build -t $IMAGE_REPO:$IMAGE_TAG .
         rm flow
+
+  - verb: build
+    name: multiarch
+    description: Build multi-arch container images (linux/amd64, linux/arm64) using docker buildx
+    aliases: [buildx]
+    exec:
+      dir: //
+      args:
+        - envKey: IMAGE_REPO
+          default: ghcr.io/flowexec/flow
+          flag: repo
+        - envKey: IMAGE_TAG
+          default: latest
+          flag: tag
+        - envKey: DRY_RUN
+          default: "false"
+          flag: dry-run
+      cmd: |
+        set -euo pipefail
+
+        # Check docker buildx is available
+        if ! docker buildx version &> /dev/null; then
+          echo "docker buildx is not available. Please install Docker with buildx support."
+          exit 1
+        fi
+
+        # Get version info for build args
+        GIT_COMMIT=$(git rev-parse HEAD)
+        BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        VERSION="${IMAGE_TAG}"
+
+        # Create/use buildx builder instance
+        BUILDER_NAME="flow-builder"
+        if ! docker buildx inspect "$BUILDER_NAME" &> /dev/null; then
+          echo "Creating buildx builder instance: $BUILDER_NAME"
+          docker buildx create --name "$BUILDER_NAME" --use
+        else
+          docker buildx use "$BUILDER_NAME"
+        fi
+
+        if [ "$DRY_RUN" = "true" ]; then
+          echo "DRY RUN: Building multi-arch images locally (not pushing)"
+          echo "  Platforms: linux/amd64, linux/arm64"
+          echo "  Image: ${IMAGE_REPO}:${IMAGE_TAG}"
+          echo ""
+
+          # Build multi-arch and load to local docker (note: can only load one platform at a time)
+          # For local testing, we'll build for the current platform only
+          CURRENT_OS=linux
+          CURRENT_ARCH=$(uname -m)
+          if [ "$CURRENT_ARCH" = "x86_64" ]; then CURRENT_ARCH="amd64"; fi
+          if [ "$CURRENT_ARCH" = "aarch64" ] || [ "$CURRENT_ARCH" = "arm64" ]; then CURRENT_ARCH="arm64"; fi
+
+          echo "Building for ${CURRENT_OS}/${CURRENT_ARCH} (local platform)..."
+
+          # First build the flow binary with version info
+          GOOS=linux GOARCH=${CURRENT_ARCH} go build \
+            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -o flow
+
+          # Build Docker image for local platform
+          docker buildx build \
+            --platform "${CURRENT_OS}/${CURRENT_ARCH}" \
+            --tag "${IMAGE_REPO}:${IMAGE_TAG}" \
+            --load \
+            .
+
+          # Cleanup binary
+          rm -f flow
+
+          echo ""
+          echo "✓ Multi-arch image built for local platform"
+          echo "  Platform: ${CURRENT_OS}/${CURRENT_ARCH}"
+          echo "  Image: ${IMAGE_REPO}:${IMAGE_TAG}"
+          echo "  Test with: docker run --rm ${IMAGE_REPO}:${IMAGE_TAG} --version"
+        else
+          echo "Building and pushing multi-arch images..."
+          echo "  Platforms: linux/amd64, linux/arm64"
+          echo "  Image: ${IMAGE_REPO}:${IMAGE_TAG}"
+          echo ""
+
+          # Build binaries for both architectures
+          echo "Building binaries for multi-arch..."
+
+          # Build amd64
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -o flow-amd64
+
+          # Build arm64
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -o flow-arm64
+
+          # Create temporary Dockerfile that uses TARGETARCH for multi-arch builds
+          TEMP_DOCKERFILE=/tmp/Dockerfile.multiarch.$$
+
+          echo "FROM --platform=\$TARGETPLATFORM golang:1.25.1-bookworm" > "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo "ARG TARGETARCH" >> "$TEMP_DOCKERFILE"
+          echo 'ENV DISABLE_FLOW_INTERACTIVE="true"' >> "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo "# TODO: replace with examples repo" >> "$TEMP_DOCKERFILE"
+          echo 'ENV WORKSPACE="flow"' >> "$TEMP_DOCKERFILE"
+          echo 'ENV REPO="https://github.com/flowexec/flow.git"' >> "$TEMP_DOCKERFILE"
+          echo 'ENV BRANCH=""' >> "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo "WORKDIR /workspaces" >> "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo "# Copy the appropriate binary based on architecture" >> "$TEMP_DOCKERFILE"
+          echo 'COPY flow-${TARGETARCH} /usr/bin/flow' >> "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo 'RUN if [ -z "$BRANCH" ]; then git clone $REPO .; else git clone -b $BRANCH $REPO .; fi' >> "$TEMP_DOCKERFILE"
+          echo 'RUN flow workspace create $WORKSPACE . --set' >> "$TEMP_DOCKERFILE"
+          echo "" >> "$TEMP_DOCKERFILE"
+          echo 'ENTRYPOINT ["flow"]' >> "$TEMP_DOCKERFILE"
+          echo 'CMD ["--version"]' >> "$TEMP_DOCKERFILE"
+
+          # Build and push multi-arch image
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "${IMAGE_REPO}:${IMAGE_TAG}" \
+            --tag "${IMAGE_REPO}:latest" \
+            --push \
+            --file "$TEMP_DOCKERFILE" \
+            .
+
+          # Cleanup
+          rm -f flow-amd64 flow-arm64 "$TEMP_DOCKERFILE"
+
+          echo ""
+          echo "✓ Multi-arch images pushed to ${IMAGE_REPO}"
+          echo "  Tags: ${IMAGE_TAG}, latest"
+        fi
 
   - verb: run
     name: container
@@ -63,7 +197,7 @@ executables:
 
   - verb: push
     name: container
-    description: Push the flow container image to the registry
+    description: Push the flow container image to the registry (use with build multiarch for production)
     aliases: [image, docker]
     exec:
       dir: //
@@ -77,6 +211,15 @@ executables:
         - envKey: IMAGE_TAG
           default: latest
           flag: tag
+        - envKey: DRY_RUN
+          default: "false"
+          flag: dry-run
       cmd: |
+        if [ "$DRY_RUN" = "true" ]; then
+          echo "DRY RUN: Would push ${IMAGE_REPO}:${IMAGE_TAG}"
+          echo "Skipping actual push to registry"
+          exit 0
+        fi
+
         echo "pushing container image..."
         $BUILDER push $IMAGE_REPO:$IMAGE_TAG
