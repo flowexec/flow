@@ -81,7 +81,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Releasing version: ${VERSION}"
       - name: Install release tools
-        run: go install github.com/goreleaser/goreleaser@v2.12.5
+        run: go install github.com/goreleaser/goreleaser/v2@v2.12.5
       - uses: flowexec/action@v1
         with:
           executable: 'publish release --param VERSION=${{ steps.version.outputs.version }}'
