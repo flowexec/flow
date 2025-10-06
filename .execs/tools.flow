@@ -23,7 +23,7 @@ executables:
         - cmd: |
             if ! command -v goreleaser &> /dev/null; then
               echo "goreleaser is not installed. Installing..."
-              go install github.com/goreleaser/goreleaser@v2.12.5
+              go install github.com/goreleaser/goreleaser/v2@v2.12.5
             fi
         - cmd: |
             if ! command -v golangci-lint &> /dev/null; then
