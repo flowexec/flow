@@ -103,6 +103,10 @@ linters:
           - funlen
           - gocognit
           - gocyclo
+      # TODO: switch exec.Command usage to CommandContext
+      - linters:
+          - noctx
+        text: "os/exec.Command must not be called. use os/exec.CommandContext"
     paths:
       - third_party$
       - builtin$
