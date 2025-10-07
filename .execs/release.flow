@@ -108,12 +108,26 @@ executables:
       args:
         - envKey: IMAGE_TAG
           flag: tag
-          required: true
+          required: false
         - envKey: REGISTRY
           default: ghcr.io
           flag: registry
       cmd: |
         set -euo pipefail
+
+        # Determine IMAGE_TAG if not provided
+        if [ -z "${IMAGE_TAG:-}" ]; then
+          if [ -n "${VERSION:-}" ]; then
+            IMAGE_TAG="${VERSION}"
+          elif [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            IMAGE_TAG="${GITHUB_REF#refs/tags/}"
+          elif [ -n "${GITHUB_SHA:-}" ]; then
+            IMAGE_TAG="${GITHUB_SHA:0:12}"
+          else
+            echo "ERROR: Unable to determine IMAGE_TAG automatically."
+            exit 1
+          fi
+        fi
 
         echo "Publishing multi-arch Docker images to ${REGISTRY}..."
         echo "  Tag: ${IMAGE_TAG}"
