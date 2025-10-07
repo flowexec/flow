@@ -32,7 +32,7 @@ flow/
 ## Key Technologies & Frameworks
 
 ### Go CLI Application
-- **Language**: Go 1.24+ (see go.mod:3)
+- **Language**: Go 1.25+ (see go.mod:3)
 - **CLI Framework**: Cobra (github.com/spf13/cobra)
 - **TUI Framework**: Custom tuikit (github.com/flowexec/tuikit) based on github.com/charmbracelet/bubbletea 
 - **Testing**: Ginkgo BDD framework (github.com/onsi/ginkgo/v2)
@@ -84,14 +84,14 @@ The project heavily uses code generation:
 ## Configuration Files
 
 - **flow.yaml**: Workspace configuration for the flow repo itself
-- **go.mod**: Go dependencies and version (Go 1.24+)
+- **go.mod**: Go dependencies and version (Go 1.25+)
 - **desktop/package.json**: Node.js dependencies for desktop app
 - **desktop/src-tauri/tauri.conf.json**: Tauri desktop app configuration
 - **.execs/**: flow development workflows (executables)
 
 ## Development Setup
 
-1. **Prerequisites**: Go 1.24+, flow CLI installed
+1. **Prerequisites**: Go 1.25+, flow CLI installed
 2. **Setup**: `flow workspace add flow . --set`
 3. **Dependencies**: `flow install tools`
 4. **Verification**: `flow validate`
