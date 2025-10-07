@@ -1,5 +1,4 @@
 import {
-  ActionIcon,
   Badge,
   Card,
   Code,
@@ -9,9 +8,8 @@ import {
   Table,
   Text,
   Title,
-  Tooltip,
 } from "@mantine/core";
-import { IconFlag, IconInfoCircle, IconKey } from "@tabler/icons-react";
+import { IconFlag, IconKey, IconFile } from "@tabler/icons-react";
 import { EnrichedExecutable } from "../../types/executable";
 import {
   ExecutableArgument,
@@ -22,9 +20,9 @@ export type ExecutableEnvironmentDetailsProps = {
   executable: EnrichedExecutable;
 };
 
-export function ExecutableEnvironmentDetails({
-  executable,
-}: ExecutableEnvironmentDetailsProps) {
+type ParamType = "static" | "secret" | "prompt" | "file" | "unknown";
+
+export function ExecutableEnvironmentDetails({executable}: ExecutableEnvironmentDetailsProps) {
   const env =
     executable.exec ||
     executable.launch ||
@@ -50,54 +48,54 @@ export function ExecutableEnvironmentDetails({
                   Environment Parameters
                 </Group>
               </Title>
-              <Table>
+              <Table withTableBorder>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Variable</Table.Th>
+                    <Table.Th>Destination</Table.Th>
                     <Table.Th>Type</Table.Th>
                     <Table.Th>Source</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {env.params.map(
-                    (param: ExecutableParameter, index: number) => {
-                      const type = param.text
-                        ? "static"
-                        : param.secretRef
-                          ? "secret"
-                          : "prompt";
-                      const source =
-                        param.text || param.secretRef || param.prompt;
+                  {env.params.map((param: ExecutableParameter, index: number) => {
+                    const type = getParamType(param);
+                    const source = getParamSource(param);
+                    const fileDestination = param.outputFile;
 
-                      return (
-                        <Table.Tr key={index}>
-                          <Table.Td>
-                            <Code>{param.envKey}</Code>
-                          </Table.Td>
-                          <Table.Td>
-                            <Badge
-                              size="sm"
-                              variant="light"
-                              color={
-                                type === "secret"
-                                  ? "red"
-                                  : type === "prompt"
-                                    ? "blue"
-                                    : "gray"
-                              }
-                            >
-                              {type}
-                            </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm" style={{ maxWidth: 200 }}>
-                              {source}
-                            </Text>
-                          </Table.Td>
-                        </Table.Tr>
-                      );
-                    },
-                  )}
+                    return (
+                      <Table.Tr key={index}>
+                        <Table.Td>
+                          {param.envKey ? (
+                            <Group gap={4} wrap="nowrap">
+                              <Code>{param.envKey}</Code>
+                              <Badge size="xs" variant="dot" color="secondary">ENV</Badge>
+                            </Group>
+                          ) : fileDestination ? (
+                            <Group gap={4} wrap="nowrap">
+                              <IconFile size={14} />
+                              <Code>{fileDestination}</Code>
+                            </Group>
+                          ) : (
+                            <Text c="dimmed" size="sm">-</Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td>
+                          <Text
+                            size="sm"
+                            variant="transparent"
+                            c={getParamTypeColor(type)}
+                          >
+                            {type}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" style={{ wordBreak: "break-word", maxWidth: 300 }} truncate>
+                            {source}
+                          </Text>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
                 </Table.Tbody>
               </Table>
             </Stack>
@@ -115,49 +113,63 @@ export function ExecutableEnvironmentDetails({
                   Command Arguments
                 </Group>
               </Title>
-              <Table>
+              <Table withTableBorder>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Variable</Table.Th>
-                    <Table.Th>Input</Table.Th>
+                    <Table.Th>Destination</Table.Th>
+                    <Table.Th>CLI Input</Table.Th>
                     <Table.Th>Type</Table.Th>
                     <Table.Th>Required</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {env.args.map((arg: ExecutableArgument, index: number) => (
-                    <Table.Tr key={index}>
-                      <Table.Td>
-                        <Code>{arg.envKey}</Code>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <Badge size="sm" variant="light">
-                            {arg.pos ? `pos-${arg.pos}` : `--${arg.flag}`}
-                          </Badge>
-                          {arg.default && (
-                            <Tooltip label={`Default: ${arg.default}`}>
-                              <ActionIcon variant="subtle" size="xs">
-                                <IconInfoCircle size={12} />
-                              </ActionIcon>
-                            </Tooltip>
+                  {env.args.map((arg: ExecutableArgument, index: number) => {
+                    const fileDestination = arg.outputFile;
+
+                    return (
+                      <Table.Tr key={index}>
+                        <Table.Td>
+                          {arg.envKey ? (
+                            <Group gap={4} wrap="nowrap">
+                              <Code>{arg.envKey}</Code>
+                              <Badge size="xs" variant="dot" color="secondary">ENV</Badge>
+                            </Group>
+                          ) : fileDestination ? (
+                            <Group gap={4} wrap="nowrap">
+                              <IconFile size={14} />
+                              <Code>{fileDestination}</Code>
+                            </Group>
+                          ) : (
+                            <Text c="dimmed" size="sm">Not saved</Text>
                           )}
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{arg.type || "string"}</Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          size="sm"
-                          variant="light"
-                          color={arg.required ? "red" : "green"}
-                        >
-                          {arg.required ? "Yes" : "No"}
-                        </Badge>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs" wrap="wrap">
+                            <Code>
+                              {arg.pos ? `position=${arg.pos}` : `flag=${arg.flag}`}
+                            </Code>
+                            {arg.default && (
+                              <Text size="xs" c="secondary">
+                                default: {arg.default}
+                              </Text>
+                            )}
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Code>{arg.type || "string"}</Code>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
+                            size="sm"
+                            variant="light"
+                            color={arg.required ? "red.5" : "green.5"}
+                          >
+                            {arg.required ? "Yes" : "No"}
+                          </Badge>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
                 </Table.Tbody>
               </Table>
             </Stack>
@@ -166,4 +178,26 @@ export function ExecutableEnvironmentDetails({
       )}
     </Grid>
   );
+}
+
+function getParamType(param: ExecutableParameter): ParamType {
+  if (param.text) return "static";
+  if (param.secretRef) return "secret";
+  if (param.prompt) return "prompt";
+  if (param.envFile) return "file";
+  return "unknown";
+}
+
+function getParamSource(param: ExecutableParameter): string {
+  return param.text || param.secretRef || param.prompt || param.envFile || "-";
+}
+
+function getParamTypeColor(type: ParamType): string {
+  switch (type) {
+    case "secret": return "red.5";
+    case "prompt": return "blue.5";
+    case "file": return "purple.5";
+    case "static": return "gray.5";
+    default: return "gray.5";
+  }
 }

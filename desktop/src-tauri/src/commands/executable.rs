@@ -25,17 +25,46 @@ impl<E: CommandExecutor + 'static> ExecutableCommands<E> {
         &self,
         workspace: Option<&str>,
         namespace: Option<&str>,
+        tags: Option<&[&str]>,
+        verb: Option<&str>,
+        filter: Option<&str>,
     ) -> CommandResult<Vec<Executable>> {
         let mut args = vec!["browse", "--list"];
 
         if let Some(ws) = workspace {
-            args.extend_from_slice(&["--workspace", ws]);
+            if !ws.is_empty() {
+                args.extend_from_slice(&["--workspace", ws]);
+            }
         }
 
         if let Some(ns) = namespace {
-            args.extend_from_slice(&["--namespace", ns]);
+            if !ns.is_empty() {
+                args.extend_from_slice(&["--namespace", ns]);
+            } else {
+                args.push("--all");
+            }
         } else {
             args.push("--all");
+        }
+        
+        if let Some(tags) = tags {
+            for tag in tags {
+                if !tag.is_empty() {
+                    args.extend_from_slice(&["--tag", tag]);
+                }
+            }
+        }
+        
+        if let Some(verb) = verb {
+            if !verb.is_empty() {
+                args.extend_from_slice(&["--verb", verb]);
+            }
+        }
+        
+        if let Some(filter) = filter {
+            if !filter.is_empty() {
+                args.extend_from_slice(&["--filter", filter]);
+            }
         }
 
         let response: ExecutableResponse = self.executor.execute_json(&args).await?;

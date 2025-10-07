@@ -35,7 +35,6 @@ export function GetUIVerbType(executable: Executable): string | null {
       return DeactivationVerbType;
     case "watch":
     case "monitor":
-    case "track":
       return "monitoring";
     case "restart":
     case "reboot":

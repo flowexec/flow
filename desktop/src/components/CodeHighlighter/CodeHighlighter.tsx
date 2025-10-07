@@ -2,13 +2,11 @@ import { Box, Code } from "@mantine/core";
 import Prism from "prismjs";
 import "prismjs/components/prism-bash";
 import "prismjs/components/prism-shell-session";
-import "prismjs/themes/prism-dark.css";
-import "prismjs/themes/prism.css";
 import { useEffect, useRef } from "react";
 import { useNotifier } from "../../hooks/useNotifier";
 import { ThemeName } from "../../theme/types";
 import { NotificationType } from "../../types/notification";
-import { getConfigForTheme } from "./config";
+import { getConfigForTheme, themeMapper } from "./config";
 
 interface CodeHighlighterProps {
   children: string;
@@ -30,6 +28,19 @@ export function CodeHighlighter({
   const finalCopyButton =
     copyButton !== undefined ? copyButton : config.defaultCopyButton;
   const language = "bash";
+
+  // Dynamically load Prism theme CSS based on app theme via themeMapper
+  useEffect(() => {
+    const loadTheme = async () => {
+      const variant = theme ? themeMapper[theme] ?? "default" : "default";
+      if (variant === "dark") {
+        await import("prismjs/themes/prism-dark.css");
+      } else {
+        await import("prismjs/themes/prism.css");
+      }
+    };
+    void loadTheme();
+  }, [theme]);
 
   useEffect(() => {
     if (codeRef.current) {
@@ -63,7 +74,6 @@ export function CodeHighlighter({
         ref={containerRef}
         pos="relative"
         style={{
-          borderRadius: config.styling.borderRadius,
           overflow: "hidden",
         }}
       >
@@ -88,7 +98,7 @@ export function CodeHighlighter({
             margin: 0,
             padding: config.styling.padding,
             background: config.styling.backgroundColor,
-            borderRadius: config.styling.borderRadius,
+            border: "none",
             overflow: "auto",
             fontSize: config.styling.fontSize,
             lineHeight: config.styling.lineHeight,

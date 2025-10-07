@@ -26,6 +26,7 @@ export interface Theme {
       sidebar: string;
       header: string;
       card: string;
+      hero: string;
     };
   };
 }
