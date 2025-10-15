@@ -91,7 +91,7 @@ var OutputFormatFlag = &Metadata{
 	Name:      "output",
 	Shorthand: "o",
 	Usage:     "Output format. One of: yaml, json, or tui.",
-	Default:   "tui",
+	Default:   "",
 	Required:  false,
 }
 
@@ -263,5 +263,13 @@ var VaultFromFileFlag = &Metadata{
 	Shorthand: "c",
 	Usage:     "File path to read the external vault's configuration from. The file must be a valid vault configuration file.",
 	Default:   "",
+	Required:  false,
+}
+
+var GlobalCacheFlag = &Metadata{
+	Name:      "global",
+	Shorthand: "g",
+	Usage:     "Force use of the global cache scope, even when called from within an executable",
+	Default:   false,
 	Required:  false,
 }

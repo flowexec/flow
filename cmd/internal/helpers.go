@@ -56,13 +56,18 @@ func MarkFlagFilename(_ *context.Context, cmd *cobra.Command, name string) {
 }
 
 func TUIEnabled(ctx *context.Context, cmd *cobra.Command) bool {
-	formatDisabled := false
 	if flags.HasFlag(cmd, *flags.OutputFormatFlag) {
 		format := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
-		formatDisabled = format == "yaml" || format == "yml" || format == "json"
+		if format == "yaml" || format == "yml" || format == "json" {
+			return false
+		}
+		if format == "tui" {
+			envDisabled, _ := strconv.ParseBool(os.Getenv(flowIO.DisableInteractiveEnvKey))
+			return !envDisabled
+		}
 	}
 	envDisabled, _ := strconv.ParseBool(os.Getenv(flowIO.DisableInteractiveEnvKey))
-	return !formatDisabled && !envDisabled && ctx.Config.ShowTUI()
+	return !envDisabled && ctx.Config.ShowTUI()
 }
 
 func SetView(ctx *context.Context, cmd *cobra.Command, view tuikit.View) {

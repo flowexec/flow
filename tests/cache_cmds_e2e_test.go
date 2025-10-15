@@ -130,4 +130,92 @@ var _ = Describe("cache e2e", Ordered, func() {
 			Expect(out).NotTo(ContainSubstring("multi-key"))
 		})
 	})
+
+	When("using the --global flag", Ordered, func() {
+		BeforeAll(func() {
+			Expect(run.Run(ctx.Context, "cache", "clear", "--all")).To(Succeed())
+			utils.ResetTestContext(ctx, GinkgoTB())
+		})
+
+		It("should set a value in the global scope with --global flag", func() {
+			Expect(run.Run(ctx.Context, "cache", "set", "--global", "global-key", "global-value")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Key \"global-key\" set in the cache"))
+		})
+
+		It("should retrieve a value from the global scope with --global flag", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "cache", "get", "--global", "global-key")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("global-value"))
+		})
+
+		It("should set a value in execution scope without --global flag", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			// Simulate being in an execution by setting the bucket env var
+			GinkgoTB().Setenv("FLOW_PROCESS_BUCKET", "test:exec:scope")
+			Expect(run.Run(ctx.Context, "cache", "set", "exec-key", "exec-value")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Key \"exec-key\" set in the cache"))
+		})
+
+		It("should retrieve exec scope value without --global flag", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			GinkgoTB().Setenv("FLOW_PROCESS_BUCKET", "test:exec:scope")
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "cache", "get", "exec-key")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("exec-value"))
+		})
+
+		It("should set value in global scope even when in execution context", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			GinkgoTB().Setenv("FLOW_PROCESS_BUCKET", "test:exec:scope")
+			Expect(run.Run(ctx.Context, "cache", "set", "--global", "override-key", "override-value")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Key \"override-key\" set in the cache"))
+		})
+
+		It("should retrieve global value with --global flag from execution context", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			GinkgoTB().Setenv("FLOW_PROCESS_BUCKET", "test:exec:scope")
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "cache", "get", "--global", "override-key")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("override-value"))
+		})
+
+		It("should retrieve global value without execution context", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "cache", "get", "--global", "override-key")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("override-value"))
+		})
+
+		It("should remove a value from global scope with --global flag", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			Expect(run.Run(ctx.Context, "cache", "remove", "--global", "global-key")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Key \"global-key\" removed from the cache"))
+		})
+
+		It("should remove a value from global scope with --global in execution context", func() {
+			utils.ResetTestContext(ctx, GinkgoTB())
+			GinkgoTB().Setenv("FLOW_PROCESS_BUCKET", "test:exec:scope")
+			Expect(run.Run(ctx.Context, "cache", "remove", "--global", "override-key")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Key \"override-key\" removed from the cache"))
+		})
+	})
 })
