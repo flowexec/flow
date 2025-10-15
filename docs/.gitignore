@@ -1,0 +1,11 @@
+# Astro / Starlight
+node_modules/
+.dist/
+.next/
+.DS_Store
+.astro/
+dist/
+.env
+.env.*
+# Pagefind search index
+pagefind/
