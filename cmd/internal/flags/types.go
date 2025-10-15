@@ -265,3 +265,11 @@ var VaultFromFileFlag = &Metadata{
 	Default:   "",
 	Required:  false,
 }
+
+var GlobalCacheFlag = &Metadata{
+	Name:      "global",
+	Shorthand: "g",
+	Usage:     "Force use of the global cache scope, even when called from within an executable",
+	Default:   false,
+	Required:  false,
+}
