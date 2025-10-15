@@ -44,10 +44,11 @@ func registerCacheSetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			cacheSetFunc(ctx, cmd, args)
 		},
 	}
+	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheSetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	key := args[0]
 
 	var value string
@@ -80,7 +81,12 @@ func cacheSetFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
-	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
+	bucketName := store.EnvironmentBucket()
+	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
+	if global {
+		bucketName = store.RootBucket
+	}
+	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	defer func() {
@@ -105,17 +111,23 @@ func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			cacheGetFunc(ctx, cmd, args)
 		},
 	}
+	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheGetFunc(_ *context.Context, _ *cobra.Command, args []string) {
+func cacheGetFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 	key := args[0]
 
 	s, err := store.NewStore(store.Path())
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
-	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
+	bucketName := store.EnvironmentBucket()
+	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
+	if global {
+		bucketName = store.RootBucket
+	}
+	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	defer func() {
@@ -184,17 +196,23 @@ func registerCacheRemoveCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			cacheRemoveFunc(ctx, cmd, args)
 		},
 	}
+	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheRemoveFunc(_ *context.Context, _ *cobra.Command, args []string) {
+func cacheRemoveFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 	key := args[0]
 
 	s, err := store.NewStore(store.Path())
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
-	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
+	bucketName := store.EnvironmentBucket()
+	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
+	if global {
+		bucketName = store.RootBucket
+	}
+	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	defer func() {
@@ -250,4 +268,5 @@ func cacheClearFunc(_ *context.Context, cmd *cobra.Command, _ []string) {
 var dataStoreDescription = "The data store is a key-value store that can be used to persist data across executions. " +
 	"Values that are set outside of an executable will persist across all executions until they are cleared. " +
 	"When set within an executable, the data will only persist across serial or parallel sub-executables but all " +
-	"values will be cleared when the parent executable completes.\n\n"
+	"values will be cleared when the parent executable completes. " +
+	"Use the --global flag to force use of the global cache scope, even when called from within an executable.\n\n"
