@@ -24,7 +24,7 @@ flow browse [EXECUTABLE-REFERENCE] [flags]
   -h, --help                help for browse
   -l, --list                Show a simple list view of executables instead of interactive discovery.
   -n, --namespace string    Filter executables by namespace.
-  -o, --output string       Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string       Output format. One of: yaml, json, or tui.
   -t, --tag stringArray     Filter by tags.
   -v, --verb string         Filter executables by verb.
       --visibility string   Filter by visibility level (hierarchical). Valid: public, private, internal, hidden. Default: private

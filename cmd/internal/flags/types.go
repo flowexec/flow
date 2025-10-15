@@ -91,7 +91,7 @@ var OutputFormatFlag = &Metadata{
 	Name:      "output",
 	Shorthand: "o",
 	Usage:     "Output format. One of: yaml, json, or tui.",
-	Default:   "tui",
+	Default:   "",
 	Required:  false,
 }
 

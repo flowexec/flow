@@ -11,7 +11,7 @@ flow template get [flags]
 ```
   -f, --file string                  Path to the template file. It must be a valid flow file template.
   -h, --help                         help for get
-  -o, --output string                Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string                Output format. One of: yaml, json, or tui.
   -t, --template flow set template   Registered template name. Templates can be registered in the flow configuration file or with flow set template.
 ```
 

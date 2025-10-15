@@ -10,7 +10,7 @@ flow workspace get NAME [flags]
 
 ```
   -h, --help            help for get
-  -o, --output string   Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

@@ -11,7 +11,7 @@ flow logs [flags]
 ```
   -h, --help            help for logs
       --last            Print the last execution's logs
-  -o, --output string   Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands
