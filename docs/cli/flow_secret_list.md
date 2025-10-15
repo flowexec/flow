@@ -10,7 +10,7 @@ flow secret list [flags]
 
 ```
   -h, --help            help for list
-  -o, --output string   Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string   Output format. One of: yaml, json, or tui.
   -p, --plaintext       Output the secret value as plain text instead of an obfuscated string
 ```
 

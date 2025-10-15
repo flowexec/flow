@@ -16,7 +16,7 @@ flow cache list [flags]
 
 ```
   -h, --help            help for list
-  -o, --output string   Output format. One of: yaml, json, or tui. (default "tui")
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands
