@@ -99,7 +99,7 @@ flow generate cli
 
 **Important**: When modifying types, edit the `schemas/*.yaml` files, not the generated Go files in `types/`.
 
-### Documentation Generation <!-- {docsify-ignore} -->
+### Documentation Generation
 
 CLI and type documentation is generated automatically:
 
@@ -125,7 +125,7 @@ flow build binary ./bin/flow-dev
 
 ## Development Tools
 
-### Required Tools <!-- {docsify-ignore} -->
+### Required Tools
 
 These are installed automatically by `flow install tools`:
 
@@ -133,7 +133,7 @@ These are installed automatically by `flow install tools`:
 - [golangci-lint](https://golangci-lint.run/) - Code linting
 - [go-jsonschema](https://github.com/atombender/go-jsonschema) - Generate Go types from YAML schemas
 
-### Additional Tools <!-- {docsify-ignore} -->
+### Additional Tools
 
 - [goreleaser](https://goreleaser.com/) - Binary builds and package distribution
 - [Docker Buildx](https://docs.docker.com/buildx/) - Multi-arch container builds (included with Docker Desktop)

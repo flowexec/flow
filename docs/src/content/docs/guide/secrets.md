@@ -207,7 +207,7 @@ flow vault create team --type age --identity-file ~/identities/identity.txt --id
 
 ## Using Secrets in Workflows
 
-### Basic Usage <!-- {docsify-ignore} -->
+### Basic Usage
 
 ```yaml
 executables:
@@ -222,7 +222,7 @@ executables:
       cmd: ./deploy.sh
 ```
 
-### Cross-Vault References <!-- {docsify-ignore} -->
+### Cross-Vault References
 
 Reference secrets from different vaults:
 
@@ -241,7 +241,7 @@ executables:
 
 ## Secret Management
 
-### Adding Secrets <!-- {docsify-ignore} -->
+### Adding Secrets
 
 ```shell
 # Interactive prompt (recommended)
@@ -256,7 +256,7 @@ cat secret.txt | flow secret set my-secret
 flow secret set my-secret --file secret.txt
 ```
 
-### Viewing Secrets <!-- {docsify-ignore} -->
+### Viewing Secrets
 
 ```shell
 # List all secrets (values hidden)
@@ -272,7 +272,7 @@ flow secret get my-secret --plaintext
 flow secret get my-secret --copy
 ```
 
-### Updating and Removing <!-- {docsify-ignore} -->
+### Updating and Removing
 
 ```shell
 # Update a secret (prompts for new value)
@@ -282,7 +282,7 @@ flow secret set existing-secret
 flow secret remove old-secret
 ```
 
-### Working with Multiple Vaults  <!-- {docsify-ignore} -->
+### Working with Multiple Vaults 
 
 When working with multiple vaults, secrets are isolated per vault but the vault's name can be used to reference secrets across vaults.
 You can retrieve secrets from a specific vault without switching to it by using the vault name as a prefix:
@@ -297,7 +297,7 @@ flow secret get development/api-key
 
 See the [vault command reference](../cli/flow_vault.md) for detailed commands and options.
 
-### Vault Configuration <!-- {docsify-ignore} -->
+### Vault Configuration
 
 ```shell
 # View the current vault
@@ -323,7 +323,7 @@ flow vault create myapp --path /storage/myapp
 
 This data is encrypted, so you can safely store it as-is without worrying about plaintext secrets being exposed.
 
-### Managing Multiple Vaults <!-- {docsify-ignore} -->
+### Managing Multiple Vaults
 
 Switch between vaults for different projects or environments:
 
@@ -341,7 +341,7 @@ flow secret set api-key
 flow secret list
 ```
 
-### Backup and Recovery <!-- {docsify-ignore} -->
+### Backup and Recovery
 
 Vault data is stored in your flow config directory:
 

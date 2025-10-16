@@ -10,10 +10,6 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkFixMdLinks],
   },
-  redirects: {
-    '/README': '/',
-    '/README/': '/',
-  },
   integrations: [
     // Use Starlight with configuration from starlight.config.ts
     starlight({
@@ -31,9 +27,8 @@ export default defineConfig({
         },
         components: { },
         tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 4 },
-        // shikiConfig: { themes: { light: 'github-light', dark: 'github-dark' } },
         editLink: {
-            baseUrl: 'https://github.com/flowexec/flow/edit/main/docs/src/content/docs/'
+            baseUrl: 'https://github.com/flowexec/flow/edit/main/docs/src/content/'
         },
     }),
   ],

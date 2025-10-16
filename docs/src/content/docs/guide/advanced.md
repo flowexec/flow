@@ -11,7 +11,7 @@ to conditions, maintain state, and compose multiple operations into powerful aut
 
 Make your workflows smart by running different steps based on runtime conditions.
 
-### Basic Operators <!-- {docsify-ignore} -->
+### Basic Operators
 
 The expression language supports standard comparison and logical operators:
 
@@ -22,7 +22,7 @@ The expression language supports standard comparison and logical operators:
 
 **See the [Expr Language Definition](https://expr-lang.org/docs/language-definition) for all available operators and functions.**
 
-### Basic Conditions <!-- {docsify-ignore} -->
+### Basic Conditions
 
 Use the `if` field to control when executables run:
 
@@ -44,7 +44,7 @@ executables:
         - cmd: kubectl apply -f deployment.yaml
 ```
 
-### Environment-Based Conditions <!-- {docsify-ignore} -->
+### Environment-Based Conditions
 
 Check environment variables to customize behavior:
 
@@ -67,7 +67,7 @@ executables:
           cmd: npm test
 ```
 
-### File System Conditions <!-- {docsify-ignore} -->
+### File System Conditions
 Check for files or directories to control execution:
 
 ```yaml
@@ -88,7 +88,7 @@ executables:
         - cmd: docker build -t myapp .
 ```
 
-### Data-Driven Conditions <!-- {docsify-ignore} -->
+### Data-Driven Conditions
 
 Use stored data to control execution flow:
 
@@ -110,7 +110,7 @@ executables:
           cmd: echo "Valid build on Linux"
 ```
 
-### Available Context <!-- {docsify-ignore} -->
+### Available Context
 
 Conditions have access to extensive runtime information:
 
@@ -148,7 +148,7 @@ Additionally the following functions are provided alongside the Expr language de
 
 Persist data across executions and share information between workflow steps.
 
-### Cache Basics <!-- {docsify-ignore} -->
+### Cache Basics
 
 The cache stores key-value data with different persistence scopes:
 
@@ -171,7 +171,7 @@ executables:
             docker tag myapp:latest myapp:$build_id
 ```
 
-### Cache Persistence Scopes <!-- {docsify-ignore} -->
+### Cache Persistence Scopes
 
 Understanding cache persistence is crucial for complex workflows:
 
@@ -228,7 +228,7 @@ flow cache clear --all
 
 See the [cache command reference](../cli/flow_cache.md) for detailed commands and options.
 
-### Temporary Directories <!-- {docsify-ignore} -->
+### Temporary Directories
 
 Use isolated temporary directories for complex operations:
 
@@ -251,7 +251,7 @@ When defined for a `serial` or `parallel` executable, the temporary directory is
 
 Build complex automations by combining executables in sophisticated ways.
 
-### Serial vs Parallel Execution <!-- {docsify-ignore} -->
+### Serial vs Parallel Execution
 
 **Serial** - Steps run one after another:
 ```yaml
@@ -282,7 +282,7 @@ executables:
         - cmd: npm run lint
 ```
 
-### Mixed Execution Patterns <!-- {docsify-ignore} -->
+### Mixed Execution Patterns
 
 Combine serial and parallel for sophisticated workflows by defining separate executables and referencing them:
 
@@ -332,7 +332,7 @@ executables:
 > [!NOTE]
 > **Cross-workspace references**: To reference executables from other workspaces, they must have `visibility: public` in their configuration. Private, internal, and hidden executables cannot be referenced from other workspaces.
 
-### Error Handling and Retries <!-- {docsify-ignore} -->
+### Error Handling and Retries
 
 Build resilient workflows that handle failures gracefully:
 
@@ -359,7 +359,7 @@ executables:
             fi
 ```
 
-### Review Gates <!-- {docsify-ignore} -->
+### Review Gates
 
 Add human approval steps for critical operations:
 
@@ -384,7 +384,7 @@ executables:
 
 Understanding how environment variables are resolved and prioritized in flow executables.
 
-### Resolution Order <!-- {docsify-ignore} -->
+### Resolution Order
 
 Environment variables are resolved in this order (highest to lowest priority):
 
@@ -431,7 +431,7 @@ flow deploy app verbose=false --param ENVIRONMENT=production
 # ENVIRONMENT=production    (--param override wins over all)
 ```
 
-### Environment Variable Expansion <!-- {docsify-ignore} -->
+### Environment Variable Expansion
 
 Environment variables are expanded in certain contexts:
 
@@ -460,7 +460,7 @@ executables:
         kubectl apply -f k8s/$ENV/
 ```
 
-### Special Environment Variables <!-- {docsify-ignore} -->
+### Special Environment Variables
 
 flow provides special environment variables automatically:
 
@@ -471,7 +471,7 @@ flow provides special environment variables automatically:
 - `FLOW_DEFINITION_DIR` - Directory containing the current flow file
 - `FLOW_TMP_DIR` - Temporary directory for current execution, if `f:tmp` is set
 
-### Environment Inheritance <!-- {docsify-ignore} -->
+### Environment Inheritance
 
 Child executables inherit environment variables from their parents:
 

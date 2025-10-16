@@ -26,7 +26,7 @@ flow browse --all --filter "database"  # Search names and descriptions
 
 ## Executable Configuration
 
-### Basic Structure <!-- {docsify-ignore} -->
+### Basic Structure
 
 Every executable needs a verb and optionally a name:
 
@@ -43,7 +43,7 @@ executables:
       cmd: echo "Hello, world!"
 ```
 
-### Common Fields <!-- {docsify-ignore} -->
+### Common Fields
 
 - **verb**: Action type (run, build, test, deploy, etc.)
 - **verbAliases**: Alternative names for the verb
@@ -54,7 +54,7 @@ executables:
 - **timeout**: Maximum execution time (e.g., 30s, 5m, 1h)
 - **visibility**: Access control (public, private, internal, hidden)
 
-### Visibility Levels <!-- {docsify-ignore} -->
+### Visibility Levels
 
 - **public**: Available from any workspace
 - **private**: Only available within the same workspace but shown in browse lists (default)
@@ -71,7 +71,7 @@ Customize executable behavior with environment variables or temporary files usin
 > By default, values defined in the `.env` file at the workspace root are automatically loaded. This can be overriden
 > in the workspace configuration file with the `envFiles` field.
 
-### Parameters (`params`) <!-- {docsify-ignore} -->
+### Parameters (`params`)
 
 Set environment data from various sources:
 
@@ -112,7 +112,7 @@ executables:
 - `text`: Static value
 - `envFile`: Load environment variables from a file
 
-### Arguments (`args`) <!-- {docsify-ignore} -->
+### Arguments (`args`)
 
 Handle command-line arguments:
 
@@ -152,7 +152,7 @@ flow build container v1.2.3 publish=true registry=my-registry.com
 - `pos`: Positional argument (by position number, starting from 1)
 - `flag`: Named flag argument
 
-### Command-Line Overrides <!-- {docsify-ignore} -->
+### Command-Line Overrides
 
 Override any environment variable with `--param`:
 
@@ -203,7 +203,7 @@ executables:
 - `f:tmp`: Temporary directory (auto-cleaned)
 - `$VAR`: Environment variable expansion
 
-## Executable Types <!-- {docsify-ignore} -->
+## Executable Types
 
 ### exec - Shell Commands
 
@@ -544,7 +544,7 @@ executables:
 - Referenced executables must have `visibility: public`
 - Private, internal, and hidden executables cannot be cross-referenced
 
-## What's Next? <!-- {docsify-ignore} -->
+## What's Next?
 
 Now that you understand all executable types and options:
 

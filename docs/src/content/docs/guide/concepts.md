@@ -268,7 +268,7 @@ flow run hello                 # By name
 flow build my-project/app      # By full reference
 ```
 
-## What's Next? <!-- {docsify-ignore} -->
+## What's Next?
 
 Now that you understand the core concepts:
 

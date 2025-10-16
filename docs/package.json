@@ -7,8 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check",
-    "migrate": "node ./scripts/migrate-content.mjs"
+    "check": "astro check"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.29.2",

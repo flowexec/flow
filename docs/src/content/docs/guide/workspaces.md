@@ -8,7 +8,7 @@ Workspaces organize your flow files and executables into logical projects. Think
 
 ## Workspace Management
 
-### Adding Workspaces <!-- {docsify-ignore} -->
+### Adding Workspaces
 
 Register any directory as a workspace:
 
@@ -25,7 +25,7 @@ flow workspace add my-project /path/to/project --set
 
 When you add a workspace, flow creates a `flow.yaml` configuration file in the root directory if one doesn't exist.
 
-### Switching Workspaces <!-- {docsify-ignore} -->
+### Switching Workspaces
 
 Change your current workspace:
 
@@ -37,7 +37,7 @@ flow workspace switch my-project
 flow workspace switch my-project --fixed
 ```
 
-### Listing and Viewing <!-- {docsify-ignore} -->
+### Listing and Viewing
 
 Explore your registered workspaces:
 
@@ -55,7 +55,7 @@ flow workspace get
 flow workspace get my-project
 ```
 
-### Removing Workspaces <!-- {docsify-ignore} -->
+### Removing Workspaces
 
 Unregister a workspace:
 
@@ -95,7 +95,7 @@ executables:
   excluded: ["node_modules/", ".git/", "tmp/"]
 ```
 
-### Configuration Options <!-- {docsify-ignore} -->
+### Configuration Options
 
 **Display and Documentation:**
 - `displayName`: Human-readable name for the workspace
@@ -117,7 +117,7 @@ executables:
 
 Control how flow determines your current workspace:
 
-### Dynamic Mode (Default) <!-- {docsify-ignore} -->
+### Dynamic Mode (Default)
 flow automatically switches to the workspace containing your current directory:
 
 ```shell
@@ -129,7 +129,7 @@ cd ~/code/api-service    # Uses api-service workspace
 cd ~/code/frontend       # Uses frontend workspace
 ```
 
-### Fixed Mode <!-- {docsify-ignore} -->
+### Fixed Mode
 flow always uses the workspace you've explicitly set:
 
 ```shell
@@ -144,7 +144,7 @@ flow workspace switch my-project
 
 ## Multi-Workspace Workflows
 
-### Cross-Workspace References <!-- {docsify-ignore} -->
+### Cross-Workspace References
 
 Reference executables from other workspaces (requires `visibility: public`):
 
@@ -159,7 +159,7 @@ executables:
         - ref: deploy infrastructure/k8s:services
 ```
 
-### Shared Workspaces <!-- {docsify-ignore} -->
+### Shared Workspaces
 
 Create workspaces for shared tools and utilities:
 
@@ -171,7 +171,7 @@ flow workspace add shared-tools ~/shared
 flow send shared-tools/slack:notification "Deployment complete"
 ```
 
-## What's Next? <!-- {docsify-ignore} -->
+## What's Next?
 
 Now that you can organize your automation with workspaces:
 

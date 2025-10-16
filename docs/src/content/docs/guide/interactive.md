@@ -11,7 +11,7 @@ This guide covers using the interactive browser, customizing the experience, and
 
 The `flow browse` command launches an interactive browser for discovering and running executables.
 
-### Basic Navigation <!-- {docsify-ignore} -->
+### Basic Navigation
 
 ```shell
 flow browse  # Launch the interactive browser
@@ -27,7 +27,7 @@ flow browse  # Launch the interactive browser
 - <kbd>H</kbd> - Show help menu with all shortcuts
 - <kbd>Q</kbd> - Quit the browser
 
-### Filtering and Search <!-- {docsify-ignore} -->
+### Filtering and Search
 
 Filter executables by various criteria:
 
@@ -56,7 +56,7 @@ flow browse --all
 flow browse --workspace api --verb deploy --tag production
 ```
 
-### Running Executables <!-- {docsify-ignore} -->
+### Running Executables
 
 **From the browser:**
 - Select an executable and press <kbd>R</kbd> to run it
@@ -75,7 +75,7 @@ flow deploy api:production
 
 Control how flow displays information with output format options.
 
-### TUI vs Non-Interactive <!-- {docsify-ignore} -->
+### TUI vs Non-Interactive
 
 ```shell
 # Interactive TUI (default)
@@ -89,7 +89,7 @@ flow workspace list --output json
 flow secret list --output yaml
 ```
 
-### Disabling the TUI <!-- {docsify-ignore} -->
+### Disabling the TUI
 
 For scripts, CI/CD, or personal preference:
 
@@ -103,7 +103,7 @@ DISABLE_FLOW_INTERACTIVE=true flow browse
 
 ## Customization
 
-### Themes <!-- {docsify-ignore} -->
+### Themes
 
 Choose from several built-in themes:
 
@@ -116,7 +116,7 @@ flow config set theme dracula      # Dracula
 flow config set theme tokyo-night  # Tokyo Night
 ```
 
-### Custom Colors <!-- {docsify-ignore} -->
+### Custom Colors
 
 Override theme colors by editing your config file:
 
@@ -132,7 +132,7 @@ colorOverride:
 
 > **Complete reference**: See the [config file reference](../types/config.md#ColorPalette) for all color options.
 
-### Notifications <!-- {docsify-ignore} -->
+### Notifications
 
 Get notified when long-running executables complete:
 
@@ -147,7 +147,7 @@ flow config set notifications true --sound
 flow config set notifications false
 ```
 
-### Log Display <!-- {docsify-ignore} -->
+### Log Display
 
 Control how command output is displayed:
 
@@ -168,7 +168,7 @@ executables:
       cmd: echo "Debug output"
 ```
 
-### Workspace Modes <!-- {docsify-ignore} -->
+### Workspace Modes
 
 Control how flow determines your current workspace:
 
@@ -182,7 +182,7 @@ flow config set workspace-mode fixed
 
 > **Learn more**: See the [Workspaces guide](workspaces.md) for detailed workspace mode explanations.
 
-### Timeouts <!-- {docsify-ignore} -->
+### Timeouts
 
 Set default timeout for all executables:
 
@@ -196,7 +196,7 @@ flow config set timeout 10m
 
 ## Configuration Management
 
-### View Current Settings <!-- {docsify-ignore} -->
+### View Current Settings
 
 ```shell
 # View all settings
@@ -206,7 +206,7 @@ flow config get
 flow config get --output json | jq '.theme'
 ```
 
-### Reset to Defaults <!-- {docsify-ignore} -->
+### Reset to Defaults
 
 ```shell
 # Reset all configuration
@@ -215,7 +215,7 @@ flow config reset
 # Warning: This overwrites all customizations
 ```
 
-### Configuration File Location <!-- {docsify-ignore} -->
+### Configuration File Location
 
 Your config is stored in:
 - **Linux**: `~/.config/flow/config.yaml`

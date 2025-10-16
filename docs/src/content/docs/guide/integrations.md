@@ -9,12 +9,12 @@ flow integrates with popular CI/CD platforms, AI assistants, and containerized e
 
 ## AI Assistant Integration
 
-### Model Context Protocol (MCP) <!-- {docsify-ignore} -->
+### Model Context Protocol (MCP)
 
 Connect flow to AI assistants through the local Model Context Protocol server for natural language workflow management.
 The flow MCP server enables AI assistants to discover, understand, and execute your flow workflows through conversational interfaces.
 
-#### Basic Usage <!-- {docsify-ignore} -->
+#### Basic Usage
 
 Add the MCP server command to your favorite MCP client:
 
@@ -45,7 +45,7 @@ The server uses stdio transport and provides AI assistants with:
 > [!NOTE]
 > **Learn more about MCP**: Visit the [Model Context Protocol](https://modelcontextprotocol.io) documentation for client setup and integration details.
 
-## CI/CD & Deployment <!-- {docsify-ignore} -->
+## CI/CD & Deployment
 
 ### GitHub Actions
 
@@ -71,7 +71,7 @@ jobs:
 
 Run flow in containerized environments for CI/CD pipelines or isolated execution.
 
-### Basic Usage <!-- {docsify-ignore} -->
+### Basic Usage
 
 ```shell
 # Run with default workspace
@@ -87,7 +87,7 @@ docker run -it --rm ghcr.io/flowexec/flow validate
 - `WORKSPACE`: Workspace name to use (defaults to "flow")
 
 
-### Workspace from Git <!-- {docsify-ignore} -->
+### Workspace from Git
 
 Automatically clone and configure a workspace:
 
@@ -99,7 +99,7 @@ docker run -it --rm \
   ghcr.io/flowexec/flow exec "deploy app"
 ```
 
-### Local Workspace <!-- {docsify-ignore} -->
+### Local Workspace
 
 Mount your local workspace:
 
@@ -111,7 +111,7 @@ docker run -it --rm \
   ghcr.io/flowexec/flow exec "build app"
 ```
 
-### In CI/CD Pipelines <!-- {docsify-ignore} -->
+### In CI/CD Pipelines
 
 Any CI/CD platform that supports Docker can run flow. The key is:
 

@@ -52,7 +52,7 @@ flow template generate my-app --template webapp
 
 Templates have four main parts:
 
-### 1. Forms - Collect User Input <!-- {docsify-ignore} -->
+### 1. Forms - Collect User Input
 
 Forms define interactive prompts shown during generation:
 
@@ -79,7 +79,7 @@ form:
 - `masked` - Hidden input for passwords
 - `confirm` - Yes/no question
 
-### 2. Templates - Generate Flow Files <!-- {docsify-ignore} -->
+### 2. Templates - Generate Flow Files
 
 The main template creates your flow file:
 
@@ -100,7 +100,7 @@ template: |
         cmd: kubectl scale deployment {{ name }} --replicas={{ form["replicas"] }}
 ```
 
-### 3. Artifacts - Copy Supporting Files <!-- {docsify-ignore} -->
+### 3. Artifacts - Copy Supporting Files
 
 Copy and optionally template additional files:
 
@@ -120,7 +120,7 @@ artifacts:
     if: form["type"] == "helm"
 ```
 
-### 4. Hooks - Run Commands <!-- {docsify-ignore} -->
+### 4. Hooks - Run Commands
 
 Execute commands before/after generation:
 
@@ -194,7 +194,7 @@ template: |
 
 See the [template command reference](../cli/flow_template.md) for all detailed commands and options.
 
-### Register Templates <!-- {docsify-ignore} -->
+### Register Templates
 
 ```shell
 # From file
@@ -207,7 +207,7 @@ flow template list
 flow template get -t webapp
 ```
 
-### Generate from Templates <!-- {docsify-ignore} -->
+### Generate from Templates
 
 ```shell
 # Using registered template
