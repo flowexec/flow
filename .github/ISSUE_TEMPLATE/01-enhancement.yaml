@@ -1,8 +1,8 @@
 name: Enhancement
 description: Document a new feature idea or other project enhancement
 labels: [enhancement, triage]
-#assignees:
-#  - jahvon
+assignees:
+  - jahvon
 body:
   - type: textarea
     id: summary

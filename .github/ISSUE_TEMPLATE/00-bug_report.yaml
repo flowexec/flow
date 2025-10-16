@@ -1,8 +1,8 @@
 name: Bug Report
 description: File a bug report
 labels: [bug, triage]
-#assignees:
-#  - jahvon
+assignees:
+  - jahvon
 body:
   - type: textarea
     id: summary
