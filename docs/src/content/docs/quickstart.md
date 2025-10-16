@@ -124,10 +124,10 @@ You'll see real-world examples of builds, tests, and development workflows used 
 
 Now that you've got the basics:
 
-- **Learn the fundamentals** → [Core concepts](guide/concepts.md)
-- **Secure your workflows** → [Working with secrets](guide/secrets.md)
-- **Build complex automations** → [Advanced workflows](guide/advanced.md)
-- **Customize your experience** → [Interactive UI](guide/interactive.md)
+- **Learn the fundamentals** → [Core concepts](guides/concepts.md)
+- **Secure your workflows** → [Working with secrets](guides/secrets.md)
+- **Build complex automations** → [Advanced workflows](guides/advanced.md)
+- **Customize your experience** → [Interactive UI](guides/interactive.md)
 
 ## Getting Help
 
