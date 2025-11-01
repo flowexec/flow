@@ -48,7 +48,7 @@ jobs:
           flow-version: 'main'
         id: unit-tests
       - name: Upload unit test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: unit-coverage
           path: unit-coverage.out
@@ -73,7 +73,7 @@ jobs:
             }
         id: e2e-tests
       - name: Upload E2E test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-coverage
           path: e2e-coverage.out
