@@ -85,17 +85,6 @@ executables:
             echo "E2E tests completed"
           retries: 1
 
-  - verb: test
-    name: desktop
-    tags: [desktop]
-    description: Run desktop application tests
-    exec:
-      dir: //desktop
-      cmd: |
-        echo "Running Tauri desktop tests..."
-        npm test
-        echo "Desktop tests completed"
-
   - verb: transform
     name: coverage
     tags: [codecov]

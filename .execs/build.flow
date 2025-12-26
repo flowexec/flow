@@ -9,7 +9,6 @@ executables:
       execs:
         - ref: generate cli
         - ref: generate docs
-        - ref: generate tauri
 
   - verb: build
     name: binary
@@ -51,44 +50,6 @@ executables:
         echo "Generating go CLI code..."
         go generate ./...
         echo "All go code generated successfully"
-
-  - verb: generate
-    name: tauri
-    aliases: [desktop]
-    tags: [desktop]
-    description: Generate code for the Tauri frontend and backend.
-    parallel:
-      failFast: false
-      execs:
-        - ref: generate frontend
-        - ref: generate backend
-
-  - verb: generate
-    name: frontend
-    aliases: [ts]
-    description: Generate TypeScript types for the Tauri's frontend.
-    exec:
-      dir: //desktop
-      cmd: |
-        if ! command -v npm &> /dev/null; then
-          echo "npm is not installed. Please install Node.js and npm."
-          exit 1
-        fi
-        if [ ! -d "node_modules" ]; then
-          echo "Installing npm dependencies..."
-          npm install
-        else
-          echo "npm dependencies already installed"
-        fi
-        npm run generate-ts
-
-  - verb: generate
-    name: backend
-    aliases: [rust]
-    description: Generate code for the Tauri desktop app's backend.
-    exec:
-      dir: //desktop
-      cmd: ./scripts/generate-rust-types.sh
 
   - verb: update
     name: modules
