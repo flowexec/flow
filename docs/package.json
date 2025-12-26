@@ -4,15 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "check": "astro check"
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
   },
-  "dependencies": {
-    "@astrojs/starlight": "^0.36.1",
-    "@astrojs/tailwind": "^6.0.2",
-    "astro": "^5.14.5",
-    "starlight-theme-flexoki": "^0.2.0"
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-tabs": "0.7.1",
+    "vue": "^3.5.13"
   }
 }

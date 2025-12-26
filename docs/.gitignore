@@ -3,7 +3,8 @@ node_modules/
 .dist/
 .next/
 .DS_Store
-.astro/
+.vitepress/cache
+.vitepress/dist/
 dist/
 .env
 .env.*
