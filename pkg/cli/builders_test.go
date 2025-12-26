@@ -2,13 +2,13 @@ package cli_test
 
 import (
 	stdCtx "context"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/pkg/cli"
 	"github.com/flowexec/flow/pkg/context"
 )
@@ -23,7 +23,8 @@ var _ = Describe("BuildRootCommand", func() {
 
 	BeforeEach(func() {
 		bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
-		ctx = context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
+		r, w, _ := os.Pipe()
+		ctx = context.NewContext(bkgCtx, cancelFunc, r, w)
 	})
 
 	AfterEach(func() {
@@ -83,7 +84,8 @@ var _ = Describe("RegisterAllCommands", func() {
 
 	BeforeEach(func() {
 		bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
-		ctx = context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
+		r, w, _ := os.Pipe()
+		ctx = context.NewContext(bkgCtx, cancelFunc, r, w)
 		rootCmd = cli.BuildRootCommand(ctx)
 	})
 
