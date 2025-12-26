@@ -1,4 +1,4 @@
-<p align="center"><a href="https://flowexec.io"><img src="docs/_media/logo.png" alt="flow" width="200"/></a></p>
+<p align="center"><a href="https://flowexec.io"><img src="docs/public/icon.png" alt="flow" width="100"/></a></p>
 
 <p align="center">
     <a href="https://img.shields.io/github/v/release/flowexec/flow"><img src="https://img.shields.io/github/v/release/flowexec/flow" alt="GitHub release"></a>
