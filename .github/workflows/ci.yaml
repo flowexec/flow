@@ -28,7 +28,7 @@ jobs:
           timeout: '5m'
           flow-version: 'main'
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: lint.sarif
           category: golangci-lint
@@ -158,6 +158,6 @@ jobs:
           timeout: '10m'
           flow-version: 'main'
       - name: Upload govuln SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: govuln.sarif
