@@ -19,8 +19,22 @@ executables:
         - envKey: NETLIFY_SITE_ID
           secretRef: netlify-flow-site-id
       cmd: |
-          if [ "${ENVIRONMENT}" = "production" ]; then
-            npx netlify-cli deploy --dir=dist --prod
+          # Generate deploy message from git log
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+          # Check if branch is dirty
+          if ! git diff-index --quiet HEAD --; then
+            DIRTY=" (dirty)"
           else
-            npx netlify-cli deploy --dir=dist
+            DIRTY=""
+          fi
+
+          MESSAGE="${BRANCH}@${COMMIT_SHA}${DIRTY}: ${COMMIT_MSG}"
+
+          if [ "${ENVIRONMENT}" = "production" ]; then
+            npx netlify-cli deploy --dir=dist --prod --message="${MESSAGE}"
+          else
+            npx netlify-cli deploy --dir=dist --message="${MESSAGE}"
           fi
