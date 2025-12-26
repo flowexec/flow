@@ -30,7 +30,7 @@ jobs:
       - name: Deploy to Netlify
         uses: flowexec/action@v1
         with:
-          executable: 'deploy docs:netlify ${{ github.event.inputs.environment || 'production' }}'
+          executable: "deploy docs:netlify ${{ github.event.inputs.environment || 'production' }}"
           timeout: '5m'
           flow-version: 'main'
           secrets: |
