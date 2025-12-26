@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	schemaDir    = "docs/schemas"
+	schemaDir    = "docs/public/schemas"
 	mcpSchemaDir = "internal/mcp/resources"
 	idBase       = "https://flowexec.io/schemas"
 )

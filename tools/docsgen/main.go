@@ -18,11 +18,6 @@ const (
 	cliDir  = "cli"
 )
 
-var (
-	oldCliRoot = filepath.Join(DocsDir, cliDir, "flow.md")
-	newCliRoot = filepath.Join(DocsDir, cliDir, "README.md")
-)
-
 func main() {
 	fmt.Println("generating CLI docs...")
 	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
@@ -33,9 +28,6 @@ func main() {
 	cmd.RegisterSubCommands(ctx, rootCmd)
 	rootCmd.DisableAutoGenTag = true
 	if err := doc.GenMarkdownTree(rootCmd, filepath.Join(rootDir(), DocsDir, cliDir)); err != nil {
-		panic(err)
-	}
-	if err := os.Rename(oldCliRoot, newCliRoot); err != nil {
 		panic(err)
 	}
 

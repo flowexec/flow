@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-SCHEMAS_DIR="../docs/schemas"
+SCHEMAS_DIR="../docs/public/schemas"
 OUTPUT_DIR="src-tauri/src/types/generated"
 
 mkdir -p "$OUTPUT_DIR"

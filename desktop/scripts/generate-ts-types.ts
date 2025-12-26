@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import { compile } from "json-schema-to-typescript";
 import path from "path";
 
-const SCHEMAS_DIR = path.resolve(process.cwd(), "../docs/schemas");
+const SCHEMAS_DIR = path.resolve(process.cwd(), "../docs/public/schemas");
 const OUTPUT_DIR = path.resolve(process.cwd(), "src/types/generated");
 
 async function generateTypes() {

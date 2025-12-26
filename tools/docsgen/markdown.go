@@ -52,7 +52,12 @@ func generateMarkdownDocs() {
 			}
 			var buf bytes.Buffer
 			tmpl, err := template.New(page.Filename).
-				Funcs(template.FuncMap{"TypeStr": typeStr, "OneLine": removeNewlines, "IsRequired": requiredStr}).
+				Funcs(template.FuncMap{
+					"TypeStr":    typeStr,
+					"OneLine":    removeNewlines,
+					"IsRequired": requiredStr,
+					"DefaultStr": defaultStr,
+				}).
 				Parse(typeTemplate)
 			if err != nil {
 				panic(err)
@@ -140,7 +145,7 @@ func typeStr(s *schema.JSONSchema) string {
 		strings.HasPrefix(name, "[]"):
 		return fmt.Sprintf("`%s`", name)
 	default:
-		return fmt.Sprintf("[%s](#%s)", name, name)
+		return fmt.Sprintf("[%s](#%s)", name, strings.ToLower(name))
 	}
 }
 
@@ -155,4 +160,15 @@ func requiredStr(list []string, key schema.FieldKey) string {
 
 func removeNewlines(s string) string {
 	return strings.ReplaceAll(s, "\n", " ")
+}
+
+func defaultStr(val interface{}) string {
+	if val == nil {
+		return ""
+	}
+	str := fmt.Sprintf("%v", val)
+	// Escape HTML-like tags to prevent VitePress parsing issues
+	str = strings.ReplaceAll(str, "<", "\\<")
+	str = strings.ReplaceAll(str, ">", "\\>")
+	return str
 }

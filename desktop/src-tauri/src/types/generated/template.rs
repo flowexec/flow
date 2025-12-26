@@ -373,7 +373,7 @@ impl ::std::default::Default for FieldType {
 #[doc = "      }"]
 #[doc = "    },"]
 #[doc = "    \"form\": {"]
-#[doc = "      \"description\": \"Form fields to be displayed to the user when generating a flow file from a template. \\nThe form will be rendered first, and the user's input can be used to render the template.\\nFor example, a form field with the key `name` can be used in the template as `{{.name}}`.\\n\","]
+#[doc = "      \"description\": \"Form fields to be displayed to the user when generating a flow file from a template. \\nThe form will be rendered first, and the user's input can be used to render the template.\\n\","]
 #[doc = "      \"default\": [],"]
 #[doc = "      \"type\": \"array\","]
 #[doc = "      \"items\": {"]
@@ -407,7 +407,7 @@ pub struct Template {
     #[doc = "A list of artifacts to be copied after generating the flow file."]
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub artifacts: ::std::vec::Vec<Artifact>,
-    #[doc = "Form fields to be displayed to the user when generating a flow file from a template. \nThe form will be rendered first, and the user's input can be used to render the template.\nFor example, a form field with the key `name` can be used in the template as `{{.name}}`.\n"]
+    #[doc = "Form fields to be displayed to the user when generating a flow file from a template. \nThe form will be rendered first, and the user's input can be used to render the template.\n"]
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub form: ::std::vec::Vec<Field>,
     #[doc = "A list of exec executables to run after generating the flow file."]

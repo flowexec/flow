@@ -100,8 +100,6 @@ type Template struct {
 	// template.
 	// The form will be rendered first, and the user's input can be used to render the
 	// template.
-	// For example, a form field with the key `name` can be used in the template as
-	// `{{.name}}`.
 	//
 	Form FormFields `json:"form,omitempty" yaml:"form,omitempty" mapstructure:"form,omitempty"`
 
