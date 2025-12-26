@@ -1,8 +1,12 @@
+---
+title: Imported Executables Config Reference
+---
+
 # Imported Executables Config Reference
 
 flow can automatically generate executables from shell scripts and Makefiles using special comments. 
 flow parses these comments during workspace synchronization and creates executable definitions that can be run 
-like any other flow executable. See [Importing Executables](../guide/executables.md#importing-executables) for more details.
+like any other flow executable. See [Importing Executables](executables.md#importing-executables) for more details.
 
 > [!NOTE] The configuration comments must be at the top of the shell script or right above the Makefile target definition.
 

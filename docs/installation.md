@@ -1,4 +1,8 @@
-# Installation <!-- {docsify-ignore-all} -->
+---
+title: Installation
+---
+
+# Installation
 
 > **System Requirements:** flow supports Linux and macOS systems. On Linux, you'll need `xclip` installed to use clipboard features.
 
@@ -58,4 +62,4 @@ Ready to start automating? → [Quick start guide](quickstart.md)
 
 ## CI/CD & Containers
 
-For GitHub Actions, Docker, and other integrations, see the [integrations guide](guide/integrations.md).
+For GitHub Actions, Docker, and other integrations, see the [integrations guide](guides/integrations.md).

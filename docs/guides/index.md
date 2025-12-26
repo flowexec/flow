@@ -1,3 +1,7 @@
+---
+title: User Guides
+---
+
 # User Guides
 
 Welcome to the flow user guides! These guides will help you master flow automation, from basic concepts to advanced workflows.
@@ -28,8 +32,8 @@ Take your automation to the next level:
 
 ## Other Resources
 
-- **[CLI Reference](../cli/README.md)** - Complete command documentation
-- **[Configuration Reference](../types/README.md)** - YAML file schemas and options
+- **[CLI Reference](../cli/index.md)** - Complete command documentation
+- **[Configuration Reference](../types/index.md)** - YAML file schemas and options
 - **[Examples Repository](https://github.com/flowexec/examples)** - Real-world workflow patterns
 
 Ready to get started? Begin with [Core Concepts](concepts.md) to understand how flow works, then build your first automation with [Your First Workflow](first-workflow.md)!

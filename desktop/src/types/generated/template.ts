@@ -14,7 +14,6 @@ export interface Template {
   /**
    * Form fields to be displayed to the user when generating a flow file from a template.
    * The form will be rendered first, and the user's input can be used to render the template.
-   * For example, a form field with the key `name` can be used in the template as `{{.name}}`.
    *
    */
   form?: Field[];

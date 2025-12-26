@@ -1,3 +1,7 @@
+---
+title: Working with Secrets
+---
+
 # Working with Secrets
 
 flow's built-in vault keeps your sensitive data secure while making it easy to use in your workflows. 
@@ -34,9 +38,9 @@ executables:
 
 flow supports multiple vault backends for different security needs:
 
-<!-- tabs:start -->
+:::tabs
 
-#### **AES256 (Default)**
+== AES256 (Default)
 
 Symmetric encryption using a generated key. This is the simplest vault type - flow generates a random encryption key for you.
 
@@ -74,7 +78,7 @@ flow vault create staging --key-env SHARED_VAULT_KEY
 > [!NOTE]
 > **Valid Key Format**: The existing key must be a base64-encoded 32-byte (256-bit) encryption key. You can generate a compatible key using `flow vault create` and copying the output, or by generating 32 random bytes and base64-encoding them. If the environment variable contains an invalid key format, vault creation will fail.
 
-#### **Age**
+== Age
 
 Asymmetric encryption using recipient keys. This is ideal for team vaults where multiple people need access.
 
@@ -100,7 +104,7 @@ flow vault create team --type age --recipients key1,key2,key3 --identity-file ~/
 flow vault create team --type age --recipients key1,key2,key3 --identity-env MY_IDENTITY
 ```
 
-#### **Unencrypted**
+== Unencrypted
 A simple vault that stores secrets in plain text JSON files.
 This is not recommended for production use but can be useful for development or testing.
 
@@ -110,7 +114,7 @@ flow vault create dev --type unencrypted
 ```
 
 
-#### **Keyring**
+== Keyring
 
 A vault that uses your operating system's keyring for managing secrets. 
 This is a good option for personal use where you want seamless integration with your OS security.
@@ -120,7 +124,7 @@ This is a good option for personal use where you want seamless integration with 
 flow vault create dev --type keyring
 ```
 
-#### **External (other CLI tools)**
+== External (other CLI tools)
 
 An external vault that uses executes an external CLI tool via shell commands to manage secrets. 
 This allows you to integrate with existing secret management systems.
@@ -168,16 +172,17 @@ flow vault create passwords --type external --config /path/to/config.json
 
 Available in `cmd` and `output` fields:
 
-- `{{key}}` - The secret key/name
-- `{{value}}` - The secret value (for set operations)
-- `{{env["VariableName"]}}`- Environment variable value
-- `{{output}}` - Raw command output (for output templates)
+
+- <span v-pre>`{{key}}`</span> - The secret key/name
+- <span v-pre>`{{value}}`</span> - The secret value (for set operations)
+- <span v-pre>`{{env["VariableName"]}}`</span>- Environment variable value
+- <span v-pre>`{{output}}`</span> - Raw command output (for output templates)
 
 All [Expr language](https://expr-lang.org/docs/language-definition) operators and functions can be used in the command templates, allowing for powerful dynamic secret management.
 
-<!-- tabs:end -->
+:::
 
-#### Authentication
+### Authentication
 
 The environment variable or file that you provide at setup will be used to resolve the encryption key when accessing the vault.
 If you did not provide a key or file, these default environment variables will be used:
@@ -203,7 +208,7 @@ flow vault create team --type age --identity-file ~/identities/identity.txt --id
 
 ## Using Secrets in Workflows
 
-### Basic Usage <!-- {docsify-ignore} -->
+### Basic Usage
 
 ```yaml
 executables:
@@ -218,7 +223,7 @@ executables:
       cmd: ./deploy.sh
 ```
 
-### Cross-Vault References <!-- {docsify-ignore} -->
+### Cross-Vault References
 
 Reference secrets from different vaults:
 
@@ -237,7 +242,7 @@ executables:
 
 ## Secret Management
 
-### Adding Secrets <!-- {docsify-ignore} -->
+### Adding Secrets
 
 ```shell
 # Interactive prompt (recommended)
@@ -252,7 +257,7 @@ cat secret.txt | flow secret set my-secret
 flow secret set my-secret --file secret.txt
 ```
 
-### Viewing Secrets <!-- {docsify-ignore} -->
+### Viewing Secrets
 
 ```shell
 # List all secrets (values hidden)
@@ -268,7 +273,7 @@ flow secret get my-secret --plaintext
 flow secret get my-secret --copy
 ```
 
-### Updating and Removing <!-- {docsify-ignore} -->
+### Updating and Removing
 
 ```shell
 # Update a secret (prompts for new value)
@@ -278,7 +283,7 @@ flow secret set existing-secret
 flow secret remove old-secret
 ```
 
-### Working with Multiple Vaults  <!-- {docsify-ignore} -->
+### Working with Multiple Vaults 
 
 When working with multiple vaults, secrets are isolated per vault but the vault's name can be used to reference secrets across vaults.
 You can retrieve secrets from a specific vault without switching to it by using the vault name as a prefix:
@@ -293,7 +298,7 @@ flow secret get development/api-key
 
 See the [vault command reference](../cli/flow_vault.md) for detailed commands and options.
 
-### Vault Configuration <!-- {docsify-ignore} -->
+### Vault Configuration
 
 ```shell
 # View the current vault
@@ -319,7 +324,7 @@ flow vault create myapp --path /storage/myapp
 
 This data is encrypted, so you can safely store it as-is without worrying about plaintext secrets being exposed.
 
-### Managing Multiple Vaults <!-- {docsify-ignore} -->
+### Managing Multiple Vaults
 
 Switch between vaults for different projects or environments:
 
@@ -337,7 +342,7 @@ flow secret set api-key
 flow secret list
 ```
 
-### Backup and Recovery <!-- {docsify-ignore} -->
+### Backup and Recovery
 
 Vault data is stored in your flow config directory:
 

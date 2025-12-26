@@ -1,0 +1,26 @@
+:root {
+  --vp-c-brand-1: #7FBBB3;
+  --vp-c-brand-2: #83C092;
+  --vp-c-brand-3: #D699B6;
+  --vp-home-hero-name-color: #D699B6;
+}
+
+/* Hero image glow effect */
+.VPHero .image-src {
+  filter: drop-shadow(5px 5px 100px #D699B6);
+}
+
+.VPHero .name {
+  font-size: 1.8em !important;
+  line-height: 1.8em !important;
+}
+
+.VPHero .text {
+  font-size: 3.2em !important;
+  line-height: 1.2em !important;
+}
+
+.VPHero .tagline {
+  font-size: 1.4em !important;
+  line-height: 1.8em !important;
+}

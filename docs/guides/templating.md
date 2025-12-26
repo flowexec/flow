@@ -1,3 +1,7 @@
+---
+title: Templates & Workflow Generation
+---
+
 # Templates & Workflow Generation
 
 Templates let you generate new workflows and project scaffolding with interactive forms. 
@@ -48,7 +52,7 @@ flow template generate my-app --template webapp
 
 Templates have four main parts:
 
-### 1. Forms - Collect User Input <!-- {docsify-ignore} -->
+### 1. Forms - Collect User Input
 
 Forms define interactive prompts shown during generation:
 
@@ -75,7 +79,7 @@ form:
 - `masked` - Hidden input for passwords
 - `confirm` - Yes/no question
 
-### 2. Templates - Generate Flow Files <!-- {docsify-ignore} -->
+### 2. Templates - Generate Flow Files
 
 The main template creates your flow file:
 
@@ -96,7 +100,7 @@ template: |
         cmd: kubectl scale deployment {{ name }} --replicas={{ form["replicas"] }}
 ```
 
-### 3. Artifacts - Copy Supporting Files <!-- {docsify-ignore} -->
+### 3. Artifacts - Copy Supporting Files
 
 Copy and optionally template additional files:
 
@@ -116,7 +120,7 @@ artifacts:
     if: form["type"] == "helm"
 ```
 
-### 4. Hooks - Run Commands <!-- {docsify-ignore} -->
+### 4. Hooks - Run Commands
 
 Execute commands before/after generation:
 
@@ -190,7 +194,7 @@ template: |
 
 See the [template command reference](../cli/flow_template.md) for all detailed commands and options.
 
-### Register Templates <!-- {docsify-ignore} -->
+### Register Templates
 
 ```shell
 # From file
@@ -203,7 +207,7 @@ flow template list
 flow template get -t webapp
 ```
 
-### Generate from Templates <!-- {docsify-ignore} -->
+### Generate from Templates
 
 ```shell
 # Using registered template
@@ -222,22 +226,22 @@ flow template generate my-app \
 ## Template Language
 
 flow uses [Expr](https://expr-lang.org) language for all template evaluation, but with Go template syntax. 
-You write templates using familiar `{{ }}` syntax, but the expressions inside are evaluated using Expr.
+You write templates using familiar <span v-pre>`{{ }}`</span> syntax, but the expressions inside are evaluated using Expr.
 
 **Available Variables:**
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `name` | Generated file name | `{{ name }}` |
-| `workspace` | Target workspace | `{{ workspace }}` |
-| `form` | Form input values | `{{ form["replicas"] }}` |
-| `env` | Environment variables | `{{ env["USER"] }}` |
-| `os` | Operating system | `{{ os }}` |
-| `arch` | System architecture | `{{ arch }}` |
-| `workspacePath` | Full path to workspace | `{{ workspacePath }}` |
-| `flowFilePath` | Full path to target flow file | `{{ flowFilePath }}` |
-| `templatePath` | Path to template file | `{{ templatePath }}` |
-| `directory` | Target directory | `{{ directory }}` |
+| `name` | Generated file name | <span v-pre>`{{ name }}`</span> |
+| `workspace` | Target workspace | <span v-pre>`{{ workspace }}`</span> |
+| `form` | Form input values | <span v-pre>`{{ form["replicas"] }}`</span> |
+| `env` | Environment variables | <span v-pre>`{{ env["USER"] }}`</span> |
+| `os` | Operating system | <span v-pre>`{{ os }}`</span> |
+| `arch` | System architecture | <span v-pre>`{{ arch }}`</span> |
+| `workspacePath` | Full path to workspace | <span v-pre>`{{ workspacePath }}`</span> |
+| `flowFilePath` | Full path to target flow file | <span v-pre>`{{ flowFilePath }}`</span> |
+| `templatePath` | Path to template file | <span v-pre>`{{ templatePath }}`</span> |
+| `directory` | Target directory | <span v-pre>`{{ directory }}`</span> |
 
 **Template Examples:**
 ```yaml
@@ -266,7 +270,7 @@ template: |
 ```
 
 **`if` fields in artifacts/hooks:**
-For `if` fields in artifacts, preRun, and postRun sections, use Expr directly (no `{{ }}` needed):
+For `if` fields in artifacts, preRun, and postRun sections, use Expr directly (no <span v-pre>`{{ }}`</span> needed):
 
 ```yaml
 artifacts:

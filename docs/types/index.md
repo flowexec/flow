@@ -1,3 +1,7 @@
+---
+title: flow YAML Configurations
+---
+
 # flow YAML Configurations
 
 - [FlowFile](flowfile.md)

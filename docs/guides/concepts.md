@@ -1,3 +1,7 @@
+---
+title: Core Concepts
+---
+
 # Core Concepts
 
 flow is built around three key concepts that work together to organize and run your automation workflows.
@@ -264,7 +268,7 @@ flow run hello                 # By name
 flow build my-project/app      # By full reference
 ```
 
-## What's Next? <!-- {docsify-ignore} -->
+## What's Next?
 
 Now that you understand the core concepts:
 

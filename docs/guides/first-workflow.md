@@ -1,4 +1,8 @@
-# Your First Workflow <!-- {docsify-ignore-all} -->
+---
+title: Your First Workflow
+---
+
+# Your First Workflow
 
 Now that you understand flow's [core concepts](concepts.md), let's build a real workflow that shows how executables, workspaces, and secrets work together.
 

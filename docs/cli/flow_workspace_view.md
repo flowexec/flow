@@ -1,3 +1,7 @@
+---
+title: Flow Workspace View
+---
+
 ## flow workspace view
 
 View the documentation for a workspace. If the name is omitted, the current workspace is used.
