@@ -13,7 +13,7 @@ require (
 	github.com/gen2brain/beeep v0.11.1
 	github.com/jahvon/expression v0.1.4
 	github.com/jahvon/glamour v0.8.1-patch3
-	github.com/mark3labs/mcp-go v0.41.1
+	github.com/mark3labs/mcp-go v0.43.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/muesli/termenv v0.16.0
 	github.com/onsi/ginkgo/v2 v2.27.2
