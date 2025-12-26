@@ -11,7 +11,6 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
-	flowIO "github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -85,7 +84,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 		tuikit.WithLoadingMsg("thinking..."),
 	)
 
-	theme := flowIO.Theme(cfg.Theme.String())
+	theme := logger.Theme(cfg.Theme.String())
 	if cfg.ColorOverride != nil {
 		theme = overrideThemeColor(theme, cfg.ColorOverride)
 	}

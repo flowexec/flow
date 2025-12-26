@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/flowexec/flow/cmd"
+	"github.com/flowexec/flow/pkg/cli"
 	"github.com/flowexec/flow/pkg/context"
 )
 
@@ -21,7 +22,8 @@ func (r *CommandRunner) Run(ctx *context.Context, args ...string) (err error) {
 			err = fmt.Errorf("panic occurred: %v", r)
 		}
 	}()
-	rootCmd := cmd.NewRootCmd(ctx)
+	rootCmd := cli.BuildRootCommand(ctx)
+	cli.RegisterAllCommands(ctx, rootCmd)
 	rootCmd.SetArgs(args)
 	rootCmd.SetIn(ctx.StdIn())
 	rootCmd.SetOut(ctx.StdOut())

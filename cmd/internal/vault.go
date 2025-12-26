@@ -11,7 +11,6 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	flowIO "github.com/flowexec/flow/internal/io"
 	vaultIO "github.com/flowexec/flow/internal/io/vault"
 	"github.com/flowexec/flow/internal/utils"
 	"github.com/flowexec/flow/internal/vault"
@@ -228,7 +227,7 @@ func removeVaultFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	}
 
 	form, err := views.NewForm(
-		flowIO.Theme(ctx.Config.Theme.String()),
+		logger.Theme(ctx.Config.Theme.String()),
 		ctx.StdIn(),
 		ctx.StdOut(),
 		&views.FormField{

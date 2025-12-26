@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/io/secret"
 	"github.com/flowexec/flow/internal/utils"
 	envUtils "github.com/flowexec/flow/internal/utils/env"
@@ -50,7 +49,7 @@ func removeSecretFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	reference := args[0]
 
 	form, err := views.NewForm(
-		io.Theme(ctx.Config.Theme.String()),
+		logger.Theme(ctx.Config.Theme.String()),
 		ctx.StdIn(),
 		ctx.StdOut(),
 		&views.FormField{
@@ -116,7 +115,7 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		value = string(data)
 	case len(args) == 1:
 		form, err := views.NewForm(
-			io.Theme(ctx.Config.Theme.String()),
+			logger.Theme(ctx.Config.Theme.String()),
 			ctx.StdIn(),
 			ctx.StdOut(),
 			&views.FormField{

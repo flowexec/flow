@@ -98,7 +98,7 @@ func WaitForTUI(ctx *context.Context, cmd *cobra.Command) {
 
 func printContext(ctx *context.Context, cmd *cobra.Command) {
 	if TUIEnabled(ctx, cmd) {
-		logger.Log().Println(flowIO.Theme(ctx.Config.Theme.String()).
+		logger.Log().Println(logger.Theme(ctx.Config.Theme.String()).
 			RenderHeader(context.AppName, context.HeaderCtxKey, ctx.String(), 0))
 	}
 }

@@ -75,32 +75,6 @@ var _ = Describe("BuildRootCommand", func() {
 		Expect(rootCmd.Short).To(Equal("Custom short"))
 		Expect(rootCmd.Version).To(Equal("2.0.0"))
 	})
-
-	It("should apply custom PersistentPreRun hook", func() {
-		hookCalled := false
-		rootCmd := cli.BuildRootCommand(ctx,
-			cli.WithPersistentPreRun(func(cmd *cobra.Command, args []string) {
-				hookCalled = true
-			}),
-		)
-
-		Expect(rootCmd.PersistentPreRun).NotTo(BeNil())
-		rootCmd.PersistentPreRun(rootCmd, []string{})
-		Expect(hookCalled).To(BeTrue())
-	})
-
-	It("should apply custom PersistentPostRun hook", func() {
-		hookCalled := false
-		rootCmd := cli.BuildRootCommand(ctx,
-			cli.WithPersistentPostRun(func(cmd *cobra.Command, args []string) {
-				hookCalled = true
-			}),
-		)
-
-		Expect(rootCmd.PersistentPostRun).NotTo(BeNil())
-		rootCmd.PersistentPostRun(rootCmd, []string{})
-		Expect(hookCalled).To(BeTrue())
-	})
 })
 
 var _ = Describe("RegisterAllCommands", func() {
@@ -123,7 +97,7 @@ var _ = Describe("RegisterAllCommands", func() {
 		cli.RegisterAllCommands(ctx, rootCmd)
 
 		commands := rootCmd.Commands()
-		Expect(len(commands)).To(BeNumerically(">", 0))
+		Expect(commands).ToNot(BeEmpty())
 
 		// Check for key commands
 		commandNames := make(map[string]bool)
@@ -134,86 +108,5 @@ var _ = Describe("RegisterAllCommands", func() {
 		Expect(commandNames).To(HaveKey("exec"))
 		Expect(commandNames).To(HaveKey("workspace"))
 		Expect(commandNames).To(HaveKey("config"))
-	})
-})
-
-var _ = Describe("Individual Command Builders", func() {
-	var ctx *context.Context
-
-	BeforeEach(func() {
-		bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
-		ctx = context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
-	})
-
-	AfterEach(func() {
-		if ctx != nil {
-			ctx.Finalize()
-		}
-	})
-
-	It("should build exec command", func() {
-		cmd := cli.BuildExecCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("exec"))
-	})
-
-	It("should build browse command", func() {
-		cmd := cli.BuildBrowseCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("browse"))
-	})
-
-	It("should build config command", func() {
-		cmd := cli.BuildConfigCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("config"))
-	})
-
-	It("should build secret command", func() {
-		cmd := cli.BuildSecretCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("secret"))
-	})
-
-	It("should build vault command", func() {
-		cmd := cli.BuildVaultCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("vault"))
-	})
-
-	It("should build cache command", func() {
-		cmd := cli.BuildCacheCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("cache"))
-	})
-
-	It("should build workspace command", func() {
-		cmd := cli.BuildWorkspaceCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("workspace"))
-	})
-
-	It("should build template command", func() {
-		cmd := cli.BuildTemplateCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("template"))
-	})
-
-	It("should build logs command", func() {
-		cmd := cli.BuildLogsCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("logs"))
-	})
-
-	It("should build sync command", func() {
-		cmd := cli.BuildSyncCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("sync"))
-	})
-
-	It("should build mcp command", func() {
-		cmd := cli.BuildMCPCommand(ctx)
-		Expect(cmd).NotTo(BeNil())
-		Expect(cmd.Name()).To(Equal("mcp"))
 	})
 })

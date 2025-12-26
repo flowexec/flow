@@ -5,12 +5,15 @@ import (
 )
 
 type ExecutableNotFoundError struct {
-	Verb string
-	Name string
+	Ref string
 }
 
 func (e ExecutableNotFoundError) Error() string {
-	return fmt.Sprintf("%s executable %s not found", e.Verb, e.Name)
+	return fmt.Sprintf("%s executable not found", e.Ref)
+}
+
+func NewExecutableNotFoundError(ref string) ExecutableNotFoundError {
+	return ExecutableNotFoundError{Ref: ref}
 }
 
 type WorkspaceNotFoundError struct {
@@ -33,4 +36,20 @@ func (e ExecutableContextError) Error() string {
 		e.WorkspacePath,
 		e.FlowFile,
 	)
+}
+
+type CacheUpdateError struct {
+	Err error
+}
+
+func (e CacheUpdateError) Error() string {
+	return fmt.Sprintf("unable to update cache - %v", e.Err)
+}
+
+func (e CacheUpdateError) Unwrap() error {
+	return e.Err
+}
+
+func NewCacheUpdateError(err error) CacheUpdateError {
+	return CacheUpdateError{Err: err}
 }

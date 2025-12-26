@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/fileparser"
+	flowErrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
@@ -171,10 +172,10 @@ func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executabl
 			primaryRef = aliasedPrimaryRef
 			cfgPath, found = c.Data.ExecutableMap[primaryRef]
 			if !found {
-				return nil, NewExecutableNotFoundError(ref.String())
+				return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 			}
 		} else {
-			return nil, NewExecutableNotFoundError(ref.String())
+			return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 		}
 	} else {
 		primaryRef = ref
@@ -208,7 +209,7 @@ func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executabl
 	if err != nil {
 		return nil, err
 	} else if exec == nil {
-		return nil, NewExecutableNotFoundError(ref.String())
+		return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 	}
 
 	c.Data.loadedExecutables[ref.String()] = exec

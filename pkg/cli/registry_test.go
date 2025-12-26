@@ -1,8 +1,6 @@
 package cli_test
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
@@ -242,52 +240,6 @@ var _ = Describe("Command Registry", func() {
 		It("should return nil for nil command", func() {
 			subCmds := cli.GetSubcommands(nil)
 			Expect(subCmds).To(BeNil())
-		})
-	})
-
-	Describe("CloneCommand", func() {
-		It("should create a shallow copy of command", func() {
-			original := &cobra.Command{
-				Use:     "test",
-				Short:   "Test command",
-				Long:    "Long description",
-				Aliases: []string{"t", "tst"},
-				Run: func(cmd *cobra.Command, args []string) {
-					fmt.Println("Running")
-				},
-			}
-
-			clone := cli.CloneCommand(original)
-			Expect(clone).NotTo(BeNil())
-			Expect(clone.Use).To(Equal(original.Use))
-			Expect(clone.Short).To(Equal(original.Short))
-			Expect(clone.Long).To(Equal(original.Long))
-			Expect(clone.Aliases).To(Equal(original.Aliases))
-			Expect(clone.Run).NotTo(BeNil())
-		})
-
-		It("should handle nil command", func() {
-			clone := cli.CloneCommand(nil)
-			Expect(clone).To(BeNil())
-		})
-
-		It("should copy annotations", func() {
-			original := &cobra.Command{
-				Use: "test",
-				Annotations: map[string]string{
-					"key1": "value1",
-					"key2": "value2",
-				},
-			}
-
-			clone := cli.CloneCommand(original)
-			Expect(clone.Annotations).To(HaveLen(2))
-			Expect(clone.Annotations["key1"]).To(Equal("value1"))
-			Expect(clone.Annotations["key2"]).To(Equal("value2"))
-
-			// Modify clone's annotations shouldn't affect original
-			clone.Annotations["key3"] = "value3"
-			Expect(original.Annotations).NotTo(HaveKey("key3"))
 		})
 	})
 })

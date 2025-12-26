@@ -262,7 +262,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				execRef := executable.Ref("exec test/testdata:test-alias")
 				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")
@@ -318,7 +318,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				executeRef := executable.Ref("execute test/testdata:test-alias")
 				_, err = execCache.GetExecutableByRef(executeRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 			})
 		})
 
@@ -340,7 +340,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				execRef := executable.Ref("exec test/testdata:test-alias")
 				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")

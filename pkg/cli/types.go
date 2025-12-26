@@ -19,12 +19,6 @@ type RootConfig struct {
 
 	// Version is the version string (defaults to Flow's current version)
 	Version string
-
-	// PersistentPreRun is a hook that runs before all commands
-	PersistentPreRun HookFunc
-
-	// PersistentPostRun is a hook that runs after all commands
-	PersistentPostRun HookFunc
 }
 
 // RootOption is a functional option for configuring the root command.
@@ -55,25 +49,5 @@ func WithLong(long string) RootOption {
 func WithVersion(version string) RootOption {
 	return func(c *RootConfig) {
 		c.Version = version
-	}
-}
-
-// WithPersistentPreRun sets a PersistentPreRun hook for the root command.
-// This hook will run before all commands in the tree.
-// Note: This will replace any existing PersistentPreRun hook from the default
-// root command. Use AddPersistentPreRunHook if you want to chain hooks.
-func WithPersistentPreRun(hook HookFunc) RootOption {
-	return func(c *RootConfig) {
-		c.PersistentPreRun = hook
-	}
-}
-
-// WithPersistentPostRun sets a PersistentPostRun hook for the root command.
-// This hook will run after all commands in the tree.
-// Note: This will replace any existing PersistentPostRun hook from the default
-// root command. Use AddPersistentPostRunHook if you want to chain hooks.
-func WithPersistentPostRun(hook HookFunc) RootOption {
-	return func(c *RootConfig) {
-		c.PersistentPostRun = hook
 	}
 }

@@ -56,10 +56,4 @@
 //
 // This package is not thread-safe. Command building and modification should be
 // done during CLI initialization, not concurrently.
-//
-// # Versioning
-//
-// This package follows semantic versioning. The API is considered stable but may
-// receive additions in minor version updates. Breaking changes will only occur
-// in major version updates.
 package cli

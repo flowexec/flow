@@ -391,7 +391,7 @@ func (l ExecutableList) FindByVerbAndID(verb Verb, id string) (*Executable, erro
 	if exec != nil {
 		return exec, nil
 	}
-	return nil, errors.ExecutableNotFoundError{Verb: string(verb), Name: name}
+	return nil, errors.NewExecutableNotFoundError(NewRef(name, verb).String())
 }
 
 func (l ExecutableList) FilterByTags(tags common.Tags) ExecutableList {

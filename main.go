@@ -9,6 +9,7 @@ import (
 
 	"github.com/flowexec/flow/cmd"
 	"github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/pkg/cli"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -29,7 +30,7 @@ func main() {
 	loggerOpts := logger.InitOptions{
 		StdOut:           io.Stdout,
 		LogMode:          cfg.DefaultLogMode,
-		Theme:            io.Theme(cfg.Theme.String()),
+		Theme:            logger.Theme(cfg.Theme.String()),
 		ArchiveDirectory: archiveDir,
 	}
 	logger.Init(loggerOpts)
@@ -49,7 +50,8 @@ func main() {
 	if ctx == nil {
 		panic("failed to initialize context")
 	}
-	rootCmd := cmd.NewRootCmd(ctx)
+	rootCmd := cli.BuildRootCommand(ctx)
+	cli.RegisterAllCommands(ctx, rootCmd)
 	if err := cmd.Execute(ctx, rootCmd); err != nil {
 		logger.Log().FatalErr(err)
 	}

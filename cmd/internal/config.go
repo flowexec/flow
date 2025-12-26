@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/io"
 	configIO "github.com/flowexec/flow/internal/io/config"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
@@ -44,7 +43,7 @@ func registerConfigResetCmd(ctx *context.Context, configCmd *cobra.Command) {
 
 func resetConfigFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
 	form, err := views.NewForm(
-		io.Theme(ctx.Config.Theme.String()),
+		logger.Theme(ctx.Config.Theme.String()),
 		ctx.StdIn(),
 		ctx.StdOut(),
 		&views.FormField{

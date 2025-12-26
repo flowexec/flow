@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	flowIO "github.com/flowexec/flow/internal/io"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
 	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/pkg/context"
@@ -55,7 +54,7 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	switch {
 	case len(args) == 1:
 		form, err := views.NewForm(
-			flowIO.Theme(ctx.Config.Theme.String()),
+			logger.Theme(ctx.Config.Theme.String()),
 			ctx.StdIn(),
 			ctx.StdOut(),
 			&views.FormField{
