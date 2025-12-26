@@ -10,7 +10,7 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/jahvon/glamour"
 
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"

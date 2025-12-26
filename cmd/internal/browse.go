@@ -7,12 +7,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/io/library"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 )

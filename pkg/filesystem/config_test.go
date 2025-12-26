@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/types/config"
 )
 

@@ -8,11 +8,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/context"
 	flowIO "github.com/flowexec/flow/internal/io"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/store"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func RegisterCacheCmd(ctx *context.Context, rootCmd *cobra.Command) {

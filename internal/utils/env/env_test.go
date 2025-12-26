@@ -10,10 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/utils/env"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"

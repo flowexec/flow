@@ -14,10 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/runner/exec"
@@ -28,6 +25,9 @@ import (
 	"github.com/flowexec/flow/internal/runner/serial"
 	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/internal/utils/env"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )

@@ -11,7 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/flowexec/flow/internal/fileparser"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 

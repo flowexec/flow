@@ -11,10 +11,10 @@ import (
 	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/themes"
 
-	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/open"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 var log io.Logger

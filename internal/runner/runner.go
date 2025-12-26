@@ -7,9 +7,9 @@ import (
 
 	"github.com/jahvon/expression"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner/engine"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 

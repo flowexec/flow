@@ -9,9 +9,9 @@ import (
 	"github.com/flowexec/flow/cmd/internal"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/cmd/internal/version"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func NewRootCmd(ctx *context.Context) *cobra.Command {

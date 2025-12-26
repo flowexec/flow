@@ -9,10 +9,10 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/filesystem"
 	"github.com/flowexec/flow/internal/io/common"
 	"github.com/flowexec/flow/internal/services/open"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/types/workspace"
 )
 

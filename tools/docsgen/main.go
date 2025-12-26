@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra/doc"
 
 	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/pkg/context"
 )
 
 const (

@@ -12,8 +12,8 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/errors"
 	"github.com/flowexec/flow/internal/utils"
+	"github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/types/common"
 )
 

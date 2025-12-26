@@ -12,7 +12,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/types/executable"
 )
 

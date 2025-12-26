@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/config"
 )
 

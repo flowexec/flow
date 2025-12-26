@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/pkg/context"
 )
 
 type CommandRunner struct{}

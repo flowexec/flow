@@ -5,8 +5,8 @@ import (
 
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/types/executable"
 )
 

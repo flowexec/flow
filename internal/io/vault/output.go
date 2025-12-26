@@ -2,7 +2,7 @@ package vault
 
 import (
 	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func PrintVault(format, vaultName string) {

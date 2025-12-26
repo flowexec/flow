@@ -11,10 +11,10 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/filesystem"
 	flowIO "github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"

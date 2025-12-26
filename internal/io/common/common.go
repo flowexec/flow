@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/services/open"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 const HeaderContextKey = "ctx"
