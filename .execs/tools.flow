@@ -40,15 +40,3 @@ executables:
               echo "mockgen is not installed. Installing..."
               go install go.uber.org/mock/mockgen@v0.4.0
             fi
-
-  - verb: install
-    name: docsify
-    aliases: [deps]
-    tags: [docs, npm]
-    description: Install the documentation site dependencies with node (globally)
-    exec:
-      cmd: |
-        if ! command -v docsify-cli &> /dev/null; then
-          echo "docsify-cli is not installed. Installing..."
-          npm i docsify-cli -g
-        fi
