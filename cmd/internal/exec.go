@@ -14,10 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/runner/exec"
@@ -28,6 +25,9 @@ import (
 	"github.com/flowexec/flow/internal/runner/serial"
 	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/internal/utils/env"
+	"github.com/flowexec/flow/pkg/context"
+	flowErrors "github.com/flowexec/flow/pkg/errors"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -109,7 +109,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	e, err := ctx.ExecutableCache.GetExecutableByRef(ref)
-	if err != nil && errors.Is(cache.NewExecutableNotFoundError(ref.String()), err) {
+	if err != nil && errors.Is(flowErrors.NewExecutableNotFoundError(ref.String()), err) {
 		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
 		if err := ctx.ExecutableCache.Update(); err != nil {
 			logger.Log().FatalErr(err)
@@ -160,7 +160,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	// add values from the prompt param type to the env map
 	textInputs := pendingFormFields(ctx, e, envMap)
 	if len(textInputs) > 0 {
-		form, err := views.NewForm(io.Theme(ctx.Config.Theme.String()), ctx.StdIn(), ctx.StdOut(), textInputs...)
+		form, err := views.NewForm(logger.Theme(ctx.Config.Theme.String()), ctx.StdIn(), ctx.StdOut(), textInputs...)
 		if err != nil {
 			logger.Log().FatalErr(err)
 		}

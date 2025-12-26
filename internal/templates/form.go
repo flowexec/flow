@@ -5,8 +5,8 @@ import (
 
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -47,7 +47,7 @@ func showForm(ctx *context.Context, fields executable.FormFields) error {
 			ValidationExpr: f.Validate,
 		})
 	}
-	form, err := views.NewForm(io.Theme(ctx.Config.Theme.String()), in, out, ff...)
+	form, err := views.NewForm(logger.Theme(ctx.Config.Theme.String()), in, out, ff...)
 	if err != nil {
 		return fmt.Errorf("encountered form init error: %w", err)
 	}

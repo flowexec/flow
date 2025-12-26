@@ -9,9 +9,9 @@ import (
 	"github.com/flowexec/flow/cmd/internal"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/cmd/internal/version"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func NewRootCmd(ctx *context.Context) *cobra.Command {
@@ -44,6 +44,11 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 	}
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.LogLevel)
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.SyncCacheFlag)
+
+	rootCmd.SetOut(ctx.StdOut())
+	rootCmd.SetErr(ctx.StdOut())
+	rootCmd.SetIn(ctx.StdIn())
+
 	return rootCmd
 }
 
@@ -53,11 +58,6 @@ func Execute(ctx *context.Context, rootCmd *cobra.Command) error {
 	} else if rootCmd == nil {
 		panic("root command is not initialized")
 	}
-
-	rootCmd.SetOut(ctx.StdOut())
-	rootCmd.SetErr(ctx.StdOut())
-	rootCmd.SetIn(ctx.StdIn())
-	RegisterSubCommands(ctx, rootCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 //nolint:errcheck

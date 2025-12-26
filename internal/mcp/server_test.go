@@ -10,9 +10,9 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/filesystem"
 	flowMcp "github.com/flowexec/flow/internal/mcp"
 	"github.com/flowexec/flow/internal/mcp/mocks"
+	"github.com/flowexec/flow/pkg/filesystem"
 )
 
 func TestServer(t *testing.T) {

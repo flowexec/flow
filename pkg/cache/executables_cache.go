@@ -7,8 +7,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/fileparser"
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/logger"
+	flowErrors "github.com/flowexec/flow/pkg/errors"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -16,7 +17,7 @@ import (
 
 const execCacheKey = "executables"
 
-//go:generate mockgen -destination=mocks/mock_executable_cache.go -package=mocks github.com/flowexec/flow/internal/cache ExecutableCache
+//go:generate mockgen -destination=mocks/mock_executable_cache.go -package=mocks github.com/flowexec/flow/pkg/cache ExecutableCache
 type ExecutableCache interface {
 	Update() error
 	GetExecutableByRef(ref executable.Ref) (*executable.Executable, error)
@@ -171,10 +172,10 @@ func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executabl
 			primaryRef = aliasedPrimaryRef
 			cfgPath, found = c.Data.ExecutableMap[primaryRef]
 			if !found {
-				return nil, NewExecutableNotFoundError(ref.String())
+				return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 			}
 		} else {
-			return nil, NewExecutableNotFoundError(ref.String())
+			return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 		}
 	} else {
 		primaryRef = ref
@@ -208,7 +209,7 @@ func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executabl
 	if err != nil {
 		return nil, err
 	} else if exec == nil {
-		return nil, NewExecutableNotFoundError(ref.String())
+		return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 	}
 
 	c.Data.loadedExecutables[ref.String()] = exec

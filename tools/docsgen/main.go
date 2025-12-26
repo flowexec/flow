@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra/doc"
 
-	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/pkg/cli"
+	"github.com/flowexec/flow/pkg/context"
 )
 
 const (
@@ -24,8 +24,8 @@ func main() {
 	ctx := context.NewContext(bkgCtx, cancelFunc, os.Stdin, os.Stdout)
 	defer ctx.Finalize()
 
-	rootCmd := cmd.NewRootCmd(ctx)
-	cmd.RegisterSubCommands(ctx, rootCmd)
+	rootCmd := cli.BuildRootCommand(ctx)
+	cli.RegisterAllCommands(ctx, rootCmd)
 	rootCmd.DisableAutoGenTag = true
 	if err := doc.GenMarkdownTree(rootCmd, filepath.Join(rootDir(), DocsDir, cliDir)); err != nil {
 		panic(err)

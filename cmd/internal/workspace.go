@@ -13,12 +13,11 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/io"
 	workspaceIO "github.com/flowexec/flow/internal/io/workspace"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/workspace"
@@ -167,7 +166,7 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 	name := args[0]
 
 	form, err := views.NewForm(
-		io.Theme(ctx.Config.Theme.String()),
+		logger.Theme(ctx.Config.Theme.String()),
 		ctx.StdIn(),
 		ctx.StdOut(),
 		&views.FormField{

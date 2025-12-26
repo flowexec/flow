@@ -15,9 +15,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/io/library"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/tests/utils"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -60,7 +60,7 @@ var _ = Describe("browse TUI", func() {
 		libraryView := library.NewLibraryView(
 			ctx.Context, wsList, execList,
 			library.Filter{},
-			io.Theme(ctx.Config.Theme.String()),
+			logger.Theme(ctx.Config.Theme.String()),
 			runFunc,
 		)
 		Expect(container.SetView(libraryView)).To(Succeed())
@@ -89,7 +89,7 @@ var _ = Describe("browse TUI", func() {
 		libraryView := library.NewLibraryView(
 			ctx.Context, wsList, execList,
 			library.Filter{},
-			io.Theme(ctx.Config.Theme.String()),
+			logger.Theme(ctx.Config.Theme.String()),
 			runFunc,
 		)
 		Expect(container.SetView(libraryView)).To(Succeed())

@@ -3,10 +3,10 @@ package secret
 import (
 	"fmt"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/vault"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func PrintSecrets(ctx *context.Context, vaultName string, vlt vault.Vault, format string, plaintext bool) {

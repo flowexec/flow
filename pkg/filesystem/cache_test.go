@@ -4,10 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/flowexec/flow/pkg/filesystem"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/flowexec/flow/internal/filesystem"
 )
 
 var _ = Describe("Cache", func() {

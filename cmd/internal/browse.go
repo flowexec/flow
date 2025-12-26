@@ -7,12 +7,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/cache"
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/io/library"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/context"
+	flowErrors "github.com/flowexec/flow/pkg/errors"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -137,7 +137,7 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 			Substring:  subStr,
 			Visibility: visibilityFilter,
 		},
-		io.Theme(ctx.Config.Theme.String()),
+		logger.Theme(ctx.Config.Theme.String()),
 		runFunc,
 	)
 	SetView(ctx, cmd, libraryModel)
@@ -218,7 +218,7 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	ref := executable.NewRef(execID, verb)
 
 	exec, err := ctx.ExecutableCache.GetExecutableByRef(ref)
-	if err != nil && errors.Is(cache.NewExecutableNotFoundError(ref.String()), err) {
+	if err != nil && errors.Is(flowErrors.NewExecutableNotFoundError(ref.String()), err) {
 		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
 		if err := ctx.ExecutableCache.Update(); err != nil {
 			logger.Log().FatalErr(err)

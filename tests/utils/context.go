@@ -14,14 +14,13 @@ import (
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/cache"
-	cacheMocks "github.com/flowexec/flow/internal/cache/mocks"
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner/mocks"
 	"github.com/flowexec/flow/internal/services/store"
+	"github.com/flowexec/flow/pkg/cache"
+	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/tests/utils/builder"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/workspace"
@@ -54,7 +53,7 @@ func NewContext(ctx stdCtx.Context, tb testing.TB) *Context {
 	stdOut, stdIn := createTempIOFiles(tb)
 	tempLogger := tuikitIO.NewLogger(
 		tuikitIO.WithOutput(stdOut),
-		tuikitIO.WithTheme(io.Theme("")),
+		tuikitIO.WithTheme(logger.Theme("")),
 		tuikitIO.WithMode(tuikitIO.Text),
 		tuikitIO.WithExitFunc(func(msg string, args ...any) {
 			msg = fmt.Sprintf(msg, args...)
@@ -126,7 +125,7 @@ func ResetTestContext(ctx *Context, tb testing.TB) {
 	setTestEnv(tb, ctx.configDir, ctx.cacheDir)
 	newLogger := tuikitIO.NewLogger(
 		tuikitIO.WithOutput(stdOut),
-		tuikitIO.WithTheme(io.Theme("")),
+		tuikitIO.WithTheme(logger.Theme("")),
 		tuikitIO.WithMode(tuikitIO.Text),
 		tuikitIO.WithExitFunc(func(msg string, args ...any) {
 			msg = fmt.Sprintf(msg, args...)

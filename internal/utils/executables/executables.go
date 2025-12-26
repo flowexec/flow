@@ -3,7 +3,7 @@ package executables
 import (
 	"fmt"
 
-	"github.com/flowexec/flow/internal/context"
+	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 )

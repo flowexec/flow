@@ -8,10 +8,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/filesystem"
 	flowIO "github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -98,7 +98,7 @@ func WaitForTUI(ctx *context.Context, cmd *cobra.Command) {
 
 func printContext(ctx *context.Context, cmd *cobra.Command) {
 	if TUIEnabled(ctx, cmd) {
-		logger.Log().Println(flowIO.Theme(ctx.Config.Theme.String()).
+		logger.Log().Println(logger.Theme(ctx.Config.Theme.String()).
 			RenderHeader(context.AppName, context.HeaderCtxKey, ctx.String(), 0))
 	}
 }

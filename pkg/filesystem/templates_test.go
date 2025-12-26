@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/filesystem"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )

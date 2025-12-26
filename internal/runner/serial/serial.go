@@ -10,13 +10,13 @@ import (
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/services/store"
 	envUtils "github.com/flowexec/flow/internal/utils/env"
 	execUtils "github.com/flowexec/flow/internal/utils/executables"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 

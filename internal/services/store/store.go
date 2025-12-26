@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 	boltErrors "go.etcd.io/bbolt/errors"
-
-	"github.com/flowexec/flow/internal/filesystem"
 )
 
 const (

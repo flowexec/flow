@@ -10,8 +10,8 @@ import (
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
 

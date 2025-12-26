@@ -9,11 +9,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/runner/engine/mocks"
 	"github.com/flowexec/flow/internal/runner/parallel"
+	"github.com/flowexec/flow/pkg/context"
 	testUtils "github.com/flowexec/flow/tests/utils"
 	"github.com/flowexec/flow/tests/utils/builder"
 	"github.com/flowexec/flow/types/executable"

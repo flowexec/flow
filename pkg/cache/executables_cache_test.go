@@ -10,10 +10,10 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/cache"
-	cacheMocks "github.com/flowexec/flow/internal/cache/mocks"
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/logger"
+	"github.com/flowexec/flow/pkg/cache"
+	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -262,7 +262,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				execRef := executable.Ref("exec test/testdata:test-alias")
 				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")
@@ -318,7 +318,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				executeRef := executable.Ref("execute test/testdata:test-alias")
 				_, err = execCache.GetExecutableByRef(executeRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 			})
 		})
 
@@ -340,7 +340,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				execRef := executable.Ref("exec test/testdata:test-alias")
 				_, err := execCache.GetExecutableByRef(execRef)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("unable to find executable"))
+				Expect(err.Error()).To(ContainSubstring("executable not found"))
 
 				// Should still be able to access via primary verb "run"
 				runRef := executable.Ref("run test/testdata:test-alias")

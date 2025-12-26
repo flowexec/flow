@@ -9,9 +9,9 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/logger"
 	vault2 "github.com/flowexec/flow/internal/vault"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/logger"
 )
 
 func NewSecretView(

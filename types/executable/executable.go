@@ -12,8 +12,8 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/errors"
 	"github.com/flowexec/flow/internal/utils"
+	"github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/types/common"
 )
 
@@ -391,7 +391,7 @@ func (l ExecutableList) FindByVerbAndID(verb Verb, id string) (*Executable, erro
 	if exec != nil {
 		return exec, nil
 	}
-	return nil, errors.ExecutableNotFoundError{Verb: string(verb), Name: name}
+	return nil, errors.NewExecutableNotFoundError(NewRef(name, verb).String())
 }
 
 func (l ExecutableList) FilterByTags(tags common.Tags) ExecutableList {

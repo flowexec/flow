@@ -1,4 +1,4 @@
-package io
+package logger
 
 import "github.com/flowexec/tuikit/themes"
 

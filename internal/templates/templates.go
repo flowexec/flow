@@ -13,14 +13,14 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/context"
-	"github.com/flowexec/flow/internal/filesystem"
-	"github.com/flowexec/flow/internal/logger"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/utils"
 	argUtils "github.com/flowexec/flow/internal/utils/env"
 	execUtils "github.com/flowexec/flow/internal/utils/executables"
+	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )

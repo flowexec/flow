@@ -6,12 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/context"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
 	"github.com/flowexec/flow/internal/services/open"
 	"github.com/flowexec/flow/internal/utils"
 	"github.com/flowexec/flow/internal/utils/env"
+	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/types/executable"
 )
 

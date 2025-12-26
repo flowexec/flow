@@ -12,8 +12,8 @@ package mocks
 import (
 	reflect "reflect"
 
-	context "github.com/flowexec/flow/internal/context"
 	engine "github.com/flowexec/flow/internal/runner/engine"
+	context "github.com/flowexec/flow/pkg/context"
 	executable "github.com/flowexec/flow/types/executable"
 	gomock "go.uber.org/mock/gomock"
 )
