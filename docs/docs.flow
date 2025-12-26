@@ -1,3 +1,26 @@
 namespace: docs
 imports:
   - package.json
+
+executables:
+  - verb: deploy
+    name: netlify
+    description: Generate, build, and deploy documentation to Netlify
+    tags: [docs, deploy]
+    exec:
+      args:
+          - envKey: ENVIRONMENT
+            default: preview
+            pos: 1
+            required: false
+      params:
+        - envKey: NETLIFY_AUTH_TOKEN
+          secretRef: netlify-pat
+        - envKey: NETLIFY_SITE_ID
+          secretRef: netlify-flow-site-id
+      cmd: |
+          if [ "${ENVIRONMENT}" = "production" ]; then
+            npx netlify-cli deploy --dir=dist --prod
+          else
+            npx netlify-cli deploy --dir=dist
+          fi

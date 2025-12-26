@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+
+jobs:
+  release-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        uses: flowexec/action@v1
+        with:
+          executable: 'install docs:'
+          timeout: '5m'
+      - name: Deploy to Netlify
+        uses: flowexec/action@v1
+        with:
+          executable: 'deploy docs:netlify ${{ github.event.inputs.environment || 'production' }}'
+          timeout: '5m'
+          flow-version: 'main'
+          secrets: |
+            {
+              "netlify-flow-site-id": "${{ secrets.NETLIFY_SITE_ID }}",
+              "netlify-pat": "${{ secrets.NETLIFY_AUTH_TOKEN }}"
+            }

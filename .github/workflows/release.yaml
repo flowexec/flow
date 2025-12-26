@@ -11,35 +11,6 @@ on:
         required: true
 
 jobs:
-  release-docs:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "^1.25"
-      - name: Generate docs
-        run: |
-          go run ./tools/docsgen/.
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: 'docs/'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@main
   release-binary:
     permissions:
       contents: write

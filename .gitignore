@@ -32,3 +32,6 @@ executable_output.txt
 flow
 flow*.tar.gz
 dist/
+
+# Local Netlify folder
+.netlify
