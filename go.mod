@@ -16,8 +16,8 @@ require (
 	github.com/mark3labs/mcp-go v0.43.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/muesli/termenv v0.16.0
-	github.com/onsi/ginkgo/v2 v2.27.2
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/ginkgo/v2 v2.27.3
+	github.com/onsi/gomega v1.38.3
 	github.com/otiai10/copy v1.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.1
