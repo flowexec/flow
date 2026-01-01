@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20250806222409-83e3a29d542f
 	github.com/flowexec/tuikit v0.2.3
 	github.com/flowexec/vault v0.2.1
-	github.com/gen2brain/beeep v0.11.1
+	github.com/gen2brain/beeep v0.11.2
 	github.com/jahvon/expression v0.1.4
 	github.com/jahvon/glamour v0.8.1-patch3
 	github.com/mark3labs/mcp-go v0.43.2
