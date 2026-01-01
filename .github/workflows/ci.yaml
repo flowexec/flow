@@ -85,11 +85,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download unit test coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: unit-coverage
       - name: Download E2E test coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: e2e-coverage
       - name: Upload to codecov
