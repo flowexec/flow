@@ -1,4 +1,4 @@
-FROM golang:1.25.4-bookworm
+FROM golang:1.26.0-bookworm
 
 ENV DISABLE_FLOW_INTERACTIVE="true"
 
