@@ -14,7 +14,7 @@ require (
 	github.com/jahvon/expression v0.1.4
 	github.com/jahvon/glamour v0.8.1-patch3
 	github.com/mark3labs/mcp-go v0.43.2
-	github.com/mattn/go-runewidth v0.0.20
+	github.com/mattn/go-runewidth v0.0.21
 	github.com/muesli/termenv v0.16.0
 	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.3
