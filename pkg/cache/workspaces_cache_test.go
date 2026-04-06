@@ -2,6 +2,7 @@ package cache_test
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/flowexec/tuikit/io/mocks"
 	. "github.com/onsi/ginkgo/v2"
@@ -11,6 +12,7 @@ import (
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/workspace"
 )
 
@@ -26,12 +28,6 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		mockLogger = mocks.NewMockLogger(ctrl)
 		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
-		wsCache = &cache.WorkspaceCacheImpl{
-			Data: &cache.WorkspaceCacheData{
-				Workspaces:         make(map[string]*workspace.Workspace),
-				WorkspaceLocations: make(map[string]string),
-			},
-		}
 
 		var err error
 		cacheDir, err = os.MkdirTemp("", "flow-cache-test")
@@ -40,6 +36,12 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 		configDir, err = os.MkdirTemp("", "flow-config-test")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Setenv(filesystem.FlowConfigDirEnvVar, configDir)).To(Succeed())
+
+		ds, err := store.NewDataStore(filepath.Join(cacheDir, "test.db"))
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = ds.Close() })
+
+		wsCache = cache.NewWorkspaceCache(ds).(*cache.WorkspaceCacheImpl)
 
 		testWs := &workspace.Workspace{}
 		testWs.SetContext("test", cacheDir)

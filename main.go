@@ -10,6 +10,7 @@ import (
 	"github.com/flowexec/flow/cmd"
 	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/pkg/cli"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -42,6 +43,10 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	if err := store.MigrateProcessBuckets(""); err != nil {
+		logger.Log().Debugx("process bucket migration skipped or failed", "err", err)
+	}
 
 	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
 	ctx := context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)

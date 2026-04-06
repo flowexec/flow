@@ -23,11 +23,12 @@ import (
 	"github.com/flowexec/flow/internal/runner/render"
 	"github.com/flowexec/flow/internal/runner/request"
 	"github.com/flowexec/flow/internal/runner/serial"
-	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/pkg/context"
 	flowErrors "github.com/flowexec/flow/pkg/errors"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -132,14 +133,12 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		))
 	}
 
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.CreateProcessBucket(ref.String()); err != nil {
+			logger.Log().FatalErr(err)
+		}
+		_ = os.Setenv(store.BucketEnv, ref.String())
 	}
-	if _, err = s.CreateAndSetBucket(ref.String()); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	_ = s.Close()
 
 	envMap := make(map[string]string)
 	// add workspace env variables to the env map
@@ -180,19 +179,35 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		execArgs = args[1:]
 	}
 
-	if err := runner.Exec(ctx, e, eng, envMap, execArgs); err != nil {
-		logger.Log().FatalErr(err)
-	}
+	runErr := runner.Exec(ctx, e, eng, envMap, execArgs)
 	dur := time.Since(startTime)
-	processStore, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().Errorf("failed clearing process store\n%v", err)
-	}
-	if processStore != nil {
-		if err = processStore.DeleteBucket(store.EnvironmentBucket()); err != nil {
+
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.DeleteProcessBucket(store.EnvironmentBucket()); err != nil {
 			logger.Log().Errorf("failed clearing process store\n%v", err)
 		}
-		_ = processStore.Close()
+	}
+
+	record := store.ExecutionRecord{
+		Ref:       ref.String(),
+		StartedAt: startTime,
+		Duration:  dur,
+	}
+	if runErr != nil {
+		record.ExitCode = 1
+		record.Error = runErr.Error()
+	}
+	if entries, listErr := tuikitIO.ListArchiveEntries(filesystem.LogsDir()); listErr == nil && len(entries) > 0 {
+		record.LogArchiveID = entries[0].Path
+	}
+	if ctx.DataStore != nil {
+		if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
+			logger.Log().Debugx("failed to record execution history", "err", recErr)
+		}
+	}
+
+	if runErr != nil {
+		logger.Log().FatalErr(runErr)
 	}
 	logger.Log().Debugx(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	if TUIEnabled(ctx, cmd) {

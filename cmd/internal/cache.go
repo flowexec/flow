@@ -9,9 +9,9 @@ import (
 
 	"github.com/flowexec/flow/cmd/internal/flags"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
-	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 )
 
 func RegisterCacheCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -76,24 +76,12 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		value = strings.Join(args[1:], " ")
 	}
 
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
 	bucketName := store.EnvironmentBucket()
 	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
 	if global {
 		bucketName = store.RootBucket
 	}
-	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	defer func() {
-		if err = s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
-		}
-	}()
-	if err = s.Set(key, value); err != nil {
+	if err := ctx.DataStore.SetProcessVar(bucketName, key, value); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	logger.Log().PlainTextInfo(fmt.Sprintf("Key %q set in the cache", key))
@@ -114,27 +102,15 @@ func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheGetFunc(_ *context.Context, cmd *cobra.Command, args []string) {
+func cacheGetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	key := args[0]
 
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
 	bucketName := store.EnvironmentBucket()
 	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
 	if global {
 		bucketName = store.RootBucket
 	}
-	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
-		}
-	}()
-	value, err := s.Get(key)
+	value, err := ctx.DataStore.GetProcessVar(bucketName, key)
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
@@ -159,19 +135,7 @@ func registerCacheListCmd(ctx *context.Context, rootCmd *cobra.Command) {
 }
 
 func cacheListFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
-	if _, err = s.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
-		}
-	}()
-	data, err := s.GetAll()
+	data, err := ctx.DataStore.GetAllProcessVars(store.EnvironmentBucket())
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}
@@ -199,27 +163,15 @@ func registerCacheRemoveCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheRemoveFunc(_ *context.Context, cmd *cobra.Command, args []string) {
+func cacheRemoveFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	key := args[0]
 
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
 	bucketName := store.EnvironmentBucket()
 	global := flags.ValueFor[bool](cmd, *flags.GlobalCacheFlag, false)
 	if global {
 		bucketName = store.RootBucket
 	}
-	if _, err = s.CreateAndSetBucket(bucketName); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
-		}
-	}()
-	if err = s.Delete(key); err != nil {
+	if err := ctx.DataStore.DeleteProcessVar(bucketName, key); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Key %q removed from the cache", key))
@@ -240,7 +192,7 @@ func registerCacheClearCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func cacheClearFunc(_ *context.Context, cmd *cobra.Command, _ []string) {
+func cacheClearFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	full := flags.ValueFor[bool](cmd, *flags.StoreAllFlag, false)
 	if full {
 		if err := store.DestroyStore(); err != nil {
@@ -249,16 +201,7 @@ func cacheClearFunc(_ *context.Context, cmd *cobra.Command, _ []string) {
 		logger.Log().PlainTextSuccess("Cache cleared")
 		return
 	}
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
-		}
-	}()
-	if err := s.DeleteBucket(store.EnvironmentBucket()); err != nil {
+	if err := ctx.DataStore.DeleteProcessBucket(store.EnvironmentBucket()); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	logger.Log().PlainTextSuccess("Cache cleared")

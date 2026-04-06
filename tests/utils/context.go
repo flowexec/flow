@@ -15,9 +15,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/internal/runner/mocks"
-	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/pkg/cache"
 	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -165,7 +165,7 @@ func newTestContext(
 		tb.Fatalf("unable to create user config: %v", err)
 	}
 
-	wsCache, execCache := testCaches(tb)
+	wsCache, execCache, ds := testCaches(tb)
 
 	cancel := func() {
 		<-ctx.Done()
@@ -176,6 +176,7 @@ func newTestContext(
 		CurrentWorkspace: testWsCfg,
 		WorkspacesCache:  wsCache,
 		ExecutableCache:  execCache,
+		DataStore:        ds,
 	}
 	ctxx.SetContext(ctx, cancel)
 	ctxx.SetIO(stdIn, stdOut)
@@ -263,9 +264,16 @@ func testWsConfig(wsDir string) (*workspace.Workspace, error) {
 }
 
 // testCaches must be called after the user and workspace configs have been created.
-func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache) {
-	wsCache := cache.NewWorkspaceCache()
-	execCache := cache.NewExecutableCache(wsCache)
+func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache, store.DataStore) {
+	dbPath := filepath.Join(tb.TempDir(), "test_store.db")
+	ds, err := store.NewDataStore(dbPath)
+	if err != nil {
+		tb.Fatalf("unable to open test data store: %v", err)
+	}
+	tb.Cleanup(func() { _ = ds.Close() })
+
+	wsCache := cache.NewWorkspaceCache(ds)
+	execCache := cache.NewExecutableCache(wsCache, ds)
 
 	if err := wsCache.Update(); err != nil {
 		tb.Fatalf("unable to update cache: %v", err)
@@ -273,7 +281,7 @@ func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache) {
 	if err := execCache.Update(); err != nil {
 		tb.Fatalf("unable to update cache: %v", err)
 	}
-	return wsCache, execCache
+	return wsCache, execCache, ds
 }
 
 func setTestEnv(tb testing.TB, configDir, cacheDir string) {

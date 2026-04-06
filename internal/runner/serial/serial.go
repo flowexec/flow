@@ -12,8 +12,8 @@ import (
 
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/services/store"
 	envUtils "github.com/flowexec/flow/internal/utils/env"
+	"github.com/flowexec/flow/pkg/store"
 	execUtils "github.com/flowexec/flow/internal/utils/executables"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"
@@ -190,21 +190,9 @@ func handleExec(
 			stepNum := i + 1
 			totalSteps := len(serialSpec.Execs)
 			conditionFunc = func() (bool, error) {
-				str, err := store.NewStore(store.Path())
+				cacheData, err := ctx.DataStore.GetAllProcessVars(store.EnvironmentBucket())
 				if err != nil {
 					return false, err
-				}
-				if _, err := str.CreateAndSetBucket(store.EnvironmentBucket()); err != nil {
-					_ = str.Close()
-					return false, err
-				}
-				cacheData, err := str.GetAll()
-				if err != nil {
-					_ = str.Close()
-					return false, err
-				}
-				if err := str.Close(); err != nil {
-					logger.Log().Error(err, "unable to close store")
 				}
 
 				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
