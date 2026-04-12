@@ -8,7 +8,7 @@ import (
 
 	"github.com/flowexec/flow/cmd/internal"
 	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/cmd/internal/version"
+	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"

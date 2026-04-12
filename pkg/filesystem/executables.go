@@ -71,14 +71,14 @@ func LoadWorkspaceFlowFiles(
 	for _, cfgFile := range cfgFiles {
 		cfg, err := LoadFlowFile(cfgFile)
 		if err != nil {
-			logger.Log().Errorx("unable to load executable config file", "configFile", cfgFile, "err", err)
+			logger.Log().Error("unable to load executable config file", "configFile", cfgFile, "err", err)
 			continue
 		}
 		cfg.SetDefaults()
 		cfg.SetContext(workspaceCfg.AssignedName(), workspaceCfg.Location(), cfgFile)
 		cfgs = append(cfgs, cfg)
 	}
-	logger.Log().Debugx(
+	logger.Log().Debug(
 		fmt.Sprintf("loaded %d config files", len(cfgs)),
 		"workspace",
 		workspaceCfg.AssignedName(),
@@ -113,7 +113,7 @@ func findFlowFiles(workspaceCfg *workspace.Workspace) ([]string, error) {
 	walkDirFunc := func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				logger.Log().Debugx("cfg path does not exist", "path", path)
+				logger.Log().Debug("cfg path does not exist", "path", path)
 				return nil
 			}
 			return err

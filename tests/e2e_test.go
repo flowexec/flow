@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/flowexec/tuikit"
-	"github.com/muesli/termenv"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	lipgloss.SetColorProfile(termenv.Ascii)
+	lipgloss.Writer.Profile = colorprofile.Ascii
 }
 
 func TestE2E(t *testing.T) {

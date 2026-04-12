@@ -64,7 +64,7 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
-				logger.EXPECT().Infof("foo", gomock.Any()).Times(1)
+				logger.EXPECT().Info("foo").Times(1)
 				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Logfmt, logger, os.Stdin, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -75,7 +75,7 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.JSON
 				}).AnyTimes()
-				logger.EXPECT().Infof("foo", gomock.Any()).Times(1)
+				logger.EXPECT().Info("foo").Times(1)
 				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -87,7 +87,7 @@ var _ = Describe("Run", func() {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
 				fields := map[string]interface{}{"key": "value"}
-				logger.EXPECT().Infox("foo", "key", "value").Times(1)
+				logger.EXPECT().Info("foo", "key", "value").Times(1)
 				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, fields)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -99,7 +99,7 @@ var _ = Describe("Run", func() {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
 				env := []string{"key=value"}
-				logger.EXPECT().Infof("value", gomock.Any()).Times(1)
+				logger.EXPECT().Info("value").Times(1)
 				err := run.RunCmd("echo \"$key\"", "", env, tuikitIO.JSON, logger, os.Stdin, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})

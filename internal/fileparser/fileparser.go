@@ -27,10 +27,10 @@ func ExecutablesFromImports(
 		expandedFile := utils.ExpandPath(file, filepath.Dir(flowFilePath), nil)
 
 		if info, err := os.Stat(expandedFile); err != nil {
-			logger.Log().Error(err, fmt.Sprintf("unable to import executables from file %s", file))
+			logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file %s", file))
 			continue
 		} else if info.IsDir() {
-			logger.Log().Errorx("unable to import executables", "err", fmt.Sprintf("%s is not a file", file))
+			logger.Log().Error("unable to import executables", "err", fmt.Sprintf("%s is not a file", file))
 			continue
 		}
 
@@ -38,7 +38,7 @@ func ExecutablesFromImports(
 		case "package.json":
 			execs, err := ExecutablesFromPackageJSON(wsPath, expandedFile)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -48,7 +48,7 @@ func ExecutablesFromImports(
 		case "makefile":
 			execs, err := ExecutablesFromMakefile(wsPath, expandedFile)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -58,7 +58,7 @@ func ExecutablesFromImports(
 		case "docker-compose.yml", "docker-compose.yaml":
 			execs, err := ExecutablesFromDockerCompose(wsPath, expandedFile)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 			}
 			for _, exec := range execs {
 				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
@@ -68,12 +68,12 @@ func ExecutablesFromImports(
 		default:
 			ext := filepath.Ext(fn)
 			if ext != ".sh" {
-				logger.Log().Warnx("unable to import executables - unsupported file type", "file", file)
+				logger.Log().Warn("unable to import executables - unsupported file type", "file", file)
 				continue
 			}
 			exec, err := ExecutablesFromShFile(wsPath, expandedFile)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
 				continue
 			}
 			exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)

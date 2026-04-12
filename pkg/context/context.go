@@ -11,6 +11,7 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
+	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -81,6 +82,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 	app := tuikit.NewApplication(
 		AppName,
 		tuikit.WithState(HeaderCtxKey, c.String()),
+		tuikit.WithVersion(version.SemVer()),
 		tuikit.WithLoadingMsg("thinking..."),
 	)
 
@@ -179,24 +181,24 @@ func (ctx *Context) Finalize() {
 
 	for _, cb := range ctx.callbacks {
 		if err := cb(ctx); err != nil {
-			logger.Log().Error(err, "callback execution error")
+			logger.Log().WrapError(err, "callback execution error")
 		}
 	}
 
 	if ctx.ProcessTmpDir != "" {
 		files, err := filepath.Glob(filepath.Join(ctx.ProcessTmpDir, "*"))
 		if err != nil {
-			logger.Log().Error(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().WrapError(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
 			return
 		}
 		for _, f := range files {
 			err = os.RemoveAll(f)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to remove file %s", f))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to remove file %s", f))
 			}
 		}
 		if err := os.Remove(ctx.ProcessTmpDir); err != nil {
-			logger.Log().Error(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().WrapError(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
 		}
 	}
 }

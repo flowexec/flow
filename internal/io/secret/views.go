@@ -166,29 +166,33 @@ func NewSecretListView(
 		secrets = append(secrets, secret)
 	}
 
-	if len(secrets.Items()) == 0 {
+	if len(secrets) == 0 {
 		container.HandleError(fmt.Errorf("no secrets found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		var secret vault2.Secret
-		var found bool
-		for _, s := range secrets {
-			if s == nil {
-				continue
-			}
-			if string(s.Ref()) == filterVal {
-				secret = s
-				found = true
-				break
-			}
-		}
-		if !found || secret == nil {
-			return fmt.Errorf("secret not found")
-		}
-
-		return container.SetView(NewSecretView(ctx, vlt, secret.Ref(), asPlainText))
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Secrets (%d)", len(secrets)), Percentage: 100},
 	}
-
-	return views.NewCollectionView(container.RenderState(), secrets, types.CollectionFormatList, selectFunc)
+	rows := make([]views.TableRow, 0, len(secrets))
+	for _, s := range secrets {
+		if s == nil {
+			continue
+		}
+		rows = append(rows, views.TableRow{Data: []string{s.Ref().Key(), string(s.Ref())}})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) < 2 {
+			return fmt.Errorf("no secret selected")
+		}
+		ref := vault2.SecretRef(row.Data()[1])
+		for _, s := range secrets {
+			if s != nil && s.Ref() == ref {
+				return container.SetView(NewSecretView(ctx, vlt, s.Ref(), asPlainText))
+			}
+		}
+		return fmt.Errorf("secret not found")
+	})
+	return table
 }

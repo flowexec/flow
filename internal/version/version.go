@@ -53,3 +53,7 @@ OS / Arch : %s
 func String() string {
 	return generateOutput()
 }
+
+func SemVer() string {
+	return strings.TrimSpace(version)
+}

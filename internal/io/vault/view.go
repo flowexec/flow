@@ -127,21 +127,23 @@ func NewVaultListView(
 		return views.NewErrorView(fmt.Errorf("no vaults found"), container.RenderState().Theme)
 	}
 
-	selectFunc := func(filterVal string) error {
-		for _, v := range vaults.Vaults {
-			if v.Name == filterVal {
-				return container.SetView(NewVaultView(container, v.Name))
-			}
-		}
-		return fmt.Errorf("vault not found")
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Vaults (%d)", len(vaults.Vaults)), Percentage: 40},
+		{Title: "Path", Percentage: 60},
 	}
-
-	return views.NewCollectionView(
-		container.RenderState(),
-		vaults,
-		types.CollectionFormatList,
-		selectFunc,
-	)
+	rows := make([]views.TableRow, 0, len(vaults.Vaults))
+	for _, v := range vaults.Vaults {
+		rows = append(rows, views.TableRow{Data: []string{v.Name, v.Path}})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) == 0 {
+			return fmt.Errorf("no vault selected")
+		}
+		return container.SetView(NewVaultView(container, row.Data()[0]))
+	})
+	return table
 }
 
 func vaultFromName(vaultName string) (*vaultEntity, error) {

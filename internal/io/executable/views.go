@@ -2,7 +2,6 @@ package executable
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/atotto/clipboard"
 	"github.com/flowexec/tuikit"
@@ -13,6 +12,7 @@ import (
 	"github.com/flowexec/flow/internal/io/common"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"
+	flowCommon "github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -29,7 +29,7 @@ func NewExecutableView(
 				ctx.TUIContainer.Shutdown(func() {
 					err := runFunc(exec.Ref().String())
 					if err != nil {
-						logger.Log().Error(err, "executable view runner error")
+						logger.Log().WrapError(err, "executable view runner error")
 					}
 				})
 				return nil
@@ -70,24 +70,42 @@ func NewExecutableListView(
 	runFunc func(string) error,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	if len(executables.Items()) == 0 {
-		container.HandleError(fmt.Errorf("no workspaces found"))
+	if len(executables) == 0 {
+		container.HandleError(fmt.Errorf("no executables found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		s := strings.Split(filterVal, " ")
-		if len(s) != 2 {
-			return fmt.Errorf("invalid filter value")
+	columns := []views.TableColumn{
+		{Title: "Verb", Percentage: 20},
+		{Title: fmt.Sprintf("Executables (%d)", len(executables)), Percentage: 60},
+		{Title: "Tags", Percentage: 20},
+	}
+	rows := make([]views.TableRow, 0, len(executables))
+	for _, ex := range executables {
+		tags := ""
+		if len(ex.Tags) > 0 {
+			tags = flowCommon.Tags(ex.Tags).PreviewString()
 		}
-		verb, id := s[0], s[1]
-		exec, err := executables.FindByVerbAndID(executable.Verb(verb), id)
+		rows = append(rows, views.TableRow{
+			Data: []string{string(ex.Verb), ex.Ref().ID(), tags},
+		})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil {
+			return fmt.Errorf("no executable selected")
+		}
+		data := row.Data()
+		if len(data) < 2 {
+			return fmt.Errorf("invalid selection")
+		}
+		ex, err := executables.FindByVerbAndID(executable.Verb(data[0]), data[1])
 		if err != nil {
 			return fmt.Errorf("executable not found")
 		}
-		return ctx.SetView(NewExecutableView(ctx, exec, runFunc))
-	}
-
-	return views.NewCollectionView(container.RenderState(), executables, types.CollectionFormatList, selectFunc)
+		return ctx.SetView(NewExecutableView(ctx, ex, runFunc))
+	})
+	return table
 }
 
 func NewTemplateView(
@@ -139,18 +157,28 @@ func NewTemplateListView(
 	runFunc func(string) error,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	if len(templates.Items()) == 0 {
+	if len(templates) == 0 {
 		container.HandleError(fmt.Errorf("no templates found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		template := templates.Find(filterVal)
-		if template == nil {
-			return fmt.Errorf("template %s not found", filterVal)
-		}
-
-		return ctx.SetView(NewTemplateView(ctx, template, runFunc))
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Templates (%d)", len(templates)), Percentage: 100},
 	}
-
-	return views.NewCollectionView(container.RenderState(), templates, types.CollectionFormatList, selectFunc)
+	rows := make([]views.TableRow, 0, len(templates))
+	for _, t := range templates {
+		rows = append(rows, views.TableRow{Data: []string{t.Name()}})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) == 0 {
+			return fmt.Errorf("no template selected")
+		}
+		t := templates.Find(row.Data()[0])
+		if t == nil {
+			return fmt.Errorf("template %s not found", row.Data()[0])
+		}
+		return ctx.SetView(NewTemplateView(ctx, t, runFunc))
+	})
+	return table
 }

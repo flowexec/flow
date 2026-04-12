@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/exp/teatest/v2"
 	"github.com/flowexec/tuikit"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

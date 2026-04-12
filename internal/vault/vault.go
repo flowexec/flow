@@ -61,7 +61,7 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 		}
 		opts = append(opts, vault.WithAESKeyFromFile(keyFile))
 		if err := writeKeyToFile(key, keyFile); err != nil {
-			logger.Log().Warnx("unable to write key to file", "err", err)
+			logger.Log().Warn("unable to write key to file", "err", err)
 		}
 	}
 

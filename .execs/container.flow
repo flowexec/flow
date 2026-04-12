@@ -80,7 +80,7 @@ executables:
 
           # First build the flow binary with version info
           GOOS=linux GOARCH=${CURRENT_ARCH} go build \
-            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -ldflags="-s -w -X github.com/flowexec/flow/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/internal/version.version=${VERSION} -X github.com/flowexec/flow/internal/version.buildDate=${BUILD_DATE}" \
             -o flow
 
           # Build Docker image for local platform
@@ -109,12 +109,12 @@ executables:
 
           # Build amd64
           GOOS=linux GOARCH=amd64 go build \
-            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -ldflags="-s -w -X github.com/flowexec/flow/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/internal/version.version=${VERSION} -X github.com/flowexec/flow/internal/version.buildDate=${BUILD_DATE}" \
             -o flow-amd64
 
           # Build arm64
           GOOS=linux GOARCH=arm64 go build \
-            -ldflags="-s -w -X github.com/flowexec/flow/cmd/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/cmd/internal/version.version=${VERSION} -X github.com/flowexec/flow/cmd/internal/version.buildDate=${BUILD_DATE}" \
+            -ldflags="-s -w -X github.com/flowexec/flow/internal/version.gitCommit=${GIT_COMMIT} -X github.com/flowexec/flow/internal/version.version=${VERSION} -X github.com/flowexec/flow/internal/version.buildDate=${BUILD_DATE}" \
             -o flow-arm64
 
           # Create temporary Dockerfile that uses TARGETARCH for multi-arch builds
@@ -180,7 +180,7 @@ executables:
           flag: workspace
         - envKey: GIT_REPO
           default: https://github.com/jahvon/flow.git
-          flag: repo
+          flag: gitrepo
         - envKey: BRANCH
           default: main
           flag: branch

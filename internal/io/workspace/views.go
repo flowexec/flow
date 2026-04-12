@@ -68,24 +68,32 @@ func NewWorkspaceListView(
 	workspaces workspace.WorkspaceList,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	if len(workspaces.Items()) == 0 {
+	if len(workspaces) == 0 {
 		container.HandleError(fmt.Errorf("no workspaces found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		var ws *workspace.Workspace
-		for _, s := range workspaces {
-			if s.AssignedName() == filterVal || s.DisplayName == filterVal {
-				ws = s
-				break
-			}
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Workspaces (%d)", len(workspaces)), Percentage: 40},
+		{Title: "Location", Percentage: 60},
+	}
+	rows := make([]views.TableRow, 0, len(workspaces))
+	for _, ws := range workspaces {
+		rows = append(rows, views.TableRow{
+			Data: []string{ws.AssignedName(), ws.Location()},
+		})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) == 0 {
+			return fmt.Errorf("no workspace selected")
 		}
+		name := row.Data()[0]
+		ws := workspaces.FindByName(name)
 		if ws == nil {
 			return fmt.Errorf("workspace not found")
 		}
-
 		return ctx.SetView(NewWorkspaceView(ctx, ws))
-	}
-
-	return views.NewCollectionView(container.RenderState(), workspaces, types.CollectionFormatList, selectFunc)
+	})
+	return table
 }

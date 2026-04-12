@@ -79,7 +79,7 @@ var _ = Describe("Executables", func() {
 
 			ctrl := gomock.NewController(GinkgoT())
 			logger := mocks.NewMockLogger(ctrl)
-			logger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 
 			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())
@@ -111,7 +111,7 @@ var _ = Describe("Executables", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			mockLogger := mocks.NewMockLogger(ctrl)
 			logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
-			mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+			mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 
 			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())
@@ -147,7 +147,7 @@ var _ = Describe("Executables", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			mockLogger := mocks.NewMockLogger(ctrl)
 			logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
-			mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+			mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 
 			definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
 			Expect(err).NotTo(HaveOccurred())

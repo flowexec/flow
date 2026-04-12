@@ -55,7 +55,7 @@ func ProcessTemplate(
 	}
 	flowfileDir = utils.ExpandDirectory(flowfileDir, ws.Location(), template.Location(), envMap)
 	fullPath := filepath.Join(flowfileDir, flowfileName)
-	logger.Log().Debugx(
+	logger.Log().Debug(
 		fmt.Sprintf("processing %s template", flowfileName),
 		"template", template.Location(), "output", fullPath,
 	)
@@ -89,7 +89,7 @@ func ProcessTemplate(
 
 		if _, e := os.Stat(fullPath); e == nil {
 			// TODO: Add a flag to overwrite existing files
-			logger.Log().Warnx("Overwriting existing file", "dst", fullPath)
+			logger.Log().Warn("Overwriting existing file", "dst", fullPath)
 		}
 
 		if err := filesystem.WriteFlowFile(fullPath, flowfile); err != nil {
@@ -166,7 +166,7 @@ func runExecutables(
 			} else {
 				a, err := argUtils.BuildArgsEnvMap(execEnv.Args, inputArgs, ee)
 				if err != nil {
-					logger.Log().Error(err, "unable to process arguments")
+					logger.Log().WrapError(err, "unable to process arguments")
 				}
 				maps.Copy(inputEnv, a)
 			}

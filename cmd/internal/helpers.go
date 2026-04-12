@@ -9,6 +9,7 @@ import (
 
 	"github.com/flowexec/flow/cmd/internal/flags"
 	flowIO "github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -73,10 +74,10 @@ func TUIEnabled(ctx *context.Context, cmd *cobra.Command) bool {
 func SetView(ctx *context.Context, cmd *cobra.Command, view tuikit.View) {
 	if TUIEnabled(ctx, cmd) {
 		if err := ctx.SetView(view); err != nil {
-			logger.Log().Fatalx("unable to set view", "view", view.Type(), "error", err)
+			logger.Log().Fatal("unable to set view", "view", view.Type(), "error", err)
 		}
 	} else {
-		logger.Log().Errorx("interactive mode is disabled", "view", view.Type())
+		logger.Log().Error("interactive mode is disabled", "view", view.Type())
 	}
 }
 
@@ -99,7 +100,7 @@ func WaitForTUI(ctx *context.Context, cmd *cobra.Command) {
 func printContext(ctx *context.Context, cmd *cobra.Command) {
 	if TUIEnabled(ctx, cmd) {
 		logger.Log().Println(logger.Theme(ctx.Config.Theme.String()).
-			RenderHeader(context.AppName, context.HeaderCtxKey, ctx.String(), 0))
+			RenderHeader(context.AppName, version.String(), context.HeaderCtxKey, ctx.String(), 0))
 	}
 }
 
@@ -116,7 +117,7 @@ func workspaceOrCurrent(ctx *context.Context, workspaceName string) *workspace.W
 		var err error
 		ws, err = filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
 		if err != nil {
-			logger.Log().Error(err, "unable to load workspace config")
+			logger.Log().WrapError(err, "unable to load workspace config")
 		}
 		ws.SetContext(workspaceName, wsPath)
 	}
@@ -143,7 +144,7 @@ func loadFlowfileTemplate(ctx *context.Context, name, path string) *executable.T
 	}
 	tmpl, err := filesystem.LoadFlowFileTemplate(name, path)
 	if err != nil {
-		logger.Log().Error(err, "unable to load flowfile template")
+		logger.Log().WrapError(err, "unable to load flowfile template")
 		return nil
 	}
 	return tmpl

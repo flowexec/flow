@@ -69,7 +69,7 @@ var _ = Describe("Utils", func() {
 			})
 			It("logs a warning if the env var is not found", func() {
 				envMap := map[string]string{"VAR1": "one"}
-				mockLogger.EXPECT().Warnx("unable to find env key in path expansion", "key", "VAR2")
+				mockLogger.EXPECT().Warn("unable to find env key in path expansion", "key", "VAR2")
 				Expect(utils.ExpandDirectory("/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
 					To(Equal("/one"))
 			})

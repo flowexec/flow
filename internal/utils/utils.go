@@ -29,7 +29,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 	case path == "." || strings.HasPrefix(path, "./"):
 		wd, err := os.Getwd()
 		if err != nil {
-			logger.Log().Warnx("unable to get working directory for relative path expansion", "err", err)
+			logger.Log().Warn("unable to get working directory for relative path expansion", "err", err)
 			targetPath = filepath.Join(fallbackDir, path)
 		} else {
 			targetPath = filepath.Join(wd, path[1:])
@@ -37,7 +37,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 	case strings.HasPrefix(path, "~/"):
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			logger.Log().Warnx("unable to get user home directory for relative path expansion", "err", err)
+			logger.Log().Warn("unable to get user home directory for relative path expansion", "err", err)
 			targetPath = filepath.Join(fallbackDir, path)
 		} else {
 			targetPath = filepath.Join(homeDir, path[2:])
@@ -51,13 +51,13 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 	targetPath = os.Expand(targetPath, func(key string) string {
 		val, found := env[key]
 		if !found {
-			logger.Log().Warnx("unable to find env key in path expansion", "key", key)
+			logger.Log().Warn("unable to find env key in path expansion", "key", key)
 		}
 		return val
 	})
 
 	if err := validateSecurePath(targetPath); err != nil {
-		logger.Log().Fatalx("path failed security validation", "path", targetPath, "err", err)
+		logger.Log().Fatal("path failed security validation", "path", targetPath, "err", err)
 		return "" // Shouldn't get here with fatal logger, but just in case
 	}
 

@@ -147,7 +147,7 @@ func handleExec(
 
 				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, childArgs, childEnv)
 				if err != nil {
-					logger.Log().Error(err, "unable to process arguments")
+					logger.Log().WrapError(err, "unable to process arguments")
 				}
 				maps.Copy(childEnv, a)
 			}
@@ -204,7 +204,7 @@ func handleExec(
 					return false, err
 				}
 				if err := str.Close(); err != nil {
-					logger.Log().Error(err, "unable to close store")
+					logger.Log().WrapError(err, "unable to close store")
 				}
 
 				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
