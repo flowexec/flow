@@ -11,6 +11,7 @@ require (
 	github.com/flowexec/tuikit v0.3.2
 	github.com/flowexec/vault v0.2.1
 	github.com/gen2brain/beeep v0.11.2
+	github.com/google/uuid v1.6.0
 	github.com/jahvon/expression v0.1.4
 	github.com/mark3labs/mcp-go v0.43.2
 	github.com/onsi/ginkgo/v2 v2.28.1
@@ -66,7 +67,6 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect

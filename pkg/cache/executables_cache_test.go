@@ -69,7 +69,9 @@ var _ = Describe("ExecutableCacheImpl", func() {
 			Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 			WorkspaceLocations: map[string]string{wsName: wsPath},
 		}, nil).AnyTimes()
-		execCache = cache.NewExecutableCache(wsCache, ds).(*cache.ExecutableCacheImpl)
+		var ok bool
+		execCache, ok = cache.NewExecutableCache(wsCache, ds).(*cache.ExecutableCacheImpl)
+		Expect(ok).To(BeTrue())
 	})
 
 	AfterEach(func() {

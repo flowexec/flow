@@ -34,7 +34,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			}
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
-				if err := cache.UpdateAll(); err != nil {
+				if err := cache.UpdateAll(ctx.DataStore); err != nil {
 					logger.Log().FatalErr(err)
 				}
 			}
@@ -81,7 +81,6 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	internal.RegisterWorkspaceCmd(ctx, rootCmd)
 	internal.RegisterTemplateCmd(ctx, rootCmd)
 	internal.RegisterLogsCmd(ctx, rootCmd)
-	internal.RegisterHistoryCmd(ctx, rootCmd)
 	internal.RegisterSyncCmd(ctx, rootCmd)
 	internal.RegisterMCPCmd(ctx, rootCmd)
 }

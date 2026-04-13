@@ -7,6 +7,8 @@ import (
 	"os"
 	"slices"
 
+	"github.com/google/uuid"
+
 	"github.com/flowexec/flow/cmd"
 	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/pkg/cli"
@@ -23,16 +25,13 @@ func main() {
 		panic(fmt.Errorf("user config load error: %w", err))
 	}
 
-	var archiveDir string
-	if args := os.Args; len(args) > 1 && slices.Contains(executable.ValidVerbs(), executable.Verb(args[1])) {
-		// only create a log archive file for exec commands
-		archiveDir = filesystem.LogsDir()
-	}
+	archiveDir, archiveID := initLogArchive()
 	loggerOpts := logger.InitOptions{
 		StdOut:           io.Stdout,
 		LogMode:          cfg.DefaultLogMode,
 		Theme:            logger.Theme(cfg.Theme.String()),
 		ArchiveDirectory: archiveDir,
+		ArchiveID:        archiveID,
 	}
 	logger.Init(loggerOpts)
 	defer func() {
@@ -44,12 +43,11 @@ func main() {
 		}
 	}()
 
-	if err := store.MigrateProcessBuckets(""); err != nil {
-		logger.Log().Debug("process bucket migration skipped or failed", "err", err)
-	}
+	initStore()
 
 	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
 	ctx := context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
+	ctx.LogArchiveID = archiveID
 	defer ctx.Finalize()
 
 	if ctx == nil {
@@ -59,5 +57,19 @@ func main() {
 	cli.RegisterAllCommands(ctx, rootCmd)
 	if err := cmd.Execute(ctx, rootCmd); err != nil {
 		logger.Log().FatalErr(err)
+	}
+}
+
+func initLogArchive() (dir, id string) {
+	if args := os.Args; len(args) > 1 && slices.Contains(executable.ValidVerbs(), executable.Verb(args[1])) {
+		dir = filesystem.LogsDir()
+		id = uuid.New().String()
+	}
+	return
+}
+
+func initStore() {
+	if err := store.MigrateProcessBuckets(""); err != nil {
+		logger.Log().Debug("process bucket migration skipped or failed", "err", err)
 	}
 }

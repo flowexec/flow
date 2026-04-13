@@ -106,7 +106,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		logger.Log().FatalErr(err)
 	}
 
-	if err := cache.UpdateAll(); err != nil {
+	if err := cache.UpdateAll(ctx.DataStore); err != nil {
 		logger.Log().FatalErr(errors.Wrap(err, "failure updating cache"))
 	}
 
@@ -201,7 +201,7 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 
 	logger.Log().Warnf("Workspace '%s' deleted", name)
 
-	if err := cache.UpdateAll(); err != nil {
+	if err := cache.UpdateAll(ctx.DataStore); err != nil {
 		logger.Log().FatalErr(errors.Wrap(err, "unable to update cache"))
 	}
 }

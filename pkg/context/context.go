@@ -52,6 +52,11 @@ type Context struct {
 	// parallel or serial runner. It is set per-goroutine (via shallow copy) so
 	// that downstream writers can prefix output with the task name.
 	CurrentTask *io.TaskContext
+
+	// LogArchiveID is the unique identifier used in the log archive filename for
+	// this process. It is set at startup and used to link execution records to
+	// their log output.
+	LogArchiveID string
 }
 
 func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
@@ -92,9 +97,6 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 		ExecutableCache:  executableCache,
 		DataStore:        ds,
 	}
-	c.AddCallback(func(_ *Context) error {
-		return ds.Close()
-	})
 
 	app := tuikit.NewApplication(
 		AppName,

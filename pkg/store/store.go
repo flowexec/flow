@@ -25,13 +25,15 @@ const (
 	BucketEnv = "FLOW_PROCESS_BUCKET"
 	// RootBucket is the name of the global (root) process bucket.
 	RootBucket = "root"
+
+	openTimeout = 3 * time.Second
 )
 
 // DataStore manages structured internal state (cache, execution history, and process env vars).
 // It is intentionally in pkg/ so external consumers (e.g. pro wrapper) can import it.
 //
 //go:generate mockgen -destination=mocks/mock_data_store.go -package=mocks github.com/flowexec/flow/pkg/store DataStore
-type DataStore interface {
+type DataStore interface { //nolint:interfacebloat // single backing store with cache, history, and process var concerns
 	SetCacheEntry(key string, value []byte) error
 	GetCacheEntry(key string) ([]byte, error)
 	DeleteCacheEntry(key string) error
@@ -56,30 +58,48 @@ type DataStore interface {
 
 // ExecutionRecord holds metadata about a single executable run.
 type ExecutionRecord struct {
-	Ref      string        `json:"ref"`
-	StartedAt time.Time   `json:"startedAt"`
+	Ref       string        `json:"ref"`
+	StartedAt time.Time     `json:"startedAt"`
 	Duration  time.Duration `json:"duration"`
-	ExitCode  int          `json:"exitCode"`
-	Error     string       `json:"error,omitempty"`
+	ExitCode  int           `json:"exitCode"`
+	Error     string        `json:"error,omitempty"`
 	// LogArchiveID links this record to a tuikit log archive entry for cross-referencing.
 	LogArchiveID string `json:"logArchiveId,omitempty"`
 }
 
+// BoltDataStore opens and closes the BBolt database for each operation, so the
+// exclusive file lock is held only for the duration of a single transaction.
+// This allows multiple flow processes to share the same store file safely.
 type BoltDataStore struct {
-	db *bolt.DB
+	dbPath string
 }
 
-// NewDataStore opens (or creates) the BBolt data store at the given path.
+// NewDataStore creates a DataStore backed by the BBolt file at dbPath.
 // If dbPath is empty, the default path is used.
+// The database file is opened and closed per operation; no persistent lock is held.
 func NewDataStore(dbPath string) (DataStore, error) {
 	if dbPath == "" {
 		dbPath = Path()
 	}
-	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 3 * time.Second})
+
+	// Verify the path is usable by opening and immediately closing.
+	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: openTimeout})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open data store: %w", err)
 	}
-	return &BoltDataStore{db: db}, nil
+	_ = db.Close()
+
+	return &BoltDataStore{dbPath: dbPath}, nil
+}
+
+// open acquires the BBolt file lock, runs fn, and releases the lock.
+func (s *BoltDataStore) open(fn func(db *bolt.DB) error) error {
+	db, err := bolt.Open(s.dbPath, 0666, &bolt.Options{Timeout: openTimeout})
+	if err != nil {
+		return fmt.Errorf("failed to open data store: %w", err)
+	}
+	defer db.Close()
+	return fn(db)
 }
 
 // Path returns the default store database path.
@@ -99,7 +119,6 @@ func EnvironmentBucket() string {
 }
 
 // DestroyStore removes the store database file entirely.
-// On Unix the open handle in DataStore continues to work; the file is recreated on next open.
 func DestroyStore() error {
 	err := os.Remove(Path())
 	if err != nil && !isNotExist(err) {
@@ -111,42 +130,48 @@ func DestroyStore() error {
 // ---- cache bucket ----
 
 func (s *BoltDataStore) SetCacheEntry(key string, value []byte) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(cacheBucket))
-		if err != nil {
-			return fmt.Errorf("failed to open cache bucket: %w", err)
-		}
-		if err := b.Put([]byte(key), value); err != nil {
-			return fmt.Errorf("failed to set cache entry %s: %w", key, err)
-		}
-		return nil
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			b, err := tx.CreateBucketIfNotExists([]byte(cacheBucket))
+			if err != nil {
+				return fmt.Errorf("failed to open cache bucket: %w", err)
+			}
+			if err := b.Put([]byte(key), value); err != nil {
+				return fmt.Errorf("failed to set cache entry %s: %w", key, err)
+			}
+			return nil
+		})
 	})
 }
 
 func (s *BoltDataStore) GetCacheEntry(key string) ([]byte, error) {
 	var value []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(cacheBucket))
-		if b == nil {
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(cacheBucket))
+			if b == nil {
+				return nil
+			}
+			v := b.Get([]byte(key))
+			if v != nil {
+				value = make([]byte, len(v))
+				copy(value, v)
+			}
 			return nil
-		}
-		v := b.Get([]byte(key))
-		if v != nil {
-			value = make([]byte, len(v))
-			copy(value, v)
-		}
-		return nil
+		})
 	})
 	return value, err
 }
 
 func (s *BoltDataStore) DeleteCacheEntry(key string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(cacheBucket))
-		if b == nil {
-			return nil
-		}
-		return b.Delete([]byte(key))
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(cacheBucket))
+			if b == nil {
+				return nil
+			}
+			return b.Delete([]byte(key))
+		})
 	})
 }
 
@@ -157,87 +182,95 @@ func (s *BoltDataStore) RecordExecution(record ExecutionRecord) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal execution record: %w", err)
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		parent, err := tx.CreateBucketIfNotExists([]byte(historyBucket))
-		if err != nil {
-			return fmt.Errorf("failed to open history bucket: %w", err)
-		}
-		refBucket, err := parent.CreateBucketIfNotExists([]byte(record.Ref))
-		if err != nil {
-			return fmt.Errorf("failed to open ref bucket for %s: %w", record.Ref, err)
-		}
-		seq, err := refBucket.NextSequence()
-		if err != nil {
-			return fmt.Errorf("failed to generate sequence for %s: %w", record.Ref, err)
-		}
-		key := make([]byte, 8)
-		binary.BigEndian.PutUint64(key, seq)
-		return refBucket.Put(key, data)
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			parent, err := tx.CreateBucketIfNotExists([]byte(historyBucket))
+			if err != nil {
+				return fmt.Errorf("failed to open history bucket: %w", err)
+			}
+			refBucket, err := parent.CreateBucketIfNotExists([]byte(record.Ref))
+			if err != nil {
+				return fmt.Errorf("failed to open ref bucket for %s: %w", record.Ref, err)
+			}
+			seq, err := refBucket.NextSequence()
+			if err != nil {
+				return fmt.Errorf("failed to generate sequence for %s: %w", record.Ref, err)
+			}
+			key := make([]byte, 8)
+			binary.BigEndian.PutUint64(key, seq)
+			return refBucket.Put(key, data)
+		})
 	})
 }
 
 func (s *BoltDataStore) GetExecutionHistory(ref string, limit int) ([]ExecutionRecord, error) {
 	var records []ExecutionRecord
-	err := s.db.View(func(tx *bolt.Tx) error {
-		parent := tx.Bucket([]byte(historyBucket))
-		if parent == nil {
-			return nil
-		}
-		refBucket := parent.Bucket([]byte(ref))
-		if refBucket == nil {
-			return nil
-		}
-		var all [][]byte
-		_ = refBucket.ForEach(func(_, v []byte) error {
-			cp := make([]byte, len(v))
-			copy(cp, v)
-			all = append(all, cp)
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(historyBucket))
+			if parent == nil {
+				return nil
+			}
+			refBucket := parent.Bucket([]byte(ref))
+			if refBucket == nil {
+				return nil
+			}
+			var all [][]byte
+			_ = refBucket.ForEach(func(_, v []byte) error {
+				cp := make([]byte, len(v))
+				copy(cp, v)
+				all = append(all, cp)
+				return nil
+			})
+			start := 0
+			if limit > 0 && len(all) > limit {
+				start = len(all) - limit
+			}
+			for _, v := range all[start:] {
+				var rec ExecutionRecord
+				if err := json.Unmarshal(v, &rec); err != nil {
+					return fmt.Errorf("failed to unmarshal execution record: %w", err)
+				}
+				records = append(records, rec)
+			}
 			return nil
 		})
-		start := 0
-		if limit > 0 && len(all) > limit {
-			start = len(all) - limit
-		}
-		for _, v := range all[start:] {
-			var rec ExecutionRecord
-			if err := json.Unmarshal(v, &rec); err != nil {
-				return fmt.Errorf("failed to unmarshal execution record: %w", err)
-			}
-			records = append(records, rec)
-		}
-		return nil
 	})
 	return records, err
 }
 
 func (s *BoltDataStore) ListExecutionRefs() ([]string, error) {
 	var refs []string
-	err := s.db.View(func(tx *bolt.Tx) error {
-		parent := tx.Bucket([]byte(historyBucket))
-		if parent == nil {
-			return nil
-		}
-		return parent.ForEach(func(k, v []byte) error {
-			if v == nil { // sub-bucket, not a key-value pair
-				refs = append(refs, string(k))
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(historyBucket))
+			if parent == nil {
+				return nil
 			}
-			return nil
+			return parent.ForEach(func(k, v []byte) error {
+				if v == nil { // sub-bucket, not a key-value pair
+					refs = append(refs, string(k))
+				}
+				return nil
+			})
 		})
 	})
 	return refs, err
 }
 
 func (s *BoltDataStore) DeleteExecutionHistory(ref string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		parent := tx.Bucket([]byte(historyBucket))
-		if parent == nil {
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(historyBucket))
+			if parent == nil {
+				return nil
+			}
+			err := parent.DeleteBucket([]byte(ref))
+			if err != nil && !isNotFound(err) {
+				return fmt.Errorf("failed to delete history for ref %s: %w", ref, err)
+			}
 			return nil
-		}
-		err := parent.DeleteBucket([]byte(ref))
-		if err != nil && !isNotFound(err) {
-			return fmt.Errorf("failed to delete history for ref %s: %w", ref, err)
-		}
-		return nil
+		})
 	})
 }
 
@@ -260,63 +293,71 @@ func processBucketFor(tx *bolt.Tx, id string, create bool) (*bolt.Bucket, error)
 	}
 	parent = tx.Bucket([]byte(processBucketName))
 	if parent == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil bucket signals "not found" — callers handle it
 	}
 	return parent.Bucket([]byte(id)), nil
 }
 
 func (s *BoltDataStore) CreateProcessBucket(id string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		_, err := processBucketFor(tx, id, true)
-		return err
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			_, err := processBucketFor(tx, id, true)
+			return err
+		})
 	})
 }
 
 func (s *BoltDataStore) DeleteProcessBucket(id string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		parent := tx.Bucket([]byte(processBucketName))
-		if parent == nil {
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(processBucketName))
+			if parent == nil {
+				return nil
+			}
+			err := parent.DeleteBucket([]byte(id))
+			if err != nil && !isNotFound(err) {
+				return fmt.Errorf("failed to delete process bucket %s: %w", id, err)
+			}
 			return nil
-		}
-		err := parent.DeleteBucket([]byte(id))
-		if err != nil && !isNotFound(err) {
-			return fmt.Errorf("failed to delete process bucket %s: %w", id, err)
-		}
-		return nil
+		})
 	})
 }
 
 func (s *BoltDataStore) SetProcessVar(bucketID, key, value string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket, err := processBucketFor(tx, bucketID, true)
-		if err != nil {
-			return err
-		}
-		if err := bucket.Put([]byte(key), []byte(value)); err != nil {
-			return fmt.Errorf("failed to set var %s in bucket %s: %w", key, bucketID, err)
-		}
-		return nil
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			bucket, err := processBucketFor(tx, bucketID, true)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put([]byte(key), []byte(value)); err != nil {
+				return fmt.Errorf("failed to set var %s in bucket %s: %w", key, bucketID, err)
+			}
+			return nil
+		})
 	})
 }
 
 // GetProcessVar retrieves the value for key in bucketID, falling back to RootBucket if not found.
 func (s *BoltDataStore) GetProcessVar(bucketID, key string) (string, error) {
 	var value []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bucket, _ := processBucketFor(tx, bucketID, false)
-		if bucket != nil {
-			value = bucket.Get([]byte(key))
-		}
-		if value == nil && bucketID != RootBucket {
-			rootBucket, _ := processBucketFor(tx, RootBucket, false)
-			if rootBucket != nil {
-				value = rootBucket.Get([]byte(key))
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			bucket, _ := processBucketFor(tx, bucketID, false)
+			if bucket != nil {
+				value = bucket.Get([]byte(key))
 			}
-		}
-		if value == nil {
-			return fmt.Errorf("key %s not found in bucket %s", key, bucketID)
-		}
-		return nil
+			if value == nil && bucketID != RootBucket {
+				rootBucket, _ := processBucketFor(tx, RootBucket, false)
+				if rootBucket != nil {
+					value = rootBucket.Get([]byte(key))
+				}
+			}
+			if value == nil {
+				return fmt.Errorf("key %s not found in bucket %s", key, bucketID)
+			}
+			return nil
+		})
 	})
 	return string(value), err
 }
@@ -324,26 +365,28 @@ func (s *BoltDataStore) GetProcessVar(bucketID, key string) (string, error) {
 // GetAllProcessVars returns all key-value pairs from bucketID merged with RootBucket (bucketID wins on conflict).
 func (s *BoltDataStore) GetAllProcessVars(bucketID string) (map[string]string, error) {
 	m := make(map[string]string)
-	err := s.db.View(func(tx *bolt.Tx) error {
-		bucket, _ := processBucketFor(tx, bucketID, false)
-		if bucket != nil {
-			_ = bucket.ForEach(func(k, v []byte) error {
-				m[string(k)] = string(v)
-				return nil
-			})
-		}
-		if bucketID != RootBucket {
-			rootBucket, _ := processBucketFor(tx, RootBucket, false)
-			if rootBucket != nil {
-				_ = rootBucket.ForEach(func(k, v []byte) error {
-					if _, exists := m[string(k)]; !exists {
-						m[string(k)] = string(v)
-					}
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			bucket, _ := processBucketFor(tx, bucketID, false)
+			if bucket != nil {
+				_ = bucket.ForEach(func(k, v []byte) error {
+					m[string(k)] = string(v)
 					return nil
 				})
 			}
-		}
-		return nil
+			if bucketID != RootBucket {
+				rootBucket, _ := processBucketFor(tx, RootBucket, false)
+				if rootBucket != nil {
+					_ = rootBucket.ForEach(func(k, v []byte) error {
+						if _, exists := m[string(k)]; !exists {
+							m[string(k)] = string(v)
+						}
+						return nil
+					})
+				}
+			}
+			return nil
+		})
 	})
 	return m, err
 }
@@ -351,45 +394,50 @@ func (s *BoltDataStore) GetAllProcessVars(bucketID string) (map[string]string, e
 // GetProcessVarKeys returns all keys from bucketID merged with RootBucket.
 func (s *BoltDataStore) GetProcessVarKeys(bucketID string) ([]string, error) {
 	var keys []string
-	err := s.db.View(func(tx *bolt.Tx) error {
-		processKeys := make(map[string]bool)
-		bucket, _ := processBucketFor(tx, bucketID, false)
-		if bucket != nil {
-			_ = bucket.ForEach(func(k, _ []byte) error {
-				key := string(k)
-				keys = append(keys, key)
-				processKeys[key] = true
-				return nil
-			})
-		}
-		if bucketID != RootBucket {
-			rootBucket, _ := processBucketFor(tx, RootBucket, false)
-			if rootBucket != nil {
-				_ = rootBucket.ForEach(func(k, _ []byte) error {
-					if key := string(k); !processKeys[key] {
-						keys = append(keys, key)
-					}
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			processKeys := make(map[string]bool)
+			bucket, _ := processBucketFor(tx, bucketID, false)
+			if bucket != nil {
+				_ = bucket.ForEach(func(k, _ []byte) error {
+					key := string(k)
+					keys = append(keys, key)
+					processKeys[key] = true
 					return nil
 				})
 			}
-		}
-		return nil
+			if bucketID != RootBucket {
+				rootBucket, _ := processBucketFor(tx, RootBucket, false)
+				if rootBucket != nil {
+					_ = rootBucket.ForEach(func(k, _ []byte) error {
+						if key := string(k); !processKeys[key] {
+							keys = append(keys, key)
+						}
+						return nil
+					})
+				}
+			}
+			return nil
+		})
 	})
 	return keys, err
 }
 
 func (s *BoltDataStore) DeleteProcessVar(bucketID, key string) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bucket, err := processBucketFor(tx, bucketID, true)
-		if err != nil {
-			return err
-		}
-		return bucket.Delete([]byte(key))
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			bucket, err := processBucketFor(tx, bucketID, true)
+			if err != nil {
+				return err
+			}
+			return bucket.Delete([]byte(key))
+		})
 	})
 }
 
+// Close is a no-op for the per-operation store — each operation opens and closes the DB itself.
 func (s *BoltDataStore) Close() error {
-	return s.db.Close()
+	return nil
 }
 
 // MigrateProcessBuckets moves any legacy top-level exec-ref buckets (created before the "process"
@@ -399,7 +447,7 @@ func MigrateProcessBuckets(dbPath string) error {
 	if dbPath == "" {
 		dbPath = Path()
 	}
-	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 3 * time.Second})
+	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: openTimeout})
 	if err != nil {
 		return fmt.Errorf("failed to open db for migration: %w", err)
 	}

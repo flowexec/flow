@@ -41,7 +41,9 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { _ = ds.Close() })
 
-		wsCache = cache.NewWorkspaceCache(ds).(*cache.WorkspaceCacheImpl)
+		var ok bool
+		wsCache, ok = cache.NewWorkspaceCache(ds).(*cache.WorkspaceCacheImpl)
+		Expect(ok).To(BeTrue())
 
 		testWs := &workspace.Workspace{}
 		testWs.SetContext("test", cacheDir)

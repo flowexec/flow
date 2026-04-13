@@ -2,8 +2,12 @@
 
 View execution history and logs.
 
+### Synopsis
+
+View execution history recorded in the data store, with associated log output. Optionally filter by executable reference.
+
 ```
-flow logs [flags]
+flow logs [ref] [flags]
 ```
 
 ### Options
@@ -24,4 +28,5 @@ flow logs [flags]
 ### SEE ALSO
 
 * [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
+* [flow logs clear](flow_logs_clear.md)	 - Clear execution history and logs.
 

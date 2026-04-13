@@ -268,10 +268,7 @@ func (c *ExecutableCacheImpl) initExecutableCacheData() error {
 
 	if cacheData == nil {
 		// Lazy-migrate from legacy YAML file if it exists.
-		cacheData, err = migrateExecutableCacheFromFile()
-		if err != nil {
-			return errors.Wrap(err, "unable to migrate executable cache")
-		}
+		cacheData = migrateExecutableCacheFromFile()
 		if cacheData != nil {
 			if writeErr := c.Store.SetCacheEntry(execCacheKey, cacheData); writeErr != nil {
 				logger.Log().Warn("failed to persist migrated executable cache", "err", writeErr)
@@ -348,24 +345,25 @@ func enumerateExecutableAliasRefs(
 }
 
 // migrateExecutableCacheFromFile attempts to read the legacy YAML cache file, re-encodes it
-// as JSON, deletes the old file, and returns the JSON bytes. Returns nil, nil if no legacy file.
-func migrateExecutableCacheFromFile() ([]byte, error) {
+// as JSON, deletes the old file, and returns the JSON bytes. Returns nil if no legacy file
+// or if any step fails (best-effort migration).
+func migrateExecutableCacheFromFile() []byte {
 	legacyPath := filepath.Join(filesystem.CachedDataDirPath(), "latestcache", execCacheKey)
 	yamlData, err := os.ReadFile(legacyPath)
 	if err != nil {
-		return nil, nil //nolint:nilerr
+		return nil
 	}
 
 	var legacy ExecutableCacheData
 	if err := yaml.Unmarshal(yamlData, &legacy); err != nil {
-		return nil, nil //nolint:nilerr
+		return nil
 	}
 
 	jsonData, err := json.Marshal(&legacy)
 	if err != nil {
-		return nil, nil //nolint:nilerr
+		return nil
 	}
 
 	_ = os.Remove(legacyPath)
-	return jsonData, nil
+	return jsonData
 }

@@ -17,10 +17,10 @@ import (
 	"github.com/flowexec/flow/internal/runner/mocks"
 	"github.com/flowexec/flow/pkg/cache"
 	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
-	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/tests/utils/builder"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/workspace"
@@ -81,7 +81,10 @@ type ContextWithMocks struct {
 // NewContextWithMocks creates a new context for testing runners. It initializes the context with
 // a mock logger and mock caches. The mock logger is set to expect debug calls.
 func NewContextWithMocks(ctx stdCtx.Context, tb testing.TB) *ContextWithMocks {
-	null := os.NewFile(0, os.DevNull)
+	null, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
+	if err != nil {
+		tb.Fatalf("unable to open devnull: %v", err)
+	}
 	configDir, cacheDir, wsDir := initTestDirectories(tb)
 	setTestEnv(tb, configDir, cacheDir)
 	testWsCfg, err := testWsConfig(wsDir)
