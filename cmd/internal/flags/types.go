@@ -221,6 +221,21 @@ var StoreAllFlag = &Metadata{
 	Default: false,
 }
 
+var BackgroundFlag = &Metadata{
+	Name:      "background",
+	Shorthand: "b",
+	Usage:     "Run the executable in the background and return a run ID immediately.",
+	Default:   false,
+	Required:  false,
+}
+
+var RunningFlag = &Metadata{
+	Name:     "running",
+	Usage:    "Show only active background processes.",
+	Default:  false,
+	Required: false,
+}
+
 var ParameterValueFlag = &Metadata{
 	Name:      "param",
 	Shorthand: "p",

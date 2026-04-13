@@ -65,6 +65,60 @@ flow logs -w api --status success --since 7d
 
 Filters work with all output modes (`--last`, `-o yaml`, TUI, etc.).
 
+## Background Execution
+
+Run any executable in the background to free up your terminal for other work. The process is detached and tracked
+automatically — you can check on it, read its output, or terminate it at any time.
+
+### Starting a Background Run
+
+Add the `--background` (or `-b`) flag to any `exec` command:
+
+```shell
+flow exec my-task --background
+# Started background run a1b2c3d4 (PID 54321) for exec flow/:my-task
+```
+
+The command returns a short **run ID** immediately. The executable — including deeply nested serial and parallel
+workflows — runs in a detached process with its output captured in the log archive.
+
+### Listing Active Runs
+
+See what's currently running in the background:
+
+```shell
+flow logs --running
+# a1b2c3d4  PID 54321    exec flow/:my-task                  running 5m30s
+```
+
+This uses the same output format as regular execution history — it supports `-o yaml`, `-o json`, and the
+interactive TUI. Stale entries (processes that exited unexpectedly) are automatically cleaned up when you list.
+
+### Streaming Output
+
+Attach to a background run to stream its log output in real time:
+
+```shell
+flow logs attach a1b2c3d4
+```
+
+This tail-follows the log file, printing new output as it appears. Press `Ctrl-C` to detach without
+stopping the process. When the background process exits, the stream ends automatically.
+
+### Terminating a Run
+
+Stop a running background process by its run ID:
+
+```shell
+flow logs kill a1b2c3d4
+# Terminated background run a1b2c3d4 (PID 54321).
+```
+
+> [!NOTE]
+> Background runs cannot prompt for interactive input (`reviewRequired` gates, parameter prompts).
+> Make sure all required parameters are provided via `--param` flags or environment variables when
+> using `--background`.
+
 ## Clearing History
 
 ```shell
