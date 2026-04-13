@@ -2,6 +2,8 @@ package cache
 
 import (
 	"encoding/json"
+	"fmt"
+	"sort"
 
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/types"
@@ -53,6 +55,19 @@ func NewCacheListView(
 	container *tuikit.Container,
 	cache map[string]string,
 ) tuikit.View {
-	data := &cacheData{Cache: cache}
-	return views.NewCollectionView(container.RenderState(), data, types.CollectionFormatList, nil)
+	keys := make([]string, 0, len(cache))
+	for k := range cache {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Entries (%d)", len(keys)), Percentage: 40},
+		{Title: "Value", Percentage: 60},
+	}
+	rows := make([]views.TableRow, 0, len(keys))
+	for _, k := range keys {
+		rows = append(rows, views.TableRow{Data: []string{k, cache[k]}})
+	}
+	return views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
 }

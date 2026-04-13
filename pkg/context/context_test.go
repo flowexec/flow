@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

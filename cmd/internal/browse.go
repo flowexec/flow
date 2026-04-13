@@ -9,7 +9,6 @@ import (
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
-	"github.com/flowexec/flow/internal/io/library"
 	"github.com/flowexec/flow/pkg/context"
 	flowErrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/logger"
@@ -127,9 +126,9 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 
 	runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
-	libraryModel := library.NewLibraryView(
+	libraryModel := execIO.NewLibraryView(
 		ctx, allWs, allExecs,
-		library.Filter{
+		execIO.Filter{
 			Workspace:  wsFilter,
 			Namespace:  nsFilter,
 			Verb:       executable.Verb(verbFilter),
@@ -137,7 +136,6 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 			Substring:  subStr,
 			Visibility: visibilityFilter,
 		},
-		logger.Theme(ctx.Config.Theme.String()),
 		runFunc,
 	)
 	SetView(ctx, cmd, libraryModel)

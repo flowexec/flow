@@ -121,10 +121,10 @@ func copyArtifact(
 		return errors.Wrap(err, "unable to create destination directory")
 	}
 
-	logger.Log().Debugx("copying artifact", "name", name, "src", srcPath, "dst", dstPath)
+	logger.Log().Debug("copying artifact", "name", name, "src", srcPath, "dst", dstPath)
 	if _, e := os.Stat(dstPath); e == nil {
 		// TODO: Add a flag to overwrite existing files
-		logger.Log().Warnx("Overwriting existing file", "dst", dstPath)
+		logger.Log().Warn("Overwriting existing file", "dst", dstPath)
 	}
 	if err := filesystem.CopyFile(srcPath, dstPath); err != nil {
 		return errors.Wrap(err, "unable to copy artifact")

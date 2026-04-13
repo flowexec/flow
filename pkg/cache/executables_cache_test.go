@@ -80,8 +80,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 	Describe("Update and GetExecutableList", func() {
 		It("should update the executable cache from filesystem and retrieve the expected data", func() {
 			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
-			mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+			mockLogger.EXPECT().Debug(gomock.Any(), "workspace", wsName).Times(1)
+			mockLogger.EXPECT().Debug(gomock.Any(), "count", 1).Times(1)
 			err := execCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -112,8 +112,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
-				mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-				mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+				mockLogger.EXPECT().Debug(gomock.Any(), "workspace", wsName).Times(1)
+				mockLogger.EXPECT().Debug(gomock.Any(), "count", 1).Times(1)
 				err = execCache.Update()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -130,8 +130,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 	Describe("Update and GetExecutableList", func() {
 		It("should update the executable cache from filesystem and retrieve the expected data", func() {
 			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
-			mockLogger.EXPECT().Debugx(gomock.Any(), "workspace", wsName).Times(1)
-			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 1).Times(1)
+			mockLogger.EXPECT().Debug(gomock.Any(), "workspace", wsName).Times(1)
+			mockLogger.EXPECT().Debug(gomock.Any(), "count", 1).Times(1)
 			err := execCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -193,7 +193,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				Expect(execCache.Update()).To(Succeed())
 
 				// Should be able to access via verb alias "activate"
@@ -216,7 +216,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				}, nil).AnyTimes()
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				Expect(execCache.Update()).To(Succeed())
 
 				// Should be able to access via default verb "run"
@@ -253,7 +253,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				}, nil).AnyTimes()
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				Expect(execCache.Update()).To(Succeed())
 
 				// Should NOT be able to access via default aliases like "exec"
@@ -289,7 +289,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				}, nil).AnyTimes()
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				Expect(execCache.Update()).To(Succeed())
 
 				// Should be able to access via custom aliases
@@ -331,7 +331,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				}, nil).AnyTimes()
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				Expect(execCache.Update()).To(Succeed())
 
 				// Should NOT be able to access via any aliases since no aliases are configured for "run"
@@ -377,8 +377,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Warnx(
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warn(
 					"duplicate executable found during cache update",
 					"ref", "run test/testdata:duplicate-exec",
 					"conflictPath", execCfg1.ConfigPath(),
@@ -417,8 +417,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Warnx(
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warn(
 					"duplicate executable alias found during cache update",
 					gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(),
 				).AnyTimes()
@@ -456,8 +456,8 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Debugx(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				mockLogger.EXPECT().Warnx(
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				mockLogger.EXPECT().Warn(
 					"duplicate executable alias found during cache update",
 					"aliasRef", gomock.Any(),
 					"conflictRef", gomock.Any(),

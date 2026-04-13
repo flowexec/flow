@@ -27,7 +27,7 @@ func (c *FlowCLIExecutor) Execute(args ...string) (string, error) {
 	if envName := os.Getenv(cliBinaryEnvKey); envName != "" {
 		name = envName
 	}
-	cmd := exec.Command(name, args...)
+	cmd := exec.Command(name, args...) // #nosec G204,G702
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Only return an error if it's not an exit error.

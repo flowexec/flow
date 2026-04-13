@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 
 	"github.com/flowexec/tuikit"
-	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 	extVault "github.com/flowexec/vault"
 	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 
+	"github.com/flowexec/flow/internal/io/common"
 	"github.com/flowexec/flow/internal/vault"
 )
 
@@ -32,7 +34,7 @@ func (v *vaultEntity) YAML() (string, error) {
 }
 
 func (v *vaultEntity) JSON() (string, error) {
-	data, err := yaml.Marshal(v)
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return "", err
 	}
@@ -65,31 +67,28 @@ func NewVaultView(
 	if err != nil || v == nil {
 		return views.NewErrorView(err, container.RenderState().Theme)
 	}
-	return views.NewEntityView(container.RenderState(), v, types.EntityFormatDocument)
+
+	var footer string
+	if v.Path != "" {
+		footer = fmt.Sprintf("_Located in %s_", v.Path)
+	}
+
+	opts := views.DetailContentOpts{
+		Title:    v.Name,
+		Subtitle: "Vault",
+		Metadata: []views.DetailField{
+			{Key: "Type", Value: v.Type},
+		},
+		Body:   vaultBodyMarkdown(v),
+		Footer: footer,
+		Entity: v,
+	}
+
+	return views.NewDetailContentView(container.RenderState(), opts)
 }
 
 type vaultCollection struct {
 	Vaults []*vaultEntity `json:"vaults" yaml:"vaults"`
-}
-
-func (vc *vaultCollection) Singular() string {
-	return "vault"
-}
-
-func (vc *vaultCollection) Plural() string {
-	return "vaults"
-}
-
-func (vc *vaultCollection) Items() []*types.EntityInfo {
-	items := make([]*types.EntityInfo, len(vc.Vaults))
-	for i, v := range vc.Vaults {
-		items[i] = &types.EntityInfo{
-			Header:    v.Name,
-			SubHeader: v.Path,
-			ID:        v.Name,
-		}
-	}
-	return items
 }
 
 func (vc *vaultCollection) YAML() (string, error) {
@@ -112,7 +111,7 @@ func NewVaultListView(
 	container *tuikit.Container,
 	vaultNames []string,
 ) tuikit.View {
-	vaults := &vaultCollection{Vaults: make([]*vaultEntity, 0, len(vaultNames))}
+	vaults := make([]*vaultEntity, 0, len(vaultNames))
 	for _, name := range vaultNames {
 		v, err := vaultFromName(name)
 		if err != nil || v == nil {
@@ -121,27 +120,101 @@ func NewVaultListView(
 				container.RenderState().Theme,
 			)
 		}
-		vaults.Vaults = append(vaults.Vaults, v)
+		vaults = append(vaults, v)
 	}
-	if len(vaults.Vaults) == 0 {
+	if len(vaults) == 0 {
 		return views.NewErrorView(fmt.Errorf("no vaults found"), container.RenderState().Theme)
 	}
 
-	selectFunc := func(filterVal string) error {
-		for _, v := range vaults.Vaults {
-			if v.Name == filterVal {
-				return container.SetView(NewVaultView(container, v.Name))
-			}
+	sort.Slice(vaults, func(i, j int) bool {
+		return vaults[i].Name < vaults[j].Name
+	})
+
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Vaults (%d)", len(vaults)), Percentage: 35},
+		{Title: "Type", Percentage: 25},
+		{Title: "Path", Percentage: 40},
+	}
+	rows := make([]views.TableRow, 0, len(vaults))
+	for _, v := range vaults {
+		rows = append(rows, views.TableRow{
+			Data: []string{v.Name, v.Type, common.ShortenPath(v.Path)},
+		})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) == 0 {
+			return fmt.Errorf("no vault selected")
 		}
-		return fmt.Errorf("vault not found")
+		return container.SetView(NewVaultView(container, row.Data()[0]))
+	})
+	return table
+}
+
+func vaultBodyMarkdown(v *vaultEntity) string {
+	if v.Data == nil {
+		return ""
 	}
 
-	return views.NewCollectionView(
-		container.RenderState(),
-		vaults,
-		types.CollectionFormatList,
-		selectFunc,
-	)
+	var sections []string
+
+	if created, ok := v.Data["created"]; ok {
+		sections = append(sections, fmt.Sprintf("**Created:** %v", created))
+	}
+	if modified, ok := v.Data["lastModified"]; ok {
+		sections = append(sections, fmt.Sprintf("**Last Modified:** %v", modified))
+	}
+
+	if sources, ok := v.Data["sources"]; ok {
+		sections = append(sections, formatSourceList("Sources", sources))
+	}
+	if recipients, ok := v.Data["recipients"]; ok {
+		sections = append(sections, formatSourceList("Recipients", recipients))
+	}
+
+	return strings.Join(sections, "\n\n")
+}
+
+// formatSourceList formats KeySource, IdentitySource slices, or plain strings
+// into a readable markdown list.
+func formatSourceList(label string, value any) string {
+	switch v := value.(type) {
+	case []extVault.KeySource:
+		if len(v) == 0 {
+			return ""
+		}
+		md := fmt.Sprintf("**%s**\n", label)
+		for _, src := range v {
+			md += fmt.Sprintf("- `%s`", src.Type)
+			if src.Path != "" {
+				md += fmt.Sprintf(" — %s", src.Path)
+			} else if src.Name != "" {
+				md += fmt.Sprintf(" — $%s", src.Name)
+			}
+			md += "\n"
+		}
+		return md
+	case []extVault.IdentitySource:
+		if len(v) == 0 {
+			return ""
+		}
+		md := fmt.Sprintf("**%s**\n", label)
+		for _, src := range v {
+			md += fmt.Sprintf("- `%s`", src.Type)
+			if src.Path != "" {
+				md += fmt.Sprintf(" — %s", src.Path)
+			} else if src.Name != "" {
+				md += fmt.Sprintf(" — $%s", src.Name)
+			}
+			md += "\n"
+		}
+		return md
+	case string:
+		return fmt.Sprintf("**%s:** `%s`", label, v)
+	default:
+		return fmt.Sprintf("**%s:** %v", label, v)
+	}
 }
 
 func vaultFromName(vaultName string) (*vaultEntity, error) {

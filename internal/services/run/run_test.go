@@ -42,7 +42,7 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.Hidden
 				}).AnyTimes()
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Hidden, logger, os.Stdin, nil)
+				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -54,7 +54,7 @@ var _ = Describe("Run", func() {
 				}).AnyTimes()
 				logger.EXPECT().Print("foo").Times(1)
 				logger.EXPECT().Print("\n").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Text, logger, os.Stdin, nil)
+				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Text, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -64,8 +64,8 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
-				logger.EXPECT().Infof("foo", gomock.Any()).Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Logfmt, logger, os.Stdin, nil)
+				logger.EXPECT().Info("foo").Times(1)
+				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -75,8 +75,8 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.JSON
 				}).AnyTimes()
-				logger.EXPECT().Infof("foo", gomock.Any()).Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, nil)
+				logger.EXPECT().Info("foo").Times(1)
+				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -87,8 +87,8 @@ var _ = Describe("Run", func() {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
 				fields := map[string]interface{}{"key": "value"}
-				logger.EXPECT().Infox("foo", "key", "value").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, fields)
+				logger.EXPECT().Info("foo", "key", "value").Times(1)
+				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, fields, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -99,8 +99,8 @@ var _ = Describe("Run", func() {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
 				env := []string{"key=value"}
-				logger.EXPECT().Infof("value", gomock.Any()).Times(1)
-				err := run.RunCmd("echo \"$key\"", "", env, tuikitIO.JSON, logger, os.Stdin, nil)
+				logger.EXPECT().Info("value").Times(1)
+				err := run.RunCmd("echo \"$key\"", "", env, tuikitIO.JSON, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -131,7 +131,7 @@ var _ = Describe("Run", func() {
 			logger.EXPECT().Print("\n").Times(1)
 			filename := filepath.Base(testfile.Name())
 			filedir := filepath.Dir(testfile.Name())
-			err := run.RunFile(filename, filedir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil)
+			err := run.RunFile(filename, filedir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

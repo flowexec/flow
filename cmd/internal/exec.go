@@ -202,14 +202,14 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	if ctx.DataStore != nil {
 		if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
-			logger.Log().Debugx("failed to record execution history", "err", recErr)
+			logger.Log().Debug("failed to record execution history", "err", recErr)
 		}
 	}
 
 	if runErr != nil {
 		logger.Log().FatalErr(runErr)
 	}
-	logger.Log().Debugx(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
+	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	if TUIEnabled(ctx, cmd) {
 		if dur > 1*time.Minute && ctx.Config.SendSoundNotification() {
 			_ = beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)

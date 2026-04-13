@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/x/exp/teatest"
+	"github.com/charmbracelet/x/exp/teatest/v2"
 )
 
 var updateEnvKey = "UPDATE_GOLDEN_FILES"

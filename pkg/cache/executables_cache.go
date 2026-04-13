@@ -73,14 +73,14 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 		wsCfg.SetContext(name, wsCacheData.WorkspaceLocations[name])
 		flowFiles, err := filesystem.LoadWorkspaceFlowFiles(wsCfg)
 		if err != nil {
-			logger.Log().Errorx("failed to load workspace executable configs", "workspace", wsCfg.AssignedName(), "err", err)
+			logger.Log().Error("failed to load workspace executable configs", "workspace", wsCfg.AssignedName(), "err", err)
 			continue
 		}
 		for _, flowFile := range flowFiles {
 			if len(flowFile.FromFile) > 0 || len(flowFile.Imports) > 0 {
 				generated, err := fileparser.ExecutablesFromImports(name, flowFile)
 				if err != nil {
-					logger.Log().Errorx(
+					logger.Log().Error(
 						"failed to generate executables from files",
 						"flowFilePath", flowFile.ConfigPath(),
 						"err", err,
@@ -96,7 +96,7 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 			}
 			for _, e := range flowFile.Executables {
 				if vErr := e.Validate(); vErr != nil {
-					logger.Log().Warnx(
+					logger.Log().Warn(
 						"invalid executable found during cache update",
 						"ref", e.Ref().String(),
 						"workspace", wsCfg.AssignedName(),
@@ -110,7 +110,7 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 				}
 
 				if existingPath, exists := cacheData.ExecutableMap[e.Ref()]; exists && existingPath != flowFile.ConfigPath() {
-					logger.Log().Warnx(
+					logger.Log().Warn(
 						"duplicate executable found during cache update",
 						"ref", e.Ref().String(),
 						"conflictPath", existingPath,
@@ -123,7 +123,7 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 
 				for _, ref := range enumerateExecutableAliasRefs(e, wsCfg.VerbAliases) {
 					if existingPrimaryRef, exists := cacheData.AliasMap[ref]; exists && existingPrimaryRef != e.Ref() {
-						logger.Log().Warnx(
+						logger.Log().Warn(
 							"duplicate executable alias found during cache update",
 							"aliasRef", ref.String(),
 							"conflictRef", existingPrimaryRef.String(),
@@ -151,7 +151,7 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
-	logger.Log().Debugx("Successfully updated executable cache data", "count", len(cacheData.ExecutableMap))
+	logger.Log().Debug("Successfully updated executable cache data", "count", len(cacheData.ExecutableMap))
 	return nil
 }
 
@@ -201,7 +201,7 @@ func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executabl
 
 	generated, err := fileparser.ExecutablesFromImports(wsInfo.WorkspaceName, cfg)
 	if err != nil {
-		logger.Log().Warnx(
+		logger.Log().Warn(
 			"failed to generate executables from files",
 			"cfgPath", cfgPath,
 			"err", err,
@@ -234,12 +234,12 @@ func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, er
 	for cfgPath := range c.Data.ConfigMap {
 		cfg, err := filesystem.LoadFlowFile(cfgPath)
 		if err != nil {
-			logger.Log().Errorx("unable to load executable config", "cfgPath", cfgPath, "err", err)
+			logger.Log().Error("unable to load executable config", "cfgPath", cfgPath, "err", err)
 			continue
 		}
 		wsInfo, found := c.Data.ConfigMap[cfgPath]
 		if !found {
-			logger.Log().Errorx("unable to find workspace info for config", "cfgPath", cfgPath)
+			logger.Log().Error("unable to find workspace info for config", "cfgPath", cfgPath)
 			continue
 		}
 		cfg.SetDefaults()
@@ -247,7 +247,7 @@ func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, er
 
 		generated, err := fileparser.ExecutablesFromImports(wsInfo.WorkspaceName, cfg)
 		if err != nil {
-			logger.Log().Warnx(
+			logger.Log().Warn(
 				"failed to generate executables from files",
 				"cfgPath", cfgPath,
 				"err", err,
@@ -274,7 +274,7 @@ func (c *ExecutableCacheImpl) initExecutableCacheData() error {
 		}
 		if cacheData != nil {
 			if writeErr := c.Store.SetCacheEntry(execCacheKey, cacheData); writeErr != nil {
-				logger.Log().Warnx("failed to persist migrated executable cache", "err", writeErr)
+				logger.Log().Warn("failed to persist migrated executable cache", "err", writeErr)
 			}
 		}
 	}

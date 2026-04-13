@@ -85,7 +85,7 @@ func (r *requestRunner) Exec(
 
 	log := logger.Log()
 	if requestSpec.LogResponse {
-		log.Infox(fmt.Sprintf("Successfully sent request to %s", requestSpec.URL), "response", respStr)
+		log.Info(fmt.Sprintf("Successfully sent request to %s", requestSpec.URL), "response", respStr)
 	} else {
 		log.Infof("Successfully sent request to %s", requestSpec.URL)
 	}
@@ -160,7 +160,7 @@ func writeResponseToFile(resp, responseFile string, format executable.RequestRes
 	}
 
 	if conversionErr != nil {
-		logger.Log().Error(conversionErr, "unable to convert response")
+		logger.Log().WrapError(conversionErr, "unable to convert response")
 	}
 
 	file, err := os.Create(filepath.Clean(responseFile))

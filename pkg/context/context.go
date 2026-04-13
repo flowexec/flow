@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/flowexec/tuikit"
+	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
+	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
@@ -45,6 +47,11 @@ type Context struct {
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
 	ProcessTmpDir string
+
+	// CurrentTask holds the task context for the currently executing step in a
+	// parallel or serial runner. It is set per-goroutine (via shallow copy) so
+	// that downstream writers can prefix output with the task name.
+	CurrentTask *io.TaskContext
 }
 
 func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
@@ -92,6 +99,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 	app := tuikit.NewApplication(
 		AppName,
 		tuikit.WithState(HeaderCtxKey, c.String()),
+		tuikit.WithVersion(version.SemVer()),
 		tuikit.WithLoadingMsg("thinking..."),
 	)
 
@@ -190,24 +198,24 @@ func (ctx *Context) Finalize() {
 
 	for _, cb := range ctx.callbacks {
 		if err := cb(ctx); err != nil {
-			logger.Log().Error(err, "callback execution error")
+			logger.Log().WrapError(err, "callback execution error")
 		}
 	}
 
 	if ctx.ProcessTmpDir != "" {
 		files, err := filepath.Glob(filepath.Join(ctx.ProcessTmpDir, "*"))
 		if err != nil {
-			logger.Log().Error(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().WrapError(err, fmt.Sprintf("unable to list files in temp dir %s", ctx.ProcessTmpDir))
 			return
 		}
 		for _, f := range files {
 			err = os.RemoveAll(f)
 			if err != nil {
-				logger.Log().Error(err, fmt.Sprintf("unable to remove file %s", f))
+				logger.Log().WrapError(err, fmt.Sprintf("unable to remove file %s", f))
 			}
 		}
 		if err := os.Remove(ctx.ProcessTmpDir); err != nil {
-			logger.Log().Error(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
+			logger.Log().WrapError(err, fmt.Sprintf("unable to remove temp dir %s", ctx.ProcessTmpDir))
 		}
 	}
 }

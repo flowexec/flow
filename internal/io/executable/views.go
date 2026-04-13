@@ -2,9 +2,11 @@ package executable
 
 import (
 	"fmt"
+	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 
-	"github.com/atotto/clipboard"
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/flowexec/tuikit/types"
@@ -15,6 +17,10 @@ import (
 	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
 )
+
+func sortByID(a, b *executable.Executable) int {
+	return strings.Compare(a.ID(), b.ID())
+}
 
 func NewExecutableView(
 	ctx *context.Context,
@@ -29,7 +35,7 @@ func NewExecutableView(
 				ctx.TUIContainer.Shutdown(func() {
 					err := runFunc(exec.Ref().String())
 					if err != nil {
-						logger.Log().Error(err, "executable view runner error")
+						logger.Log().WrapError(err, "executable view runner error")
 					}
 				})
 				return nil
@@ -38,11 +44,7 @@ func NewExecutableView(
 		{
 			Key: "c", Label: "copy ref",
 			Callback: func() error {
-				if err := clipboard.WriteAll(exec.Ref().String()); err != nil {
-					container.HandleError(fmt.Errorf("unable to copy reference to clipboard: %w", err))
-				} else {
-					container.SetNotice("copied reference to clipboard", themes.OutputLevelInfo)
-				}
+				common.CopyToClipboard(container, exec.Ref().String(), "copied reference to clipboard")
 				return nil
 			},
 		},
@@ -56,10 +58,10 @@ func NewExecutableView(
 			},
 		},
 	}
-	return views.NewEntityView(
+	opts := executableDetailOpts(exec)
+	return views.NewDetailContentView(
 		container.RenderState(),
-		exec,
-		types.EntityFormatDocument,
+		opts,
 		executableKeyCallbacks...,
 	)
 }
@@ -70,24 +72,68 @@ func NewExecutableListView(
 	runFunc func(string) error,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	if len(executables.Items()) == 0 {
-		container.HandleError(fmt.Errorf("no workspaces found"))
+	if len(executables) == 0 {
+		container.HandleError(fmt.Errorf("no executables found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		s := strings.Split(filterVal, " ")
-		if len(s) != 2 {
-			return fmt.Errorf("invalid filter value")
+	slices.SortFunc(executables, sortByID)
+
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Executables (%d)", len(executables)), Percentage: 40},
+		{Title: "Flowfile", Percentage: 30},
+		{Title: "Tags", Percentage: 30},
+	}
+	rows := make([]views.TableRow, 0, len(executables))
+	for _, ex := range executables {
+		tags := common.ColorizeTags(ex.Tags)
+		flowfile := filepath.Base(ex.FlowFilePath())
+		rows = append(rows, views.TableRow{
+			Data: []string{fmt.Sprintf("%s %s", ex.Verb, ex.Ref().ID()), flowfile, tags},
+		})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	selectedExec := func() *executable.Executable {
+		row := table.GetSelectedRow()
+		if row == nil {
+			return nil
 		}
-		verb, id := s[0], s[1]
-		exec, err := executables.FindByVerbAndID(executable.Verb(verb), id)
+		data := row.Data()
+		if len(data) < 1 {
+			return nil
+		}
+		parts := strings.SplitN(data[0], " ", 2)
+		if len(parts) < 2 {
+			return nil
+		}
+		ex, err := executables.FindByVerbAndID(executable.Verb(parts[0]), parts[1])
 		if err != nil {
-			return fmt.Errorf("executable not found")
+			return nil
 		}
-		return ctx.SetView(NewExecutableView(ctx, exec, runFunc))
+		return ex
 	}
-
-	return views.NewCollectionView(container.RenderState(), executables, types.CollectionFormatList, selectFunc)
+	table.SetOnSelect(func(_ int) error {
+		ex := selectedExec()
+		if ex == nil {
+			return fmt.Errorf("no executable selected")
+		}
+		return ctx.SetView(NewExecutableView(ctx, ex, runFunc))
+	})
+	table.SetKeyCallbacks([]types.KeyCallback{
+		{Key: "r", Label: "run", Callback: func() error {
+			ex := selectedExec()
+			if ex == nil {
+				container.SetNotice("no executable selected", themes.OutputLevelError)
+				return nil
+			}
+			container.Shutdown(func() {
+				if err := runFunc(ex.Ref().String()); err != nil {
+					logger.Log().WrapError(err, "executable list view runner error")
+				}
+			})
+			return nil
+		}},
+	})
+	return table
 }
 
 func NewTemplateView(
@@ -107,11 +153,7 @@ func NewTemplateView(
 		{
 			Key: "c", Label: "copy location",
 			Callback: func() error {
-				if err := clipboard.WriteAll(template.Location()); err != nil {
-					container.HandleError(fmt.Errorf("unable to copy location to clipboard: %w", err))
-				} else {
-					container.SetNotice("copied location to clipboard", themes.OutputLevelInfo)
-				}
+				common.CopyToClipboard(container, template.Location(), "copied location to clipboard")
 				return nil
 			},
 		},
@@ -125,10 +167,10 @@ func NewTemplateView(
 			},
 		},
 	}
-	return views.NewEntityView(
+	opts := templateDetailOpts(template)
+	return views.NewDetailContentView(
 		container.RenderState(),
-		template,
-		types.EntityFormatDocument,
+		opts,
 		templateKeyCallbacks...,
 	)
 }
@@ -139,18 +181,35 @@ func NewTemplateListView(
 	runFunc func(string) error,
 ) tuikit.View {
 	container := ctx.TUIContainer
-	if len(templates.Items()) == 0 {
+	if len(templates) == 0 {
 		container.HandleError(fmt.Errorf("no templates found"))
 	}
 
-	selectFunc := func(filterVal string) error {
-		template := templates.Find(filterVal)
-		if template == nil {
-			return fmt.Errorf("template %s not found", filterVal)
-		}
+	sort.Slice(templates, func(i, j int) bool {
+		return templates[i].Name() < templates[j].Name()
+	})
 
-		return ctx.SetView(NewTemplateView(ctx, template, runFunc))
+	columns := []views.TableColumn{
+		{Title: fmt.Sprintf("Templates (%d)", len(templates)), Percentage: 50},
+		{Title: "Location", Percentage: 50},
 	}
-
-	return views.NewCollectionView(container.RenderState(), templates, types.CollectionFormatList, selectFunc)
+	rows := make([]views.TableRow, 0, len(templates))
+	for _, t := range templates {
+		rows = append(rows, views.TableRow{
+			Data: []string{t.Name(), common.ShortenPath(t.Location())},
+		})
+	}
+	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.SetOnSelect(func(_ int) error {
+		row := table.GetSelectedRow()
+		if row == nil || len(row.Data()) == 0 {
+			return fmt.Errorf("no template selected")
+		}
+		t := templates.Find(row.Data()[0])
+		if t == nil {
+			return fmt.Errorf("template %s not found", row.Data()[0])
+		}
+		return ctx.SetView(NewTemplateView(ctx, t, runFunc))
+	})
+	return table
 }

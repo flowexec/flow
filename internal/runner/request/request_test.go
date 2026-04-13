@@ -88,7 +88,7 @@ var _ = Describe("Request Runner", func() {
 				},
 			}
 
-			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+			ctx.Logger.EXPECT().Info(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -103,7 +103,7 @@ var _ = Describe("Request Runner", func() {
 				},
 			}
 
-			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("value")).Times(1)
+			ctx.Logger.EXPECT().Info(gomock.Any(), gomock.Any(), gomock.Regex("value")).Times(1)
 			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -140,7 +140,7 @@ var _ = Describe("Request Runner", func() {
 				},
 			}
 
-			ctx.Logger.EXPECT().Infox(gomock.Any(), gomock.Any(), gomock.Regex("SUCCESSFUL")).Times(1)
+			ctx.Logger.EXPECT().Info(gomock.Any(), gomock.Any(), gomock.Regex("SUCCESSFUL")).Times(1)
 			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
