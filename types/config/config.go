@@ -135,65 +135,78 @@ func (c *Config) JSON() (string, error) {
 }
 
 func (c *Config) Markdown() string {
-	mkdwn := "# Global Configurations\n"
-	mkdwn += fmt.Sprintf("**Current workspace:** `%s`\n", c.CurrentWorkspace)
-	switch c.WorkspaceMode {
-	case ConfigWorkspaceModeFixed:
-		mkdwn += "*Workspace mode is set to fixed. This means that your working directory will have no impact on the " +
-			"current workspace.*\n\n"
-	case ConfigWorkspaceModeDynamic:
-		mkdwn += "*Workspace mode is set to dynamic. This means that your current workspace is also determined by " +
-			"your working directory.*\n\n"
+	var sections []string
+
+	// General settings
+	general := "## General\n"
+	general += fmt.Sprintf("**Workspace:** `%s`\n\n", c.CurrentWorkspace)
+	if c.CurrentNamespace != "" {
+		general += fmt.Sprintf("**Namespace:** `%s`\n\n", c.CurrentNamespace)
 	}
 
-	if c.CurrentNamespace != "" {
-		mkdwn += fmt.Sprintf("**Current namespace**: %s\n\n", c.CurrentNamespace)
-	} else {
-		mkdwn += "*No namespace is set*\n\n"
+	mode := string(c.WorkspaceMode)
+	if mode == "" {
+		mode = "dynamic"
+	}
+	general += fmt.Sprintf("**Workspace Mode:** %s\n\n", mode)
+
+	if c.Theme != "" {
+		general += fmt.Sprintf("**Theme:** %s\n\n", c.Theme)
 	}
 	if c.DefaultTimeout != 0 {
-		mkdwn += fmt.Sprintf("**Default timeout**: %s\n", c.DefaultTimeout)
+		general += fmt.Sprintf("**Default Timeout:** %s\n\n", c.DefaultTimeout)
 	}
-	if c.Theme != "" {
-		mkdwn += fmt.Sprintf("**Theme**: %s\n", c.Theme)
+	if c.DefaultLogMode != "" {
+		general += fmt.Sprintf("**Log Mode:** %s\n\n", c.DefaultLogMode)
 	}
+	sections = append(sections, general)
+
+	// Interactive settings
 	if c.Interactive != nil { //nolint:nestif
-		mkdwn += "## Interactivity Settings\n"
+		interactive := "## Interactive\n"
 		if c.Interactive.Enabled {
-			mkdwn += "**Interactive mode is enabled**\n"
-			if c.Interactive.NotifyOnCompletion != nil {
-				mkdwn += "*Notify on completion is enabled*\n"
+			interactive += "**Enabled:** yes\n\n"
+			if c.Interactive.NotifyOnCompletion != nil && *c.Interactive.NotifyOnCompletion {
+				interactive += "**Notify on Completion:** yes\n\n"
 			}
-			if c.Interactive.SoundOnCompletion != nil {
-				mkdwn += "*Sound on completion is enabled*\n"
+			if c.Interactive.SoundOnCompletion != nil && *c.Interactive.SoundOnCompletion {
+				interactive += "**Sound on Completion:** yes\n\n"
 			}
 		} else {
-			mkdwn += "**Interactive mode is disabled**\n"
+			interactive += "**Enabled:** no\n\n"
 		}
-	}
-	mkdwn += "## Registered Workspaces\n"
-	allWs := make([]string, 0, len(c.Workspaces))
-	for name := range c.Workspaces {
-		allWs = append(allWs, name)
-	}
-	slices.Sort(allWs)
-	for _, name := range allWs {
-		mkdwn += fmt.Sprintf("- %s: %s\n", name, c.Workspaces[name])
+		sections = append(sections, interactive)
 	}
 
+	// Workspaces
+	if len(c.Workspaces) > 0 {
+		ws := fmt.Sprintf("## Workspaces (%d)\n", len(c.Workspaces))
+		allWs := make([]string, 0, len(c.Workspaces))
+		for name := range c.Workspaces {
+			allWs = append(allWs, name)
+		}
+		slices.Sort(allWs)
+		for _, name := range allWs {
+			ws += fmt.Sprintf("- **%s** — %s\n", name, c.Workspaces[name])
+		}
+		sections = append(sections, ws)
+	}
+
+	// Templates
 	if len(c.Templates) > 0 {
-		mkdwn += "## Registered Templates\n"
+		tmpl := fmt.Sprintf("## Templates (%d)\n", len(c.Templates))
 		allTmpl := make([]string, 0, len(c.Templates))
 		for name := range c.Templates {
 			allTmpl = append(allTmpl, name)
 		}
 		slices.Sort(allTmpl)
 		for _, name := range allTmpl {
-			mkdwn += fmt.Sprintf("- %s: %s\n", name, c.Templates[name])
+			tmpl += fmt.Sprintf("- **%s** — %s\n", name, c.Templates[name])
 		}
+		sections = append(sections, tmpl)
 	}
 
-	return mkdwn
+	return strings.Join(sections, "\n")
 }
 
 func (ct ConfigTheme) String() string {

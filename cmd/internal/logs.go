@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
-	"github.com/flowexec/tuikit/views"
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal/flags"
@@ -38,7 +37,7 @@ func logFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		logger.Log().FatalErr(err)
 	}
 	if TUIEnabled(ctx, cmd) {
-		view := views.NewLogArchiveView(ctx.TUIContainer.RenderState(), filesystem.LogsDir(), lastEntry)
+		view := logs.NewLogView(ctx.TUIContainer, filesystem.LogsDir(), lastEntry)
 		SetView(ctx, cmd, view)
 		return
 	}

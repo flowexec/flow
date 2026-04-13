@@ -1,6 +1,9 @@
 package internal
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/pkg/cache"
@@ -24,8 +27,10 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 }
 
 func syncFunc(_ *context.Context, _ *cobra.Command, _ []string) {
+	start := time.Now()
 	if err := cache.UpdateAll(); err != nil {
 		logger.Log().FatalErr(err)
 	}
-	logger.Log().PlainTextSuccess("Synced flow cache")
+	duration := time.Since(start)
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second)))
 }

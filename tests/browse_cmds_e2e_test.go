@@ -16,8 +16,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	execIO "github.com/flowexec/flow/internal/io/executable"
-	"github.com/flowexec/flow/internal/io/library"
-	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/tests/utils"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -57,10 +55,9 @@ var _ = Describe("browse TUI", func() {
 		execList, err := ctx.ExecutableCache.GetExecutableList()
 		Expect(err).NotTo(HaveOccurred())
 
-		libraryView := library.NewLibraryView(
+		libraryView := execIO.NewLibraryView(
 			ctx.Context, wsList, execList,
-			library.Filter{},
-			logger.Theme(ctx.Config.Theme.String()),
+			execIO.Filter{},
 			runFunc,
 		)
 		Expect(container.SetView(libraryView)).To(Succeed())
@@ -86,10 +83,9 @@ var _ = Describe("browse TUI", func() {
 		execList, err := ctx.ExecutableCache.GetExecutableList()
 		Expect(err).NotTo(HaveOccurred())
 
-		libraryView := library.NewLibraryView(
+		libraryView := execIO.NewLibraryView(
 			ctx.Context, wsList, execList,
-			library.Filter{},
-			logger.Theme(ctx.Config.Theme.String()),
+			execIO.Filter{},
 			runFunc,
 		)
 		Expect(container.SetView(libraryView)).To(Succeed())

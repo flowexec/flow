@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/flowexec/tuikit"
+	"github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
@@ -44,6 +45,11 @@ type Context struct {
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
 	ProcessTmpDir string
+
+	// CurrentTask holds the task context for the currently executing step in a
+	// parallel or serial runner. It is set per-goroutine (via shallow copy) so
+	// that downstream writers can prefix output with the task name.
+	CurrentTask *io.TaskContext
 }
 
 func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {

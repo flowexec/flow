@@ -55,5 +55,9 @@ func String() string {
 }
 
 func SemVer() string {
+	if version == unknown {
+		return ""
+	}
+
 	return strings.TrimSpace(version)
 }

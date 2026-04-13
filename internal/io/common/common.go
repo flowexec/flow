@@ -22,7 +22,7 @@ func OpenInEditor(path string, stdIn, stdOut *os.File) error {
 	if preferred == "" {
 		preferred = "vim"
 	}
-	cmd := exec.Command(preferred, path) // #nosec G204
+	cmd := exec.Command(preferred, path) // #nosec G204,G702
 	cmd.Stdin = stdIn
 	cmd.Stdout = stdOut
 	return cmd.Run()

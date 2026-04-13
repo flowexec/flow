@@ -25,7 +25,7 @@ executables:
         - envKey: BIN_NAME
           text: flow
       cmd: |
-        go build -o ${BIN_PATH}/${BIN_NAME}
+        go build -ldflags "-X github.com/flowexec/flow/internal/version.version=dev" -o ${BIN_PATH}/${BIN_NAME}
         echo "flow built at ${BIN_PATH}/${BIN_NAME}"
 
   - verb: generate

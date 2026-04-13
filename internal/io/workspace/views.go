@@ -3,6 +3,7 @@ package workspace
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
@@ -60,7 +61,8 @@ func NewWorkspaceView(
 		},
 	}
 
-	return views.NewEntityView(container.RenderState(), ws, types.EntityFormatDocument, workspaceKeyCallbacks...)
+	opts := workspaceDetailOpts(ws)
+	return views.NewDetailContentView(container.RenderState(), opts, workspaceKeyCallbacks...)
 }
 
 func NewWorkspaceListView(
@@ -72,24 +74,34 @@ func NewWorkspaceListView(
 		container.HandleError(fmt.Errorf("no workspaces found"))
 	}
 
+	sort.Slice(workspaces, func(i, j int) bool {
+		return workspaces[i].AssignedName() < workspaces[j].AssignedName()
+	})
+
 	columns := []views.TableColumn{
-		{Title: fmt.Sprintf("Workspaces (%d)", len(workspaces)), Percentage: 40},
-		{Title: "Location", Percentage: 60},
+		{Title: fmt.Sprintf("Workspaces (%d)", len(workspaces)), Percentage: 35},
+		{Title: "Tags", Percentage: 30},
+		{Title: "Location", Percentage: 35},
 	}
 	rows := make([]views.TableRow, 0, len(workspaces))
 	for _, ws := range workspaces {
+		name := ws.AssignedName()
+		if ws.DisplayName != "" {
+			name = ws.DisplayName
+		}
+		tags := common.ColorizeTags(ws.Tags)
 		rows = append(rows, views.TableRow{
-			Data: []string{ws.AssignedName(), ws.Location()},
+			Data: []string{name, tags, common.ShortenPath(ws.Location()), ws.AssignedName()},
 		})
 	}
 	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
 	table.SetOnSelect(func(_ int) error {
 		row := table.GetSelectedRow()
-		if row == nil || len(row.Data()) == 0 {
+		if row == nil || len(row.Data()) < 4 {
 			return fmt.Errorf("no workspace selected")
 		}
-		name := row.Data()[0]
-		ws := workspaces.FindByName(name)
+		// Hidden cell [3] holds the assigned name for lookup
+		ws := workspaces.FindByName(row.Data()[3])
 		if ws == nil {
 			return fmt.Errorf("workspace not found")
 		}
