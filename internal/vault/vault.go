@@ -61,7 +61,7 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 		}
 		opts = append(opts, vault.WithAESKeyFromFile(keyFile))
 		if err := writeKeyToFile(key, keyFile); err != nil {
-			logger.Log().Warnx("unable to write key to file", "err", err)
+			logger.Log().Warn("unable to write key to file", "err", err)
 		}
 	}
 
@@ -267,7 +267,7 @@ func writeKeyToFile(key, filePath string) error {
 		return fmt.Errorf("unable to create directory for key file: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, []byte(key), 0600); err != nil {
+	if err := os.WriteFile(filePath, []byte(key), 0600); err != nil { // #nosec G703
 		return fmt.Errorf("unable to write key to file: %w", err)
 	}
 	logger.Log().Infof("Key written to file: %s", filePath)

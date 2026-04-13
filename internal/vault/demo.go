@@ -70,7 +70,7 @@ func newDemoVaultConfig() *VaultConfig {
 
 //nolint:lll
 func demoData() map[string]string {
-	return map[string]string{
+	return map[string]string{ // #nosec G101
 		// Basic secrets (common use cases)
 		"api-key":        "demo-api-key-12345-dont-use-in-production",
 		"database-url":   "postgres://demo:password@localhost:5432/flowdb",

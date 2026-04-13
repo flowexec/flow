@@ -90,7 +90,7 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 	defer func() {
 		if err = s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
+			logger.Log().WrapError(err, "cleanup failure")
 		}
 	}()
 	if err = s.Set(key, value); err != nil {
@@ -131,7 +131,7 @@ func cacheGetFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
+			logger.Log().WrapError(err, "cleanup failure")
 		}
 	}()
 	value, err := s.Get(key)
@@ -168,7 +168,7 @@ func cacheListFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
+			logger.Log().WrapError(err, "cleanup failure")
 		}
 	}()
 	data, err := s.GetAll()
@@ -216,7 +216,7 @@ func cacheRemoveFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
+			logger.Log().WrapError(err, "cleanup failure")
 		}
 	}()
 	if err = s.Delete(key); err != nil {
@@ -255,7 +255,7 @@ func cacheClearFunc(_ *context.Context, cmd *cobra.Command, _ []string) {
 	}
 	defer func() {
 		if err := s.Close(); err != nil {
-			logger.Log().Error(err, "cleanup failure")
+			logger.Log().WrapError(err, "cleanup failure")
 		}
 	}()
 	if err := s.DeleteBucket(store.EnvironmentBucket()); err != nil {

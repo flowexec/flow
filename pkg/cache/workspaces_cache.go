@@ -53,7 +53,7 @@ func (c *WorkspaceCacheImpl) Update() error {
 		if err != nil {
 			return errors.Wrap(err, "failed loading workspace config")
 		} else if wsCfg == nil {
-			logger.Log().Errorx("config not found for workspace", "name", name, "path", path)
+			logger.Log().Error("config not found for workspace", "name", name, "path", path)
 			continue
 		}
 		cacheData.Workspaces[name] = wsCfg
@@ -69,7 +69,7 @@ func (c *WorkspaceCacheImpl) Update() error {
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
-	logger.Log().Debugx("Successfully updated workspace cache data", "count", len(cacheData.Workspaces))
+	logger.Log().Debug("Successfully updated workspace cache data", "count", len(cacheData.Workspaces))
 	return nil
 }
 

@@ -57,7 +57,7 @@ var _ = Describe("WorkspaceCacheImpl", func() {
 	Describe("Update and GetLatestData", func() {
 		It("should update the workspace cache and retrieve the same data", func() {
 			mockLogger.EXPECT().Debugf(gomock.Any()).Times(1)
-			mockLogger.EXPECT().Debugx(gomock.Any(), "count", 2).Times(1)
+			mockLogger.EXPECT().Debug(gomock.Any(), "count", 2).Times(1)
 			err := wsCache.Update()
 			Expect(err).ToNot(HaveOccurred())
 

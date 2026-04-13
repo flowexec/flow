@@ -11,7 +11,7 @@ import (
 )
 
 type entry struct {
-	Args string `json:"args" yaml:"args"`
+	ID   string `json:"id"   yaml:"id"`
 	Time string `json:"time" yaml:"time"`
 	File string `json:"file" yaml:"file"`
 }
@@ -22,7 +22,7 @@ type entryResponse struct {
 
 func tuikitToEntry(e io.ArchiveEntry) entry {
 	return entry{
-		Args: e.Args,
+		ID:   e.ID,
 		Time: e.Time.String(),
 		File: e.Path,
 	}

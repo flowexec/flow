@@ -27,6 +27,7 @@ func RunCmd(
 	logger io.Logger,
 	stdIn *os.File,
 	logFields map[string]interface{},
+	task *io.TaskContext,
 ) error {
 	logger.Debugf("running command in dir (%s):\n%s", dir, strings.TrimSpace(commandStr))
 
@@ -52,8 +53,8 @@ func RunCmd(
 		interp.Env(expand.ListEnviron(envList...)),
 		interp.StdIO(
 			stdIn,
-			stdOutWriter(logMode, logger, flattenedFields...),
-			stdErrWriter(logMode, logger, flattenedFields...),
+			stdOutWriter(logMode, logger, task, flattenedFields...),
+			stdErrWriter(logMode, logger, task, flattenedFields...),
 		),
 	)
 	if err != nil {
@@ -80,6 +81,7 @@ func RunFile(
 	logger io.Logger,
 	stdIn *os.File,
 	logFields map[string]interface{},
+	task *io.TaskContext,
 ) error {
 	logger.Debugf("executing file (%s)", filepath.Join(dir, filename))
 
@@ -113,8 +115,8 @@ func RunFile(
 		interp.Env(expand.ListEnviron(envList...)),
 		interp.StdIO(
 			stdIn,
-			stdOutWriter(logMode, logger, flattenedFields...),
-			stdErrWriter(logMode, logger, flattenedFields...),
+			stdOutWriter(logMode, logger, task, flattenedFields...),
+			stdErrWriter(logMode, logger, task, flattenedFields...),
 		),
 	)
 	if err != nil {
@@ -132,12 +134,12 @@ func RunFile(
 	return nil
 }
 
-func stdOutWriter(mode io.LogMode, logger io.Logger, logFields ...any) stdio.Writer {
-	return io.StdOutWriter{LogFields: logFields, Logger: logger, LogMode: &mode}
+func stdOutWriter(mode io.LogMode, logger io.Logger, task *io.TaskContext, logFields ...any) stdio.Writer {
+	return io.StdOutWriter{LogFields: logFields, Logger: logger, LogMode: &mode, Task: task}
 }
 
-func stdErrWriter(mode io.LogMode, logger io.Logger, logFields ...any) stdio.Writer {
-	return io.StdErrWriter{LogFields: logFields, Logger: logger, LogMode: &mode}
+func stdErrWriter(mode io.LogMode, logger io.Logger, task *io.TaskContext, logFields ...any) stdio.Writer {
+	return io.StdErrWriter{LogFields: logFields, Logger: logger, LogMode: &mode, Task: task}
 }
 
 func setupColorEnvironment() {

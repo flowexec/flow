@@ -296,7 +296,7 @@ func setTestEnv(tb testing.TB, configDir, cacheDir string) {
 
 func expectInternalMockLoggerCalls(logger *tuikitIOMocks.MockLogger) {
 	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
-	logger.EXPECT().Debugx(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().LogMode().AnyTimes()
 	logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
 }

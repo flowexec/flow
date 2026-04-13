@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/flowexec/tuikit/io"
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
@@ -98,11 +99,14 @@ func handleExec(
 		ctx.ProcessTmpDir = targetDir
 	}
 
-	// Build the list of steps to execute
-	var execs []engine.Exec
-
+	// Resolve all executables first to count duplicate refs
+	type resolvedExec struct {
+		exec *executable.Executable
+		ref  string
+	}
+	resolved := make([]resolvedExec, 0, len(serialSpec.Execs))
+	refCounts := make(map[string]int)
 	for i, refConfig := range serialSpec.Execs {
-		// Get the executable for the step
 		var exec *executable.Executable
 		switch {
 		case refConfig.Ref != "":
@@ -116,6 +120,18 @@ func handleExec(
 		default:
 			return errors.New("serial executable must have a ref or cmd")
 		}
+		ref := exec.Ref().String()
+		refCounts[ref]++
+		resolved = append(resolved, resolvedExec{exec: exec, ref: ref})
+	}
+	refIdx := make(map[string]int)
+
+	// Build the list of steps to execute
+	tracker := io.NewTaskTracker()
+	var execs []engine.Exec
+
+	for i, refConfig := range serialSpec.Execs {
+		exec := resolved[i].exec
 
 		// Prepare the environment and arguments for the child executable
 		childEnv := make(map[string]string)
@@ -147,7 +163,7 @@ func handleExec(
 
 				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, childArgs, childEnv)
 				if err != nil {
-					logger.Log().Error(err, "unable to process arguments")
+					logger.Log().WrapError(err, "unable to process arguments")
 				}
 				maps.Copy(childEnv, a)
 			}
@@ -179,8 +195,22 @@ func handleExec(
 			}
 		}
 
+		ref := resolved[i].ref
+		refIdx[ref]++
+		taskName := ref
+		if refCounts[ref] > 1 {
+			taskName = fmt.Sprintf("%s · %d", ref, refIdx[ref])
+		}
 		runExec := func() error {
-			return runSerialExecFunc(ctx, i, refConfig, exec, eng, childEnv, childArgs, serialSpec)
+			task := tracker.StartTask(taskName)
+			ctx.CurrentTask = task
+			err := runSerialExecFunc(ctx, i, refConfig, exec, eng, childEnv, childArgs, serialSpec)
+			if err != nil {
+				tracker.CompleteTask(task, io.TaskFailed, err)
+				return err
+			}
+			tracker.CompleteTask(task, io.TaskSuccess, nil)
+			return nil
 		}
 
 		// Create condition function if needed
@@ -204,7 +234,7 @@ func handleExec(
 					return false, err
 				}
 				if err := str.Close(); err != nil {
-					logger.Log().Error(err, "unable to close store")
+					logger.Log().WrapError(err, "unable to close store")
 				}
 
 				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
@@ -213,6 +243,7 @@ func handleExec(
 					return false, err
 				}
 				if !truthy {
+					tracker.StartTask(taskName).Status = io.TaskSkipped
 					logger.Log().Debugf("skipping execution %d/%d", stepNum, totalSteps)
 				} else {
 					logger.Log().Debugf("condition %s is true", ifCondition)
@@ -229,9 +260,24 @@ func handleExec(
 		})
 	}
 
+	parentTask := ctx.CurrentTask
+	if parentTask == nil {
+		if tal, ok := logger.Log().(io.TaskAwareLogger); ok {
+			tal.BeginGroup(parent.Ref().String())
+		}
+	}
 	results := eng.Execute(ctx, execs, engine.WithMode(engine.Serial), engine.WithFailFast(parent.Serial.FailFast))
+	ctx.CurrentTask = nil
+	if parentTask != nil {
+		parentTask.Children = append(parentTask.Children, tracker.Tasks()...)
+	} else {
+		if tal, ok := logger.Log().(io.TaskAwareLogger); ok {
+			tal.EndGroup()
+			tal.PrintTaskSummary(tracker.Tasks())
+		}
+	}
 	if results.HasErrors() {
-		return errors.New(results.String())
+		return fmt.Errorf("serial execution failed")
 	}
 	return nil
 }

@@ -133,7 +133,7 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	case len(args) == 2:
 		value = args[1]
 	default:
-		logger.Log().Warnx("merging multiple arguments into a single value", "count", len(args))
+		logger.Log().Warn("merging multiple arguments into a single value", "count", len(args))
 		value = strings.Join(args[1:], " ")
 	}
 
@@ -239,7 +239,7 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 	if copyValue {
 		if err := clipboard.WriteAll(s.PlainTextString()); err != nil {
-			logger.Log().Error(err, "\nunable to copy secret value to clipboard")
+			logger.Log().WrapError(err, "\nunable to copy secret value to clipboard")
 		} else {
 			logger.Log().PlainTextSuccess("\ncopied secret value to clipboard")
 		}

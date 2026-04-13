@@ -227,7 +227,7 @@ func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	workspaceCache, err := ctx.WorkspacesCache.GetLatestData()
 	if err != nil {
-		logger.Log().Fatalx("failure loading workspace configs from cache", "err", err)
+		logger.Log().Fatal("failure loading workspace configs from cache", "err", err)
 	}
 
 	filteredWorkspaces := make([]*workspace.Workspace, 0)
