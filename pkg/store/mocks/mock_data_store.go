@@ -67,6 +67,20 @@ func (mr *MockDataStoreMockRecorder) CreateProcessBucket(arg0 any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProcessBucket", reflect.TypeOf((*MockDataStore)(nil).CreateProcessBucket), arg0)
 }
 
+// DeleteBackgroundRun mocks base method.
+func (m *MockDataStore) DeleteBackgroundRun(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBackgroundRun", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBackgroundRun indicates an expected call of DeleteBackgroundRun.
+func (mr *MockDataStoreMockRecorder) DeleteBackgroundRun(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBackgroundRun", reflect.TypeOf((*MockDataStore)(nil).DeleteBackgroundRun), arg0)
+}
+
 // DeleteCacheEntry mocks base method.
 func (m *MockDataStore) DeleteCacheEntry(arg0 string) error {
 	m.ctrl.T.Helper()
@@ -138,6 +152,21 @@ func (mr *MockDataStoreMockRecorder) GetAllProcessVars(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProcessVars", reflect.TypeOf((*MockDataStore)(nil).GetAllProcessVars), arg0)
 }
 
+// GetBackgroundRun mocks base method.
+func (m *MockDataStore) GetBackgroundRun(arg0 string) (store.BackgroundRun, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackgroundRun", arg0)
+	ret0, _ := ret[0].(store.BackgroundRun)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBackgroundRun indicates an expected call of GetBackgroundRun.
+func (mr *MockDataStoreMockRecorder) GetBackgroundRun(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackgroundRun", reflect.TypeOf((*MockDataStore)(nil).GetBackgroundRun), arg0)
+}
+
 // GetCacheEntry mocks base method.
 func (m *MockDataStore) GetCacheEntry(arg0 string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -198,6 +227,21 @@ func (mr *MockDataStoreMockRecorder) GetProcessVarKeys(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProcessVarKeys", reflect.TypeOf((*MockDataStore)(nil).GetProcessVarKeys), arg0)
 }
 
+// ListBackgroundRuns mocks base method.
+func (m *MockDataStore) ListBackgroundRuns() ([]store.BackgroundRun, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBackgroundRuns")
+	ret0, _ := ret[0].([]store.BackgroundRun)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBackgroundRuns indicates an expected call of ListBackgroundRuns.
+func (mr *MockDataStoreMockRecorder) ListBackgroundRuns() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBackgroundRuns", reflect.TypeOf((*MockDataStore)(nil).ListBackgroundRuns))
+}
+
 // ListExecutionRefs mocks base method.
 func (m *MockDataStore) ListExecutionRefs() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -225,6 +269,20 @@ func (m *MockDataStore) RecordExecution(arg0 store.ExecutionRecord) error {
 func (mr *MockDataStoreMockRecorder) RecordExecution(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordExecution", reflect.TypeOf((*MockDataStore)(nil).RecordExecution), arg0)
+}
+
+// SaveBackgroundRun mocks base method.
+func (m *MockDataStore) SaveBackgroundRun(arg0 store.BackgroundRun) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveBackgroundRun", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveBackgroundRun indicates an expected call of SaveBackgroundRun.
+func (mr *MockDataStoreMockRecorder) SaveBackgroundRun(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveBackgroundRun", reflect.TypeOf((*MockDataStore)(nil).SaveBackgroundRun), arg0)
 }
 
 // SetCacheEntry mocks base method.

@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	cacheBucket       = "cache"
-	historyBucket     = "history"
-	processBucketName = "process"
-	storeFileName     = "store.db"
+	cacheBucket          = "cache"
+	historyBucket        = "history"
+	processBucketName    = "process"
+	backgroundBucketName = "background"
+	storeFileName        = "store.db"
 
 	// BucketEnv is the environment variable used to identify the current process bucket.
 	BucketEnv = "FLOW_PROCESS_BUCKET"
@@ -43,6 +44,12 @@ type DataStore interface { //nolint:interfacebloat // single backing store with 
 	ListExecutionRefs() ([]string, error)
 	DeleteExecutionHistory(ref string) error
 
+	// Background run management (detached process tracking).
+	SaveBackgroundRun(run BackgroundRun) error
+	GetBackgroundRun(id string) (BackgroundRun, error)
+	ListBackgroundRuns() ([]BackgroundRun, error)
+	DeleteBackgroundRun(id string) error
+
 	// Process env var management (per-execution scoped key-value storage).
 	// bucketID identifies the execution scope; use EnvironmentBucket() to get the current scope.
 	CreateProcessBucket(id string) error
@@ -65,6 +72,27 @@ type ExecutionRecord struct {
 	Error     string        `json:"error,omitempty"`
 	// LogArchiveID links this record to a tuikit log archive entry for cross-referencing.
 	LogArchiveID string `json:"logArchiveId,omitempty"`
+}
+
+// BackgroundRunStatus represents the state of a background run.
+type BackgroundRunStatus string
+
+const (
+	BackgroundRunning   BackgroundRunStatus = "running"
+	BackgroundCompleted BackgroundRunStatus = "completed"
+	BackgroundFailed    BackgroundRunStatus = "failed"
+)
+
+// BackgroundRun holds metadata about a detached background execution.
+type BackgroundRun struct {
+	ID           string              `json:"id"`
+	PID          int                 `json:"pid"`
+	Ref          string              `json:"ref"`
+	StartedAt    time.Time           `json:"startedAt"`
+	Status       BackgroundRunStatus `json:"status"`
+	LogArchiveID string              `json:"logArchiveId,omitempty"`
+	Error        string              `json:"error,omitempty"`
+	CompletedAt  *time.Time          `json:"completedAt,omitempty"`
 }
 
 // BoltDataStore opens and closes the BBolt database for each operation, so the
@@ -431,6 +459,75 @@ func (s *BoltDataStore) DeleteProcessVar(bucketID, key string) error {
 				return err
 			}
 			return bucket.Delete([]byte(key))
+		})
+	})
+}
+
+// ---- background bucket ----
+
+func (s *BoltDataStore) SaveBackgroundRun(run BackgroundRun) error {
+	data, err := json.Marshal(run)
+	if err != nil {
+		return fmt.Errorf("failed to marshal background run: %w", err)
+	}
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			b, err := tx.CreateBucketIfNotExists([]byte(backgroundBucketName))
+			if err != nil {
+				return fmt.Errorf("failed to open background bucket: %w", err)
+			}
+			return b.Put([]byte(run.ID), data)
+		})
+	})
+}
+
+func (s *BoltDataStore) GetBackgroundRun(id string) (BackgroundRun, error) {
+	var run BackgroundRun
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(backgroundBucketName))
+			if b == nil {
+				return fmt.Errorf("background run %s not found", id)
+			}
+			v := b.Get([]byte(id))
+			if v == nil {
+				return fmt.Errorf("background run %s not found", id)
+			}
+			return json.Unmarshal(v, &run)
+		})
+	})
+	return run, err
+}
+
+func (s *BoltDataStore) ListBackgroundRuns() ([]BackgroundRun, error) {
+	var runs []BackgroundRun
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(backgroundBucketName))
+			if b == nil {
+				return nil
+			}
+			return b.ForEach(func(_, v []byte) error {
+				var run BackgroundRun
+				if err := json.Unmarshal(v, &run); err != nil {
+					return fmt.Errorf("failed to unmarshal background run: %w", err)
+				}
+				runs = append(runs, run)
+				return nil
+			})
+		})
+	})
+	return runs, err
+}
+
+func (s *BoltDataStore) DeleteBackgroundRun(id string) error {
+	return s.open(func(db *bolt.DB) error {
+		return db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(backgroundBucketName))
+			if b == nil {
+				return nil
+			}
+			return b.Delete([]byte(id))
 		})
 	})
 }

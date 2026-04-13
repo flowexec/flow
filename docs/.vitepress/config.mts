@@ -75,7 +75,9 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { text: 'flow logs', link: '/cli/flow_logs' },
-                { text: 'flow logs clear', link: '/cli/flow_logs_clear' }
+                { text: 'flow logs attach', link: '/cli/flow_logs_attach' },
+                { text: 'flow logs clear', link: '/cli/flow_logs_clear' },
+                { text: 'flow logs kill', link: '/cli/flow_logs_kill' }
               ]
             },
             { text: 'flow mcp', link: '/cli/flow_mcp' },

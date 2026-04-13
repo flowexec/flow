@@ -41,33 +41,29 @@ func toRecordOutput(r UnifiedRecord) recordOutput {
 
 // PrintRecords outputs unified records in the specified format (json, yaml, or plain text).
 func PrintRecords(format string, records []UnifiedRecord) {
-	if len(records) == 0 {
-		logger.Log().Println("No execution history found.")
-		return
+	out := make([]recordOutput, len(records))
+	for i, r := range records {
+		out[i] = toRecordOutput(r)
 	}
 
 	switch common.NormalizeFormat(format) {
 	case common.JSONFormat:
-		out := make([]recordOutput, len(records))
-		for i, r := range records {
-			out[i] = toRecordOutput(r)
-		}
 		data, err := json.MarshalIndent(recordsResponse{History: out}, "", "  ")
 		if err != nil {
 			logger.Log().Fatalf("Failed to marshal records - %v", err)
 		}
 		logger.Log().Println(string(data))
 	case common.YAMLFormat:
-		out := make([]recordOutput, len(records))
-		for i, r := range records {
-			out[i] = toRecordOutput(r)
-		}
 		data, err := yaml.Marshal(recordsResponse{History: out})
 		if err != nil {
 			logger.Log().Fatalf("Failed to marshal records - %v", err)
 		}
 		logger.Log().Println(string(data))
 	default:
+		if len(records) == 0 {
+			logger.Log().Println("No execution history found.")
+			return
+		}
 		printRecordsText(records)
 	}
 }

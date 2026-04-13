@@ -4,9 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	osExec "os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+
+	"github.com/google/uuid"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/views"
@@ -31,6 +35,11 @@ import (
 	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
+)
+
+const (
+	// backgroundRunIDEnv is set on child processes spawned by --background.
+	backgroundRunIDEnv = "FLOW_BACKGROUND_RUN_ID"
 )
 
 func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -76,6 +85,7 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	}
 	RegisterFlag(ctx, subCmd, *flags.ParameterValueFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogModeFlag)
+	RegisterFlag(ctx, subCmd, *flags.BackgroundFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -130,6 +140,20 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		))
 	}
 
+	// Handle --background: spawn a detached child process and return immediately.
+	background := flags.ValueFor[bool](cmd, *flags.BackgroundFlag, false)
+	if background {
+		launchBackground(ctx, ref, verb, args)
+		return
+	}
+
+	// If this is a background child process, eagerly record the log archive path
+	// so that `logs --running` can stream output while we're still executing.
+	bgRunID := os.Getenv(backgroundRunIDEnv)
+	if bgRunID != "" {
+		linkBackgroundArchive(ctx, bgRunID)
+	}
+
 	if ctx.DataStore != nil {
 		if err := ctx.DataStore.CreateProcessBucket(ref.String()); err != nil {
 			logger.Log().FatalErr(err)
@@ -152,11 +176,126 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	cleanupProcessStore(ctx)
 	recordExecution(ctx, ref, startTime, dur, runErr)
 
+	// Update background run record if this is a child process.
+	if bgRunID != "" {
+		finalizeBackgroundRun(ctx, bgRunID, runErr)
+	}
+
 	if runErr != nil {
 		logger.Log().FatalErr(runErr)
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// launchBackground spawns a detached flow process for the given executable and returns immediately.
+func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.Verb, args []string) {
+	runID := uuid.New().String()[:8]
+
+	// Build the child command: same verb + args. Stdout/stderr are set to nil so
+	// Go redirects them to /dev/null — terminal output is suppressed but the tuikit
+	// archive handler still writes to the log file normally.
+	childArgs := []string{string(verb)}
+	if len(args) > 0 {
+		childArgs = append(childArgs, args...)
+	}
+
+	flowBin, err := os.Executable()
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to find flow binary: %w", err))
+	}
+
+	child := osExec.Command(flowBin, childArgs...)
+	child.Env = append(os.Environ(), fmt.Sprintf("%s=%s", backgroundRunIDEnv, runID))
+	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	child.Stdout = nil
+	child.Stderr = nil
+	child.Stdin = nil
+
+	if err := child.Start(); err != nil {
+		logger.Log().FatalErr(fmt.Errorf("failed to start background process: %w", err))
+	}
+
+	run := store.BackgroundRun{
+		ID:        runID,
+		PID:       child.Process.Pid,
+		Ref:       ref.String(),
+		StartedAt: time.Now(),
+		Status:    store.BackgroundRunning,
+	}
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.SaveBackgroundRun(run); err != nil {
+			logger.Log().Errorf("failed to save background run record: %v", err)
+		}
+	}
+
+	// Release the child process so it survives parent exit.
+	_ = child.Process.Release()
+
+	logger.Log().Println(fmt.Sprintf("Started background run %s (PID %d) for %s", runID, run.PID, ref))
+}
+
+// linkBackgroundArchive eagerly writes the log archive path into the background run
+// record so that `logs attach` can stream output while the child is still executing.
+// Unlike findArchiveByID, this scans the log directory directly without skipping empty
+// files — the archive file exists at startup but may not have content yet.
+func linkBackgroundArchive(ctx *context.Context, runID string) {
+	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
+		return
+	}
+	archivePath := findArchiveFileByID(ctx.LogArchiveID)
+	if archivePath == "" {
+		return
+	}
+	run, err := ctx.DataStore.GetBackgroundRun(runID)
+	if err != nil {
+		return
+	}
+	run.LogArchiveID = archivePath
+	_ = ctx.DataStore.SaveBackgroundRun(run)
+}
+
+// findArchiveFileByID scans the logs directory for a file whose name starts with the
+// given archive ID. Unlike ListArchiveEntries, this does not skip empty files.
+func findArchiveFileByID(archiveID string) string {
+	logsDir := filesystem.LogsDir()
+	files, err := os.ReadDir(logsDir)
+	if err != nil {
+		return ""
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(f.Name(), archiveID) {
+			return filepath.Join(logsDir, f.Name())
+		}
+	}
+	return ""
+}
+
+// finalizeBackgroundRun updates the background run record with the final status.
+func finalizeBackgroundRun(ctx *context.Context, runID string, runErr error) {
+	if ctx.DataStore == nil {
+		return
+	}
+	run, err := ctx.DataStore.GetBackgroundRun(runID)
+	if err != nil {
+		logger.Log().Debug("failed to load background run for finalization", "err", err)
+		return
+	}
+	now := time.Now()
+	run.CompletedAt = &now
+	run.LogArchiveID = findArchiveByID(ctx.LogArchiveID)
+	if runErr != nil {
+		run.Status = store.BackgroundFailed
+		run.Error = runErr.Error()
+	} else {
+		run.Status = store.BackgroundCompleted
+	}
+	if err := ctx.DataStore.SaveBackgroundRun(run); err != nil {
+		logger.Log().Debug("failed to finalize background run", "err", err)
+	}
 }
 
 func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Executable) map[string]string {

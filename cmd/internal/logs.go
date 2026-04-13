@@ -2,11 +2,14 @@ package internal
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
-	"time"
-
 	"strings"
+	"syscall"
+	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/spf13/cobra"
@@ -16,6 +19,7 @@ import (
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/executable"
 )
 
@@ -51,11 +55,40 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 
+	killCmd := &cobra.Command{
+		Use:   "kill RUN_ID",
+		Short: "Terminate a background process.",
+		Long:  "Send a termination signal to a running background process identified by its run ID.",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			logsKillFunc(ctx, args[0])
+		},
+	}
+
+	attachCmd := &cobra.Command{
+		Use:   "attach RUN_ID",
+		Short: "Attach to a background process output.",
+		Long:  "Stream the log output of a background process identified by its run ID.",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			logsAttachFunc(ctx, args[0])
+		},
+	}
+
 	subCmd.AddCommand(clearCmd)
+	subCmd.AddCommand(killCmd)
+	subCmd.AddCommand(attachCmd)
+	RegisterFlag(ctx, subCmd, *flags.RunningFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
 func logFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	running := flags.ValueFor[bool](cmd, *flags.RunningFlag, false)
+	if running {
+		logsRunningFunc(ctx, cmd)
+		return
+	}
+
 	lastEntry := flags.ValueFor[bool](cmd, *flags.LastLogEntryFlag, false)
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if err := filesystem.EnsureLogsDir(); err != nil {
@@ -188,4 +221,156 @@ func deleteAssociatedLogs(ctx *context.Context, ref string) {
 			_ = tuikitIO.DeleteArchiveEntry(r.LogArchiveID)
 		}
 	}
+}
+
+// logsRunningFunc lists active background processes using the same output/TUI
+// patterns as regular execution history.
+func logsRunningFunc(ctx *context.Context, cmd *cobra.Command) {
+	if ctx.DataStore == nil {
+		logger.Log().Fatalf("data store is not available")
+	}
+
+	runs, err := ctx.DataStore.ListBackgroundRuns()
+	if err != nil {
+		logger.Log().FatalErr(err)
+	}
+
+	// Prune stale entries and collect active runs.
+	var active []store.BackgroundRun
+	for _, run := range runs {
+		if run.Status != store.BackgroundRunning {
+			continue
+		}
+		if !isProcessAlive(run.PID) {
+			now := time.Now()
+			run.Status = store.BackgroundFailed
+			run.Error = "process exited unexpectedly"
+			run.CompletedAt = &now
+			_ = ctx.DataStore.SaveBackgroundRun(run)
+			continue
+		}
+		active = append(active, run)
+	}
+
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+
+	if TUIEnabled(ctx, cmd) {
+		view := logs.NewBackgroundRunsView(ctx.TUIContainer, active, ctx.DataStore)
+		SetView(ctx, cmd, view)
+		return
+	}
+
+	logs.PrintBackgroundRuns(outputFormat, active)
+}
+
+// logsKillFunc terminates a background process by run ID.
+func logsKillFunc(ctx *context.Context, runID string) {
+	if ctx.DataStore == nil {
+		logger.Log().Fatalf("data store is not available")
+	}
+
+	run, err := ctx.DataStore.GetBackgroundRun(runID)
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("background run %s not found: %w", runID, err))
+	}
+
+	if run.Status != store.BackgroundRunning {
+		logger.Log().Fatalf("background run %s is not running (status: %s)", runID, run.Status)
+	}
+
+	proc, err := os.FindProcess(run.PID)
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to find process %d: %w", run.PID, err))
+	}
+
+	if err := proc.Signal(syscall.SIGTERM); err != nil {
+		logger.Log().FatalErr(fmt.Errorf("failed to terminate process %d: %w", run.PID, err))
+	}
+
+	now := time.Now()
+	run.Status = store.BackgroundFailed
+	run.Error = "killed by user"
+	run.CompletedAt = &now
+	if err := ctx.DataStore.SaveBackgroundRun(run); err != nil {
+		logger.Log().Errorf("failed to update background run record: %v", err)
+	}
+
+	logger.Log().Println(fmt.Sprintf("Terminated background run %s (PID %d).", runID, run.PID))
+}
+
+// logsAttachFunc streams log output from a background process, tail-following
+// the log archive file until the process exits or the user interrupts.
+func logsAttachFunc(ctx *context.Context, runID string) {
+	if ctx.DataStore == nil {
+		logger.Log().Fatalf("data store is not available")
+	}
+
+	run, err := ctx.DataStore.GetBackgroundRun(runID)
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("background run %s not found: %w", runID, err))
+	}
+
+	archivePath := run.LogArchiveID
+	if archivePath == "" {
+		logger.Log().Fatalf("no log output available for background run %s (archive not yet linked)", runID)
+	}
+
+	f, err := os.Open(archivePath)
+	if err != nil {
+		logger.Log().FatalErr(fmt.Errorf("unable to open log archive: %w", err))
+	}
+	defer f.Close()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	buf := make([]byte, 4096)
+	var pos int64
+	for {
+		select {
+		case <-sigCh:
+			_, _ = fmt.Fprintln(ctx.StdOut(), "\nDetached.")
+			return
+		default:
+		}
+
+		n, readErr := f.ReadAt(buf, pos)
+		if n > 0 {
+			_, _ = ctx.StdOut().Write(buf[:n])
+			pos += int64(n)
+			continue
+		}
+
+		// No new data — check if the process is still alive.
+		if !isProcessAlive(run.PID) {
+			// Final drain.
+			for {
+				n, _ = f.ReadAt(buf, pos)
+				if n == 0 {
+					break
+				}
+				_, _ = ctx.StdOut().Write(buf[:n])
+				pos += int64(n)
+			}
+			_, _ = fmt.Fprintln(ctx.StdOut(), "\nBackground process exited.")
+			return
+		}
+
+		if readErr != nil && readErr != io.EOF {
+			logger.Log().FatalErr(fmt.Errorf("error reading log: %w", readErr))
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// isProcessAlive checks whether a process with the given PID is still running.
+func isProcessAlive(pid int) bool {
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	// On Unix, signal 0 checks for process existence without actually sending a signal.
+	return proc.Signal(syscall.Signal(0)) == nil
 }

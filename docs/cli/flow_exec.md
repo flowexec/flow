@@ -50,6 +50,7 @@ flow exec EXECUTABLE_ID [args...] [flags]
 ### Options
 
 ```
+  -b, --background          Run the executable in the background and return a run ID immediately.
   -h, --help                help for exec
   -m, --log-mode string     Log mode (text, logfmt, json, hidden)
   -p, --param stringArray   Set a parameter value by env key. (i.e. KEY=value) Use multiple times to set multiple parameters.This will override any existing parameter values defined for the executable.
