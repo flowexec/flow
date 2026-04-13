@@ -90,8 +90,8 @@ github.com/esiqveland/notify v0.13.3 h1:QCMw6o1n+6rl+oLUfg8P1IIDSFsDEb2WlXvVvIJb
 github.com/esiqveland/notify v0.13.3/go.mod h1:hesw/IRYTO0x99u1JPweAl4+5mwXJibQVUcP0Iu5ORE=
 github.com/expr-lang/expr v1.17.7 h1:Q0xY/e/2aCIp8g9s/LGvMDCC5PxYlvHgDZRQ4y16JX8=
 github.com/expr-lang/expr v1.17.7/go.mod h1:8/vRC7+7HBzESEqt5kKpYXxrxkr31SaO8r40VO/1IT4=
-github.com/flowexec/tuikit v0.3.1 h1:66/x19WE1alZGbN2pwstIQza5suBnvJqYNevV4GrSYQ=
-github.com/flowexec/tuikit v0.3.1/go.mod h1:ZD+hSmN6Ls/mXAqEOhIhmfXXiR32u/IFys3KafOajpQ=
+github.com/flowexec/tuikit v0.3.2 h1:bhPnjIZl2XjbAh3vlOYAmUCod88bYH2tFjQiIgNp8hg=
+github.com/flowexec/tuikit v0.3.2/go.mod h1:ZD+hSmN6Ls/mXAqEOhIhmfXXiR32u/IFys3KafOajpQ=
 github.com/flowexec/vault v0.2.1 h1:IYII6iXhhzUc4o0arJVH8281so67L9V8HY8ary/kTps=
 github.com/flowexec/vault v0.2.1/go.mod h1:6JHONK+fTf8Zn7bOwejzbKTWuIh1BYHxgAwBc/XPXeY=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
