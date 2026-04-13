@@ -89,27 +89,44 @@ func printRecordsText(records []UnifiedRecord) {
 }
 
 // PrintLastRecord outputs metadata and log content for a single record.
-func PrintLastRecord(record UnifiedRecord, stdout io.Writer) {
-	status := "ok"
-	if record.ExitCode != 0 {
-		status = fmt.Sprintf("exit(%d)", record.ExitCode)
-	}
+func PrintLastRecord(format string, record UnifiedRecord, stdout io.Writer) {
+	out := toRecordOutput(record)
 
-	_, _ = fmt.Fprintf(stdout, "Executable: %s\n", record.Ref)
-	_, _ = fmt.Fprintf(stdout, "Time:       %s\n", record.StartedAt.Format(time.RFC3339))
-	_, _ = fmt.Fprintf(stdout, "Duration:   %s\n", record.Duration.Round(time.Millisecond))
-	_, _ = fmt.Fprintf(stdout, "Status:     %s\n", status)
-	if record.Error != "" {
-		_, _ = fmt.Fprintf(stdout, "Error:      %s\n", record.Error)
-	}
-	_, _ = fmt.Fprintln(stdout)
-
-	if record.LogEntry != nil {
-		content, err := record.LogEntry.Read()
+	switch common.NormalizeFormat(format) {
+	case common.JSONFormat:
+		data, err := json.MarshalIndent(out, "", "  ")
 		if err != nil {
-			_, _ = fmt.Fprintf(stdout, "error reading log: %v\n", err)
-		} else if content != "" {
-			_, _ = fmt.Fprint(stdout, content)
+			logger.Log().Fatalf("Failed to marshal record - %v", err)
+		}
+		_, _ = fmt.Fprintln(stdout, string(data))
+	case common.YAMLFormat:
+		data, err := yaml.Marshal(out)
+		if err != nil {
+			logger.Log().Fatalf("Failed to marshal record - %v", err)
+		}
+		_, _ = fmt.Fprint(stdout, string(data))
+	default:
+		status := "ok"
+		if record.ExitCode != 0 {
+			status = fmt.Sprintf("exit(%d)", record.ExitCode)
+		}
+
+		_, _ = fmt.Fprintf(stdout, "Executable: %s\n", record.Ref)
+		_, _ = fmt.Fprintf(stdout, "Time:       %s\n", record.StartedAt.Format(time.RFC3339))
+		_, _ = fmt.Fprintf(stdout, "Duration:   %s\n", record.Duration.Round(time.Millisecond))
+		_, _ = fmt.Fprintf(stdout, "Status:     %s\n", status)
+		if record.Error != "" {
+			_, _ = fmt.Fprintf(stdout, "Error:      %s\n", record.Error)
+		}
+		_, _ = fmt.Fprintln(stdout)
+
+		if record.LogEntry != nil {
+			content, err := record.LogEntry.Read()
+			if err != nil {
+				_, _ = fmt.Fprintf(stdout, "error reading log: %v\n", err)
+			} else if content != "" {
+				_, _ = fmt.Fprint(stdout, content)
+			}
 		}
 	}
 }

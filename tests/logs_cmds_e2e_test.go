@@ -73,7 +73,7 @@ var _ = Describe("logs e2e", Ordered, func() {
 			Expect(run.Run(ctx.Context, "logs", "--last")).To(Succeed())
 			out, err := readFileContent(stdOut)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(out).To(ContainSubstring("Executable: default/examples:simple-print"))
+			Expect(out).To(ContainSubstring("ref: default/examples:simple-print"))
 		})
 	})
 

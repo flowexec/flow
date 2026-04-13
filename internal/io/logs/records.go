@@ -2,11 +2,68 @@ package logs
 
 import (
 	"sort"
+	"strings"
+	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
 	"github.com/flowexec/flow/pkg/store"
 )
+
+// RecordFilter holds optional criteria for filtering unified records.
+type RecordFilter struct {
+	Workspace string
+	Status    string // "success" or "failure"
+	Since     time.Time
+	Limit     int
+}
+
+// extractWorkspace parses the workspace from a ref formatted as "verb ws/ns:name".
+func extractWorkspace(ref string) string {
+	_, rest, ok := strings.Cut(ref, " ")
+	if !ok {
+		return ""
+	}
+	ws, _, ok := strings.Cut(rest, "/")
+	if !ok {
+		return ""
+	}
+	return ws
+}
+
+// FilterRecords applies the filter criteria to a slice of unified records.
+func FilterRecords(records []UnifiedRecord, f RecordFilter) []UnifiedRecord {
+	var filtered []UnifiedRecord
+	for _, r := range records {
+		if f.Workspace != "" {
+			// Refs are formatted as "verb ws/ns:name" — workspace is between the space and the first "/".
+			ws := extractWorkspace(r.Ref)
+			if ws != f.Workspace {
+				continue
+			}
+		}
+		if f.Status != "" {
+			switch f.Status {
+			case "success":
+				if r.ExitCode != 0 {
+					continue
+				}
+			case "failure":
+				if r.ExitCode == 0 {
+					continue
+				}
+			}
+		}
+		if !f.Since.IsZero() && r.StartedAt.Before(f.Since) {
+			continue
+		}
+		filtered = append(filtered, r)
+	}
+	if f.Limit > 0 && len(filtered) > f.Limit {
+		filtered = filtered[:f.Limit]
+	}
+	return filtered
+}
 
 // UnifiedRecord joins an execution history record with its corresponding log archive entry (if available).
 type UnifiedRecord struct {

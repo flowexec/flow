@@ -148,6 +148,35 @@ var LastLogEntryFlag = &Metadata{
 	Required: false,
 }
 
+var LogFilterWorkspaceFlag = &Metadata{
+	Name:      "workspace",
+	Shorthand: "w",
+	Usage:     "Filter history by workspace name.",
+	Default:   "",
+	Required:  false,
+}
+
+var LogFilterStatusFlag = &Metadata{
+	Name:     "status",
+	Usage:    "Filter history by status (success or failure).",
+	Default:  "",
+	Required: false,
+}
+
+var LogFilterSinceFlag = &Metadata{
+	Name:     "since",
+	Usage:    "Filter history to entries after a duration (e.g. 1h, 30m, 7d).",
+	Default:  "",
+	Required: false,
+}
+
+var LogFilterLimitFlag = &Metadata{
+	Name:     "limit",
+	Usage:    "Maximum number of records to display.",
+	Default:  0,
+	Required: false,
+}
+
 var TemplateWorkspaceFlag = &Metadata{
 	Name:      "workspace",
 	Shorthand: "w",

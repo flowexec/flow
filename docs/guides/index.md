@@ -20,6 +20,7 @@ Master the core features of flow:
 - **[Workspaces](workspaces.md)** - Organize your automation across projects
 - **[Executables](executables.md)** - Complete reference for all executable types and configuration
 - **[Working with Secrets](secrets.md)** - Secure your workflows with encrypted vaults
+- **[Execution History & Logs](execution-history.md)** - View, filter, and manage your execution history
 
 ## Advanced Topics
 

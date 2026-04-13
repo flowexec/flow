@@ -50,6 +50,7 @@ export default defineConfig({
                 { text: 'Executables', link: '/guides/executables' },
                 { text: 'Workspaces', link: '/guides/workspaces' },
                 { text: 'Secrets', link: '/guides/secrets' },
+                { text: 'Execution History & Logs', link: '/guides/execution-history' },
             ]},
             { text: 'Advanced',
             items: [
@@ -69,7 +70,14 @@ export default defineConfig({
             { text: 'Overview', link: '/cli/flow' },
             { text: 'flow browse', link: '/cli/flow_browse' },
             { text: 'flow exec', link: '/cli/flow_exec' },
-            { text: 'flow logs', link: '/cli/flow_logs' },
+            {
+              text: 'Logs',
+              collapsed: true,
+              items: [
+                { text: 'flow logs', link: '/cli/flow_logs' },
+                { text: 'flow logs clear', link: '/cli/flow_logs_clear' }
+              ]
+            },
             { text: 'flow mcp', link: '/cli/flow_mcp' },
             { text: 'flow sync', link: '/cli/flow_sync' },
             {

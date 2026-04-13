@@ -13,9 +13,13 @@ flow logs [ref] [flags]
 ### Options
 
 ```
-  -h, --help            help for logs
-      --last            Print the last execution's logs
-  -o, --output string   Output format. One of: yaml, json, or tui.
+  -h, --help               help for logs
+      --last               Print the last execution's logs
+      --limit int          Maximum number of records to display.
+  -o, --output string      Output format. One of: yaml, json, or tui.
+      --since string       Filter history to entries after a duration (e.g. 1h, 30m, 7d).
+      --status string      Filter history by status (success or failure).
+  -w, --workspace string   Filter history by workspace name.
 ```
 
 ### Options inherited from parent commands
