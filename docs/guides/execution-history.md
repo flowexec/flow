@@ -79,8 +79,7 @@ flow exec my-task --background
 # Started background run a1b2c3d4 (PID 54321) for exec flow/:my-task
 ```
 
-The command returns a short **run ID** immediately. The executable — including deeply nested serial and parallel
-workflows — runs in a detached process with its output captured in the log archive.
+The command returns a short **run ID** immediately. The executable runs in a detached process with its output captured in the log archive.
 
 ### Listing Active Runs
 
@@ -90,9 +89,6 @@ See what's currently running in the background:
 flow logs --running
 # a1b2c3d4  PID 54321    exec flow/:my-task                  running 5m30s
 ```
-
-This uses the same output format as regular execution history — it supports `-o yaml`, `-o json`, and the
-interactive TUI. Stale entries (processes that exited unexpectedly) are automatically cleaned up when you list.
 
 ### Streaming Output
 

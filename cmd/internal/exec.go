@@ -192,12 +192,13 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.Verb, args []string) {
 	runID := uuid.New().String()[:8]
 
-	// Build the child command: same verb + args, with --log-mode=hidden (no interactive output).
+	// Build the child command: same verb + args. Stdout/stderr are set to nil so
+	// Go redirects them to /dev/null — terminal output is suppressed but the tuikit
+	// archive handler still writes to the log file normally.
 	childArgs := []string{string(verb)}
 	if len(args) > 0 {
 		childArgs = append(childArgs, args...)
 	}
-	childArgs = append(childArgs, "--log-mode=hidden")
 
 	flowBin, err := os.Executable()
 	if err != nil {
@@ -235,12 +236,14 @@ func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.
 }
 
 // linkBackgroundArchive eagerly writes the log archive path into the background run
-// record so that `logs --running` can stream output while the child is still executing.
+// record so that `logs attach` can stream output while the child is still executing.
+// Unlike findArchiveByID, this scans the log directory directly without skipping empty
+// files — the archive file exists at startup but may not have content yet.
 func linkBackgroundArchive(ctx *context.Context, runID string) {
 	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
 		return
 	}
-	archivePath := findArchiveByID(ctx.LogArchiveID)
+	archivePath := findArchiveFileByID(ctx.LogArchiveID)
 	if archivePath == "" {
 		return
 	}
@@ -250,6 +253,25 @@ func linkBackgroundArchive(ctx *context.Context, runID string) {
 	}
 	run.LogArchiveID = archivePath
 	_ = ctx.DataStore.SaveBackgroundRun(run)
+}
+
+// findArchiveFileByID scans the logs directory for a file whose name starts with the
+// given archive ID. Unlike ListArchiveEntries, this does not skip empty files.
+func findArchiveFileByID(archiveID string) string {
+	logsDir := filesystem.LogsDir()
+	files, err := os.ReadDir(logsDir)
+	if err != nil {
+		return ""
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(f.Name(), archiveID) {
+			return filepath.Join(logsDir, f.Name())
+		}
+	}
+	return ""
 }
 
 // finalizeBackgroundRun updates the background run record with the final status.
