@@ -1,7 +1,10 @@
 package cache
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -10,6 +13,7 @@ import (
 	flowErrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -42,10 +46,12 @@ type ExecutableCacheData struct {
 type ExecutableCacheImpl struct {
 	Data           *ExecutableCacheData `json:",inline" yaml:",inline"`
 	WorkspaceCache WorkspaceCache       `json:"-"       yaml:"-"`
+	Store          store.DataStore
 }
 
-func NewExecutableCache(wsCache WorkspaceCache) ExecutableCache {
+func NewExecutableCache(wsCache WorkspaceCache, s store.DataStore) ExecutableCache {
 	return &ExecutableCacheImpl{
+		Store: s,
 		Data: &ExecutableCacheData{
 			ExecutableMap: make(map[executable.Ref]string),
 			AliasMap:      make(map[executable.Ref]executable.Ref),
@@ -136,13 +142,12 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 		}
 	}
 
-	data, err := yaml.Marshal(cacheData)
+	data, err := json.Marshal(cacheData)
 	if err != nil {
 		return errors.Wrap(err, "unable to encode cache data")
 	}
 
-	err = filesystem.WriteLatestCachedData(execCacheKey, data)
-	if err != nil {
+	if err := c.Store.SetCacheEntry(execCacheKey, data); err != nil {
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
@@ -256,17 +261,30 @@ func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, er
 }
 
 func (c *ExecutableCacheImpl) initExecutableCacheData() error {
-	cacheData, err := filesystem.LoadLatestCachedData(execCacheKey)
+	cacheData, err := c.Store.GetCacheEntry(execCacheKey)
 	if err != nil {
 		return errors.Wrap(err, "unable to load executable cache data")
-	} else if cacheData == nil {
-		if err := c.Update(); err != nil {
-			return errors.Wrap(err, "unable to update executable cache data")
+	}
+
+	if cacheData == nil {
+		// Lazy-migrate from legacy YAML file if it exists.
+		cacheData = migrateExecutableCacheFromFile()
+		if cacheData != nil {
+			if writeErr := c.Store.SetCacheEntry(execCacheKey, cacheData); writeErr != nil {
+				logger.Log().Warn("failed to persist migrated executable cache", "err", writeErr)
+			}
 		}
 	}
 
+	if cacheData == nil {
+		if err := c.Update(); err != nil {
+			return errors.Wrap(err, "unable to update executable cache data")
+		}
+		return nil
+	}
+
 	c.Data = &ExecutableCacheData{}
-	if err := yaml.Unmarshal(cacheData, c.Data); err != nil {
+	if err := json.Unmarshal(cacheData, c.Data); err != nil {
 		return errors.Wrap(err, "unable to decode executable cache data")
 	}
 	return nil
@@ -324,4 +342,28 @@ func enumerateExecutableAliasRefs(
 	}
 
 	return refs
+}
+
+// migrateExecutableCacheFromFile attempts to read the legacy YAML cache file, re-encodes it
+// as JSON, deletes the old file, and returns the JSON bytes. Returns nil if no legacy file
+// or if any step fails (best-effort migration).
+func migrateExecutableCacheFromFile() []byte {
+	legacyPath := filepath.Join(filesystem.CachedDataDirPath(), "latestcache", execCacheKey)
+	yamlData, err := os.ReadFile(legacyPath)
+	if err != nil {
+		return nil
+	}
+
+	var legacy ExecutableCacheData
+	if err := yaml.Unmarshal(yamlData, &legacy); err != nil {
+		return nil
+	}
+
+	jsonData, err := json.Marshal(&legacy)
+	if err != nil {
+		return nil
+	}
+
+	_ = os.Remove(legacyPath)
+	return jsonData
 }

@@ -23,11 +23,12 @@ import (
 	"github.com/flowexec/flow/internal/runner/render"
 	"github.com/flowexec/flow/internal/runner/request"
 	"github.com/flowexec/flow/internal/runner/serial"
-	"github.com/flowexec/flow/internal/services/store"
 	"github.com/flowexec/flow/internal/utils/env"
 	"github.com/flowexec/flow/pkg/context"
 	flowErrors "github.com/flowexec/flow/pkg/errors"
+	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
 )
@@ -87,9 +88,6 @@ func execPreRun(_ *context.Context, _ *cobra.Command, _ []string) {
 	runner.RegisterRunner(parallel.NewRunner())
 }
 
-// TODO: refactor this function to simplify the logic
-//
-//nolint:funlen,gocognit
 func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, args []string) {
 	logMode := flags.ValueFor[string](cmd, *flags.LogModeFlag, false)
 	if logMode != "" {
@@ -132,17 +130,37 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		))
 	}
 
-	s, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().FatalErr(err)
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.CreateProcessBucket(ref.String()); err != nil {
+			logger.Log().FatalErr(err)
+		}
+		_ = os.Setenv(store.BucketEnv, ref.String())
 	}
-	if _, err = s.CreateAndSetBucket(ref.String()); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	_ = s.Close()
 
+	envMap := buildExecEnv(ctx, cmd, e)
+
+	var execArgs []string
+	if len(args) >= 2 {
+		execArgs = args[1:]
+	}
+
+	startTime := time.Now()
+	eng := engine.NewExecEngine()
+	runErr := runner.Exec(ctx, e, eng, envMap, execArgs)
+	dur := time.Since(startTime)
+
+	cleanupProcessStore(ctx)
+	recordExecution(ctx, ref, startTime, dur, runErr)
+
+	if runErr != nil {
+		logger.Log().FatalErr(runErr)
+	}
+	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
+	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Executable) map[string]string {
 	envMap := make(map[string]string)
-	// add workspace env variables to the env map
 	if wsData, err := ctx.WorkspacesCache.GetWorkspaceConfigList(); err != nil {
 		logger.Log().Errorf("failed to get workspace cache data, skipping env file resolution: %v", err)
 	} else {
@@ -153,11 +171,9 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		}
 	}
 
-	// add --param overrides to the env map
 	paramOverrides := flags.ValueFor[[]string](cmd, *flags.ParameterValueFlag, false)
 	applyParameterOverrides(paramOverrides, envMap)
 
-	// add values from the prompt param type to the env map
 	textInputs := pendingFormFields(ctx, e, envMap)
 	if len(textInputs) > 0 {
 		form, err := views.NewForm(logger.Theme(ctx.Config.Theme.String()), ctx.StdIn(), ctx.StdOut(), textInputs...)
@@ -171,37 +187,62 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 			envMap[key] = fmt.Sprintf("%v", val)
 		}
 	}
+	return envMap
+}
 
-	startTime := time.Now()
-	eng := engine.NewExecEngine()
-
-	var execArgs []string
-	if len(args) >= 2 {
-		execArgs = args[1:]
-	}
-
-	if err := runner.Exec(ctx, e, eng, envMap, execArgs); err != nil {
-		logger.Log().FatalErr(err)
-	}
-	dur := time.Since(startTime)
-	processStore, err := store.NewStore(store.Path())
-	if err != nil {
-		logger.Log().Errorf("failed clearing process store\n%v", err)
-	}
-	if processStore != nil {
-		if err = processStore.DeleteBucket(store.EnvironmentBucket()); err != nil {
+func cleanupProcessStore(ctx *context.Context) {
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.DeleteProcessBucket(store.EnvironmentBucket()); err != nil {
 			logger.Log().Errorf("failed clearing process store\n%v", err)
 		}
-		_ = processStore.Close()
 	}
-	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
-	if TUIEnabled(ctx, cmd) {
-		if dur > 1*time.Minute && ctx.Config.SendSoundNotification() {
-			_ = beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+}
+
+func recordExecution(ctx *context.Context, ref executable.Ref, startTime time.Time, dur time.Duration, runErr error) {
+	record := store.ExecutionRecord{
+		Ref:       ref.String(),
+		StartedAt: startTime,
+		Duration:  dur,
+	}
+	if runErr != nil {
+		record.ExitCode = 1
+		record.Error = runErr.Error()
+	}
+	record.LogArchiveID = findArchiveByID(ctx.LogArchiveID)
+	if ctx.DataStore != nil {
+		if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
+			logger.Log().Debug("failed to record execution history", "err", recErr)
 		}
-		if dur > 1*time.Minute && ctx.Config.SendTextNotification() {
-			_ = beeep.Notify("Flow", "Flow completed", "")
+	}
+}
+
+// findArchiveByID searches log archive entries for one matching the given ID.
+// Returns the entry's path if found, empty string otherwise.
+func findArchiveByID(archiveID string) string {
+	if archiveID == "" {
+		return ""
+	}
+	entries, err := tuikitIO.ListArchiveEntries(filesystem.LogsDir())
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if e.ID == archiveID {
+			return e.Path
 		}
+	}
+	return ""
+}
+
+func sendCompletionNotifications(ctx *context.Context, cmd *cobra.Command, dur time.Duration) {
+	if !TUIEnabled(ctx, cmd) || dur <= 1*time.Minute {
+		return
+	}
+	if ctx.Config.SendSoundNotification() {
+		_ = beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+	}
+	if ctx.Config.SendTextNotification() {
+		_ = beeep.Notify("Flow", "Flow completed", "")
 	}
 }
 

@@ -26,9 +26,9 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func syncFunc(_ *context.Context, _ *cobra.Command, _ []string) {
+func syncFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
 	start := time.Now()
-	if err := cache.UpdateAll(); err != nil {
+	if err := cache.UpdateAll(ctx.DataStore); err != nil {
 		logger.Log().FatalErr(err)
 	}
 	duration := time.Since(start)

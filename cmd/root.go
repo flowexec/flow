@@ -34,7 +34,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			}
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
-				if err := cache.UpdateAll(); err != nil {
+				if err := cache.UpdateAll(ctx.DataStore); err != nil {
 					logger.Log().FatalErr(err)
 				}
 			}

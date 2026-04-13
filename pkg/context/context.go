@@ -16,6 +16,7 @@ import (
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/config"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -37,6 +38,7 @@ type Context struct {
 	TUIContainer     *tuikit.Container
 	WorkspacesCache  cache.WorkspaceCache
 	ExecutableCache  cache.ExecutableCache
+	DataStore        store.DataStore
 
 	// RootExecutable is the executable that is being run in the current context.
 	// This will be nil if the context is not associated with an executable run.
@@ -50,6 +52,11 @@ type Context struct {
 	// parallel or serial runner. It is set per-goroutine (via shallow copy) so
 	// that downstream writers can prefix output with the task name.
 	CurrentTask *io.TaskContext
+
+	// LogArchiveID is the unique identifier used in the log archive filename for
+	// this process. It is set at startup and used to link execution records to
+	// their log output.
+	LogArchiveID string
 }
 
 func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
@@ -71,8 +78,13 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 		panic(fmt.Errorf("workspace config not found in current workspace (%s)", cfg.CurrentWorkspace))
 	}
 
-	workspaceCache := cache.NewWorkspaceCache()
-	executableCache := cache.NewExecutableCache(workspaceCache)
+	ds, err := store.NewDataStore(store.Path())
+	if err != nil {
+		panic(errors.Wrap(err, "data store initialization error"))
+	}
+
+	workspaceCache := cache.NewWorkspaceCache(ds)
+	executableCache := cache.NewExecutableCache(workspaceCache, ds)
 
 	c := &Context{
 		ctx:              ctx,
@@ -83,6 +95,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 		CurrentWorkspace: wsConfig,
 		WorkspacesCache:  workspaceCache,
 		ExecutableCache:  executableCache,
+		DataStore:        ds,
 	}
 
 	app := tuikit.NewApplication(

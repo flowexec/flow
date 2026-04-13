@@ -14,6 +14,7 @@ import (
 	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/common"
 	"github.com/flowexec/flow/types/executable"
 	"github.com/flowexec/flow/types/workspace"
@@ -40,6 +41,10 @@ var _ = Describe("ExecutableCacheImpl", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Setenv(filesystem.FlowConfigDirEnvVar, configDir)).To(Succeed())
 
+		ds, err := store.NewDataStore(filepath.Join(cacheDir, "test.db"))
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _ = ds.Close() })
+
 		wsName = "test"
 		wsPath = filepath.Join(cacheDir, "workspace")
 		err = filesystem.InitWorkspaceConfig(wsName, wsPath)
@@ -58,20 +63,15 @@ var _ = Describe("ExecutableCacheImpl", func() {
 		execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "test"+executable.FlowFileExt))
 		err = filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)
 		Expect(err).NotTo(HaveOccurred())
-		execCacheData := &cache.ExecutableCacheData{
-			ExecutableMap: make(map[executable.Ref]string),
-			AliasMap:      make(map[executable.Ref]executable.Ref),
-			ConfigMap:     make(map[string]cache.WorkspaceInfo),
-		}
+
 		wsCache = cacheMocks.NewMockWorkspaceCache(gomock.NewController(GinkgoT()))
 		wsCache.EXPECT().GetLatestData().Return(&cache.WorkspaceCacheData{
 			Workspaces:         map[string]*workspace.Workspace{wsName: wsConfig},
 			WorkspaceLocations: map[string]string{wsName: wsPath},
 		}, nil).AnyTimes()
-		execCache = &cache.ExecutableCacheImpl{
-			Data:           execCacheData,
-			WorkspaceCache: wsCache,
-		}
+		var ok bool
+		execCache, ok = cache.NewExecutableCache(wsCache, ds).(*cache.ExecutableCacheImpl)
+		Expect(ok).To(BeTrue())
 	})
 
 	AfterEach(func() {

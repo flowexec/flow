@@ -22,6 +22,7 @@ var (
 type InitOptions struct {
 	StdOut           *os.File
 	ArchiveDirectory string
+	ArchiveID        string // Unique identifier embedded in the archive filename for reliable linking.
 	LogMode          io.LogMode
 	Theme            themes.Theme
 
@@ -57,6 +58,9 @@ func Init(opts InitOptions) {
 		}
 		if opts.ArchiveDirectory != "" {
 			loggerOpts = append(loggerOpts, io.WithArchiveDirectory(opts.ArchiveDirectory))
+			if opts.ArchiveID != "" {
+				loggerOpts = append(loggerOpts, io.WithArchiveID(opts.ArchiveID))
+			}
 		}
 
 		globalLogger = io.NewLogger(loggerOpts...)

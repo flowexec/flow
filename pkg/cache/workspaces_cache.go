@@ -1,15 +1,20 @@
 package cache
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/pkg/store"
 	"github.com/flowexec/flow/types/workspace"
 )
 
-const wsCacheKey = "workspace"
+const wsCacheKey = "workspaces"
 
 //go:generate mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/pkg/cache WorkspaceCache
 type WorkspaceCache interface {
@@ -20,17 +25,19 @@ type WorkspaceCache interface {
 }
 type WorkspaceCacheData struct {
 	// Map of workspace name to workspace config
-	Workspaces map[string]*workspace.Workspace `yaml:"workspaces"`
+	Workspaces map[string]*workspace.Workspace `json:"workspaces" yaml:"workspaces"`
 	// Map of workspace name to workspace path
-	WorkspaceLocations map[string]string `yaml:"workspaceLocations"`
+	WorkspaceLocations map[string]string `json:"workspaceLocations" yaml:"workspaceLocations"`
 }
 
 type WorkspaceCacheImpl struct {
-	Data *WorkspaceCacheData
+	Data  *WorkspaceCacheData
+	Store store.DataStore
 }
 
-func NewWorkspaceCache() WorkspaceCache {
+func NewWorkspaceCache(s store.DataStore) WorkspaceCache {
 	workspaceCache := &WorkspaceCacheImpl{
+		Store: s,
 		Data: &WorkspaceCacheData{
 			Workspaces:         make(map[string]*workspace.Workspace),
 			WorkspaceLocations: make(map[string]string),
@@ -59,13 +66,12 @@ func (c *WorkspaceCacheImpl) Update() error {
 		cacheData.Workspaces[name] = wsCfg
 		cacheData.WorkspaceLocations[name] = path
 	}
-	data, err := yaml.Marshal(cacheData)
+	data, err := json.Marshal(cacheData)
 	if err != nil {
 		return errors.Wrap(err, "unable to encode cache data")
 	}
 
-	err = filesystem.WriteLatestCachedData(wsCacheKey, data)
-	if err != nil {
+	if err := c.Store.SetCacheEntry(wsCacheKey, data); err != nil {
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
@@ -78,17 +84,30 @@ func (c *WorkspaceCacheImpl) GetData() *WorkspaceCacheData {
 }
 
 func (c *WorkspaceCacheImpl) GetLatestData() (*WorkspaceCacheData, error) {
-	cacheData, err := filesystem.LoadLatestCachedData(wsCacheKey)
+	cacheData, err := c.Store.GetCacheEntry(wsCacheKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to load workspace cache data")
-	} else if cacheData == nil {
-		if err := c.Update(); err != nil {
-			return nil, errors.Wrap(err, "unable to get updated workspace cache data")
+	}
+
+	if cacheData == nil {
+		// Lazy-migrate from legacy YAML file if it exists.
+		cacheData = migrateWorkspaceCacheFromFile()
+		if cacheData != nil {
+			if writeErr := c.Store.SetCacheEntry(wsCacheKey, cacheData); writeErr != nil {
+				logger.Log().Warn("failed to persist migrated workspace cache", "err", writeErr)
+			}
 		}
 	}
 
+	if cacheData == nil {
+		if err := c.Update(); err != nil {
+			return nil, errors.Wrap(err, "unable to get updated workspace cache data")
+		}
+		return c.Data, nil
+	}
+
 	c.Data = &WorkspaceCacheData{}
-	if err := yaml.Unmarshal(cacheData, c.Data); err != nil {
+	if err := json.Unmarshal(cacheData, c.Data); err != nil {
 		return nil, errors.Wrap(err, "unable to decode workspace cache data")
 	}
 	return c.Data, nil
@@ -112,4 +131,29 @@ func (c *WorkspaceCacheImpl) GetWorkspaceConfigList() (workspace.WorkspaceList, 
 		wsCfgs = append(wsCfgs, wsCfg)
 	}
 	return wsCfgs, nil
+}
+
+// migrateWorkspaceCacheFromFile attempts to read the legacy YAML cache file, re-encodes it
+// as JSON, deletes the old file, and returns the JSON bytes. Returns nil if no legacy file
+// or if any step fails (best-effort migration).
+func migrateWorkspaceCacheFromFile() []byte {
+	// Legacy key was "workspace" (singular); legacy dir was <cacheDir>/latestcache/
+	legacyPath := filepath.Join(filesystem.CachedDataDirPath(), "latestcache", "workspace")
+	yamlData, err := os.ReadFile(legacyPath)
+	if err != nil {
+		return nil
+	}
+
+	var legacy WorkspaceCacheData
+	if err := yaml.Unmarshal(yamlData, &legacy); err != nil {
+		return nil
+	}
+
+	jsonData, err := json.Marshal(&legacy)
+	if err != nil {
+		return nil
+	}
+
+	_ = os.Remove(legacyPath)
+	return jsonData
 }
