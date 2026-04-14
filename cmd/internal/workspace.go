@@ -80,15 +80,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if git.IsGitURL(pathOrURL) {
 		path = cloneGitWorkspace(name, pathOrURL, branch, tag)
 	} else {
-		if branch != "" || tag != "" {
-			logger.Log().Fatalf("--branch and --tag flags are only supported with Git URLs")
-		}
-		path = resolveLocalPath(pathOrURL, name)
-		if !filesystem.WorkspaceConfigExists(path) {
-			if err := filesystem.InitWorkspaceConfig(name, path); err != nil {
-				logger.Log().FatalErr(err)
-			}
-		}
+		path = initLocalWorkspace(name, pathOrURL, branch, tag)
 	}
 
 	userConfig.Workspaces[name] = path
@@ -108,6 +100,19 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
+}
+
+func initLocalWorkspace(name, pathOrURL, branch, tag string) string {
+	if branch != "" || tag != "" {
+		logger.Log().Fatalf("--branch and --tag flags are only supported with Git URLs")
+	}
+	path := resolveLocalPath(pathOrURL, name)
+	if !filesystem.WorkspaceConfigExists(path) {
+		if err := filesystem.InitWorkspaceConfig(name, path); err != nil {
+			logger.Log().FatalErr(err)
+		}
+	}
+	return path
 }
 
 func cloneGitWorkspace(name, gitURL, branch, tag string) string {
