@@ -105,15 +105,27 @@ func workspaceResourceHandler(_ context.Context, request mcp.ReadResourceRequest
 
 func executableResourceHandler(_ context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	uri := request.Params.URI
-	// Parse flow://executable/{workspace}/{namespace}/{name}
+	// Parse flow://executable/{workspace}/{namespace}/{name}.
+	// Empty workspace or namespace segments resolve to the current context
+	// (workspace required; namespace may itself be empty = no-namespace executable).
 	parts := extractExecutableURIParts(uri)
-	if parts.workspace == "" || parts.namespace == "" || parts.name == "" {
-		return nil, fmt.Errorf("invalid executable URI: expected flow://executable/{workspace}/{namespace}/{name}")
+	if parts.name == "" {
+		return nil, fmt.Errorf("invalid executable URI: name is required")
 	}
 
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if parts.workspace == "" {
+		if cfg.CurrentWorkspace == "" {
+			return nil, fmt.Errorf("workspace is empty in URI and no current workspace is set")
+		}
+		parts.workspace = cfg.CurrentWorkspace
+	}
+	if parts.namespace == "" {
+		parts.namespace = cfg.CurrentNamespace
 	}
 
 	wsPath, ok := cfg.Workspaces[parts.workspace]

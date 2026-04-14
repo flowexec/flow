@@ -15,8 +15,7 @@ const (
 	idBase    = "https://flowexec.io/schemas"
 )
 
-// The JSON schemas are published at https://flowexec.io/schemas/*. The MCP server references
-// them by URL rather than embedding them — see the get_info tool's SchemaURLs response.
+// The JSON schemas are published at https://flowexec.io/schemas/*.
 func generateJSONSchemas() {
 	sm := schema.RegisteredSchemaMap()
 	for fn, s := range sm {

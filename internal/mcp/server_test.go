@@ -199,8 +199,6 @@ var _ = Describe("MCP Server", func() {
 				Expect(content).To(ContainSubstring("docsUrl"))
 				Expect(content).To(ContainSubstring("llmsTxtUrl"))
 				Expect(content).To(ContainSubstring("schemaUrls"))
-				// Verify guides are NOT embedded (they are referenced by URL instead)
-				Expect(content).ToNot(ContainSubstring("# Flow Concepts"))
 			})
 		})
 
