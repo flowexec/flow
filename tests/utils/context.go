@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -39,10 +40,82 @@ type Context struct {
 	cacheDir  string
 	configDir string
 	wsDir     string
+	exit      *ExitRecorder
 }
 
 func (c *Context) WorkspaceDir() string {
 	return c.wsDir
+}
+
+// ExpectFailure flips the test context into capture mode: subsequent fatal
+// logger calls will be recorded on the context and cause the currently
+// executing command to return an error instead of failing the test. Reset
+// on every ResetTestContext call.
+func (c *Context) ExpectFailure() {
+	c.exit.setExpect(true)
+}
+
+// ExitCalls returns the fatal messages captured while the context was in
+// failure-capture mode.
+func (c *Context) ExitCalls() []string {
+	return c.exit.snapshot()
+}
+
+// ExitRecorder routes logger fatal calls so they can be asserted on in tests
+// rather than aborting the process or the test goroutine.
+type ExitRecorder struct {
+	mu     sync.Mutex
+	expect bool
+	calls  []string
+	tb     testing.TB
+}
+
+// fatalExit is the panic value emitted by the recorder when capture mode is on.
+// CommandRunner.Run recovers from it and surfaces the message as an error.
+type fatalExit struct{ msg string }
+
+func (f fatalExit) String() string { return f.msg }
+
+func newExitRecorder(tb testing.TB) *ExitRecorder {
+	return &ExitRecorder{tb: tb}
+}
+
+func (r *ExitRecorder) setTB(tb testing.TB) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.tb = tb
+	r.expect = false
+	r.calls = nil
+}
+
+func (r *ExitRecorder) setExpect(v bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.expect = v
+	if v {
+		r.calls = nil
+	}
+}
+
+func (r *ExitRecorder) snapshot() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.calls...)
+}
+
+func (r *ExitRecorder) exit(msg string, args ...any) {
+	formatted := fmt.Sprintf(msg, args...)
+	r.mu.Lock()
+	expect := r.expect
+	if expect {
+		r.calls = append(r.calls, formatted)
+	}
+	tb := r.tb
+	r.mu.Unlock()
+	if expect {
+		panic(fatalExit{msg: formatted})
+	}
+	tb.Fatalf("logger exit called - %s", formatted)
 }
 
 // NewContext creates a new context for testing runners. It initializes the context with
@@ -51,14 +124,12 @@ func (c *Context) WorkspaceDir() string {
 // Test environment variables are set the config and cache directories override paths.
 func NewContext(ctx stdCtx.Context, tb testing.TB) *Context {
 	stdOut, stdIn := createTempIOFiles(tb)
+	recorder := newExitRecorder(tb)
 	tempLogger := tuikitIO.NewLogger(
 		tuikitIO.WithOutput(stdOut),
 		tuikitIO.WithTheme(logger.Theme("")),
 		tuikitIO.WithMode(tuikitIO.Text),
-		tuikitIO.WithExitFunc(func(msg string, args ...any) {
-			msg = fmt.Sprintf(msg, args...)
-			tb.Fatalf("logger exit called - %s", msg)
-		}),
+		tuikitIO.WithExitFunc(recorder.exit),
 	)
 	logger.Init(logger.InitOptions{Logger: tempLogger, TestingTB: tb})
 	ctxx, configDir, cacheDir, wsDir := newTestContext(ctx, tb, stdIn, stdOut)
@@ -67,6 +138,7 @@ func NewContext(ctx stdCtx.Context, tb testing.TB) *Context {
 		configDir: configDir,
 		cacheDir:  cacheDir,
 		wsDir:     wsDir,
+		exit:      recorder,
 	}
 }
 
@@ -126,14 +198,12 @@ func ResetTestContext(ctx *Context, tb testing.TB) {
 	stdIn, stdOut := createTempIOFiles(tb)
 	ctx.SetIO(stdIn, stdOut)
 	setTestEnv(tb, ctx.configDir, ctx.cacheDir)
+	ctx.exit.setTB(tb)
 	newLogger := tuikitIO.NewLogger(
 		tuikitIO.WithOutput(stdOut),
 		tuikitIO.WithTheme(logger.Theme("")),
 		tuikitIO.WithMode(tuikitIO.Text),
-		tuikitIO.WithExitFunc(func(msg string, args ...any) {
-			msg = fmt.Sprintf(msg, args...)
-			tb.Fatalf("logger exit called - %s", msg)
-		}),
+		tuikitIO.WithExitFunc(ctx.exit.exit),
 	)
 	logger.Init(logger.InitOptions{Logger: newLogger, TestingTB: tb})
 }

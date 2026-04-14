@@ -106,9 +106,40 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 		})
 	})
 
-	// Note: Negative test cases (e.g. updating a non-git workspace, conflicting flags)
-	// use logger.Fatalf which calls tb.Fatalf in the test context. Since tb.Fatalf
-	// invokes runtime.Goexit, these cannot be caught as errors by the CommandRunner.
+	When("adding a workspace with conflicting git flags (flow workspace add)", func() {
+		It("fatals when both --branch and --tag are specified", func() {
+			ctx.ExpectFailure()
+			err := run.Run(
+				ctx.Context, "workspace", "add", "conflict-ws", bareRepoURL,
+				"--branch", "main", "--tag", "v1",
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("cannot specify both --branch and --tag")))
+		})
+
+		It("fatals when adding a workspace that already exists", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "add", wsName, bareRepoURL)
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("already exists")))
+		})
+	})
+
+	When("updating a non-git workspace (flow workspace update)", func() {
+		It("fatals with a not-a-git-workspace message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "update", utils.TestWorkspaceName)
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("is not a git-sourced workspace")))
+		})
+
+		It("fatals when updating a workspace that does not exist", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "update", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("workspace doesnotexist not found")))
+		})
+	})
 })
 
 // initBareRepo creates a local bare git repo with a flow.yaml file,

@@ -70,6 +70,22 @@ var _ = Describe("workspace e2e", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring(wsName))
 		})
+
+		It("fatals when the workspace does not exist", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "get", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).NotTo(BeEmpty())
+		})
+	})
+
+	When("switching to a workspace that does not exist (flow workspace switch)", func() {
+		It("fatals with a not-found message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "switch", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("workspace doesnotexist not found")))
+		})
 	})
 
 	When("listing workspaces (flow workspace list)", func() {

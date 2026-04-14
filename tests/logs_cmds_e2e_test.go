@@ -151,6 +151,40 @@ var _ = Describe("logs e2e", Ordered, func() {
 		})
 	})
 
+	When("viewing the last log with no history (flow logs --last)", func() {
+		It("fatals with a no-history message", func() {
+			// Clear any records from earlier specs in this Ordered suite.
+			refs, err := ctx.DataStore.ListExecutionRefs()
+			Expect(err).NotTo(HaveOccurred())
+			for _, ref := range refs {
+				_ = ctx.DataStore.DeleteExecutionHistory(ref)
+			}
+
+			ctx.ExpectFailure()
+			err = run.Run(ctx.Context, "logs", "--last")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("No execution history found")))
+		})
+	})
+
+	When("filtering logs with an invalid duration (flow logs --since bogus)", func() {
+		It("fatals with an invalid --since message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "logs", "--since", "bogus")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("Invalid --since value")))
+		})
+	})
+
+	When("attaching to a background run that does not exist (flow logs attach)", func() {
+		It("fatals with a not-found message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "logs", "attach", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("not found")))
+		})
+	})
+
 	When("attaching to a background process (flow logs attach)", func() {
 		It("should display log content from the archive file", func() {
 			// Create a temporary log archive file with known content.

@@ -67,10 +67,6 @@ var _ = Describe("browse TUI", func() {
 		out, err := stdIO.ReadAll(tm.FinalOutput(GinkgoTB()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
-
-		// TODO: fix golden generation / normalization / comparison
-		// utils.MaybeUpdateGolden(GinkgoTB(), out)
-		// utils.RequireEqualSnapshot(GinkgoTB(), out)
 	})
 
 	Specify("wide snapshot", func() {
@@ -95,10 +91,6 @@ var _ = Describe("browse TUI", func() {
 		out, err := stdIO.ReadAll(tm.FinalOutput(GinkgoTB()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
-
-		// TODO: fix golden generation / normalization / comparison
-		// utils.MaybeUpdateGolden(GinkgoTB(), out)
-		// utils.RequireEqualSnapshot(GinkgoTB(), out)
 	})
 
 	Specify("list snapshot", func() {
@@ -117,10 +109,6 @@ var _ = Describe("browse TUI", func() {
 		out, err := stdIO.ReadAll(tm.FinalOutput(GinkgoTB()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
-
-		// TODO: fix golden generation / normalization / comparison
-		// utils.MaybeUpdateGolden(GinkgoTB(), out)
-		// utils.RequireEqualSnapshot(GinkgoTB(), out)
 	})
 
 	Specify("exec snapshot", func() {
@@ -144,10 +132,6 @@ var _ = Describe("browse TUI", func() {
 		out, err := stdIO.ReadAll(tm.FinalOutput(GinkgoTB()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).NotTo(BeEmpty())
-
-		// TODO: fix golden generation / normalization / comparison
-		// utils.MaybeUpdateGolden(GinkgoTB(), out)
-		// utils.RequireEqualSnapshot(GinkgoTB(), out)
 	})
 })
 
@@ -195,5 +179,23 @@ var _ = Describe("browse e2e", Ordered, func() {
 		out, err := readFileContent(stdOut)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).To(ContainSubstring("name: simple-print"))
+	})
+
+	When("browsing with an invalid visibility filter", func() {
+		It("fatals with an invalid visibility message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "browse", "--list", "--visibility", "bogus")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid visibility")))
+		})
+	})
+
+	When("browsing an executable that does not exist", func() {
+		It("fatals with a not-found message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "browse", "exec", "examples:doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).NotTo(BeEmpty())
+		})
 	})
 })

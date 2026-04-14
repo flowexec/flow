@@ -92,6 +92,24 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 		})
 	})
 
+	When("getting a vault that does not exist (flow vault get doesnotexist)", func() {
+		It("fatals with a failure to get vault message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "vault", "get", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("Failed to get vault doesnotexist")))
+		})
+	})
+
+	When("setting a secret with both --file and a value (flow secret set)", func() {
+		It("fatals with a mutually exclusive input error", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "secret", "set", "message", "inline-value", "--file", "doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("either a filename OR a value")))
+		})
+	})
+
 	When("listing vaults (flow vault list)", func() {
 		It("should list vaults in YAML format", func() {
 			stdOut := ctx.StdOut()

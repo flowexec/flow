@@ -55,7 +55,7 @@ func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[st
 			flagArgs[flagStr] = execArgs[i]
 		}
 	}
-	return
+	return flagArgs, posArgs
 }
 
 func resolveArgValues(

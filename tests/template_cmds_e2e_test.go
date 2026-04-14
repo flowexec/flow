@@ -151,6 +151,15 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 		})
 	})
 
+	When("getting a template that is not registered (flow template get)", func() {
+		It("fatals with an unable-to-load message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "template", "get", "-t", "doesnotexist", "-o", "yaml")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("unable to load flowfile template")))
+		})
+	})
+
 	When("Rendering a template (flow template generate)", func() {
 		It("should process the template options and render the flowfile", func() {
 			name := "test"

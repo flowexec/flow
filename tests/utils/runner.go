@@ -18,8 +18,12 @@ func NewE2ECommandRunner() *CommandRunner {
 
 func (r *CommandRunner) Run(ctx *context.Context, args ...string) (err error) {
 	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic occurred: %v", r)
+		if rec := recover(); rec != nil {
+			if fe, ok := rec.(fatalExit); ok {
+				err = fmt.Errorf("fatal exit: %s", fe.msg)
+				return
+			}
+			err = fmt.Errorf("panic occurred: %v", rec)
 		}
 	}()
 	rootCmd := cli.BuildRootCommand(ctx)

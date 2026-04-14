@@ -167,6 +167,15 @@ var _ = Describe("config e2e", Ordered, func() {
 		})
 	})
 
+	When("setting an invalid timeout (flow config set timeout bogus)", func() {
+		It("fatals with an invalid duration message", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "config", "set", "timeout", "bogus")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid duration")))
+		})
+	})
+
 	When("resetting configuration (flow config reset)", func() {
 		It("should prompt for confirmation and reset config", func() {
 			reader, writer, err := os.Pipe()

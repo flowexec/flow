@@ -26,6 +26,16 @@ var _ = Describe("exec e2e", func() {
 		ctx.Finalize()
 	})
 
+	When("executing a nonexistent executable (flow exec)", func() {
+		It("fatals with a not-found message", func() {
+			runner := utils.NewE2ECommandRunner()
+			ctx.ExpectFailure()
+			err := runner.Run(ctx.Context, "exec", "examples:doesnotexist")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).NotTo(BeEmpty())
+		})
+	})
+
 	DescribeTable("with dir example executables", func(ref string) {
 		runner := utils.NewE2ECommandRunner()
 		stdOut := ctx.StdOut()
