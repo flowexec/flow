@@ -2,6 +2,10 @@
 
 Refresh workspace cache and discover new executables.
 
+### Synopsis
+
+Refresh the workspace cache and discover new executables. Use --git to also pull latest changes for all git-sourced workspaces before syncing. Use --force with --git to discard local changes and hard reset to the remote.
+
 ```
 flow sync [flags]
 ```
@@ -9,7 +13,9 @@ flow sync [flags]
 ### Options
 
 ```
-  -h, --help   help for sync
+      --force   Force update by discarding local changes (hard reset to remote)
+  -g, --git     Pull latest changes for all git-sourced workspaces before syncing
+  -h, --help    help for sync
 ```
 
 ### Options inherited from parent commands

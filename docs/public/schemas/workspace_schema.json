@@ -71,6 +71,26 @@
     "executables": {
       "$ref": "#/definitions/ExecutableFilter"
     },
+    "gitRef": {
+      "description": "The git ref (branch or tag name) that was specified when the workspace was added from a git URL.\nUsed by `flow workspace update` to checkout the correct ref after pulling.\n",
+      "type": "string",
+      "default": ""
+    },
+    "gitRefType": {
+      "description": "The type of git ref specified when the workspace was added.\nEither \"branch\" or \"tag\". Empty if no ref was specified.\n",
+      "type": "string",
+      "default": "",
+      "enum": [
+        "",
+        "branch",
+        "tag"
+      ]
+    },
+    "gitRemote": {
+      "description": "The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL.\nUsed by `flow workspace update` to pull the latest changes.\n",
+      "type": "string",
+      "default": ""
+    },
     "tags": {
       "$ref": "#/definitions/CommonTags",
       "default": []

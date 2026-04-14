@@ -75,6 +75,25 @@ properties:
       A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.
       By default, the `.env` file in the workspace root is loaded if it exists.
     default: []
+  gitRemote:
+    type: string
+    description: |
+      The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL.
+      Used by `flow workspace update` to pull the latest changes.
+    default: ""
+  gitRef:
+    type: string
+    description: |
+      The git ref (branch or tag name) that was specified when the workspace was added from a git URL.
+      Used by `flow workspace update` to checkout the correct ref after pulling.
+    default: ""
+  gitRefType:
+    type: string
+    enum: ["", "branch", "tag"]
+    description: |
+      The type of git ref specified when the workspace was added.
+      Either "branch" or "tag". Empty if no ref was specified.
+    default: ""
   assignedName:
     type: string
     goJSONSchema:

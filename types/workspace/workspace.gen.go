@@ -55,6 +55,23 @@ type Workspace struct {
 	// Executables corresponds to the JSON schema field "executables".
 	Executables *ExecutableFilter `json:"executables,omitempty" yaml:"executables,omitempty" mapstructure:"executables,omitempty"`
 
+	// The git ref (branch or tag name) that was specified when the workspace was
+	// added from a git URL.
+	// Used by `flow workspace update` to checkout the correct ref after pulling.
+	//
+	GitRef string `json:"gitRef,omitempty" yaml:"gitRef,omitempty" mapstructure:"gitRef,omitempty"`
+
+	// The type of git ref specified when the workspace was added.
+	// Either "branch" or "tag". Empty if no ref was specified.
+	//
+	GitRefType WorkspaceGitRefType `json:"gitRefType,omitempty" yaml:"gitRefType,omitempty" mapstructure:"gitRefType,omitempty"`
+
+	// The git remote URL for the workspace. This is set automatically when a
+	// workspace is added from a git URL.
+	// Used by `flow workspace update` to pull the latest changes.
+	//
+	GitRemote string `json:"gitRemote,omitempty" yaml:"gitRemote,omitempty" mapstructure:"gitRemote,omitempty"`
+
 	// location corresponds to the JSON schema field "location".
 	location string `json:"location,omitempty" yaml:"location,omitempty" mapstructure:"location,omitempty"`
 
@@ -64,6 +81,12 @@ type Workspace struct {
 	// VerbAliases corresponds to the JSON schema field "verbAliases".
 	VerbAliases *WorkspaceVerbAliases `json:"verbAliases,omitempty" yaml:"verbAliases,omitempty" mapstructure:"verbAliases,omitempty"`
 }
+
+type WorkspaceGitRefType string
+
+const WorkspaceGitRefTypeBlank WorkspaceGitRefType = ""
+const WorkspaceGitRefTypeBranch WorkspaceGitRefType = "branch"
+const WorkspaceGitRefTypeTag WorkspaceGitRefType = "tag"
 
 type WorkspaceTags common.Tags
 
