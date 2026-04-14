@@ -15,6 +15,12 @@ import (
 	"github.com/flowexec/flow/types/executable"
 )
 
+// Test seams: swapped by tests to avoid invoking the host OS's default URL handler.
+var (
+	openFn     = open.Open
+	openWithFn = open.OpenWith
+)
+
 type launchRunner struct{}
 
 func NewRunner() runner.Runner {
@@ -80,7 +86,7 @@ func (r *launchRunner) Exec(
 	}
 
 	if launchSpec.App != "" {
-		return open.OpenWith(launchSpec.App, targetURI)
+		return openWithFn(launchSpec.App, targetURI)
 	}
-	return open.Open(targetURI)
+	return openFn(targetURI)
 }

@@ -6,6 +6,7 @@ import (
 	stdio "io"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/flowexec/tuikit/views"
 	"github.com/jahvon/expression"
@@ -19,6 +20,14 @@ import (
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/executable"
+)
+
+// Markers wrap rendered content when render runs in non-TUI (plain) mode so
+// the output can be parsed out of a log stream. Kept deliberately distinctive
+// to avoid colliding with content that happens to start or end with "###".
+const (
+	PlainBeginMarker = "<<<FLOW:RENDER:BEGIN>>>"
+	PlainEndMarker   = "<<<FLOW:RENDER:END>>>"
 )
 
 type renderRunner struct{}
@@ -38,6 +47,18 @@ func (r *renderRunner) IsCompatible(executable *executable.Executable) bool {
 	return true
 }
 
+// InteractiveDisabled reports whether the process-wide DISABLE_FLOW_INTERACTIVE
+// flag is set to a truthy value. Subexecs that shell out inherit this flag via
+// env.DefaultEnv, and in-process subexecs share the parent Config.
+func InteractiveDisabled() bool {
+	v := os.Getenv(io.DisableInteractiveEnvKey)
+	if v == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	return err == nil && b
+}
+
 func (r *renderRunner) Exec(
 	ctx *context.Context,
 	e *executable.Executable,
@@ -45,10 +66,6 @@ func (r *renderRunner) Exec(
 	inputEnv map[string]string,
 	inputArgs []string,
 ) error {
-	if !ctx.Config.ShowTUI() {
-		return fmt.Errorf("unable to render when interactive mode is disabled")
-	}
-
 	renderSpec := e.Render
 	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
@@ -107,10 +124,8 @@ func (r *renderRunner) Exec(
 
 	logger.Log().Infof("Rendering content from file %s", contentFile)
 
-	if os.Getenv(io.DisableInteractiveEnvKey) != "" {
-		logger.Log().Print("### Rendered Content Start ###")
-		logger.Log().Print(data)
-		logger.Log().Print("### Rendered Content End ###")
+	if !ctx.Config.ShowTUI() || InteractiveDisabled() {
+		renderPlain(contentFile, data)
 		return nil
 	}
 
@@ -124,6 +139,15 @@ func (r *renderRunner) Exec(
 	filename := filepath.Base(contentFile)
 	ctx.TUIContainer.SetState("file", filename)
 	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), data))
+}
+
+// renderPlain writes the rendered content bracketed by parseable markers so
+// callers scraping log output can extract the block deterministically.
+func renderPlain(contentFile, data string) {
+	log := logger.Log()
+	log.Print(fmt.Sprintf("%s file=%s", PlainBeginMarker, filepath.Base(contentFile)))
+	log.Print(data)
+	log.Print(PlainEndMarker)
 }
 
 func readDataFile(dir, path string) (interface{}, error) {
