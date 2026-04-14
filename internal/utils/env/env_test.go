@@ -345,7 +345,7 @@ TEST_ENV_VAR3=value3`
 		It("should convert the map to list correctly", func() {
 			envMap := map[string]string{"TEST_KEY": "test", "TEST_KEY_2": "test2"}
 			envList := env.EnvMapToEnvList(envMap)
-			Expect(envList).To(Equal([]string{"TEST_KEY=test", "TEST_KEY_2=test2"}))
+			Expect(envList).To(ConsistOf("TEST_KEY=test", "TEST_KEY_2=test2"))
 		})
 	})
 

@@ -24,3 +24,12 @@ ignore:
   - "tests/utils/**" # ignore test utilities
   - "**/testdata/**" # ignore test data
   - "**/mocks/**" # ignore mocks
+  # TUI rendering layers — tightly coupled to tuikit; exercised via e2e.
+  # Patterns catch every file in io/{cache,config,executable,workspace,secret,vault}
+  # plus the TUI-bound files in io/logs, while leaving io/common/ tracked.
+  - "internal/io/*/output.go"
+  - "internal/io/*/view*.go"      # matches views.go and view.go
+  - "internal/io/*/detail.go"
+  - "internal/io/*/library.go"
+  - "internal/io/*/background.go"
+  - "internal/runner/render/render.go" # TUI path dominates; plain path is unit-tested
