@@ -4,6 +4,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/flowexec/flow/types/executable"
@@ -48,7 +49,7 @@ func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[st
 			continue
 		}
 		if args.FlagType(flagStr) == executable.ArgumentTypeBool {
-			flagArgs[flagStr] = "true"
+			flagArgs[flagStr] = strconv.FormatBool(true)
 		} else if i+1 < len(execArgs) && !strings.HasPrefix(execArgs[i+1], "--") {
 			i++
 			flagArgs[flagStr] = execArgs[i]
