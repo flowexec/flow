@@ -41,7 +41,12 @@ flow workspace add dev-tools https://github.com/myorg/tools.git --branch develop
 
 # Clone a specific tag
 flow workspace add stable https://github.com/myorg/tools.git --tag v1.0.0
+
+# Clone from a local bare repo (useful for testing or air-gapped environments)
+flow workspace add local-tools file:///path/to/bare/repo
 ```
+
+Flow supports HTTPS, SSH, and `file://` Git URLs. The `file://` protocol is useful for local testing, air-gapped environments, or pointing at bare repos on a shared filesystem.
 
 Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved in the workspace's `flow.yaml` so they can be used for updates.
 
