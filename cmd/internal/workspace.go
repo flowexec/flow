@@ -14,6 +14,7 @@ import (
 
 	"github.com/flowexec/flow/cmd/internal/flags"
 	workspaceIO "github.com/flowexec/flow/internal/io/workspace"
+	"github.com/flowexec/flow/internal/services/git"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/filesystem"
@@ -30,6 +31,7 @@ func RegisterWorkspaceCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Short:   "Manage development workspaces.",
 	}
 	registerAddWorkspaceCmd(ctx, wsCmd)
+	registerUpdateWorkspaceCmd(ctx, wsCmd)
 	registerSwitchWorkspaceCmd(ctx, wsCmd)
 	registerRemoveWorkspaceCmd(ctx, wsCmd)
 	registerListWorkspaceCmd(ctx, wsCmd)
@@ -39,61 +41,48 @@ func RegisterWorkspaceCmd(ctx *context.Context, rootCmd *cobra.Command) {
 
 func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	createCmd := &cobra.Command{
-		Use:     "add NAME PATH",
+		Use:     "add NAME PATH_OR_GIT_URL",
 		Aliases: []string{"init", "create", "new"},
-		Short:   "Initialize a new workspace.",
-		Args:    cobra.ExactArgs(2),
-		Run:     func(cmd *cobra.Command, args []string) { addWorkspaceFunc(ctx, cmd, args) },
+		Short:   "Initialize a new workspace from a local path or Git URL.",
+		Long: "Initialize a new workspace. PATH_OR_GIT_URL can be a local directory path " +
+			"or a Git repository URL (HTTPS or SSH). When a Git URL is provided, " +
+			"the repository is cloned to the flow cache directory and registered as a workspace.\n\n" +
+			"Examples:\n" +
+			"  flow workspace add my-ws ./path/to/dir\n" +
+			"  flow workspace add shared https://github.com/org/flows.git\n" +
+			"  flow workspace add tools git@github.com:org/tools.git --branch main\n" +
+			"  flow workspace add stable https://github.com/org/flows.git --tag v1.0.0",
+		Args: cobra.ExactArgs(2),
+		Run:  func(cmd *cobra.Command, args []string) { addWorkspaceFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, createCmd, *flags.SetAfterCreateFlag)
+	RegisterFlag(ctx, createCmd, *flags.GitBranchFlag)
+	RegisterFlag(ctx, createCmd, *flags.GitTagFlag)
 	wsCmd.AddCommand(createCmd)
 }
 
 func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
-	path := args[1]
+	pathOrURL := args[1]
 
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[name]; found {
 		logger.Log().Fatalf("workspace %s already exists at %s", name, userConfig.Workspaces[name])
 	}
 
-	switch {
-	case path == "":
-		path = filepath.Join(filesystem.CachedDataDirPath(), name)
-	case path == "." || strings.HasPrefix(path, "./"):
-		wd, err := os.Getwd()
-		if err != nil {
-			logger.Log().FatalErr(err)
-		}
-		if path == "." {
-			path = wd
-		} else {
-			path = fmt.Sprintf("%s/%s", wd, path[2:])
-		}
-	case path == "~" || strings.HasPrefix(path, "~/"):
-		hd, err := os.UserHomeDir()
-		if err != nil {
-			logger.Log().FatalErr(err)
-		}
-		if path == "~" {
-			path = hd
-		} else {
-			path = fmt.Sprintf("%s/%s", hd, path[2:])
-		}
-	case !filepath.IsAbs(path):
-		wd, err := os.Getwd()
-		if err != nil {
-			logger.Log().FatalErr(err)
-		}
-		path = fmt.Sprintf("%s/%s", wd, path)
+	branch := flags.ValueFor[string](cmd, *flags.GitBranchFlag, false)
+	tag := flags.ValueFor[string](cmd, *flags.GitTagFlag, false)
+	if branch != "" && tag != "" {
+		logger.Log().Fatalf("cannot specify both --branch and --tag")
 	}
 
-	if !filesystem.WorkspaceConfigExists(path) {
-		if err := filesystem.InitWorkspaceConfig(name, path); err != nil {
-			logger.Log().FatalErr(err)
-		}
+	var path string
+	if git.IsGitURL(pathOrURL) {
+		path = cloneGitWorkspace(name, pathOrURL, branch, tag)
+	} else {
+		path = initLocalWorkspace(name, pathOrURL, branch, tag)
 	}
+
 	userConfig.Workspaces[name] = path
 
 	set := flags.ValueFor[bool](cmd, *flags.SetAfterCreateFlag, false)
@@ -111,6 +100,162 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
+}
+
+func initLocalWorkspace(name, pathOrURL, branch, tag string) string {
+	if branch != "" || tag != "" {
+		logger.Log().Fatalf("--branch and --tag flags are only supported with Git URLs")
+	}
+	path := resolveLocalPath(pathOrURL, name)
+	if !filesystem.WorkspaceConfigExists(path) {
+		if err := filesystem.InitWorkspaceConfig(name, path); err != nil {
+			logger.Log().FatalErr(err)
+		}
+	}
+	return path
+}
+
+func cloneGitWorkspace(name, gitURL, branch, tag string) string {
+	clonePath, err := git.ClonePath(gitURL)
+	if err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to determine clone path"))
+	}
+
+	logger.Log().Infof("Cloning %s...", gitURL)
+	if err := git.Clone(gitURL, clonePath, branch, tag); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to clone git repository"))
+	}
+
+	var wsCfg *workspace.Workspace
+	if filesystem.WorkspaceConfigExists(clonePath) {
+		wsCfg, err = filesystem.LoadWorkspaceConfig(name, clonePath)
+		if err != nil {
+			logger.Log().FatalErr(errors.Wrap(err, "unable to load cloned workspace config"))
+		}
+	} else {
+		wsCfg = workspace.DefaultWorkspaceConfig(name)
+	}
+
+	wsCfg.GitRemote = gitURL
+	if branch != "" {
+		wsCfg.GitRef = branch
+		wsCfg.GitRefType = workspace.WorkspaceGitRefTypeBranch
+	} else if tag != "" {
+		wsCfg.GitRef = tag
+		wsCfg.GitRefType = workspace.WorkspaceGitRefTypeTag
+	}
+
+	if err := filesystem.WriteWorkspaceConfig(clonePath, wsCfg); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to write workspace config with git metadata"))
+	}
+	return clonePath
+}
+
+func resolveLocalPath(path, name string) string {
+	switch {
+	case path == "":
+		return filepath.Join(filesystem.CachedDataDirPath(), name)
+	case path == "." || strings.HasPrefix(path, "./"):
+		wd, err := os.Getwd()
+		if err != nil {
+			logger.Log().FatalErr(err)
+		}
+		if path == "." {
+			return wd
+		}
+		return fmt.Sprintf("%s/%s", wd, path[2:])
+	case path == "~" || strings.HasPrefix(path, "~/"):
+		hd, err := os.UserHomeDir()
+		if err != nil {
+			logger.Log().FatalErr(err)
+		}
+		if path == "~" {
+			return hd
+		}
+		return fmt.Sprintf("%s/%s", hd, path[2:])
+	case !filepath.IsAbs(path):
+		wd, err := os.Getwd()
+		if err != nil {
+			logger.Log().FatalErr(err)
+		}
+		return fmt.Sprintf("%s/%s", wd, path)
+	default:
+		return path
+	}
+}
+
+func registerUpdateWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
+	updateCmd := &cobra.Command{
+		Use:     "update [NAME]",
+		Aliases: []string{"pull", "sync"},
+		Short:   "Pull latest changes for a git-sourced workspace.",
+		Long: "Pull the latest changes from the git remote for a workspace that was added from a Git URL. " +
+			"If NAME is omitted, the current workspace is used.\n\n" +
+			"This respects the branch or tag that was originally specified when the workspace was added.\n" +
+			"Use --force to discard local changes and hard reset to the remote.",
+		Args: cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
+			return maps.Keys(ctx.Config.Workspaces), cobra.ShellCompDirectiveNoFileComp
+		},
+		Run: func(cmd *cobra.Command, args []string) { updateWorkspaceFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, updateCmd, *flags.ForceFlag)
+	wsCmd.AddCommand(updateCmd)
+}
+
+func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	var workspaceName, wsPath string
+	if len(args) == 1 {
+		workspaceName = args[0]
+		wsPath = ctx.Config.Workspaces[workspaceName]
+		if wsPath == "" {
+			logger.Log().Fatalf("workspace %s not found", workspaceName)
+		}
+	} else {
+		if ctx.CurrentWorkspace == nil {
+			logger.Log().Fatalf("no current workspace set")
+		}
+		workspaceName = ctx.CurrentWorkspace.AssignedName()
+		wsPath = ctx.CurrentWorkspace.Location()
+	}
+
+	force := flags.ValueFor[bool](cmd, *flags.ForceFlag, false)
+
+	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
+	if err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to load workspace config"))
+	}
+
+	if wsCfg.GitRemote == "" {
+		logger.Log().Fatalf("workspace '%s' is not a git-sourced workspace (no gitRemote set in flow.yaml)", workspaceName)
+	}
+
+	if force {
+		logger.Log().Warnf(
+			"Force updating workspace '%s' from %s (local changes will be discarded)...",
+			workspaceName, wsCfg.GitRemote,
+		)
+	} else {
+		logger.Log().Infof("Updating workspace '%s' from %s...", workspaceName, wsCfg.GitRemote)
+	}
+
+	if force {
+		err = git.ResetPull(wsPath, wsCfg.GitRef, string(wsCfg.GitRefType))
+	} else {
+		err = git.Pull(wsPath, wsCfg.GitRef, string(wsCfg.GitRefType))
+	}
+	if err != nil {
+		if !force {
+			logger.Log().Warnf("Hint: use --force to discard local changes and hard reset to remote")
+		}
+		logger.Log().FatalErr(errors.Wrap(err, "unable to update workspace"))
+	}
+
+	if err := cache.UpdateAll(ctx.DataStore); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "failure updating cache"))
+	}
+
+	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' updated", workspaceName))
 }
 
 func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {

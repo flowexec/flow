@@ -23,6 +23,9 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `displayName` | The display name of the workspace. This is used in the interactive UI. | `string` |  |  |
 | `envFiles` | A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables. By default, the `.env` file in the workspace root is loaded if it exists.  | `array` (`string`) | [] |  |
 | `executables` |  | [ExecutableFilter](#executablefilter) |  |  |
+| `gitRef` | The git ref (branch or tag name) that was specified when the workspace was added from a git URL. Used by `flow workspace update` to checkout the correct ref after pulling.  | `string` |  |  |
+| `gitRefType` | The type of git ref specified when the workspace was added. Either "branch" or "tag". Empty if no ref was specified.  | `string` |  |  |
+| `gitRemote` | The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL. Used by `flow workspace update` to pull the latest changes.  | `string` |  |  |
 | `tags` |  | [CommonTags](#commontags) | [] |  |
 | `verbAliases` |  | [VerbAliases](#verbaliases) |  |  |
 

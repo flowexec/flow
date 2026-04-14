@@ -25,6 +25,62 @@ flow workspace add my-project /path/to/project --set
 
 When you add a workspace, flow creates a `flow.yaml` configuration file in the root directory if one doesn't exist.
 
+#### Git Workspaces
+
+> **Prerequisite:** Git must be installed and available on your `PATH` to use git workspace features.
+
+You can also add workspaces directly from Git repositories. Flow clones the repository to its cache directory and registers it as a workspace:
+
+```shell
+# Clone from HTTPS URL
+flow workspace add shared-tools https://github.com/myorg/tools.git
+
+# Clone from SSH URL
+flow workspace add k8s-flows git@github.com:platform/k8s.git --set
+
+# Clone a specific branch
+flow workspace add dev-tools https://github.com/myorg/tools.git --branch develop
+
+# Clone a specific tag
+flow workspace add stable https://github.com/myorg/tools.git --tag v1.0.0
+
+# Clone from a local bare repo (useful for testing or air-gapped environments)
+flow workspace add local-tools file:///path/to/bare/repo
+```
+
+Flow supports HTTPS, SSH, and `file://` Git URLs. The `file://` protocol is useful for local testing, air-gapped environments, or pointing at bare repos on a shared filesystem.
+
+Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved in the workspace's `flow.yaml` so they can be used for updates.
+
+### Updating Git Workspaces
+
+Pull the latest changes for a git-sourced workspace:
+
+```shell
+# Update a specific workspace
+flow workspace update shared-tools
+
+# Update the current workspace
+flow workspace update
+
+# Force update, discarding any local changes
+flow workspace update shared-tools --force
+```
+
+This respects the branch or tag originally specified when the workspace was added. For branch-based workspaces, it performs a `git pull`. For tag-based workspaces, it fetches the latest tags and checks out the specified tag.
+
+If a pull fails due to merge conflicts or local changes, the error output from git is shown directly. Use `--force` to discard local changes and hard reset to the remote state.
+
+You can also update all git workspaces at once during a cache sync:
+
+```shell
+# Sync cache and pull all git workspaces
+flow sync --git
+
+# Force pull all git workspaces (discards local changes)
+flow sync --git --force
+```
+
 ### Switching Workspaces
 
 Change your current workspace:
@@ -111,6 +167,11 @@ executables:
 - `verbAliases`: Customize which verb synonyms are available
 - `envFiles`: List of environment files to load for all executables (the root `.env` is loaded by default)
 
+**Git Workspace Fields** (set automatically when adding from a Git URL):
+- `gitRemote`: The git remote URL for the workspace
+- `gitRef`: The branch or tag name specified at registration
+- `gitRefType`: Either `branch` or `tag`
+
 > **Complete reference**: See the [workspace configuration schema](../types/workspace.md) for all available options.
 
 ## Workspace Modes
@@ -161,14 +222,17 @@ executables:
 
 ### Shared Workspaces
 
-Create workspaces for shared tools and utilities:
+Share workspaces across teams using Git repositories:
 
 ```shell
-# Create shared workspace
-flow workspace add shared-tools ~/shared
+# Add shared workspace from git
+flow workspace add team-tools https://github.com/myorg/flow-workflows.git
+
+# Keep it up to date
+flow workspace update team-tools
 
 # Reference from other workspaces
-flow send shared-tools/slack:notification "Deployment complete"
+flow send team-tools/slack:notification "Deployment complete"
 ```
 
 ## What's Next?

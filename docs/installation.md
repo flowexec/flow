@@ -5,6 +5,8 @@ title: Installation
 # Installation
 
 > **System Requirements:** flow supports Linux and macOS systems. On Linux, you'll need `xclip` installed to use clipboard features.
+>
+> **Optional:** [Git](https://git-scm.com/) is required for [git workspace](guides/workspaces.md#git-workspaces) features (`workspace add` from URLs, `workspace update`, `sync --git`).
 
 ## Quick Install
 

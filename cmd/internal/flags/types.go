@@ -111,6 +111,34 @@ var SetAfterCreateFlag = &Metadata{
 	Required:  false,
 }
 
+var GitBranchFlag = &Metadata{
+	Name:      "branch",
+	Shorthand: "b",
+	Usage:     "Git branch to checkout when cloning a git workspace",
+	Default:   "",
+	Required:  false,
+}
+
+var GitTagFlag = &Metadata{
+	Name:    "tag",
+	Usage:   "Git tag to checkout when cloning a git workspace",
+	Default: "",
+}
+
+var GitPullFlag = &Metadata{
+	Name:      "git",
+	Shorthand: "g",
+	Usage:     "Pull latest changes for all git-sourced workspaces before syncing",
+	Default:   false,
+	Required:  false,
+}
+
+var ForceFlag = &Metadata{
+	Name:    "force",
+	Usage:   "Force update by discarding local changes (hard reset to remote)",
+	Default: false,
+}
+
 var FixedWsModeFlag = &Metadata{
 	Name:      "fixed",
 	Shorthand: "f",
