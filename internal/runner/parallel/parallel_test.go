@@ -180,7 +180,7 @@ var _ = Describe("ParallelRunner", func() {
 
 			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
 			ctx.RunnerMock.EXPECT().
-				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), []string{"var=test_value"}).
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), []string{"--var=test_value"}).
 				DoAndReturn(func(
 					_ *context.Context,
 					exec *executable.Executable,
@@ -189,7 +189,7 @@ var _ = Describe("ParallelRunner", func() {
 					inputArgs []string,
 				) error {
 					Expect(inputEnv).To(HaveKeyWithValue("TEST_VAR", "test_value"))
-					Expect(inputArgs).To(ContainElement("var=test_value"))
+					Expect(inputArgs).To(ContainElement("--var=test_value"))
 					return nil
 				}).Times(1)
 

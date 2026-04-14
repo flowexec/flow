@@ -80,6 +80,15 @@ func (al *ArgumentList) Flags() []string {
 	return flags
 }
 
+func (al *ArgumentList) FlagType(name string) ArgumentType {
+	for _, arg := range *al {
+		if arg.Flag == name {
+			return arg.Type
+		}
+	}
+	return ""
+}
+
 func (al *ArgumentList) Validate() error {
 	var errs []error
 	for _, arg := range *al {
