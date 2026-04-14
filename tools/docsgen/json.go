@@ -11,23 +11,14 @@ import (
 )
 
 const (
-	schemaDir    = "docs/public/schemas"
-	mcpSchemaDir = "internal/mcp/resources"
-	idBase       = "https://flowexec.io/schemas"
+	schemaDir = "docs/public/schemas"
+	idBase    = "https://flowexec.io/schemas"
 )
 
-// The JSON schema that's bundled in to the MCP server should always match the schemas that are provided via the docs
-// site. Not all schema are needed so below is just an allowlist of schemas that we embed.
-var mcpSchemaResources = []string{
-	schema.WorkspaceDefinitionTitle,
-	schema.FlowfileDefinitionTitle,
-	schema.TemplateDefinitionTitle,
-}
-
+// The JSON schemas are published at https://flowexec.io/schemas/*.
 func generateJSONSchemas() {
 	sm := schema.RegisteredSchemaMap()
 	for fn, s := range sm {
-		//nolint:nestif
 		if slices.Contains(TopLevelPages, fn.Title()) {
 			updateFileID(s, fn)
 			for key, value := range s.Properties {
@@ -49,12 +40,6 @@ func generateJSONSchemas() {
 			docsPath := filepath.Join(rootDir(), schemaDir, fn.JSONSchemaFile())
 			if err := writeSchemaFile(string(schemaJSON), docsPath); err != nil {
 				panic(err)
-			}
-			if slices.Contains(mcpSchemaResources, fn.Title()) {
-				mcpPath := filepath.Join(rootDir(), mcpSchemaDir, fn.JSONSchemaFile())
-				if err := writeSchemaFile(string(schemaJSON), mcpPath); err != nil {
-					panic(err)
-				}
 			}
 		}
 	}
