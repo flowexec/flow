@@ -2,6 +2,10 @@ package mcp_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/client"
@@ -87,10 +91,58 @@ var _ = Describe("MCP Server", func() {
 				"execute",
 				"get_execution_logs",
 				"sync_executables",
+				"write_flowfile",
+				"get_workspace_config",
 			}
 
 			for _, expectedTool := range expectedTools {
 				Expect(toolNames).To(ContainElement(expectedTool))
+			}
+		})
+
+		It("should include output schema on list tools", func() {
+			toolsResult, err := mcpClient.ListTools(ctx, mcp.ListToolsRequest{})
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify tools that should have output schemas
+			toolsWithSchema := map[string]bool{
+				"list_workspaces":      true,
+				"list_executables":     true,
+				"get_workspace":        true,
+				"get_execution_logs":   true,
+				"get_info":             true,
+				"write_flowfile":       true,
+				"get_workspace_config": true,
+			}
+
+			for _, tool := range toolsResult.Tools {
+				if toolsWithSchema[tool.Name] {
+					Expect(tool.OutputSchema.Type).ToNot(BeEmpty(),
+						"tool %s should have an output schema", tool.Name)
+				}
+			}
+		})
+	})
+
+	Describe("Resource Template Registration", func() {
+		It("should register all expected resource templates", func() {
+			result, err := mcpClient.ListResourceTemplates(ctx, mcp.ListResourceTemplatesRequest{})
+			Expect(err).ToNot(HaveOccurred())
+
+			templates := make([]string, len(result.ResourceTemplates))
+			for i, t := range result.ResourceTemplates {
+				templates[i] = t.URITemplate.Raw()
+			}
+
+			expectedTemplates := []string{
+				"flow://workspace/{name}",
+				"flow://executable/{workspace}/{namespace}/{name}",
+				"flow://flowfile/{+path}",
+				"flow://logs/{run_id}",
+			}
+
+			for _, expected := range expectedTemplates {
+				Expect(templates).To(ContainElement(expected))
 			}
 		})
 	})
@@ -144,8 +196,11 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				content := getTextContent(result)
 				Expect(content).To(ContainSubstring("currentContext"))
-				Expect(content).To(ContainSubstring("usageGuides"))
-				Expect(content).To(ContainSubstring("schemas"))
+				Expect(content).To(ContainSubstring("docsUrl"))
+				Expect(content).To(ContainSubstring("llmsTxtUrl"))
+				Expect(content).To(ContainSubstring("schemaUrls"))
+				// Verify guides are NOT embedded (they are referenced by URL instead)
+				Expect(content).ToNot(ContainSubstring("# Flow Concepts"))
 			})
 		})
 
@@ -240,10 +295,9 @@ var _ = Describe("MCP Server", func() {
 
 		Context("execute tool", func() {
 			It("should call executor with provided arguments", func() {
-				expectedOutput := "execution result"
 				mockExecutor.EXPECT().
-					Execute("test", "test:test-flow", "arg1", "arg2").
-					Return(expectedOutput, nil)
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "arg1", "arg2").
+					Return("execution result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
 					"executable_verb": "test",
@@ -252,14 +306,13 @@ var _ = Describe("MCP Server", func() {
 				}))
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(getTextContent(result)).To(Equal(expectedOutput))
+				Expect(getTextContent(result)).To(ContainSubstring("execution result"))
 			})
 
 			It("should handle no args", func() {
-				expectedOutput := "execution result with no args"
 				mockExecutor.EXPECT().
-					Execute("test", "test:test-flow").
-					Return(expectedOutput, nil)
+					ExecuteContext(gomock.Any(), "test", "test:test-flow").
+					Return("execution result with no args", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
 					"executable_verb": "test",
@@ -267,7 +320,7 @@ var _ = Describe("MCP Server", func() {
 				}))
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(getTextContent(result)).To(Equal(expectedOutput))
+				Expect(getTextContent(result)).To(ContainSubstring("execution result with no args"))
 			})
 		})
 
@@ -290,12 +343,165 @@ var _ = Describe("MCP Server", func() {
 		Context("sync_executables tool", func() {
 			It("should call executor with correct arguments", func() {
 				mockExecutor.EXPECT().
-					Execute("sync").
+					ExecuteContext(gomock.Any(), "sync").
 					Return("Synced executables", nil)
 
 				_, err := mcpClient.CallTool(ctx, newCallToolRequest("sync_executables", nil))
 
 				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Context("structured error responses", func() {
+			It("should return a structured error JSON when executor fails", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "get", "missing-ws", "--output", "json").
+					Return("workspace not found", errors.New("exit status 1"))
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+					"workspace_name": "missing-ws",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+
+				text := getTextContent(result)
+				var payload struct {
+					Error struct {
+						Code    string `json:"code"`
+						Message string `json:"message"`
+					} `json:"error"`
+				}
+				Expect(json.Unmarshal([]byte(text), &payload)).To(Succeed())
+				Expect(payload.Error.Code).To(Equal("NOT_FOUND"))
+				Expect(payload.Error.Message).To(ContainSubstring("missing-ws"))
+			})
+
+			It("should return INVALID_INPUT error for missing required parameter", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+
+				text := getTextContent(result)
+				Expect(text).To(ContainSubstring("INVALID_INPUT"))
+				Expect(text).To(ContainSubstring("workspace_name"))
+			})
+		})
+
+		Context("write_flowfile tool", func() {
+			It("should write a valid flowfile and return summary", func() {
+				tmpDir := GinkgoTB().TempDir()
+				flowPath := filepath.Join(tmpDir, "test.flow")
+
+				validYAML := `
+executables:
+  - verb: run
+    name: hello
+    description: say hello
+    exec:
+      cmd: echo hello
+  - verb: test
+    name: greet
+    exec:
+      cmd: echo greet
+`
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":    flowPath,
+					"content": validYAML,
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+
+				text := getTextContent(result)
+				var out flowMcp.WriteFlowFileOutput
+				Expect(json.Unmarshal([]byte(text), &out)).To(Succeed())
+				Expect(out.Path).To(Equal(flowPath))
+				Expect(out.Executables).To(ContainElements("hello", "greet"))
+
+				// Verify file was actually written
+				_, statErr := os.Stat(flowPath)
+				Expect(statErr).ToNot(HaveOccurred())
+			})
+
+			It("should reject invalid file extension", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":    "/tmp/bad.txt",
+					"content": "executables: []",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring("VALIDATION_FAILED"))
+			})
+
+			It("should reject invalid YAML content", func() {
+				tmpDir := GinkgoTB().TempDir()
+				flowPath := filepath.Join(tmpDir, "bad.flow")
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":    flowPath,
+					"content": "not: valid: yaml: [[[",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring("VALIDATION_FAILED"))
+			})
+
+			It("should reject existing file without overwrite flag", func() {
+				tmpDir := GinkgoTB().TempDir()
+				flowPath := filepath.Join(tmpDir, "existing.flow")
+				Expect(os.WriteFile(flowPath, []byte("executables: []\n"), 0600)).To(Succeed())
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":    flowPath,
+					"content": "executables: []",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring("already exists"))
+			})
+
+			It("should overwrite existing file when overwrite=true", func() {
+				tmpDir := GinkgoTB().TempDir()
+				flowPath := filepath.Join(tmpDir, "existing.flow")
+				Expect(os.WriteFile(flowPath, []byte("executables: []\n"), 0600)).To(Succeed())
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":      flowPath,
+					"content":   "executables: []",
+					"overwrite": true,
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+			})
+		})
+
+		Context("list_executables pagination", func() {
+			It("should paginate results and include next cursor", func() {
+				// Build a CLI JSON output with 30 executables.
+				var cliResp struct {
+					Executables []flowMcp.ExecutableOutput `json:"executables"`
+				}
+				for i := 0; i < 30; i++ {
+					cliResp.Executables = append(cliResp.Executables, flowMcp.ExecutableOutput{
+						ID:   "ws/ns:exec",
+						Ref:  "run ws/ns:exec",
+						Name: "exec",
+						Verb: "run",
+					})
+				}
+				cliJSON, _ := json.Marshal(cliResp)
+
+				mockExecutor.EXPECT().
+					Execute("browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					Return(string(cliJSON), nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))
+				Expect(err).ToNot(HaveOccurred())
+
+				var out flowMcp.ExecutableListOutput
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+				Expect(out.TotalCount).To(Equal(30))
+				Expect(out.Executables).To(HaveLen(25)) // defaultPageSize
+				Expect(out.NextCursor).ToNot(BeEmpty())
 			})
 		})
 	})

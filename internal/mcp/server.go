@@ -21,12 +21,14 @@ func NewServer(executor CommandExecutor) *Server {
 	srv := server.NewMCPServer(
 		"Flow",
 		"1.0.0",
-		server.WithToolCapabilities(false),
+		server.WithToolCapabilities(true),
 		server.WithPromptCapabilities(false),
+		server.WithResourceCapabilities(true, true),
 		server.WithInstructions(serverInstructions),
 	)
 	addServerTools(srv, executor)
 	addServerPrompts(srv)
+	addServerResources(srv)
 
 	return &Server{srv: srv, executor: executor}
 }

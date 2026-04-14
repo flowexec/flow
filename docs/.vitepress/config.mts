@@ -8,6 +8,10 @@ export default defineConfig({
   base: '/',
   outDir: './dist',
 
+  sitemap: {
+    hostname: 'https://flowexec.io'
+  },
+
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],

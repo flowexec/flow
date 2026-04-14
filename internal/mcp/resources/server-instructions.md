@@ -7,13 +7,22 @@ from development/operations tasks to personal productivity tools, content manage
 ## Essential Context to Load First
 
 Unless this information is provided to you, always start new conversations by calling the `get_info` tool.
-This provides all essential context including:
+The response is intentionally lightweight and includes:
 - Current workspace, namespace, and vault context
-- File type distinctions and schemas
-- Flow concepts and platform guide
+- A short platform summary
+- URLs for the docs site, the `llms.txt` docs index, JSON schemas, and key guide pages
 
 You should only need to run this at the start of the conversation as the response is unlikely to change unless you or the user
 explicitly switches context or configurations.
+
+### When you need deeper context
+
+Fetch documentation from the URLs that `get_info` returns rather than asking the user:
+- **`llmsTxtUrl`** (`https://flowexec.io/llms.txt`) — index of all docs pages in the llmstxt.org format
+- **`schemaUrls.*`** — JSON schemas for flowfile, workspace, template, and config files; use these when generating or validating YAML
+- **`guideUrls.*`** — specific guide pages for concepts, file types, workspaces, secrets, templates, and the first-workflow tutorial
+
+The `write_flowfile` tool already validates YAML against the flowfile schema server-side, so you don't need to embed the schema in the client context to generate valid files — but fetching the schema from `schemaUrls.flowFile` is the authoritative reference when authoring non-trivial executables.
 
 ## Flow Concepts
 
@@ -28,7 +37,7 @@ If the user prompts with any of these concepts, then they are likely referring t
 
 ### Safety
 - **Always confirm** before running `execute` with potentially destructive commands
-- **Validate YAML** before suggesting users save it to files. The JSON Schemas are provided by the `get_info` tool
+- **Validate YAML** before suggesting users save it to files. JSON schema URLs are returned by `get_info` under `schemaUrls`, and `write_flowfile` performs server-side validation on write.
 - **Check current context** before making workspace assumptions
 - **Use appropriate filters** when using tools that may return long lists. For instance, provide the appropriate arguments for the `list_executables` tool if you know the target workspace, a keyword, or verb for the executable that you're looking for.
 

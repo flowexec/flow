@@ -1,0 +1,124 @@
+# Flow
+
+> Flow is a local-first automation platform that helps you organize and execute any kind of workflow through declarative YAML. It provides a CLI, an interactive TUI, secret management via vaults, templating for code generation, and an MCP server for AI-agent integration.
+
+Flow organizes automation into **workspaces** (projects/domains), each rooted at a `flow.yaml` config file. Inside a workspace, **executables** are declared in `*.flow` (or `*.flow.yaml`) files and run by invoking a **verb** (e.g. `run`, `build`, `test`, `deploy`) optionally combined with a `workspace/namespace:name` reference. Executables can be simple commands, HTTP requests, or orchestrated serial/parallel pipelines. **Templates** (`*.flow.tmpl`) generate new workflows interactively.
+
+## Getting Started
+
+- [Home](https://flowexec.io/): Landing page with feature overview
+- [Installation](https://flowexec.io/installation): Install flow on macOS, Linux, or Windows
+- [Quick Start](https://flowexec.io/quickstart): Five-minute walkthrough from install to first executable
+
+## Core Guides
+
+- [Guides Overview](https://flowexec.io/guides/): Index of all user guides
+- [Concepts](https://flowexec.io/guides/concepts): Executables, verbs, workspaces, namespaces, templates, vaults, execution model
+- [Your First Workflow](https://flowexec.io/guides/first-workflow): End-to-end tutorial for building a workflow
+- [Executables](https://flowexec.io/guides/executables): Full reference for executable types (exec, serial, parallel, request, launch, render)
+- [Workspaces](https://flowexec.io/guides/workspaces): How workspaces organize projects and domains
+- [Secrets](https://flowexec.io/guides/secrets): Vault-backed secret storage and injection into executions
+- [Execution History & Logs](https://flowexec.io/guides/execution-history): Viewing, attaching to, and inspecting past runs
+
+## Advanced
+
+- [Imported Executables](https://flowexec.io/guides/generated-config): Auto-import from Makefile, package.json, docker-compose, shell scripts
+- [Templates & Workflow Generation](https://flowexec.io/guides/templating): Generate executables from templates with interactive forms
+- [Advanced Workflows](https://flowexec.io/guides/advanced): Serial/parallel pipelines, retries, conditional execution, arguments/params
+- [Interactive UI](https://flowexec.io/guides/interactive): TUI customization and keybindings
+- [Integrations](https://flowexec.io/guides/integrations): MCP server, GitHub Actions, Docker, CI pipelines
+
+## Configuration Reference
+
+- [Config Reference Overview](https://flowexec.io/types/): Index with direct JSON schema links
+- [FlowFile Schema](https://flowexec.io/types/flowfile): Structure of `*.flow` / `*.flow.yaml` files
+- [Workspace Schema](https://flowexec.io/types/workspace): Structure of `flow.yaml` workspace config
+- [Template Schema](https://flowexec.io/types/template): Structure of `*.flow.tmpl` template files
+- [Config Schema](https://flowexec.io/types/config): Structure of the user-level flow config
+
+## JSON Schemas
+
+- [flowfile_schema.json](https://flowexec.io/schemas/flowfile_schema.json): Use this to validate or generate `*.flow` files
+- [workspace_schema.json](https://flowexec.io/schemas/workspace_schema.json): Use this to validate or generate `flow.yaml` files
+- [template_schema.json](https://flowexec.io/schemas/template_schema.json): Use this to validate or generate `*.flow.tmpl` files
+- [config_schema.json](https://flowexec.io/schemas/config_schema.json): Use this to validate or generate the user-level config
+
+## CLI Reference
+
+- [CLI Overview](https://flowexec.io/cli/flow): Top-level `flow` command and global flags
+- [flow browse](https://flowexec.io/cli/flow_browse): Interactive TUI for discovering and running executables
+- [flow exec](https://flowexec.io/cli/flow_exec): Run an executable directly
+- [flow sync](https://flowexec.io/cli/flow_sync): Refresh cached executable and workspace state
+- [flow mcp](https://flowexec.io/cli/flow_mcp): Start the MCP server over stdio for AI-agent integration
+
+### Logs
+
+- [flow logs](https://flowexec.io/cli/flow_logs): View execution history
+- [flow logs attach](https://flowexec.io/cli/flow_logs_attach): Attach to a running background execution
+- [flow logs clear](https://flowexec.io/cli/flow_logs_clear): Clear log history
+- [flow logs kill](https://flowexec.io/cli/flow_logs_kill): Terminate a background execution
+
+### Cache
+
+- [flow cache](https://flowexec.io/cli/flow_cache): Manage cached executable metadata
+- [flow cache clear](https://flowexec.io/cli/flow_cache_clear): Clear all cache entries
+- [flow cache get](https://flowexec.io/cli/flow_cache_get): Read a specific cache entry
+- [flow cache list](https://flowexec.io/cli/flow_cache_list): List cache entries
+- [flow cache remove](https://flowexec.io/cli/flow_cache_remove): Remove a specific entry
+- [flow cache set](https://flowexec.io/cli/flow_cache_set): Write a cache entry
+
+### Config
+
+- [flow config](https://flowexec.io/cli/flow_config): User-level configuration commands
+- [flow config get](https://flowexec.io/cli/flow_config_get): Read current config
+- [flow config reset](https://flowexec.io/cli/flow_config_reset): Reset to defaults
+- [flow config set](https://flowexec.io/cli/flow_config_set): Update a config value
+- [flow config set namespace](https://flowexec.io/cli/flow_config_set_namespace): Set current namespace
+- [flow config set workspace](https://flowexec.io/cli/flow_config_set_workspace): Set current workspace
+- [flow config set workspace-mode](https://flowexec.io/cli/flow_config_set_workspace-mode): Set fixed vs dynamic workspace mode
+- [flow config set log-mode](https://flowexec.io/cli/flow_config_set_log-mode): Set default log output format
+- [flow config set timeout](https://flowexec.io/cli/flow_config_set_timeout): Set default execution timeout
+- [flow config set theme](https://flowexec.io/cli/flow_config_set_theme): Customize TUI theme
+- [flow config set tui](https://flowexec.io/cli/flow_config_set_tui): Toggle interactive mode defaults
+- [flow config set notifications](https://flowexec.io/cli/flow_config_set_notifications): Configure notification behavior
+
+### Secrets & Vaults
+
+- [flow secret](https://flowexec.io/cli/flow_secret): Manage secrets in the active vault
+- [flow secret get](https://flowexec.io/cli/flow_secret_get): Read a secret value
+- [flow secret list](https://flowexec.io/cli/flow_secret_list): List secrets
+- [flow secret remove](https://flowexec.io/cli/flow_secret_remove): Delete a secret
+- [flow secret set](https://flowexec.io/cli/flow_secret_set): Store a secret
+- [flow vault](https://flowexec.io/cli/flow_vault): Manage vaults
+- [flow vault create](https://flowexec.io/cli/flow_vault_create): Create a new vault (AES256, Age, Keyring, or unencrypted)
+- [flow vault edit](https://flowexec.io/cli/flow_vault_edit): Edit vault metadata
+- [flow vault get](https://flowexec.io/cli/flow_vault_get): Show vault details
+- [flow vault list](https://flowexec.io/cli/flow_vault_list): List registered vaults
+- [flow vault remove](https://flowexec.io/cli/flow_vault_remove): Remove a vault
+- [flow vault switch](https://flowexec.io/cli/flow_vault_switch): Switch active vault
+
+### Templates
+
+- [flow template](https://flowexec.io/cli/flow_template): Manage workflow templates
+- [flow template add](https://flowexec.io/cli/flow_template_add): Register a template
+- [flow template generate](https://flowexec.io/cli/flow_template_generate): Generate a workflow from a template
+- [flow template get](https://flowexec.io/cli/flow_template_get): Show template metadata
+- [flow template list](https://flowexec.io/cli/flow_template_list): List registered templates
+
+### Workspaces
+
+- [flow workspace](https://flowexec.io/cli/flow_workspace): Workspace management commands
+- [flow workspace add](https://flowexec.io/cli/flow_workspace_add): Register a workspace
+- [flow workspace get](https://flowexec.io/cli/flow_workspace_get): Show workspace details
+- [flow workspace list](https://flowexec.io/cli/flow_workspace_list): List registered workspaces
+- [flow workspace remove](https://flowexec.io/cli/flow_workspace_remove): Unregister a workspace
+- [flow workspace switch](https://flowexec.io/cli/flow_workspace_switch): Change active workspace
+- [flow workspace view](https://flowexec.io/cli/flow_workspace_view): Open workspace in TUI
+
+## Optional
+
+- [Contributing](https://flowexec.io/development): Development setup and contribution guide
+- [TUI Kit](https://flowexec.io/tuikit): Companion Bubble Tea-based TUI framework
+- [GitHub Repository](https://github.com/flowexec/flow): Source code, issues, releases
+- [Examples Repository](https://github.com/flowexec/examples): Real-world workflow examples
+- [Discord Community](https://discord.gg/CtByNKNMxM): Community chat
