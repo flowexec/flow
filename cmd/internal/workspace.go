@@ -78,38 +78,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	var path string
 	if git.IsGitURL(pathOrURL) {
-		clonePath, err := git.ClonePath(pathOrURL)
-		if err != nil {
-			logger.Log().FatalErr(errors.Wrap(err, "unable to determine clone path"))
-		}
-
-		logger.Log().Infof("Cloning %s...", pathOrURL)
-		if err := git.Clone(pathOrURL, clonePath, branch, tag); err != nil {
-			logger.Log().FatalErr(errors.Wrap(err, "unable to clone git repository"))
-		}
-		path = clonePath
-
-		// Write git metadata to workspace config after clone
-		wsCfg := &workspace.Workspace{}
-		if filesystem.WorkspaceConfigExists(path) {
-			wsCfg, err = filesystem.LoadWorkspaceConfig(name, path)
-			if err != nil {
-				logger.Log().FatalErr(errors.Wrap(err, "unable to load cloned workspace config"))
-			}
-		} else {
-			wsCfg = workspace.DefaultWorkspaceConfig(name)
-		}
-		wsCfg.GitRemote = pathOrURL
-		if branch != "" {
-			wsCfg.GitRef = branch
-			wsCfg.GitRefType = workspace.WorkspaceGitRefTypeBranch
-		} else if tag != "" {
-			wsCfg.GitRef = tag
-			wsCfg.GitRefType = workspace.WorkspaceGitRefTypeTag
-		}
-		if err := filesystem.WriteWorkspaceConfig(path, wsCfg); err != nil {
-			logger.Log().FatalErr(errors.Wrap(err, "unable to write workspace config with git metadata"))
-		}
+		path = cloneGitWorkspace(name, pathOrURL, branch, tag)
 	} else {
 		if branch != "" || tag != "" {
 			logger.Log().Fatalf("--branch and --tag flags are only supported with Git URLs")
@@ -139,6 +108,42 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
+}
+
+func cloneGitWorkspace(name, gitURL, branch, tag string) string {
+	clonePath, err := git.ClonePath(gitURL)
+	if err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to determine clone path"))
+	}
+
+	logger.Log().Infof("Cloning %s...", gitURL)
+	if err := git.Clone(gitURL, clonePath, branch, tag); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to clone git repository"))
+	}
+
+	var wsCfg *workspace.Workspace
+	if filesystem.WorkspaceConfigExists(clonePath) {
+		wsCfg, err = filesystem.LoadWorkspaceConfig(name, clonePath)
+		if err != nil {
+			logger.Log().FatalErr(errors.Wrap(err, "unable to load cloned workspace config"))
+		}
+	} else {
+		wsCfg = workspace.DefaultWorkspaceConfig(name)
+	}
+
+	wsCfg.GitRemote = gitURL
+	if branch != "" {
+		wsCfg.GitRef = branch
+		wsCfg.GitRefType = workspace.WorkspaceGitRefTypeBranch
+	} else if tag != "" {
+		wsCfg.GitRef = tag
+		wsCfg.GitRefType = workspace.WorkspaceGitRefTypeTag
+	}
+
+	if err := filesystem.WriteWorkspaceConfig(clonePath, wsCfg); err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "unable to write workspace config with git metadata"))
+	}
+	return clonePath
 }
 
 func resolveLocalPath(path, name string) string {
@@ -221,7 +226,10 @@ func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 	}
 
 	if force {
-		logger.Log().Warnf("Force updating workspace '%s' from %s (local changes will be discarded)...", workspaceName, wsCfg.GitRemote)
+		logger.Log().Warnf(
+			"Force updating workspace '%s' from %s (local changes will be discarded)...",
+			workspaceName, wsCfg.GitRemote,
+		)
 	} else {
 		logger.Log().Infof("Updating workspace '%s' from %s...", workspaceName, wsCfg.GitRemote)
 	}
