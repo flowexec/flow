@@ -24,13 +24,35 @@ func BuildArgsEnvMap(
 func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[string]string, posArgs []string) {
 	flagArgs = make(map[string]string)
 	posArgs = make([]string, 0)
+	knownFlags := args.Flags()
 	for i := 0; i < len(execArgs); i++ {
-		split := strings.SplitN(execArgs[i], "=", 2)
-		if len(split) == 2 && slices.Contains(args.Flags(), split[0]) {
-			flagArgs[split[0]] = split[1]
+		arg := execArgs[i]
+		if !strings.HasPrefix(arg, "--") {
+			posArgs = append(posArgs, arg)
 			continue
 		}
-		posArgs = append(posArgs, execArgs[i])
+
+		// Strip the -- prefix
+		flagStr := strings.TrimPrefix(arg, "--")
+
+		// Handle --flag=value
+		if name, value, ok := strings.Cut(flagStr, "="); ok {
+			if slices.Contains(knownFlags, name) {
+				flagArgs[name] = value
+			}
+			continue
+		}
+
+		// Handle --flag (no value)
+		if !slices.Contains(knownFlags, flagStr) {
+			continue
+		}
+		if args.FlagType(flagStr) == executable.ArgumentTypeBool {
+			flagArgs[flagStr] = "true"
+		} else if i+1 < len(execArgs) && !strings.HasPrefix(execArgs[i+1], "--") {
+			i++
+			flagArgs[flagStr] = execArgs[i]
+		}
 	}
 	return
 }
@@ -156,7 +178,7 @@ func BuildArgsFromEnv(
 	}
 	pos := len(argsWithPositions)
 	for flag, value := range flagArgs {
-		result[pos] = flag + "=" + value
+		result[pos] = "--" + flag + "=" + value
 		pos++
 	}
 

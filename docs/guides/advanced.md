@@ -423,7 +423,7 @@ export VERBOSE=true
 export ENVIRONMENT=development
 
 # Command execution
-flow deploy app verbose=false --param ENVIRONMENT=production
+flow deploy app --param ENVIRONMENT=production -- --verbose=false
 
 # Final environment variables:
 # API_KEY=<secret-value>    (params wins over shell)

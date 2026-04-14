@@ -8,8 +8,9 @@ Execute any executable by reference.
 Execute an executable where EXECUTABLE_ID is the target executable's ID in the form of 'ws/ns:name'.
 The flow subcommand used should match the target executable's verb or one of its aliases.
 
-If the target executable accept arguments, they can be passed in the form of flag or positional arguments.
-Flag arguments are specified with the format 'flag=value' and positional arguments are specified as values without any prefix.
+If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.
+Flag arguments use standard '--flag=value' or '--flag value' syntax. Boolean flags can omit the value (e.g., '--verbose' implies true).
+Positional arguments are specified as values without any prefix.
 
 
 See https://flowexec.io/types/flowfile?id=executableverb for more information on executable verbs and https://flowexec.io/types/flowfile?id=executableref for more information on executable IDs.
@@ -40,11 +41,11 @@ flow exec ws/ns:build
 
 **Execute the 'build' flow in the 'ws' workspace and 'ns' namespace with flag and positional arguments**
 
-flow exec ws/ns:build flag1=value1 flag2=value2 value3 value4
+flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 
 
 ```
-flow exec EXECUTABLE_ID [args...] [flags]
+flow exec EXECUTABLE_ID [-- args...] [flags]
 ```
 
 ### Options

@@ -170,7 +170,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := make(map[string]string)
-				err := env.SetEnv("", exec, []string{"test", "flag=value"}, promptedEnv)
+				err := env.SetEnv("", exec, []string{"test", "--flag=value"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_POS")
 				Expect(exists).To(BeTrue())
@@ -186,7 +186,7 @@ TEST_ENV_VAR3=value3`
 					Args:   []executable.Argument{{EnvKey: "TEST_KEY", Flag: "flag"}},
 				}
 				promptedEnv := map[string]string{"TEST_KEY": "input"}
-				err := env.SetEnv("", exec, []string{"flag=flag"}, promptedEnv)
+				err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_KEY")
 				Expect(exists).To(BeTrue())
@@ -199,7 +199,7 @@ TEST_ENV_VAR3=value3`
 					Args:   []executable.Argument{{EnvKey: "TEST_KEY", Flag: "flag"}},
 				}
 				promptedEnv := map[string]string{"TEST_KEY": "input"}
-				err := env.SetEnv("", exec, []string{"flag=flag"}, promptedEnv)
+				err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_KEY")
 				Expect(exists).To(BeTrue())
@@ -242,12 +242,30 @@ TEST_ENV_VAR3=value3`
 	})
 
 	Describe("BuildArgsEnvMap", func() {
-		It("should correctly parse flag arguments", func() {
+		It("should correctly parse flag arguments with --flag=value syntax", func() {
 			args := executable.ArgumentList{{EnvKey: "flag1", Flag: "flag1"}, {EnvKey: "flag2", Flag: "flag2"}}
-			inputVals := []string{"flag1=value1", "flag2=value2"}
+			inputVals := []string{"--flag1=value1", "--flag2=value2"}
 			envMap, err := env.BuildArgsEnvMap(args, inputVals, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envMap).To(Equal(map[string]string{"flag1": "value1", "flag2": "value2"}))
+		})
+
+		It("should correctly parse flag arguments with --flag value syntax", func() {
+			args := executable.ArgumentList{{EnvKey: "flag1", Flag: "flag1"}, {EnvKey: "flag2", Flag: "flag2"}}
+			inputVals := []string{"--flag1", "value1", "--flag2", "value2"}
+			envMap, err := env.BuildArgsEnvMap(args, inputVals, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envMap).To(Equal(map[string]string{"flag1": "value1", "flag2": "value2"}))
+		})
+
+		It("should correctly parse boolean flags without a value", func() {
+			args := executable.ArgumentList{
+				{EnvKey: "verbose", Flag: "verbose", Type: executable.ArgumentTypeBool},
+			}
+			inputVals := []string{"--verbose"}
+			envMap, err := env.BuildArgsEnvMap(args, inputVals, nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envMap).To(Equal(map[string]string{"verbose": "true"}))
 		})
 
 		It("should correctly parse positional arguments", func() {
@@ -263,7 +281,7 @@ TEST_ENV_VAR3=value3`
 		It("should correctly parse mixed arguments", func() {
 			p1 := 1
 			args := executable.ArgumentList{{EnvKey: "flag1", Flag: "flag1"}, {EnvKey: "pos1", Pos: &p1}}
-			inputVals := []string{"flag1=value1", "pos1"}
+			inputVals := []string{"--flag1=value1", "pos1"}
 			envMap, err := env.BuildArgsEnvMap(args, inputVals, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envMap).To(Equal(map[string]string{"flag1": "value1", "pos1": "pos1"}))
@@ -271,7 +289,7 @@ TEST_ENV_VAR3=value3`
 
 		It("should correctly parse flag arguments with equal sign in value", func() {
 			args := executable.ArgumentList{{EnvKey: "flag1", Flag: "flag1"}}
-			inputVals := []string{"flag1=value1=value2"}
+			inputVals := []string{"--flag1=value1=value2"}
 			envMap, err := env.BuildArgsEnvMap(args, inputVals, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envMap).To(Equal(map[string]string{"flag1": "value1=value2"}))
@@ -367,7 +385,7 @@ TEST_ENV_VAR3=value3`
 			}
 			inputEnv := make(map[string]string)
 			defaultEnv := make(map[string]string)
-			envMap, err := env.BuildEnvMap("", exec, []string{"flag=test3"}, inputEnv, defaultEnv)
+			envMap, err := env.BuildEnvMap("", exec, []string{"--flag=test3"}, inputEnv, defaultEnv)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envMap).To(Equal(map[string]string{"TEST_KEY": "test", "TEST_KEY_2": "test2", "TEST_KEY_3": "test3"}))
 		})
@@ -509,7 +527,7 @@ BUILD_ENV_VAR3=build_value3`
 
 			filteredArgs := env.BuildArgsFromEnv(childArgs, parentEnv)
 			Expect(filteredArgs).
-				To(Equal([]string{"bitnami", "https://charts.bitnami.com/bitnami", "namespace=my-namespace"}))
+				To(Equal([]string{"bitnami", "https://charts.bitnami.com/bitnami", "--namespace=my-namespace"}))
 		})
 
 		It("should handle missing parent env values gracefully", func() {

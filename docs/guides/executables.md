@@ -145,8 +145,13 @@ executables:
 
 **Run with arguments:**
 ```shell
-flow build container v1.2.3 publish=true registry=my-registry.com
+flow build container -- v1.2.3 --publish=true --registry=my-registry.com
 ```
+
+> [!WARNING]
+> **Breaking change:** Executable arguments now use standard `--flag=value` syntax with a `--` separator.
+> The previous `flag=value` format (e.g., `flow build container v1.2.3 publish=true`) is no longer supported.
+> Use `--` to separate flow flags from executable arguments, and prefix flag names with `--`.
 
 **Argument types:**
 - `pos`: Positional argument (by position number, starting from 1)
