@@ -27,6 +27,9 @@ func IsGitURL(s string) bool {
 	if err != nil {
 		return false
 	}
+	if u.Scheme == "file" && u.Path != "" {
+		return true
+	}
 	return (u.Scheme == "https" || u.Scheme == "http" || u.Scheme == "ssh") &&
 		u.Host != "" &&
 		strings.HasSuffix(u.Path, ".git")
@@ -176,5 +179,9 @@ func parseGitURL(gitURL string) (host, repoPath string, err error) {
 	if err != nil {
 		return "", "", fmt.Errorf("invalid git URL: %w", err)
 	}
-	return u.Host, u.Path, nil
+	host = u.Host
+	if host == "" {
+		host = "localhost"
+	}
+	return host, u.Path, nil
 }
