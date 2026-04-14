@@ -27,6 +27,8 @@ When you add a workspace, flow creates a `flow.yaml` configuration file in the r
 
 #### Git Workspaces
 
+> **Prerequisite:** Git must be installed and available on your `PATH` to use git workspace features.
+
 You can also add workspaces directly from Git repositories. Flow clones the repository to its cache directory and registers it as a workspace:
 
 ```shell

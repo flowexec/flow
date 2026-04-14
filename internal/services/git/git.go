@@ -136,8 +136,20 @@ func ResetPull(repoDir, ref, refType string) error {
 	return runGit(repoDir, "clean", "-fd")
 }
 
+// EnsureInstalled checks that the git binary is available on PATH.
+func EnsureInstalled() error {
+	if _, err := exec.LookPath("git"); err != nil {
+		return fmt.Errorf("git is not installed or not in PATH (required for git workspace features)")
+	}
+	return nil
+}
+
 // runGit executes a git command, streams progress to stderr, and captures output for error messages.
 func runGit(dir string, args ...string) error {
+	if err := EnsureInstalled(); err != nil {
+		return err
+	}
+
 	cmd := exec.Command("git", args...)
 	if dir != "" {
 		cmd.Dir = dir
