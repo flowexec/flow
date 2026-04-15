@@ -57,6 +57,7 @@ func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, browseCmd, *flags.FilterNamespaceFlag)
 	RegisterFlag(ctx, browseCmd, *flags.FilterVerbFlag)
 	RegisterFlag(ctx, browseCmd, *flags.FilterTagFlag)
+	RegisterFlag(ctx, browseCmd, *flags.FilterAnnotationFlag)
 	RegisterFlag(ctx, browseCmd, *flags.FilterExecSubstringFlag)
 	RegisterFlag(ctx, browseCmd, *flags.AllNamespacesFlag)
 	RegisterFlag(ctx, browseCmd, *flags.VisibilityFlag)
@@ -105,6 +106,7 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)
 	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
+	annotationFilter := flags.ValueFor[[]string](cmd, *flags.FilterAnnotationFlag, false)
 	subStr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
 	visStr := flags.ValueFor[string](cmd, *flags.VisibilityFlag, false)
@@ -129,12 +131,13 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	libraryModel := execIO.NewLibraryView(
 		ctx, allWs, allExecs,
 		execIO.Filter{
-			Workspace:  wsFilter,
-			Namespace:  nsFilter,
-			Verb:       executable.Verb(verbFilter),
-			Tags:       tagsFilter,
-			Substring:  subStr,
-			Visibility: visibilityFilter,
+			Workspace:   wsFilter,
+			Namespace:   nsFilter,
+			Verb:        executable.Verb(verbFilter),
+			Tags:        tagsFilter,
+			Annotations: annotationFilter,
+			Substring:   subStr,
+			Visibility:  visibilityFilter,
 		},
 		runFunc,
 	)
@@ -161,6 +164,7 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)
 	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
+	annotationFilter := flags.ValueFor[[]string](cmd, *flags.FilterAnnotationFlag, false)
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	substr := flags.ValueFor[string](cmd, *flags.FilterExecSubstringFlag, false)
 
@@ -183,6 +187,7 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		FilterByNamespace(nsFilter).
 		FilterByVerb(executable.Verb(verbFilter)).
 		FilterByTags(tagsFilter).
+		FilterByAnnotations(annotationFilter).
 		FilterBySubstring(substr)
 
 	if TUIEnabled(ctx, cmd) {

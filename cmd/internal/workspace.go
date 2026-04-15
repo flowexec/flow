@@ -363,12 +363,14 @@ func registerListWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	}
 	RegisterFlag(ctx, listCmd, *flags.OutputFormatFlag)
 	RegisterFlag(ctx, listCmd, *flags.FilterTagFlag)
+	RegisterFlag(ctx, listCmd, *flags.FilterAnnotationFlag)
 	wsCmd.AddCommand(listCmd)
 }
 
 func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	tagsFilter := flags.ValueFor[[]string](cmd, *flags.FilterTagFlag, false)
+	annotationFilter := flags.ValueFor[[]string](cmd, *flags.FilterAnnotationFlag, false)
 
 	workspaceCache, err := ctx.WorkspacesCache.GetLatestData()
 	if err != nil {
@@ -380,6 +382,9 @@ func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		location := workspaceCache.WorkspaceLocations[name]
 		ws.SetContext(name, location)
 		if !common.Tags(ws.Tags).HasAnyTag(tagsFilter) {
+			continue
+		}
+		if !common.Annotations(ws.Annotations).MatchesAnnotationSelectors(annotationFilter) {
 			continue
 		}
 		filteredWorkspaces = append(filteredWorkspaces, ws)

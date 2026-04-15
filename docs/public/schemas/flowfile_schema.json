@@ -12,6 +12,13 @@
         "type": "string"
       }
     },
+    "CommonAnnotations": {
+      "description": "A map of arbitrary string key/value metadata attached to the object.\nAnnotations are intended for use by external tools and integrations to\nstore system metadata. Unlike tags, annotations are not used for\nfiltering or display in the Flow UI - treat them as opaque state.\nKeys should be namespaced (e.g. `my-tool.example.com/state`) to avoid\ncollisions between tools.\n",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "CommonTags": {
       "description": "A list of tags.\nTags can be used with list commands to filter returned data.\n",
       "type": "array",
@@ -41,6 +48,10 @@
         "aliases": {
           "$ref": "#/definitions/CommonAliases",
           "default": []
+        },
+        "annotations": {
+          "$ref": "#/definitions/CommonAnnotations",
+          "default": {}
         },
         "description": {
           "description": "A description of the executable.\nThis description is rendered as markdown in the interactive UI.\n",
@@ -673,6 +684,10 @@
     "Verb": {}
   },
   "properties": {
+    "annotations": {
+      "$ref": "#/definitions/CommonAnnotations",
+      "default": {}
+    },
     "description": {
       "description": "A description of the executables defined within the flow file. This description will used as a shared description\nfor all executables in the flow file.\n",
       "type": "string",

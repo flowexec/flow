@@ -46,6 +46,13 @@
         }
       }
     },
+    "CommonAnnotations": {
+      "description": "A map of arbitrary string key/value metadata attached to the object.\nAnnotations are intended for use by external tools and integrations to\nstore system metadata. Unlike tags, annotations are not used for\nfiltering or display in the Flow UI - treat them as opaque state.\nKeys should be namespaced (e.g. `my-tool.example.com/state`) to avoid\ncollisions between tools.\n",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "ExecutableRef": {
       "description": "A reference to an executable.\nThe format is `\u003cverb\u003e \u003cworkspace\u003e/\u003cnamespace\u003e:\u003cexecutable name\u003e`.\nFor example, `exec ws/ns:my-workflow`.\n\n- If the workspace is not specified, the current workspace will be used.\n- If the namespace is not specified, the current namespace will be used.\n- Excluding the name will reference the executable with a matching verb but an unspecified name and namespace (e.g. `exec ws` or simply `exec`).\n",
       "type": "string"
@@ -135,6 +142,10 @@
     }
   },
   "properties": {
+    "annotations": {
+      "$ref": "#/definitions/CommonAnnotations",
+      "default": {}
+    },
     "artifacts": {
       "description": "A list of artifacts to be copied after generating the flow file.",
       "type": "array",

@@ -244,6 +244,48 @@ var _ = Describe("ExecutableList", func() {
 		})
 	})
 
+	Describe("FilterByAnnotations", func() {
+		BeforeEach(func() {
+			exec1.Annotations = executable.ExecutableAnnotations{"managed-by": "tool-a", "env": "prod"}
+			exec2.Annotations = executable.ExecutableAnnotations{"managed-by": "tool-b", "env": "prod"}
+			execs = executable.ExecutableList{exec1, exec2}
+		})
+
+		It("should return all executables when selectors are empty", func() {
+			Expect(execs.FilterByAnnotations(nil)).To(HaveLen(2))
+			Expect(execs.FilterByAnnotations([]string{})).To(HaveLen(2))
+		})
+
+		It("should match by key=value exact value", func() {
+			filtered := execs.FilterByAnnotations([]string{"managed-by=tool-a"})
+			Expect(filtered).To(HaveLen(1))
+			Expect(filtered[0].Name).To(Equal(exec1.Name))
+		})
+
+		It("should match by key presence regardless of value", func() {
+			filtered := execs.FilterByAnnotations([]string{"managed-by"})
+			Expect(filtered).To(HaveLen(2))
+		})
+
+		It("should AND multiple selectors", func() {
+			filtered := execs.FilterByAnnotations([]string{"env=prod", "managed-by=tool-b"})
+			Expect(filtered).To(HaveLen(1))
+			Expect(filtered[0].Name).To(Equal(exec2.Name))
+		})
+
+		It("should return empty when a selector key is absent", func() {
+			Expect(execs.FilterByAnnotations([]string{"missing"})).To(BeEmpty())
+		})
+
+		It("should return empty when a selector value does not match", func() {
+			Expect(execs.FilterByAnnotations([]string{"env=staging"})).To(BeEmpty())
+		})
+
+		It("should ignore whitespace-only selectors", func() {
+			Expect(execs.FilterByAnnotations([]string{"   "})).To(HaveLen(2))
+		})
+	})
+
 	Describe("FilterByVerb", func() {
 		BeforeEach(func() {
 			exec1.Verb = "run"

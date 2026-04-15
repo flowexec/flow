@@ -2,6 +2,8 @@
 
 package executable
 
+import "github.com/flowexec/flow/types/common"
+
 // File source and destination configuration.
 // Go templating from form data is supported in all fields.
 type Artifact struct {
@@ -90,6 +92,9 @@ const FieldTypeText FieldType = "text"
 // Configuration for a flowfile template; templates can be used to generate flow
 // files.
 type Template struct {
+	// Annotations corresponds to the JSON schema field "annotations".
+	Annotations TemplateAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
 	// A list of artifacts to be copied after generating the flow file.
 	Artifacts []Artifact `json:"artifacts,omitempty" yaml:"artifacts,omitempty" mapstructure:"artifacts,omitempty"`
 
@@ -116,6 +121,8 @@ type Template struct {
 	// after rendering.
 	Template string `json:"template" yaml:"template" mapstructure:"template"`
 }
+
+type TemplateAnnotations common.Annotations
 
 // Configuration for a template executable.
 type TemplateRefConfig struct {

@@ -87,6 +87,15 @@ var FilterTagFlag = &Metadata{
 	Required:  false,
 }
 
+var FilterAnnotationFlag = &Metadata{
+	Name: "annotation",
+	Usage: "Filter by annotations. Format: 'key=value' for exact value match, " +
+		"or 'key' for presence regardless of value. Repeat the flag for multiple selectors; " +
+		"all selectors must match (AND).",
+	Default:  []string{},
+	Required: false,
+}
+
 var OutputFormatFlag = &Metadata{
 	Name:      "output",
 	Shorthand: "o",

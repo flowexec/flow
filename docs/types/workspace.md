@@ -18,6 +18,7 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 
 | Field | Description | Type | Default | Required |
 | ----- | ----------- | ---- | ------- | :--------: |
+| `annotations` |  | [CommonAnnotations](#commonannotations) | map[] |  |
 | `description` | A description of the workspace. This description is rendered as markdown in the interactive UI. | `string` |  |  |
 | `descriptionFile` | A path to a markdown file that contains the description of the workspace. | `string` |  |  |
 | `displayName` | The display name of the workspace. This is used in the interactive UI. | `string` |  |  |
@@ -31,6 +32,21 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 
 
 ## Definitions
+
+### CommonAnnotations
+
+A map of arbitrary string key/value metadata attached to the object.
+Annotations are intended for use by external tools and integrations to
+store system metadata. Unlike tags, annotations are not used for
+filtering or display in the Flow UI - treat them as opaque state.
+Keys should be namespaced (e.g. `my-tool.example.com/state`) to avoid
+collisions between tools.
+
+
+**Type:** `map` (`string` -> `string`)
+
+
+
 
 ### CommonTags
 

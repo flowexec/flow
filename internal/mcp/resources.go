@@ -81,6 +81,7 @@ func workspaceResourceHandler(_ context.Context, request mcp.ReadResourceRequest
 		DisplayName: ws.DisplayName,
 		Description: ws.Description,
 		Tags:        ws.Tags,
+		Annotations: map[string]string(ws.Annotations),
 	}
 	if ws.Executables != nil {
 		output.Executables = &ExecutableFilter{
@@ -162,6 +163,7 @@ func executableResourceHandler(_ context.Context, request mcp.ReadResourceReques
 					Visibility:  visibility,
 					Tags:        exec.Tags,
 					Aliases:     exec.Aliases,
+					Annotations: map[string]string(exec.Annotations),
 				}
 
 				jsonData, err := json.MarshalIndent(output, "", "  ")

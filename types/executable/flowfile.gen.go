@@ -11,6 +11,9 @@ import "github.com/flowexec/flow/types/common"
 // (namespace, tags, etc). A workspace can have multiple flow files located
 // anywhere in the workspace directory
 type FlowFile struct {
+	// Annotations corresponds to the JSON schema field "annotations".
+	Annotations FlowFileAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
 	// configPath corresponds to the JSON schema field "configPath".
 	configPath string `json:"configPath,omitempty" yaml:"configPath,omitempty" mapstructure:"configPath,omitempty"`
 
@@ -55,6 +58,8 @@ type FlowFile struct {
 	// workspacePath corresponds to the JSON schema field "workspacePath".
 	workspacePath string `json:"workspacePath,omitempty" yaml:"workspacePath,omitempty" mapstructure:"workspacePath,omitempty"`
 }
+
+type FlowFileAnnotations common.Annotations
 
 type FlowFileVisibility common.Visibility
 

@@ -18,6 +18,7 @@ in order to be discovered by the CLI. It's configuration is used to define a gro
 
 | Field | Description | Type | Default | Required |
 | ----- | ----------- | ---- | ------- | :--------: |
+| `annotations` |  | [CommonAnnotations](#commonannotations) | map[] |  |
 | `description` | A description of the executables defined within the flow file. This description will used as a shared description for all executables in the flow file.  | `string` |  |  |
 | `descriptionFile` | A path to a markdown file that contains the description of the executables defined within the flow file. | `string` |  |  |
 | `executables` |  | `array` ([Executable](#executable)) | [] |  |
@@ -35,6 +36,21 @@ in order to be discovered by the CLI. It's configuration is used to define a gro
 Alternate names that can be used to reference the executable in the CLI.
 
 **Type:** `array` (`string`)
+
+
+
+
+### CommonAnnotations
+
+A map of arbitrary string key/value metadata attached to the object.
+Annotations are intended for use by external tools and integrations to
+store system metadata. Unlike tags, annotations are not used for
+filtering or display in the Flow UI - treat them as opaque state.
+Keys should be namespaced (e.g. `my-tool.example.com/state`) to avoid
+collisions between tools.
+
+
+**Type:** `map` (`string` -> `string`)
 
 
 
@@ -86,6 +102,7 @@ Executables are the building blocks of workflows and are used to define the acti
 | Field | Description | Type | Default | Required |
 | ----- | ----------- | ---- | ------- | :--------: |
 | `aliases` |  | [CommonAliases](#commonaliases) | [] |  |
+| `annotations` |  | [CommonAnnotations](#commonannotations) | map[] |  |
 | `description` | A description of the executable. This description is rendered as markdown in the interactive UI.  | `string` |  |  |
 | `exec` |  | [ExecutableExecExecutableType](#executableexecexecutabletype) |  |  |
 | `launch` |  | [ExecutableLaunchExecutableType](#executablelaunchexecutabletype) |  |  |

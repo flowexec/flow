@@ -33,6 +33,9 @@ type VerbAliases map[string][]string
 // Every workspace has a workspace config file named `flow.yaml` in the root of the
 // workspace directory.
 type Workspace struct {
+	// Annotations corresponds to the JSON schema field "annotations".
+	Annotations WorkspaceAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
 	// assignedName corresponds to the JSON schema field "assignedName".
 	assignedName string `json:"assignedName,omitempty" yaml:"assignedName,omitempty" mapstructure:"assignedName,omitempty"`
 
@@ -81,6 +84,8 @@ type Workspace struct {
 	// VerbAliases corresponds to the JSON schema field "verbAliases".
 	VerbAliases *WorkspaceVerbAliases `json:"verbAliases,omitempty" yaml:"verbAliases,omitempty" mapstructure:"verbAliases,omitempty"`
 }
+
+type WorkspaceAnnotations common.Annotations
 
 type WorkspaceGitRefType string
 

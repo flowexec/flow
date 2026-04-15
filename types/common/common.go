@@ -50,6 +50,26 @@ func (t Tags) HasTag(tag string) bool {
 	return slices.Contains(t, tag)
 }
 
+// MatchesAnnotationSelectors reports whether the annotations satisfy every selector.
+// Each selector is either "key" (matches if the key is present, regardless of value)
+// or "key=value" (matches if the key is present with the exact value). Empty or
+// whitespace-only selectors are ignored. An empty selector list always matches.
+// Semantics are AND across selectors (all must match).
+func (a Annotations) MatchesAnnotationSelectors(selectors []string) bool {
+	return !slices.ContainsFunc(selectors, func(sel string) bool {
+		key, value, hasValue := strings.Cut(strings.TrimSpace(sel), "=")
+		key = strings.TrimSpace(key)
+		if key == "" {
+			return false
+		}
+		got, ok := a[key]
+		if !ok {
+			return true
+		}
+		return hasValue && got != value
+	})
+}
+
 func (v Visibility) String() string {
 	return string(v)
 }

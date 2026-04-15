@@ -167,6 +167,12 @@ properties:
   template:
     type: string
     description: The flow file template to generate. The template must be a valid flow file after rendering.
+  annotations:
+    $ref: '../common/schema.yaml#/definitions/Annotations'
+    goJSONSchema:
+      type: "common.Annotations"
+      imports: ["github.com/flowexec/flow/types/common"]
+    default: {}
   location:
     type: string
     goJSONSchema:

@@ -123,7 +123,8 @@ func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 }
 
 func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	// TODO: include unregistered templates within the current ws
+	// TODO: include unregistered templates within the current ws;
+	// add --annotation filter flags (mirroring browse / workspace list)
 	tmpls, err := filesystem.LoadFlowFileTemplates(ctx.Config.Templates)
 	if err != nil {
 		logger.Log().FatalErr(err)

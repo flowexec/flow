@@ -17,6 +17,7 @@ Configuration for a flowfile template; templates can be used to generate flow fi
 
 | Field | Description | Type | Default | Required |
 | ----- | ----------- | ---- | ------- | :--------: |
+| `annotations` |  | [CommonAnnotations](#commonannotations) | map[] |  |
 | `artifacts` | A list of artifacts to be copied after generating the flow file. | `array` ([Artifact](#artifact)) |  |  |
 | `form` | Form fields to be displayed to the user when generating a flow file from a template.  The form will be rendered first, and the user's input can be used to render the template.  | `array` ([Field](#field)) | [] |  |
 | `postRun` | A list of exec executables to run after generating the flow file. | `array` ([TemplateRefConfig](#templaterefconfig)) |  |  |
@@ -46,6 +47,21 @@ Go templating from form data is supported in all fields.
 | `if` | An expression that determines whether the the artifact should be copied, using the Expr language syntax.  The expression is evaluated at runtime and must resolve to a boolean value. If the condition is not met,  the artifact will not be copied.  The expression has access to OS/architecture information (os, arch), environment variables (env), form input  (form), and context information (name, workspace, directory, etc.).  See the [flow documentation](https://flowexec.io/guide/templating) for more information.  | `string` |  |  |
 | `srcDir` | The directory to copy the file from.  If not set, the file will be copied from the directory of the template file.  | `string` |  |  |
 | `srcName` | The name of the file to copy. | `string` |  |  |
+
+### CommonAnnotations
+
+A map of arbitrary string key/value metadata attached to the object.
+Annotations are intended for use by external tools and integrations to
+store system metadata. Unlike tags, annotations are not used for
+filtering or display in the Flow UI - treat them as opaque state.
+Keys should be namespaced (e.g. `my-tool.example.com/state`) to avoid
+collisions between tools.
+
+
+**Type:** `map` (`string` -> `string`)
+
+
+
 
 ### ExecutableRef
 

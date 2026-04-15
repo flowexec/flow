@@ -28,6 +28,7 @@ type Filter struct {
 	Workspace, Namespace string
 	Verb                 executable.Verb
 	Tags                 flowCommon.Tags
+	Annotations          []string
 	Substring            string
 	Visibility           flowCommon.Visibility
 }
@@ -83,6 +84,7 @@ func applyFilter(execs executable.ExecutableList, filter Filter) executable.Exec
 		FilterByNamespace(filter.Namespace).
 		FilterByVerb(filter.Verb).
 		FilterByTags(filter.Tags).
+		FilterByAnnotations(filter.Annotations).
 		FilterBySubstring(filter.Substring)
 }
 

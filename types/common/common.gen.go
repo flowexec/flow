@@ -5,6 +5,14 @@ package common
 // Alternate names that can be used to reference the executable in the CLI.
 type Aliases []string
 
+// A map of arbitrary string key/value metadata attached to the object.
+// Annotations are intended for use by external tools and integrations to
+// store system metadata. Unlike tags, annotations are not used for
+// filtering or display in the Flow UI - treat them as opaque state.
+// Keys should be namespaced (e.g. `my-tool.example.com/state`) to avoid
+// collisions between tools.
+type Annotations map[string]string
+
 // A list of tags.
 // Tags can be used with list commands to filter returned data.
 type Tags []string

@@ -102,6 +102,9 @@ type Executable struct {
 	// Aliases corresponds to the JSON schema field "aliases".
 	Aliases ExecutableAliases `json:"aliases,omitempty" yaml:"aliases,omitempty" mapstructure:"aliases,omitempty"`
 
+	// Annotations corresponds to the JSON schema field "annotations".
+	Annotations ExecutableAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
+
 	// A description of the executable.
 	// This description is rendered as markdown in the interactive UI.
 	//
@@ -170,6 +173,8 @@ type Executable struct {
 }
 
 type ExecutableAliases common.Aliases
+
+type ExecutableAnnotations common.Annotations
 
 type ExecutableTags common.Tags
 

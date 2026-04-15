@@ -626,6 +626,11 @@ properties:
     goJSONSchema:
       type: "common.Tags"
     default: []
+  annotations:
+    $ref: '../common/schema.yaml#/definitions/Annotations'
+    goJSONSchema:
+      type: "common.Annotations"
+    default: {}
   verb:
     $ref: '#/definitions/Verb'
     default: exec

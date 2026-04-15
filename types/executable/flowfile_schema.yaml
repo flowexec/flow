@@ -51,6 +51,12 @@ properties:
     items:
       type: string
     default: []
+  annotations:
+    $ref: '../common/schema.yaml#/definitions/Annotations'
+    goJSONSchema:
+      type: "common.Annotations"
+      imports: ["github.com/flowexec/flow/types/common"]
+    default: {}
   description:
     type: string
     description: |

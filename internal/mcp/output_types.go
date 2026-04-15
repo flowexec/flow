@@ -51,6 +51,7 @@ type WorkspaceOutput struct {
 	EnvFiles        []string            `json:"envFiles,omitempty"`
 	Executables     *ExecutableFilter   `json:"executables,omitempty"`
 	VerbAliases     map[string][]string `json:"verbAliases,omitempty"`
+	Annotations     map[string]string   `json:"annotations,omitempty"`
 }
 
 type ExecutableFilter struct {
@@ -67,19 +68,20 @@ type WorkspaceListOutput struct {
 
 // ExecutableOutput is the output of the get_executable tool.
 type ExecutableOutput struct {
-	ID              string   `json:"id"`
-	Ref             string   `json:"ref"`
-	Name            string   `json:"name"`
-	Namespace       string   `json:"namespace"`
-	Workspace       string   `json:"workspace"`
-	FlowFile        string   `json:"flowfile"`
-	Description     string   `json:"description,omitempty"`
-	FullDescription string   `json:"fullDescription,omitempty"`
-	Verb            string   `json:"verb"`
-	Visibility      string   `json:"visibility,omitempty"`
-	Timeout         string   `json:"timeout,omitempty"`
-	Tags            []string `json:"tags,omitempty"`
-	Aliases         []string `json:"aliases,omitempty"`
+	ID              string            `json:"id"`
+	Ref             string            `json:"ref"`
+	Name            string            `json:"name"`
+	Namespace       string            `json:"namespace"`
+	Workspace       string            `json:"workspace"`
+	FlowFile        string            `json:"flowfile"`
+	Description     string            `json:"description,omitempty"`
+	FullDescription string            `json:"fullDescription,omitempty"`
+	Verb            string            `json:"verb"`
+	Visibility      string            `json:"visibility,omitempty"`
+	Timeout         string            `json:"timeout,omitempty"`
+	Tags            []string          `json:"tags,omitempty"`
+	Aliases         []string          `json:"aliases,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty"`
 }
 
 // ExecutableListOutput is the output of the list_executables tool.

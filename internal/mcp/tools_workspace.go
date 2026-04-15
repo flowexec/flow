@@ -165,6 +165,7 @@ func getWorkspaceConfigHandler() server.ToolHandlerFunc {
 				DisplayName: ws.DisplayName,
 				Description: ws.Description,
 				Tags:        ws.Tags,
+				Annotations: map[string]string(ws.Annotations),
 			},
 		}
 		if ws.Executables != nil {

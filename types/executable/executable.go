@@ -409,6 +409,20 @@ func (l ExecutableList) FilterByTags(tags common.Tags) ExecutableList {
 	return filteredExecs
 }
 
+func (l ExecutableList) FilterByAnnotations(selectors []string) ExecutableList {
+	if len(selectors) == 0 {
+		return l
+	}
+
+	filteredExecs := make(ExecutableList, 0)
+	for _, exec := range l {
+		if common.Annotations(exec.Annotations).MatchesAnnotationSelectors(selectors) {
+			filteredExecs = append(filteredExecs, exec)
+		}
+	}
+	return filteredExecs
+}
+
 func (l ExecutableList) FilterByVerb(verb Verb) ExecutableList {
 	if verb == "" || verb == "*" {
 		return l
