@@ -63,10 +63,22 @@ func resetConfigFunc(ctx *context.Context, _ *cobra.Command, _ []string) {
 		return
 	}
 
-	if err := filesystem.InitConfig(); err != nil {
+	resetCfg := &config.Config{
+		Workspaces:       ctx.Config.Workspaces,
+		CurrentWorkspace: ctx.Config.CurrentWorkspace,
+		Templates:        ctx.Config.Templates,
+		Vaults:           ctx.Config.Vaults,
+		CurrentVault:     ctx.Config.CurrentVault,
+		WorkspaceMode:    config.ConfigWorkspaceModeDynamic,
+		Interactive: &config.Interactive{
+			Enabled: true,
+		},
+		DefaultLogMode: "logfmt",
+	}
+	if err := filesystem.WriteConfig(resetCfg); err != nil {
 		logger.Log().FatalErr(err)
 	}
-	logger.Log().PlainTextSuccess("Restored flow configurations")
+	logger.Log().PlainTextSuccess("Restored flow configurations (workspaces, vaults, and templates preserved)")
 }
 
 func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {

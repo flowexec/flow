@@ -72,9 +72,13 @@ func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResu
 	}
 	cfg.SetDefaults()
 
-	wsName, err := cfg.CurrentWorkspaceName()
-	if err != nil {
-		return toolError(ErrCodeInternal, fmt.Sprintf("failed to get current workspace name: %s", err)), nil
+	var wsName, wsPath string
+	if len(cfg.Workspaces) > 0 {
+		wsName, err = cfg.CurrentWorkspaceName()
+		if err != nil {
+			return toolError(ErrCodeInternal, fmt.Sprintf("failed to get current workspace name: %s", err)), nil
+		}
+		wsPath = cfg.Workspaces[wsName]
 	}
 
 	output := FlowInfoOutput{
@@ -83,7 +87,7 @@ func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResu
 			Namespace:     cfg.CurrentNamespace,
 			Vault:         cfg.CurrentVaultName(),
 			WorkspaceMode: string(cfg.WorkspaceMode),
-			WorkspacePath: cfg.Workspaces[cfg.CurrentWorkspace],
+			WorkspacePath: wsPath,
 		},
 		Summary:    flowInfoSummary,
 		DocsURL:    docsBaseURL,

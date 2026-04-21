@@ -133,7 +133,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	if !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
+	if ctx.CurrentWorkspace != nil && !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
 		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
 			"executable '%s' cannot be executed from workspace %s",
 			ref,

@@ -41,22 +41,9 @@ func EnsureConfigDir() error {
 }
 
 func InitConfig() error {
-	if err := EnsureDefaultWorkspace(); err != nil {
-		return errors.Wrap(err, "unable to ensure default workspace")
-	}
-	defaultWsName := "default"
-	if _, err := os.Stat(filepath.Join(DefaultWorkspaceDir(), WorkspaceConfigFileName)); os.IsNotExist(err) {
-		if err := InitWorkspaceConfig(defaultWsName, DefaultWorkspaceDir()); err != nil {
-			return errors.Wrap(err, "unable to initialize default workspace config")
-		}
-	} else if err != nil {
-		return errors.Wrap(err, "unable to check for default workspace config")
-	}
-
 	defaultCfg := &config.Config{
-		Workspaces:       map[string]string{defaultWsName: DefaultWorkspaceDir()},
-		CurrentWorkspace: defaultWsName,
-		WorkspaceMode:    config.ConfigWorkspaceModeDynamic,
+		Workspaces:    make(map[string]string),
+		WorkspaceMode: config.ConfigWorkspaceModeDynamic,
 		Interactive: &config.Interactive{
 			Enabled: true,
 		},

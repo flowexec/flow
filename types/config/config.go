@@ -17,15 +17,10 @@ import (
 //go:generate go run github.com/atombender/go-jsonschema@v0.16.0 -et --only-models -p config -o config.gen.go schema.yaml
 
 func (c *Config) Validate() error {
-	if c.CurrentWorkspace == "" {
-		if _, found := c.Workspaces["default"]; found {
-			c.CurrentWorkspace = "default"
-		} else {
-			return fmt.Errorf("current workspace is not set")
+	if c.CurrentWorkspace != "" {
+		if _, wsFound := c.Workspaces[c.CurrentWorkspace]; !wsFound {
+			return fmt.Errorf("current workspace %s does not exist", c.CurrentWorkspace)
 		}
-	}
-	if _, wsFound := c.Workspaces[c.CurrentWorkspace]; !wsFound {
-		return fmt.Errorf("current workspace %s does not exist", c.CurrentWorkspace)
 	}
 	if c.WorkspaceMode != "" &&
 		c.WorkspaceMode != ConfigWorkspaceModeFixed &&

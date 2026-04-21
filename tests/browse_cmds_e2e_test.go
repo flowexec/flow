@@ -118,7 +118,7 @@ var _ = Describe("browse TUI", func() {
 			Name: "snapshot",
 			Exec: &executable.ExecExecutableType{Cmd: "echo 'Hello, world! This is a snapshot test.'"},
 		}
-		exec.SetContext("default", ctx.WorkspaceDir(), "", path)
+		exec.SetContext(utils.TestWorkspaceName, ctx.WorkspaceDir(), "", path)
 
 		tm := teatest.NewTestModel(GinkgoTB(), container, teatest.WithInitialTermSize(80, 25))
 		container.Program().SetTeaProgram(tm.GetProgram())

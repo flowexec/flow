@@ -211,7 +211,7 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if len(args) > 1 {
 		id := args[1]
 		ws, ns, name := executable.MustParseExecutableID(id)
-		if ws == executable.WildcardWorkspace {
+		if ws == executable.WildcardWorkspace && ctx.CurrentWorkspace != nil {
 			ws = ctx.CurrentWorkspace.AssignedName()
 		}
 		if ns == executable.WildcardNamespace && ctx.Config.CurrentNamespace != "" {

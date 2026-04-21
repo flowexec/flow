@@ -7,7 +7,7 @@ import (
 )
 
 func LogsDir() string {
-	return CachedDataDirPath() + "/logs"
+	return StateDirPath() + "/logs"
 }
 
 func EnsureLogsDir() error {

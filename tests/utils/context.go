@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	TestWorkspaceName        = "default"
-	TestWorkspaceDisplayName = "Default Workspace"
+	TestWorkspaceName        = "test"
+	TestWorkspaceDisplayName = "Test Workspace"
 
 	userConfigSubdir = "config"
 	cacheSubdir      = "cache"

@@ -12,10 +12,6 @@ import (
 
 const WorkspaceConfigFileName = "flow.yaml"
 
-func DefaultWorkspaceDir() string {
-	return CachedDataDirPath() + "/default"
-}
-
 func InitWorkspaceConfig(name, path string) error {
 	wsCfg := workspace.DefaultWorkspaceConfig(name)
 
@@ -25,18 +21,6 @@ func InitWorkspaceConfig(name, path string) error {
 
 	if err := WriteWorkspaceConfig(path, wsCfg); err != nil {
 		return errors.Wrap(err, "unable to write workspace config")
-	}
-	return nil
-}
-
-func EnsureDefaultWorkspace() error {
-	if _, err := os.Stat(DefaultWorkspaceDir()); os.IsNotExist(err) {
-		err = os.MkdirAll(DefaultWorkspaceDir(), 0750)
-		if err != nil {
-			return errors.Wrap(err, "unable to create default workspace directory")
-		}
-	} else if err != nil {
-		return errors.Wrap(err, "unable to check for default workspace directory")
 	}
 	return nil
 }

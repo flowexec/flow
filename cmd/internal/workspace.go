@@ -432,6 +432,9 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		workspaceName = args[0]
 		wsPath = ctx.Config.Workspaces[workspaceName]
 	} else {
+		if ctx.CurrentWorkspace == nil {
+			errhandler.HandleUsage(ctx, cmd, "no current workspace set — run 'flow workspace add' to get started")
+		}
 		workspaceName = ctx.CurrentWorkspace.AssignedName()
 		wsPath = ctx.CurrentWorkspace.Location()
 	}

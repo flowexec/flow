@@ -83,11 +83,14 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 		// This is a temporary solution until the config handling is refactored a bit
 		_ = os.Setenv(executable.TimeoutOverrideEnv, cfg.DefaultTimeout.String())
 	}
-	wsConfig, err := currentWorkspace(cfg)
-	if err != nil {
-		panic(errors.Wrap(err, "workspace config load error"))
-	} else if wsConfig == nil {
-		panic(fmt.Errorf("workspace config not found in current workspace (%s)", cfg.CurrentWorkspace))
+	var wsConfig *workspace.Workspace
+	if len(cfg.Workspaces) > 0 {
+		wsConfig, err = currentWorkspace(cfg)
+		if err != nil {
+			panic(errors.Wrap(err, "workspace config load error"))
+		} else if wsConfig == nil {
+			panic(fmt.Errorf("workspace config not found in current workspace (%s)", cfg.CurrentWorkspace))
+		}
 	}
 
 	ds, err := store.NewDataStore(store.Path())
@@ -164,7 +167,10 @@ func (ctx *Context) Value(key any) any {
 }
 
 func (ctx *Context) String() string {
-	ws := ctx.CurrentWorkspace.AssignedName()
+	var ws string
+	if ctx.CurrentWorkspace != nil {
+		ws = ctx.CurrentWorkspace.AssignedName()
+	}
 	ns := ctx.Config.CurrentNamespace
 	if ws == "" {
 		ws = "unk"
@@ -255,7 +261,7 @@ func (ctx *Context) Finalize() {
 func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 	id := ref.ID()
 	ws, ns, name := executable.MustParseExecutableID(id)
-	if ws == "" || ws == executable.WildcardWorkspace {
+	if (ws == "" || ws == executable.WildcardWorkspace) && ctx.CurrentWorkspace != nil {
 		ws = ctx.CurrentWorkspace.AssignedName()
 	}
 	if ns == "" {
