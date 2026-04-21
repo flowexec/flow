@@ -11,6 +11,7 @@ import (
 	"github.com/flowexec/tuikit/views"
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/io/secret"
 	"github.com/flowexec/flow/internal/utils"
@@ -45,7 +46,7 @@ func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 	secretCmd.AddCommand(removeCmd)
 }
 
-func removeSecretFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	reference := args[0]
 
 	form, err := views.NewForm(
@@ -58,10 +59,10 @@ func removeSecretFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 			Title: fmt.Sprintf("Are you sure you want to remove the secret '%s'?", reference),
 		})
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err := form.Run(ctx); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	resp := form.FindByKey("confirm").Value()
 	if truthy, _ := strconv.ParseBool(resp); !truthy {
@@ -73,10 +74,10 @@ func removeSecretFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	defer v.Close()
 
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err = v.DeleteSecret(reference); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Secret '%s' deleted from vault", reference))
@@ -101,16 +102,16 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	var value string
 	switch {
 	case filename != "" && len(args) >= 2:
-		logger.Log().FatalErr(errors.New("must specify either a filename OR a value as an argument"))
+		errhandler.HandleFatal(ctx, cmd, errors.New("must specify either a filename OR a value as an argument"))
 	case filename != "":
 		wd, err := os.Getwd()
 		if err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		expanded := utils.ExpandPath(filename, wd, envUtils.EnvListToEnvMap(os.Environ()))
 		data, err := os.ReadFile(expanded)
 		if err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		value = string(data)
 	case len(args) == 1:
@@ -124,10 +125,10 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 				Title: "Enter the secret value",
 			})
 		if err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		if err := form.Run(ctx); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		value = form.FindByKey("value").Value()
 	case len(args) == 2:
@@ -142,10 +143,10 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	defer v.Close()
 
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err = v.SetSecret(reference, vault.NewSecretValue([]byte(value))); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Secret %s set in vault", reference))
@@ -185,7 +186,7 @@ func listSecretFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}()
 
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if interactiveUI {
@@ -216,7 +217,7 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	rVault, key, err := vault.RefToParts(vault.SecretRef(reference))
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if rVault == "" {
 		rVault = currentVault(ctx.Config)
@@ -225,11 +226,11 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	defer v.Close()
 
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	s, err := v.GetSecret(key)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if asPlainText {

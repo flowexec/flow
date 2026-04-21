@@ -38,7 +38,7 @@ func main() {
 
 	// Create context
 	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
-	ctx := context.NewContext(bkgCtx, cancelFunc, os.Stdin, os.Stdout)
+	ctx := context.NewContext(bkgCtx, cancelFunc, context.WithStdIn(os.Stdin), context.WithStdOut(os.Stdout))
 	defer ctx.Finalize()
 
 	// Build root command with custom version

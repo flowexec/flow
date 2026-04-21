@@ -7,6 +7,7 @@ import (
 	"github.com/flowexec/tuikit/views"
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
 	"github.com/flowexec/flow/pkg/context"
@@ -63,10 +64,10 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 				Title: "Enter the value to store",
 			})
 		if err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		if err = form.Run(ctx); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		value = form.FindByKey("value").Value()
 	case len(args) == 2:
@@ -82,7 +83,7 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		bucketName = store.RootBucket
 	}
 	if err := ctx.DataStore.SetProcessVar(bucketName, key, value); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextInfo(fmt.Sprintf("Key %q set in the cache", key))
 }
@@ -112,7 +113,7 @@ func cacheGetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 	value, err := ctx.DataStore.GetProcessVar(bucketName, key)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess(value)
 }
@@ -137,7 +138,7 @@ func registerCacheListCmd(ctx *context.Context, rootCmd *cobra.Command) {
 func cacheListFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	data, err := ctx.DataStore.GetAllProcessVars(store.EnvironmentBucket())
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
@@ -172,7 +173,7 @@ func cacheRemoveFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		bucketName = store.RootBucket
 	}
 	if err := ctx.DataStore.DeleteProcessVar(bucketName, key); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Key %q removed from the cache", key))
 }
@@ -196,13 +197,13 @@ func cacheClearFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	full := flags.ValueFor[bool](cmd, *flags.StoreAllFlag, false)
 	if full {
 		if err := store.DestroyStore(); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		logger.Log().PlainTextSuccess("Cache cleared")
 		return
 	}
 	if err := ctx.DataStore.DeleteProcessBucket(store.EnvironmentBucket()); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess("Cache cleared")
 }

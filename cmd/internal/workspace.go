@@ -12,11 +12,13 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	workspaceIO "github.com/flowexec/flow/internal/io/workspace"
 	"github.com/flowexec/flow/internal/services/git"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
+	flowerrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/types/common"
@@ -67,13 +69,13 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[name]; found {
-		logger.Log().Fatalf("workspace %s already exists at %s", name, userConfig.Workspaces[name])
+		errhandler.HandleUsage(ctx, cmd, "workspace %s already exists at %s", name, userConfig.Workspaces[name])
 	}
 
 	branch := flags.ValueFor[string](cmd, *flags.GitBranchFlag, false)
 	tag := flags.ValueFor[string](cmd, *flags.GitTagFlag, false)
 	if branch != "" && tag != "" {
-		logger.Log().Fatalf("cannot specify both --branch and --tag")
+		errhandler.HandleUsage(ctx, cmd, "cannot specify both --branch and --tag")
 	}
 
 	var path string
@@ -92,11 +94,11 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
-		logger.Log().FatalErr(errors.Wrap(err, "failure updating cache"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure updating cache"))
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
@@ -209,11 +211,11 @@ func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 		workspaceName = args[0]
 		wsPath = ctx.Config.Workspaces[workspaceName]
 		if wsPath == "" {
-			logger.Log().Fatalf("workspace %s not found", workspaceName)
+			errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: workspaceName})
 		}
 	} else {
 		if ctx.CurrentWorkspace == nil {
-			logger.Log().Fatalf("no current workspace set")
+			errhandler.HandleUsage(ctx, cmd, "no current workspace set")
 		}
 		workspaceName = ctx.CurrentWorkspace.AssignedName()
 		wsPath = ctx.CurrentWorkspace.Location()
@@ -223,11 +225,16 @@ func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
 	if err != nil {
-		logger.Log().FatalErr(errors.Wrap(err, "unable to load workspace config"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "unable to load workspace config"))
 	}
 
 	if wsCfg.GitRemote == "" {
-		logger.Log().Fatalf("workspace '%s' is not a git-sourced workspace (no gitRemote set in flow.yaml)", workspaceName)
+		errhandler.HandleUsage(
+			ctx,
+			cmd,
+			"workspace '%s' is not a git-sourced workspace (no gitRemote set in flow.yaml)",
+			workspaceName,
+		)
 	}
 
 	if force {
@@ -248,11 +255,11 @@ func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 		if !force {
 			logger.Log().Warnf("Hint: use --force to discard local changes and hard reset to remote")
 		}
-		logger.Log().FatalErr(errors.Wrap(err, "unable to update workspace"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "unable to update workspace"))
 	}
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
-		logger.Log().FatalErr(errors.Wrap(err, "failure updating cache"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure updating cache"))
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' updated", workspaceName))
@@ -277,7 +284,7 @@ func switchWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 	ws := args[0]
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[ws]; !found {
-		logger.Log().Fatalf("workspace %s not found", ws)
+		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: ws})
 	}
 	userConfig.CurrentWorkspace = ws
 	fixedMode := flags.ValueFor[bool](cmd, *flags.FixedWsModeFlag, false)
@@ -286,7 +293,7 @@ func switchWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 	}
 
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess("Workspace set to " + ws)
 }
@@ -307,7 +314,7 @@ func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	wsCmd.AddCommand(deleteCmd)
 }
 
-func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func removeWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 
 	form, err := views.NewForm(
@@ -320,10 +327,10 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 			Title: fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name),
 		})
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err := form.Run(ctx); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	resp := form.FindByKey("confirm").Value()
 	if truthy, _ := strconv.ParseBool(resp); !truthy {
@@ -333,21 +340,21 @@ func removeWorkspaceFunc(ctx *context.Context, _ *cobra.Command, args []string) 
 
 	userConfig := ctx.Config
 	if name == userConfig.CurrentWorkspace {
-		logger.Log().Fatalf("cannot remove the current workspace")
+		errhandler.HandleUsage(ctx, cmd, "cannot remove the current workspace")
 	}
 	if _, found := userConfig.Workspaces[name]; !found {
-		logger.Log().Fatalf("workspace %s was not found", name)
+		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: name})
 	}
 
 	delete(userConfig.Workspaces, name)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	logger.Log().Warnf("Workspace '%s' deleted", name)
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
-		logger.Log().FatalErr(errors.Wrap(err, "unable to update cache"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "unable to update cache"))
 	}
 }
 
@@ -374,7 +381,7 @@ func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	workspaceCache, err := ctx.WorkspacesCache.GetLatestData()
 	if err != nil {
-		logger.Log().Fatal("failure loading workspace configs from cache", "err", err)
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure loading workspace configs from cache"))
 	}
 
 	filteredWorkspaces := make([]*workspace.Workspace, 0)
@@ -391,7 +398,7 @@ func listWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 
 	if len(filteredWorkspaces) == 0 {
-		logger.Log().Fatalf("no workspaces found")
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("no workspaces found"))
 	}
 
 	if TUIEnabled(ctx, cmd) {
@@ -431,9 +438,9 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
 	if err != nil {
-		logger.Log().FatalErr(errors.Wrap(err, "failure loading workspace config"))
+		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure loading workspace config"))
 	} else if wsCfg == nil {
-		logger.Log().Fatalf("config not found for workspace %s", workspaceName)
+		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: workspaceName})
 	}
 
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)

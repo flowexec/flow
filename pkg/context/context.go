@@ -28,10 +28,10 @@ const (
 )
 
 type Context struct {
-	ctx           context.Context
-	cancelFunc    context.CancelFunc
-	stdOut, stdIn *os.File
-	callbacks     []func(*Context) error
+	ctx                   context.Context
+	cancelFunc            context.CancelFunc
+	stdOut, stdIn, stdErr *os.File
+	callbacks             []func(*Context) error
 
 	Config           *config.Config
 	CurrentWorkspace *workspace.Workspace
@@ -59,7 +59,19 @@ type Context struct {
 	LogArchiveID string
 }
 
-func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOut *os.File) *Context {
+// Option configures optional fields on a Context during construction.
+type Option func(*Context)
+
+// WithStdIn sets the standard input file. Defaults to os.Stdin.
+func WithStdIn(f *os.File) Option { return func(c *Context) { c.stdIn = f } }
+
+// WithStdOut sets the standard output file. Defaults to os.Stdout.
+func WithStdOut(f *os.File) Option { return func(c *Context) { c.stdOut = f } }
+
+// WithStdErr sets the standard error file. Defaults to os.Stderr.
+func WithStdErr(f *os.File) Option { return func(c *Context) { c.stdErr = f } }
+
+func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Option) *Context {
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
 		panic(errors.Wrap(err, "user config load error"))
@@ -89,13 +101,17 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 	c := &Context{
 		ctx:              ctx,
 		cancelFunc:       cancelFunc,
-		stdOut:           stdOut,
-		stdIn:            stdIn,
+		stdOut:           os.Stdout,
+		stdIn:            os.Stdin,
+		stdErr:           os.Stderr,
 		Config:           cfg,
 		CurrentWorkspace: wsConfig,
 		WorkspacesCache:  workspaceCache,
 		ExecutableCache:  executableCache,
 		DataStore:        ds,
+	}
+	for _, opt := range opts {
+		opt(c)
 	}
 
 	app := tuikit.NewApplication(
@@ -111,8 +127,8 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, stdIn, stdOu
 	}
 	c.TUIContainer, err = tuikit.NewContainer(
 		ctx, app,
-		tuikit.WithInput(stdIn),
-		tuikit.WithOutput(stdOut),
+		tuikit.WithInput(c.stdIn),
+		tuikit.WithOutput(c.stdOut),
 		tuikit.WithTheme(theme),
 	)
 	if err != nil {
@@ -167,12 +183,26 @@ func (ctx *Context) StdIn() *os.File {
 	return ctx.stdIn
 }
 
+// StdErr returns the standard error file for structured error envelopes.
+// Falls back to os.Stderr when unset (e.g. in tests that bypass NewContext).
+func (ctx *Context) StdErr() *os.File {
+	if ctx.stdErr == nil {
+		return os.Stderr
+	}
+	return ctx.stdErr
+}
+
 // SetIO sets the standard input and output for the context
 // This function should NOT be used outside of tests! The standard input and output
 // should be set when creating the context.
 func (ctx *Context) SetIO(stdIn, stdOut *os.File) {
 	ctx.stdIn = stdIn
 	ctx.stdOut = stdOut
+}
+
+// SetStdErr sets the standard error file. Intended for tests.
+func (ctx *Context) SetStdErr(stdErr *os.File) {
+	ctx.stdErr = stdErr
 }
 
 // SetContext sets the context and cancel function for the Context.

@@ -17,6 +17,7 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/io"
 	"github.com/flowexec/flow/internal/runner"
@@ -73,7 +74,7 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			logMode := flags.ValueFor[string](cmd, *flags.LogModeFlag, false)
 			if err := tuikitIO.LogMode(logMode).Validate(); err != nil {
-				logger.Log().FatalErr(err)
+				errhandler.HandleFatal(ctx, cmd, err)
 			}
 			execPreRun(ctx, cmd, args)
 		},
@@ -105,7 +106,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	if err := verb.Validate(); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	var ref executable.Ref
@@ -120,20 +121,20 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	if err != nil && errors.Is(flowErrors.NewExecutableNotFoundError(ref.String()), err) {
 		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
 		if err := ctx.ExecutableCache.Update(); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		e, err = ctx.ExecutableCache.GetExecutableByRef(ref)
 	}
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if err := e.Validate(); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
-		logger.Log().FatalErr(fmt.Errorf(
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
 			"executable '%s' cannot be executed from workspace %s",
 			ref,
 			ctx.Config.CurrentWorkspace,
@@ -156,7 +157,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	if ctx.DataStore != nil {
 		if err := ctx.DataStore.CreateProcessBucket(ref.String()); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		_ = os.Setenv(store.BucketEnv, ref.String())
 	}
@@ -182,7 +183,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	if runErr != nil {
-		logger.Log().FatalErr(runErr)
+		errhandler.HandleFatal(ctx, cmd, runErr)
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)

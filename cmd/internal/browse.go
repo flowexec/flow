@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/io"
 	execIO "github.com/flowexec/flow/internal/io/executable"
@@ -81,7 +82,7 @@ func browseFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	if !TUIEnabled(ctx, cmd) {
-		logger.Log().FatalErr(errors.New("interactive discovery requires an interactive terminal"))
+		errhandler.HandleFatal(ctx, cmd, errors.New("interactive discovery requires an interactive terminal"))
 	}
 
 	wsFilter := flags.ValueFor[string](cmd, *flags.FilterWorkspaceFlag, false)
@@ -114,17 +115,17 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	if visStr != "" {
 		visibilityFilter = common.Visibility(visStr)
 		if !isValidVisibility(visibilityFilter) {
-			logger.Log().Fatalf("invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
+			errhandler.HandleUsage(ctx, cmd, "invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
 		}
 	}
 
 	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	allWs, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
@@ -173,13 +174,13 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	if visStr != "" {
 		visibilityFilter = common.Visibility(visStr)
 		if !isValidVisibility(visibilityFilter) {
-			logger.Log().Fatalf("invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
+			errhandler.HandleUsage(ctx, cmd, "invalid visibility: %s (valid: public, private, internal, hidden)", visStr)
 		}
 	}
 
 	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	filteredExec := allExecs
 	filteredExec = filteredExec.
@@ -203,7 +204,7 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	verbStr := args[0]
 	verb := executable.Verb(verbStr)
 	if err := verb.Validate(); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	var execID string
@@ -224,14 +225,14 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if err != nil && errors.Is(flowErrors.NewExecutableNotFoundError(ref.String()), err) {
 		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
 		if err := ctx.ExecutableCache.Update(); err != nil {
-			logger.Log().FatalErr(err)
+			errhandler.HandleFatal(ctx, cmd, err)
 		}
 		exec, err = ctx.ExecutableCache.GetExecutableByRef(ref)
 	}
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	} else if exec == nil {
-		logger.Log().Fatalf("executable %s not found", ref)
+		errhandler.HandleFatal(ctx, cmd, flowErrors.NewExecutableNotFoundError(ref.String()))
 	}
 
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)

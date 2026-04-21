@@ -19,6 +19,7 @@ import (
 	"github.com/flowexec/flow/pkg/cache"
 	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
 	"github.com/flowexec/flow/pkg/context"
+	flowerrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/pkg/logger"
 	"github.com/flowexec/flow/pkg/store"
@@ -118,6 +119,13 @@ func (r *ExitRecorder) exit(msg string, args ...any) {
 	tb.Fatalf("logger exit called - %s", formatted)
 }
 
+// exitOnCode wraps exit for the pkg/errors.ExitFunc hook, which signals via
+// exit code rather than a formatted message. The recorder stores a generic
+// marker so assertions that use ExitCalls still observe that a fatal occurred.
+func (r *ExitRecorder) exitOnCode(code int) {
+	r.exit("process exit (code %d)", code)
+}
+
 // NewContext creates a new context for testing runners. It initializes the context with
 // a real logger that writes it's output to a temporary file.
 // It also creates a temporary testing directory for the test workspace, user configs, and caches.
@@ -132,7 +140,11 @@ func NewContext(ctx stdCtx.Context, tb testing.TB) *Context {
 		tuikitIO.WithExitFunc(recorder.exit),
 	)
 	logger.Init(logger.InitOptions{Logger: tempLogger, TestingTB: tb})
+	flowerrors.ExitFunc = recorder.exitOnCode
 	ctxx, configDir, cacheDir, wsDir := newTestContext(ctx, tb, stdIn, stdOut)
+	// Route stderr to the same file as stdout so tests can assert on the
+	// structured envelope emitted by HandleFatal in JSON/YAML mode.
+	ctxx.SetStdErr(stdOut)
 	return &Context{
 		Context:   ctxx,
 		configDir: configDir,
@@ -197,6 +209,7 @@ func ResetTestContext(ctx *Context, tb testing.TB) {
 	ctx.SetContext(c, cancel)
 	stdIn, stdOut := createTempIOFiles(tb)
 	ctx.SetIO(stdIn, stdOut)
+	ctx.SetStdErr(stdOut)
 	setTestEnv(tb, ctx.configDir, ctx.cacheDir)
 	ctx.exit.setTB(tb)
 	newLogger := tuikitIO.NewLogger(
@@ -206,6 +219,7 @@ func ResetTestContext(ctx *Context, tb testing.TB) {
 		tuikitIO.WithExitFunc(ctx.exit.exit),
 	)
 	logger.Init(logger.InitOptions{Logger: newLogger, TestingTB: tb})
+	flowerrors.ExitFunc = ctx.exit.exitOnCode
 }
 
 func createTempIOFiles(tb testing.TB) (stdIn *os.File, stdOut *os.File) {

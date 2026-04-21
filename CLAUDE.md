@@ -106,3 +106,9 @@ The project heavily uses code generation:
   - Code should be written in a way that would enable easy testing in the future
 - **Documentation**: Lives in `docs/` and is hosted at flowexec.io
 - **Build**: Use `flow build binary ./bin/flow` for development CLI builds
+
+## Error handling in CLI commands
+
+The CLI surfaces a structured JSON/YAML error envelope (`{"error":{"code","message","details"}}`) on stderr when the user passes `--output json` or `--output yaml`, and a plain-text fatal message otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
+
+When authoring a new cobra `Run` func (or touching an existing one), prefer `errhandler.HandleFatal(ctx, cmd, err)` over `logger.Log().FatalErr(err)`. Use `errhandler.HandleUsage(ctx, cmd, "...", args...)` for flag/argument misuse so callers see `INVALID_INPUT` + exit code 2. Typed errors in [pkg/errors/errors.go](pkg/errors/errors.go) implement `Code() string` for classification — extend that set rather than returning bare `fmt.Errorf` when a stable machine-readable code matters.

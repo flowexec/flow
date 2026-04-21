@@ -24,7 +24,7 @@ var _ = Describe("BuildRootCommand", func() {
 	BeforeEach(func() {
 		bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
 		r, w, _ := os.Pipe()
-		ctx = context.NewContext(bkgCtx, cancelFunc, r, w)
+		ctx = context.NewContext(bkgCtx, cancelFunc, context.WithStdIn(r), context.WithStdOut(w))
 	})
 
 	AfterEach(func() {
@@ -85,7 +85,7 @@ var _ = Describe("RegisterAllCommands", func() {
 	BeforeEach(func() {
 		bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
 		r, w, _ := os.Pipe()
-		ctx = context.NewContext(bkgCtx, cancelFunc, r, w)
+		ctx = context.NewContext(bkgCtx, cancelFunc, context.WithStdIn(r), context.WithStdOut(w))
 		rootCmd = cli.BuildRootCommand(ctx)
 	})
 

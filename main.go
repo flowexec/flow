@@ -46,7 +46,7 @@ func main() {
 	initStore()
 
 	bkgCtx, cancelFunc := stdCtx.WithCancel(stdCtx.Background())
-	ctx := context.NewContext(bkgCtx, cancelFunc, io.Stdin, io.Stdout)
+	ctx := context.NewContext(bkgCtx, cancelFunc, context.WithStdIn(io.Stdin), context.WithStdOut(io.Stdout))
 	ctx.LogArchiveID = archiveID
 	defer ctx.Finalize()
 

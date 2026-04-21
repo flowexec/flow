@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/runner"
@@ -57,12 +58,12 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 
 	ws := workspaceOrCurrent(ctx, workspaceName)
 	if ws == nil {
-		logger.Log().Fatalf("workspace %s not found", workspaceName)
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("workspace %s not found", workspaceName))
 	}
 
 	tmpl := loadFlowfileTemplate(ctx, template, templateFilePath)
 	if tmpl == nil {
-		logger.Log().Fatalf("unable to load flowfile template")
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("unable to load flowfile template"))
 	}
 
 	flowFilename := tmpl.Name()
@@ -70,7 +71,7 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 		flowFilename = args[0]
 	}
 	if err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Template '%s' rendered successfully", flowFilename))
@@ -87,15 +88,15 @@ func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 	templateCmd.AddCommand(addCmd)
 }
 
-func addTemplateFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func addTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 	flowFilePath := args[1]
 	loadedTemplates, err := filesystem.LoadFlowFileTemplate(name, flowFilePath)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err := loadedTemplates.Validate(); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	userConfig := ctx.Config
 	if userConfig.Templates == nil {
@@ -103,7 +104,7 @@ func addTemplateFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	}
 	userConfig.Templates[name] = flowFilePath
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Template %s set to %s", name, flowFilePath))
 }
@@ -127,7 +128,7 @@ func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	// add --annotation filter flags (mirroring browse / workspace list)
 	tmpls, err := filesystem.LoadFlowFileTemplates(ctx.Config.Templates)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
@@ -176,7 +177,7 @@ func getTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	tmpl := loadFlowfileTemplate(ctx, template, templateFilePath)
 	if tmpl == nil {
-		logger.Log().Fatalf("unable to load flowfile template")
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("unable to load flowfile template"))
 	}
 
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)

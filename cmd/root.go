@@ -7,17 +7,23 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowexec/flow/cmd/internal"
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
+	flowerrors "github.com/flowexec/flow/pkg/errors"
 	"github.com/flowexec/flow/pkg/logger"
 )
 
 func NewRootCmd(ctx *context.Context) *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "flow",
-		Short: "flow is a command line interface designed to make managing and running development workflows easier.",
+		// SilenceErrors prevents cobra from auto-printing "Error: <msg>" on RunE
+		// errors; our Execute wrapper re-emits the error via HandleFatal so it can
+		// honor --output=json. Usage printing on bad flags is left intact.
+		SilenceErrors: true,
+		Use:           "flow",
+		Short:         "flow is a command line interface designed to make managing and running development workflows easier.",
 		Long: "flow is a command line interface designed to make managing and running development workflows easier." +
 			"It's driven by executables organized across workspaces and namespaces defined in a workspace.\n\n" +
 			"See https://flowexec.io for more information.",
@@ -35,7 +41,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
 				if err := cache.UpdateAll(ctx.DataStore); err != nil {
-					logger.Log().FatalErr(err)
+					errhandler.HandleFatal(ctx, cmd, err)
 				}
 			}
 		},
@@ -46,7 +52,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.SyncCacheFlag)
 
 	rootCmd.SetOut(ctx.StdOut())
-	rootCmd.SetErr(ctx.StdOut())
+	rootCmd.SetErr(ctx.StdErr())
 	rootCmd.SetIn(ctx.StdIn())
 
 	return rootCmd
@@ -60,6 +66,10 @@ func Execute(ctx *context.Context, rootCmd *cobra.Command) error {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
+		// Cobra-level errors (unknown command, bad flag, arg validation) surface
+		// here. Route them through the structured handler so --output=json
+		// produces an envelope instead of plain text.
+		errhandler.HandleFatal(ctx, rootCmd, flowerrors.NewUsageError("%s", err.Error()))
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 	return nil

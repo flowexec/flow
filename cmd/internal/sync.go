@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
 	"github.com/flowexec/flow/internal/services/git"
 	"github.com/flowexec/flow/pkg/cache"
@@ -39,7 +40,7 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	force := flags.ValueFor[bool](cmd, *flags.ForceFlag, false)
 
 	if force && !pullGit {
-		logger.Log().Fatalf("--force can only be used with --git")
+		errhandler.HandleUsage(ctx, cmd, "--force can only be used with --git")
 	}
 
 	start := time.Now()
@@ -49,7 +50,7 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	duration := time.Since(start)
 	logger.Log().PlainTextSuccess(fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second)))
