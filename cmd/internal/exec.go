@@ -286,7 +286,9 @@ func finalizeBackgroundRun(ctx *context.Context, runID string, runErr error) {
 	}
 	now := time.Now()
 	run.CompletedAt = &now
-	run.LogArchiveID = findArchiveByID(ctx.LogArchiveID)
+	if archivePath := findArchiveByID(ctx.LogArchiveID); archivePath != "" {
+		run.LogArchiveID = archivePath
+	}
 	if runErr != nil {
 		run.Status = store.BackgroundFailed
 		run.Error = runErr.Error()
@@ -347,7 +349,11 @@ func recordExecution(ctx *context.Context, ref executable.Ref, startTime time.Ti
 		record.ExitCode = 1
 		record.Error = runErr.Error()
 	}
-	record.LogArchiveID = findArchiveByID(ctx.LogArchiveID)
+	if archivePath := findArchiveByID(ctx.LogArchiveID); archivePath != "" {
+		record.LogArchiveID = archivePath
+	} else {
+		record.LogArchiveID = findArchiveFileByID(ctx.LogArchiveID)
+	}
 	if ctx.DataStore != nil {
 		if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
 			logger.Log().Debug("failed to record execution history", "err", recErr)
