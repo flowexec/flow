@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -283,7 +282,7 @@ func logsKillFunc(ctx *context.Context, runID string) {
 		logger.Log().FatalErr(fmt.Errorf("unable to find process %d: %w", run.PID, err))
 	}
 
-	if err := proc.Signal(syscall.SIGTERM); err != nil {
+	if err := terminateProcess(proc); err != nil {
 		logger.Log().FatalErr(fmt.Errorf("failed to terminate process %d: %w", run.PID, err))
 	}
 
@@ -322,7 +321,7 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 	defer f.Close()
 
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	notifyTermSignals(sigCh)
 	defer signal.Stop(sigCh)
 
 	buf := make([]byte, 4096)
@@ -363,14 +362,4 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 
 		time.Sleep(200 * time.Millisecond)
 	}
-}
-
-// isProcessAlive checks whether a process with the given PID is still running.
-func isProcessAlive(pid int) bool {
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	// On Unix, signal 0 checks for process existence without actually sending a signal.
-	return proc.Signal(syscall.Signal(0)) == nil
 }

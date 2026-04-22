@@ -6,6 +6,7 @@ import (
 	"fmt"
 	stdio "io"
 	"os"
+	osexec "os/exec"
 	"path/filepath"
 	"strings"
 
@@ -73,7 +74,9 @@ func RunCmd(
 	return nil
 }
 
-// RunFile executes a file in the current shell in a specific directory.
+// RunFile executes a file in a specific directory.
+// Shell scripts (.sh) are interpreted via the built-in POSIX shell interpreter.
+// Batch files (.bat, .cmd) are executed via cmd.exe and PowerShell scripts (.ps1) via pwsh/powershell.
 func RunFile(
 	filename, dir string,
 	envList []string,
@@ -85,11 +88,78 @@ func RunFile(
 ) error {
 	logger.Debugf("executing file (%s)", filepath.Join(dir, filename))
 
-	ctx := context.Background()
 	fullPath := filepath.Join(dir, filename)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist - %s", fullPath)
 	}
+
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".bat", ".cmd":
+		return runNativeFile("cmd", []string{"/C", fullPath}, dir, envList, logMode, logger, stdIn, logFields, task)
+	case ".ps1":
+		shell := findPowerShell()
+		return runNativeFile(shell, []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", fullPath},
+			dir, envList, logMode, logger, stdIn, logFields, task)
+	default:
+		return runShellFile(fullPath, envList, logMode, logger, stdIn, logFields, task)
+	}
+}
+
+// findPowerShell returns the PowerShell executable name,
+// preferring the cross-platform "pwsh" over the Windows-only "powershell".
+func findPowerShell() string {
+	if _, err := osexec.LookPath("pwsh"); err == nil {
+		return "pwsh"
+	}
+	return "powershell"
+}
+
+// runNativeFile executes a file using a native system command (e.g. cmd.exe, pwsh).
+func runNativeFile(
+	command string, args []string,
+	dir string,
+	envList []string,
+	logMode io.LogMode,
+	logger io.Logger,
+	stdIn *os.File,
+	logFields map[string]interface{},
+	task *io.TaskContext,
+) error {
+	if envList == nil {
+		envList = make([]string, 0)
+	}
+	envList = append(os.Environ(), envList...)
+
+	flattenedFields := make([]interface{}, 0)
+	for k, v := range logFields {
+		flattenedFields = append(flattenedFields, k, v)
+	}
+
+	cmd := osexec.Command(command, args...)
+	cmd.Dir = dir
+	cmd.Env = envList
+	cmd.Stdin = stdIn
+	cmd.Stdout = stdOutWriter(logMode, logger, task, flattenedFields...)
+	cmd.Stderr = stdErrWriter(logMode, logger, task, flattenedFields...)
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("file execution failed - %w", err)
+	}
+	return nil
+}
+
+// runShellFile executes a file using the built-in POSIX shell interpreter.
+func runShellFile(
+	fullPath string,
+	envList []string,
+	logMode io.LogMode,
+	logger io.Logger,
+	stdIn *os.File,
+	logFields map[string]interface{},
+	task *io.TaskContext,
+) error {
+	ctx := context.Background()
 	file, err := os.OpenFile(filepath.Clean(fullPath), os.O_RDONLY, 0)
 	if err != nil {
 		return fmt.Errorf("unable to open file - %w", err)

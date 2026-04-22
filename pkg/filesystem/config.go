@@ -25,7 +25,7 @@ func ConfigDirPath() string {
 }
 
 func UserConfigFilePath() string {
-	return ConfigDirPath() + "/config.yaml"
+	return filepath.Join(ConfigDirPath(), "config.yaml")
 }
 
 func EnsureConfigDir() error {

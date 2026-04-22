@@ -54,6 +54,8 @@ var _ = Describe("Utils", func() {
 			Entry("dir starts with ~/", "~/dir", filepath.Join(testHomeDir, "dir")),
 			Entry("dir starts with /", "/dir", "/dir"),
 			Entry("default case", "dir", filepath.Join(execDir, "dir")),
+			Entry("hidden dir with extension-like name", "/path/.config", "/path/.config"),
+			Entry("file with extension returns parent dir", "/path/file.txt", "/path"),
 		)
 
 		When("env vars are in the dir", func() {

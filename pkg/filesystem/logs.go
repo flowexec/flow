@@ -2,12 +2,13 @@ package filesystem
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 )
 
 func LogsDir() string {
-	return StateDirPath() + "/logs"
+	return filepath.Join(StateDirPath(), "logs")
 }
 
 func EnsureLogsDir() error {

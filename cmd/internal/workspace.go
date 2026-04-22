@@ -165,7 +165,7 @@ func resolveLocalPath(path, name string) string {
 		if path == "." {
 			return wd
 		}
-		return fmt.Sprintf("%s/%s", wd, path[2:])
+		return filepath.Join(wd, path[2:])
 	case path == "~" || strings.HasPrefix(path, "~/"):
 		hd, err := os.UserHomeDir()
 		if err != nil {
@@ -174,13 +174,13 @@ func resolveLocalPath(path, name string) string {
 		if path == "~" {
 			return hd
 		}
-		return fmt.Sprintf("%s/%s", hd, path[2:])
+		return filepath.Join(hd, path[2:])
 	case !filepath.IsAbs(path):
 		wd, err := os.Getwd()
 		if err != nil {
 			logger.Log().FatalErr(err)
 		}
-		return fmt.Sprintf("%s/%s", wd, path)
+		return filepath.Join(wd, path)
 	default:
 		return path
 	}

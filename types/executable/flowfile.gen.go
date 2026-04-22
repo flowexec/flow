@@ -63,6 +63,6 @@ type FlowFileAnnotations common.Annotations
 
 type FlowFileVisibility common.Visibility
 
-// A list of `.sh` files to convert into generated executables in the file's
-// executable group.
+// A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated
+// executables in the file's executable group.
 type FromFile []string

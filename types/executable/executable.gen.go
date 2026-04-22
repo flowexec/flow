@@ -78,7 +78,7 @@ type ExecExecutableType struct {
 	// Dir corresponds to the JSON schema field "dir".
 	Dir Directory `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`
 
-	// The file to execute.
+	// The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`).
 	// Only one of `cmd` or `file` must be set.
 	//
 	File string `json:"file,omitempty" yaml:"file,omitempty" mapstructure:"file,omitempty"`

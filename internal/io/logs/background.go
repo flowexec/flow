@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"os"
-	"syscall"
 
 	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
@@ -134,7 +133,7 @@ func killAndUpdate(r store.BackgroundRun, ds store.DataStore) {
 	if err != nil {
 		return
 	}
-	_ = proc.Signal(syscall.SIGTERM)
+	_ = killProcess(proc)
 	now := time.Now()
 	r.Status = store.BackgroundFailed
 	r.Error = "killed by user"

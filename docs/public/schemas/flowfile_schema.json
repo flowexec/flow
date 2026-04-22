@@ -179,7 +179,7 @@
           "default": ""
         },
         "file": {
-          "description": "The file to execute.\nOnly one of `cmd` or `file` must be set.\n",
+          "description": "The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`).\nOnly one of `cmd` or `file` must be set.\n",
           "type": "string",
           "default": ""
         },
@@ -673,7 +673,7 @@
       ]
     },
     "FromFile": {
-      "description": "A list of `.sh` files to convert into generated executables in the file's executable group.",
+      "description": "A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated executables in the file's executable group.",
       "type": "array",
       "default": [],
       "items": {

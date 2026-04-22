@@ -390,13 +390,14 @@ Current time: {{ data["timestamp"] }}
 
 ## Importing Executables
 
-Generate executables from shell scripts, Makefiles, package.json scripts, or docker-compose services:
+Generate executables from scripts, Makefiles, package.json scripts, or docker-compose services:
 
 ```yaml
 # In flowfile
 imports:
   - "scripts/deploy.sh"
-  - "scripts/backup.sh"
+  - "scripts/build.bat"
+  - "scripts/setup.ps1"
   - "Makefile"
   - "frontend/package.json"
   - "docker-compose.yaml"
@@ -404,28 +405,51 @@ imports:
 
 All imported executables are automatically tagged with `generated` and their file type (e.g., `docker-compose`, `makefile`, `package.json`).
 
+#### **Script Files**
 
+Script files (`.sh`, `.bat`, `.cmd`, `.ps1`) are imported as single executables with the script's filename as the name and `exec` as the default verb. Each script type is executed with its native interpreter:
 
+| Extension | Interpreter | Platforms |
+|-----------|------------|-----------|
+| `.sh` | Built-in POSIX shell | All (cross-platform) |
+| `.bat`, `.cmd` | `cmd.exe /C` | Windows |
+| `.ps1` | `pwsh` or `powershell` | All (requires PowerShell) |
 
-#### **Shell Scripts (.sh files)**
+You can use special comments to override executable metadata. The comment syntax depends on the script type:
 
-Shell scripts are imported as single executables with the script's filename as the name and `exec` as the default verb.
-
-You can use special comments to override executable metadata:
-
-```bash
+::: code-group
+```bash [Shell (.sh)]
 #!/bin/bash
-# scripts/deploy.sh
-
 # f:name=production f:verb=deploy
 # f:description="Deploy to production environment"
 # f:tag=production f:tag=critical
-# f:visibility=internal
 # f:timeout=10m
 
 echo "Deploying to production..."
 kubectl apply -f k8s/
 ```
+
+```batch [Batch (.bat / .cmd)]
+@echo off
+REM f:name=production f:verb=deploy
+REM f:description="Deploy to production environment"
+REM f:tag=production f:tag=critical
+REM f:timeout=10m
+
+echo Deploying to production...
+kubectl apply -f k8s\
+```
+
+```powershell [PowerShell (.ps1)]
+# f:name=production f:verb=deploy
+# f:description="Deploy to production environment"
+# f:tag=production f:tag=critical
+# f:timeout=10m
+
+Write-Host "Deploying to production..."
+kubectl apply -f k8s/
+```
+:::
 
 See the [generated configuration reference](generated-config.md) for more details.
 

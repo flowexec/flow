@@ -22,6 +22,13 @@ func ExecutablesFromImports(
 	flowFileNs := flowFile.Namespace
 	files := append(flowFile.FromFile, flowFile.Imports...) //nolint:gocritic
 
+	setCtx := func(execs ...*executable.Executable) {
+		for _, e := range execs {
+			e.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
+			e.SetInheritedFields(flowFile)
+		}
+	}
+
 	for _, file := range files {
 		fn := filepath.Base(file)
 		expandedFile := utils.ExpandPath(file, filepath.Dir(flowFilePath), nil)
@@ -34,60 +41,55 @@ func ExecutablesFromImports(
 			continue
 		}
 
-		switch strings.ToLower(fn) {
-		case "package.json":
-			execs, err := ExecutablesFromPackageJSON(wsPath, expandedFile)
-			if err != nil {
-				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
-			}
-			for _, exec := range execs {
-				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
-				exec.SetInheritedFields(flowFile)
-				executables = append(executables, exec)
-			}
-		case "makefile":
-			execs, err := ExecutablesFromMakefile(wsPath, expandedFile)
-			if err != nil {
-				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
-			}
-			for _, exec := range execs {
-				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
-				exec.SetInheritedFields(flowFile)
-				executables = append(executables, exec)
-			}
-		case "docker-compose.yml", "docker-compose.yaml":
-			execs, err := ExecutablesFromDockerCompose(wsPath, expandedFile)
-			if err != nil {
-				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
-			}
-			for _, exec := range execs {
-				exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
-				exec.SetInheritedFields(flowFile)
-				executables = append(executables, exec)
-			}
-		default:
-			ext := filepath.Ext(fn)
-			if ext != ".sh" {
-				logger.Log().Warn("unable to import executables - unsupported file type", "file", file)
-				continue
-			}
-			exec, err := ExecutablesFromShFile(wsPath, expandedFile)
-			if err != nil {
-				logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
-				continue
-			}
-			exec.SetContext(wsName, wsPath, flowFileNs, flowFilePath)
-			exec.SetInheritedFields(flowFile)
-			executables = append(executables, exec)
+		parsed, err := parseImportFile(wsPath, fn, expandedFile)
+		if err != nil {
+			logger.Log().WrapError(err, fmt.Sprintf("unable to import executables from file (%s)", file))
+			continue
 		}
+		setCtx(parsed...)
+		executables = append(executables, parsed...)
 	}
 
 	return executables, nil
 }
 
+func parseImportFile(wsPath, fn, expandedFile string) (executable.ExecutableList, error) {
+	switch strings.ToLower(fn) {
+	case "package.json":
+		return ExecutablesFromPackageJSON(wsPath, expandedFile)
+	case "makefile":
+		return ExecutablesFromMakefile(wsPath, expandedFile)
+	case "docker-compose.yml", "docker-compose.yaml":
+		return ExecutablesFromDockerCompose(wsPath, expandedFile)
+	default:
+		return parseScriptFile(wsPath, fn, expandedFile)
+	}
+}
+
+func parseScriptFile(wsPath, fn, expandedFile string) (executable.ExecutableList, error) {
+	ext := strings.ToLower(filepath.Ext(fn))
+	var exec *executable.Executable
+	var err error
+	switch ext {
+	case ".sh":
+		exec, err = ExecutablesFromShFile(wsPath, expandedFile)
+	case ".bat", ".cmd":
+		exec, err = ExecutablesFromBatFile(wsPath, expandedFile)
+	case ".ps1":
+		exec, err = ExecutablesFromPs1File(wsPath, expandedFile)
+	default:
+		logger.Log().Warn("unable to import executables - unsupported file type", "file", fn)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return executable.ExecutableList{exec}, nil
+}
+
 func shortenWsPath(wsPath string, path string) string {
 	if strings.HasPrefix(path, wsPath) {
-		return "//" + strings.TrimPrefix(path[len(wsPath):], "/")
+		return "//" + strings.TrimPrefix(path[len(wsPath):], string(filepath.Separator))
 	}
 
 	return path

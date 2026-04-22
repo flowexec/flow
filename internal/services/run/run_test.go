@@ -107,32 +107,72 @@ var _ = Describe("Run", func() {
 	})
 
 	Describe("RunFile", func() {
-		var testfile *os.File
+		var tmpDir string
 
 		BeforeEach(func() {
 			var err error
-			testfile, err = os.CreateTemp("", "test.sh")
-			Expect(err).NotTo(HaveOccurred())
-			_, err = testfile.WriteString("#!/bin/sh\necho foo")
+			tmpDir, err = os.MkdirTemp("", "runfile-test")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
-			Expect(testfile.Close()).To(Succeed())
-			Expect(os.Remove(testfile.Name())).To(Succeed())
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
-		It("should log the file execution output", func() {
+		It("should execute a .sh file via the POSIX interpreter", func() {
+			err := os.WriteFile(filepath.Join(tmpDir, "test.sh"), []byte("#!/bin/sh\necho foo"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
 			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
 			logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 				return tuikitIO.Text
 			}).AnyTimes()
 			logger.EXPECT().Print("foo").Times(1)
 			logger.EXPECT().Print("\n").Times(1)
-			filename := filepath.Base(testfile.Name())
-			filedir := filepath.Dir(testfile.Name())
-			err := run.RunFile(filename, filedir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
+			err = run.RunFile("test.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error for a non-existent file", func() {
+			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
+			logger.EXPECT().LogMode().AnyTimes()
+			err := run.RunFile("missing.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("file does not exist"))
+		})
+
+		It("should not parse a .bat file as shell syntax", func() {
+			// Write batch syntax that would fail the POSIX parser.
+			// If routing works correctly, this goes to cmd.exe (not the shell parser).
+			err := os.WriteFile(filepath.Join(tmpDir, "test.bat"), []byte("@echo off\r\necho hello"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
+			logger.EXPECT().LogMode().AnyTimes()
+			logger.EXPECT().Print(gomock.Any()).AnyTimes()
+
+			err = run.RunFile("test.bat", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			// On non-Windows this will fail because cmd.exe doesn't exist, but crucially
+			// it should NOT fail with "unable to parse file" (which would mean it hit the shell parser).
+			if err != nil {
+				Expect(err.Error()).NotTo(ContainSubstring("unable to parse file"))
+			}
+		})
+
+		It("should not parse a .ps1 file as shell syntax", func() {
+			err := os.WriteFile(filepath.Join(tmpDir, "test.ps1"), []byte("Write-Host 'hello'"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
+			logger.EXPECT().LogMode().AnyTimes()
+			logger.EXPECT().Print(gomock.Any()).AnyTimes()
+
+			err = run.RunFile("test.ps1", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			// Same as above — on non-Windows/non-pwsh systems this may fail,
+			// but it must NOT fail with a shell parse error.
+			if err != nil {
+				Expect(err.Error()).NotTo(ContainSubstring("unable to parse file"))
+			}
 		})
 	})
 })

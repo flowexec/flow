@@ -10,7 +10,7 @@ description: |
 definitions:
   FromFile:
     type: array
-    description: A list of `.sh` files to convert into generated executables in the file's executable group.
+    description: A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated executables in the file's executable group.
     items:
       type: string
     default: []

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -34,7 +34,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 		} else {
 			targetPath = filepath.Join(wd, path[1:])
 		}
-	case strings.HasPrefix(path, "~/"):
+	case len(path) > 1 && path[0] == '~' && os.IsPathSeparator(path[1]):
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			logger.Log().Warn("unable to get user home directory for relative path expansion", "err", err)
@@ -42,7 +42,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 		} else {
 			targetPath = filepath.Join(homeDir, path[2:])
 		}
-	case strings.HasPrefix(path, "/"), strings.HasPrefix(path, "$"), strings.Contains(path, "://"):
+	case filepath.IsAbs(path), strings.HasPrefix(path, "$"), strings.Contains(path, "://"):
 		targetPath = path
 	default:
 		targetPath = filepath.Join(fallbackDir, path)
@@ -73,7 +73,7 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 func ExpandDirectory(dir, wsPath, execPath string, env map[string]string) string {
 	expandedPath := dir
 	if wsPath != "" && strings.HasPrefix(dir, "//") {
-		expandedPath = strings.Replace(expandedPath, "//", wsPath+"/", 1)
+		expandedPath = strings.Replace(expandedPath, "//", wsPath+string(filepath.Separator), 1)
 	}
 	expandedPath = ExpandPath(expandedPath, filepath.Dir(execPath), env)
 
@@ -85,10 +85,9 @@ func ExpandDirectory(dir, wsPath, execPath string, env map[string]string) string
 }
 
 func isHiddenDir(path string) bool {
-	// Regex to match hidden directories like .config
-	// This assumes that filenames starting with a dot (.) are hidden directories - this may not be universally true
-	hiddenDirRegex := regexp.MustCompile(`(^|/)\.[^/]+$`)
-	return hiddenDirRegex.MatchString(path)
+	// Check if the last path component starts with a dot (hidden on Unix, conventional on all platforms).
+	base := filepath.Base(path)
+	return len(base) > 1 && base[0] == '.'
 }
 
 // validateSecurePath checks if a path is safe to use
@@ -115,7 +114,16 @@ func validateSecurePath(path string) error {
 	}
 
 	// Basic check that we're not accessing sensitive system directories
-	systemDirs := []string{"/etc", "/sys", "/proc", "/dev"}
+	var systemDirs []string
+	if runtime.GOOS == "windows" {
+		winDir := os.Getenv("SYSTEMROOT")
+		if winDir == "" {
+			winDir = `C:\Windows`
+		}
+		systemDirs = []string{winDir, filepath.Join(winDir, "System32")}
+	} else {
+		systemDirs = []string{"/etc", "/sys", "/proc", "/dev"}
+	}
 	for _, sysDir := range systemDirs {
 		if strings.HasPrefix(absPath, sysDir) {
 			return fmt.Errorf("path accesses sensitive system directory")

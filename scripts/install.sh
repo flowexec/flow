@@ -6,6 +6,7 @@ get_os() {
     case "$(uname -s)" in
         Linux*)     OS=linux;;
         Darwin*)    OS=darwin;;
+        MINGW*|MSYS*|CYGWIN*) OS=windows;;
         *)          echo "Unsupported operating system"; exit 1;;
     esac
     echo "$OS"
@@ -34,9 +35,17 @@ if [ -z "$VERSION" ]; then
     VERSION=$(get_latest_version)
 fi
 
-DOWNLOAD_URL="https://github.com/${OWNER}/${NAME}/releases/download/${VERSION}/${BINARY}_${VERSION}_${OS}_${ARCH}.tar.gz"
+if [ "$OS" = "windows" ]; then
+    EXT="zip"
+    BINARY_NAME="${BINARY}.exe"
+else
+    EXT="tar.gz"
+    BINARY_NAME="${BINARY}"
+fi
+
+DOWNLOAD_URL="https://github.com/${OWNER}/${NAME}/releases/download/${VERSION}/${BINARY}_${VERSION}_${OS}_${ARCH}.${EXT}"
 TMP_DIR=$(mktemp -d)
-DOWNLOAD_PATH="${TMP_DIR}/${BINARY}_${VERSION}_${OS}_${ARCH}.tar.gz"
+DOWNLOAD_PATH="${TMP_DIR}/${BINARY}_${VERSION}_${OS}_${ARCH}.${EXT}"
 
 echo "Downloading $BINARY $VERSION for $OS/$ARCH..."
 wget -q "$DOWNLOAD_URL" -O "$DOWNLOAD_PATH"
@@ -45,14 +54,21 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-INSTALL_DIR="/usr/local/bin"
-echo "Installing $BINARY $VERSION to $INSTALL_DIR..."
-tar -xzf "$DOWNLOAD_PATH" -C "$TMP_DIR"
+if [ "$OS" = "windows" ]; then
+    INSTALL_DIR="$HOME/bin"
+    mkdir -p "$INSTALL_DIR"
+    echo "Installing $BINARY $VERSION to $INSTALL_DIR..."
+    unzip -o -q "$DOWNLOAD_PATH" -d "$TMP_DIR"
+    mv "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+else
+    INSTALL_DIR="/usr/local/bin"
+    echo "Installing $BINARY $VERSION to $INSTALL_DIR..."
+    tar -xzf "$DOWNLOAD_PATH" -C "$TMP_DIR"
+    chmod +x "$TMP_DIR/$BINARY_NAME"
+    sudo mv "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+fi
 
-chmod +x "$TMP_DIR/$BINARY"
-sudo mv "$TMP_DIR/$BINARY" "$INSTALL_DIR/$BINARY"
-
-echo "$BINARY was installed successfully to $INSTALL_DIR/$BINARY"
+echo "$BINARY was installed successfully to $INSTALL_DIR/$BINARY_NAME"
 if command -v $BINARY --version >/dev/null; then
     echo "Run '$BINARY --help' to get started"
 else

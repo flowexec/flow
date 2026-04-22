@@ -59,6 +59,22 @@ var _ = Describe("ExecutablesFromImports", func() {
 		}
 	})
 
+	It("should return executables from bat file imports", func() {
+		flowFile.Imports = append(flowFile.Imports, "simple.bat")
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(HaveLen(1))
+		Expect(result[0].Exec.File).To(Equal("simple.bat"))
+	})
+
+	It("should return executables from ps1 file imports", func() {
+		flowFile.Imports = append(flowFile.Imports, "simple.ps1")
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(HaveLen(1))
+		Expect(result[0].Exec.File).To(Equal("simple.ps1"))
+	})
+
 	It("should log a warning for invalid file type", func() {
 		mockLogger.EXPECT().Warn(gomock.Any(), "file", "invalidfile").AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "invalidfile")

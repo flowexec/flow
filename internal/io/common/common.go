@@ -3,6 +3,7 @@ package common
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -20,7 +21,11 @@ func OpenInEditor(path string, stdIn, stdOut *os.File) error {
 		return open.OpenWith(preferred, path)
 	}
 	if preferred == "" {
-		preferred = "vim"
+		if runtime.GOOS == "windows" {
+			preferred = "notepad"
+		} else {
+			preferred = "vim"
+		}
 	}
 	cmd := exec.Command(preferred, path) // #nosec G204,G702
 	cmd.Stdin = stdIn

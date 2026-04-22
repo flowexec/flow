@@ -7,7 +7,6 @@ import (
 	osExec "os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -208,7 +207,7 @@ func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.
 
 	child := osExec.Command(flowBin, childArgs...)
 	child.Env = append(os.Environ(), fmt.Sprintf("%s=%s", backgroundRunIDEnv, runID))
-	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setSysProcAttr(child)
 	child.Stdout = nil
 	child.Stderr = nil
 	child.Stdin = nil

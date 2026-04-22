@@ -4,11 +4,14 @@ title: Imported Executables Config Reference
 
 # Imported Executables Config Reference
 
-flow can automatically generate executables from shell scripts and Makefiles using special comments. 
+flow can automatically generate executables from scripts and Makefiles using special comments. 
+Supported script types include shell scripts (`.sh`), batch files (`.bat`, `.cmd`), and PowerShell scripts (`.ps1`).
 flow parses these comments during workspace synchronization and creates executable definitions that can be run 
 like any other flow executable. See [Importing Executables](executables.md#importing-executables) for more details.
 
-> [!NOTE] The configuration comments must be at the top of the shell script or right above the Makefile target definition.
+> [!NOTE] The configuration comments must be at the top of the script file or right above the Makefile target definition.
+> - **Shell / PowerShell:** Use `# ` as the comment prefix (e.g., `# f:name=deploy`)
+> - **Batch files:** Use `REM ` or `:: ` as the comment prefix (e.g., `REM f:name=deploy`)
 
 ## Supported Fields
 
@@ -28,13 +31,30 @@ like any other flow executable. See [Importing Executables](executables.md#impor
 
 Define environment variables that will be available to your script with `f:params` or `f:param`:
 
-```bash
+::: code-group
+```bash [Shell (.sh)]
 #!/bin/bash
 # f:name=deploy-with-secrets f:verb=deploy
 # f:params=secretRef:api-key:API_TOKEN|prompt:Environment?:ENV_NAME|text:production:DEFAULT_ENV
 
 echo "Deploying to $ENV_NAME with token: ${API_TOKEN:0:8}..."
 ```
+
+```batch [Batch (.bat)]
+@echo off
+REM f:name=deploy-with-secrets f:verb=deploy
+REM f:params=secretRef:api-key:API_TOKEN|prompt:Environment?:ENV_NAME|text:production:DEFAULT_ENV
+
+echo Deploying to %ENV_NAME% with token: %API_TOKEN%...
+```
+
+```powershell [PowerShell (.ps1)]
+# f:name=deploy-with-secrets f:verb=deploy
+# f:params=secretRef:api-key:API_TOKEN|prompt:Environment?:ENV_NAME|text:production:DEFAULT_ENV
+
+Write-Host "Deploying to $env:ENV_NAME with token: $($env:API_TOKEN.Substring(0,8))..."
+```
+:::
 
 **Parameter Types:**
 - `secretRef:secret-name:ENV_VAR` - Reference a vault secret
@@ -45,7 +65,8 @@ echo "Deploying to $ENV_NAME with token: ${API_TOKEN:0:8}..."
 
 Define command line arguments that users can pass when running the executable with `f:args` or `f:arg`:
 
-```bash
+::: code-group
+```bash [Shell (.sh)]
 #!/bin/bash
 # f:name=build-app f:verb=build
 # f:args=flag:dry-run:DRY_RUN|pos:1:VERSION|flag:verbose:VERBOSE
@@ -56,6 +77,30 @@ else
     echo "Building version $VERSION"
 fi
 ```
+
+```batch [Batch (.bat)]
+@echo off
+REM f:name=build-app f:verb=build
+REM f:args=flag:dry-run:DRY_RUN|pos:1:VERSION|flag:verbose:VERBOSE
+
+if "%DRY_RUN%"=="true" (
+    echo DRY RUN: Would build version %VERSION%
+) else (
+    echo Building version %VERSION%
+)
+```
+
+```powershell [PowerShell (.ps1)]
+# f:name=build-app f:verb=build
+# f:args=flag:dry-run:DRY_RUN|pos:1:VERSION|flag:verbose:VERBOSE
+
+if ($env:DRY_RUN -eq "true") {
+    Write-Host "DRY RUN: Would build version $env:VERSION"
+} else {
+    Write-Host "Building version $env:VERSION"
+}
+```
+:::
 
 **Argument Types:**
 - `flag:flag-name:ENV_VAR` - Named flag (`--flag-name`)

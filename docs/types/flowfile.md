@@ -176,7 +176,7 @@ Standard executable type. Runs a command/file in a subprocess.
 | `args` |  | [ExecutableArgumentList](#executableargumentlist) |  |  |
 | `cmd` | The command to execute. Only one of `cmd` or `file` must be set.  | `string` |  |  |
 | `dir` |  | [ExecutableDirectory](#executabledirectory) |  |  |
-| `file` | The file to execute. Only one of `cmd` or `file` must be set.  | `string` |  |  |
+| `file` | The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`). Only one of `cmd` or `file` must be set.  | `string` |  |  |
 | `logMode` | The log mode to use when running the executable. This can either be `hidden`, `json`, `logfmt` or `text`  | `string` | logfmt |  |
 | `params` |  | [ExecutableParameterList](#executableparameterlist) |  |  |
 
@@ -560,7 +560,7 @@ while maintaining simplicity and flexibility for diverse development and operati
 
 ### FromFile
 
-A list of `.sh` files to convert into generated executables in the file's executable group.
+A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated executables in the file's executable group.
 
 **Type:** `array` (`string`)
 

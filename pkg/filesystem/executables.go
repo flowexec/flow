@@ -150,7 +150,7 @@ func pathMatches(path, basePath string, patterns []string) bool {
 	for _, p := range patterns {
 		pattern := p
 		if strings.HasPrefix(pattern, "//") {
-			pattern = strings.Replace(pattern, "//", basePath+"/", 1)
+			pattern = strings.Replace(pattern, "//", basePath+string(filepath.Separator), 1)
 		}
 
 		if path == pattern || strings.HasPrefix(path, pattern) {
