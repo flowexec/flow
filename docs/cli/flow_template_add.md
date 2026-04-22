@@ -9,7 +9,8 @@ flow template add NAME DEFINITION_TEMPLATE_PATH [flags]
 ### Options
 
 ```
-  -h, --help   help for add
+  -h, --help            help for add
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

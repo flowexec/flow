@@ -13,6 +13,7 @@ import (
 
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	"github.com/flowexec/flow/internal/io/secret"
 	"github.com/flowexec/flow/internal/utils"
 	envUtils "github.com/flowexec/flow/internal/utils/env"
@@ -43,6 +44,7 @@ func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Args:    cobra.ExactArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { removeSecretFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(removeCmd)
 }
 
@@ -80,7 +82,9 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Secret '%s' deleted from vault", reference))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Secret '%s' deleted from vault", reference), map[string]any{
+		"name": reference,
+	})
 }
 
 func registerSetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
@@ -92,6 +96,7 @@ func registerSetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Run:     func(cmd *cobra.Command, args []string) { setSecretFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, setCmd, *flags.SecretFromFile)
+	RegisterFlag(ctx, setCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(setCmd)
 }
 
@@ -149,7 +154,9 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Secret %s set in vault", reference))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Secret %s set in vault", reference), map[string]any{
+		"name": reference,
+	})
 }
 
 func registerListSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {

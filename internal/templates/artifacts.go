@@ -19,106 +19,70 @@ func copyAllArtifacts(
 	artifacts []executable.Artifact,
 	wsDir, srcDir, dstDir string,
 	templateData expressionData,
-) error {
+) ([]string, error) {
+	var copied []string
 	var errs []error
 	for i, a := range artifacts {
-		if err := copyArtifact(
+		paths, err := copyArtifact(
 			fmt.Sprintf("artifact-%d", i), wsDir, srcDir, dstDir, a, templateData,
-		); err != nil {
+		)
+		if err != nil {
 			errs = append(errs, err)
 		}
+		copied = append(copied, paths...)
 	}
 	if len(errs) > 0 {
-		return errors.Errorf("errors copying artifacts: %v", errs)
+		return copied, errors.Errorf("errors copying artifacts: %v", errs)
 	}
-	return nil
+	return copied, nil
 }
 
-//nolint:gocognit
 func copyArtifact(
 	name, wsPath, srcDir, dstDir string,
 	artifact executable.Artifact,
 	templateData expressionData,
-) error {
+) ([]string, error) {
 	srcPath, err := parseSourcePath(name, srcDir, wsPath, artifact, templateData)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse source path")
+		return nil, errors.Wrap(err, "unable to parse source path")
 	}
 
 	if artifact.If != "" {
 		eval, err := expression.IsTruthy(artifact.If, templateData)
 		if err != nil {
-			return errors.Wrap(err, "unable to evaluate if condition")
+			return nil, errors.Wrap(err, "unable to evaluate if condition")
 		}
 		if !eval {
 			logger.Log().Debugf("skipping artifact %s", name)
-			return nil
+			return nil, nil
 		}
 	}
 
 	srcName := filepath.Base(srcPath)
 	if strings.Contains(srcName, "*") {
-		matches, err := filepath.Glob(srcPath)
-		if err != nil {
-			return errors.Wrap(err, "unable to glob source path")
-		}
-		var errs []error
-		for i, match := range matches {
-			m := artifact
-			m.SrcName = filepath.Base(match)
-			m.SrcDir = filepath.Dir(match)
-			mErr := copyArtifact(fmt.Sprintf("%s-%d", name, i), wsPath, srcDir, dstDir, m, templateData)
-			if mErr != nil {
-				errs = append(errs, mErr)
-			}
-		}
-		if len(errs) > 0 {
-			return errors.Errorf("errors copying artifact from pattern: %v", errs)
-		}
+		return copyGlobArtifacts(name, wsPath, srcDir, dstDir, srcPath, artifact, templateData)
 	}
 
 	info, err := os.Stat(srcPath)
 	switch {
 	case os.IsNotExist(err):
-		return errors.Errorf("file does not exist: %s", srcPath)
+		return nil, errors.Errorf("file does not exist: %s", srcPath)
 	case err != nil:
-		return errors.Wrap(err, "unable to stat src file")
+		return nil, errors.Wrap(err, "unable to stat src file")
 	case info.IsDir():
-		err := filepath.WalkDir(srcPath, func(path string, entry fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if entry.IsDir() {
-				return nil
-			}
-			a := artifact
-			a.SrcName = filepath.Base(path)
-			a.SrcDir = filepath.Dir(path)
-			aName := fmt.Sprintf("%s-%s", name, a.SrcName)
-			return copyArtifact(aName, wsPath, srcDir, dstDir, a, templateData)
-		})
-		if err != nil {
-			return errors.Wrap(err, "unable to walk directory")
-		}
+		return copyDirArtifacts(name, wsPath, srcDir, dstDir, srcPath, artifact, templateData)
 	}
+
 	if artifact.DstName == "" {
 		artifact.DstName = srcName
 	}
-	dstPath, err := parseDestinationPath(
-		name,
-		dstDir, srcDir, wsPath,
-		artifact,
-		templateData,
-	)
+	dstPath, err := parseDestinationPath(name, dstDir, srcDir, wsPath, artifact, templateData)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse destination path")
+		return nil, errors.Wrap(err, "unable to parse destination path")
 	}
 
 	if err := os.MkdirAll(dstDir, 0750); err != nil {
-		if !os.IsExist(err) {
-			return errors.Wrap(err, "unable to create destination directory")
-		}
-		return errors.Wrap(err, "unable to create destination directory")
+		return nil, errors.Wrap(err, "unable to create destination directory")
 	}
 
 	logger.Log().Debug("copying artifact", "name", name, "src", srcPath, "dst", dstPath)
@@ -127,7 +91,61 @@ func copyArtifact(
 		logger.Log().Warn("Overwriting existing file", "dst", dstPath)
 	}
 	if err := filesystem.CopyFile(srcPath, dstPath); err != nil {
-		return errors.Wrap(err, "unable to copy artifact")
+		return nil, errors.Wrap(err, "unable to copy artifact")
 	}
-	return nil
+	return []string{dstPath}, nil
+}
+
+func copyGlobArtifacts(
+	name, wsPath, srcDir, dstDir, srcPath string,
+	artifact executable.Artifact,
+	templateData expressionData,
+) ([]string, error) {
+	matches, err := filepath.Glob(srcPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to glob source path")
+	}
+	var copied []string
+	var errs []error
+	for i, match := range matches {
+		m := artifact
+		m.SrcName = filepath.Base(match)
+		m.SrcDir = filepath.Dir(match)
+		paths, mErr := copyArtifact(fmt.Sprintf("%s-%d", name, i), wsPath, srcDir, dstDir, m, templateData)
+		if mErr != nil {
+			errs = append(errs, mErr)
+		}
+		copied = append(copied, paths...)
+	}
+	if len(errs) > 0 {
+		return copied, errors.Errorf("errors copying artifact from pattern: %v", errs)
+	}
+	return copied, nil
+}
+
+func copyDirArtifacts(
+	name, wsPath, srcDir, dstDir, srcPath string,
+	artifact executable.Artifact,
+	templateData expressionData,
+) ([]string, error) {
+	var copied []string
+	err := filepath.WalkDir(srcPath, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		a := artifact
+		a.SrcName = filepath.Base(path)
+		a.SrcDir = filepath.Dir(path)
+		aName := fmt.Sprintf("%s-%s", name, a.SrcName)
+		paths, walkErr := copyArtifact(aName, wsPath, srcDir, dstDir, a, templateData)
+		copied = append(copied, paths...)
+		return walkErr
+	})
+	if err != nil {
+		return copied, errors.Wrap(err, "unable to walk directory")
+	}
+	return copied, nil
 }

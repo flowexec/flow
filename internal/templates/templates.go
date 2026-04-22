@@ -25,12 +25,22 @@ import (
 	"github.com/flowexec/flow/types/workspace"
 )
 
+// TemplateResult contains structured metadata about a successful template
+// generation, suitable for returning to callers that need machine-readable output.
+type TemplateResult struct {
+	FlowfileName string            `json:"flowfileName"         yaml:"flowfileName"`
+	FlowfilePath string            `json:"flowfilePath"         yaml:"flowfilePath"`
+	OutputDir    string            `json:"outputDir"            yaml:"outputDir"`
+	FormValues   map[string]string `json:"formValues,omitempty" yaml:"formValues,omitempty"`
+	Artifacts    []string          `json:"artifacts,omitempty"  yaml:"artifacts,omitempty"`
+}
+
 func ProcessTemplate(
 	ctx *context.Context,
 	template *executable.Template,
 	ws *workspace.Workspace,
 	flowfileName, flowfileDir string,
-) error {
+) (*TemplateResult, error) {
 	if flowfileName == "" {
 		flowfileName = fmt.Sprintf("executables_%s", time.Now().Format("20060102150405"))
 	}
@@ -42,7 +52,7 @@ func ProcessTemplate(
 	formMap := make(map[string]string)
 	if template.Form != nil {
 		if err := showForm(ctx, template.Form); err != nil {
-			return err
+			return nil, err
 		}
 		formMap = template.Form.ValueMap()
 	}
@@ -69,22 +79,23 @@ func ProcessTemplate(
 	if err := runExecutables(
 		ctx, ws, "pre-run", filepath.Dir(template.Location()), template.PreRun, dataMap,
 	); err != nil {
-		return err
+		return nil, err
 	}
-	if err := copyAllArtifacts(
+	artifactPaths, err := copyAllArtifacts(
 		template.Artifacts,
 		ws.Location(),
 		filepath.Dir(template.Location()),
 		flowfileDir,
 		dataMap,
-	); err != nil {
-		return err
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	if template.Template != "" {
 		flowfile, err := templateToFlowfile(template, dataMap)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if _, e := os.Stat(fullPath); e == nil {
@@ -93,14 +104,20 @@ func ProcessTemplate(
 		}
 
 		if err := filesystem.WriteFlowFile(fullPath, flowfile); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("unable to write flowfile %s from template", flowfileName))
+			return nil, errors.Wrap(err, fmt.Sprintf("unable to write flowfile %s from template", flowfileName))
 		}
 	}
 	if err := runExecutables(ctx, ws, "post-run", flowfileDir, template.PostRun, dataMap); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &TemplateResult{
+		FlowfileName: flowfileName,
+		FlowfilePath: fullPath,
+		OutputDir:    flowfileDir,
+		FormValues:   formMap,
+		Artifacts:    artifactPaths,
+	}, nil
 }
 
 //nolint:gocognit

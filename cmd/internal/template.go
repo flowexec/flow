@@ -2,11 +2,14 @@ package internal
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/spf13/cobra"
 
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	"github.com/flowexec/flow/internal/io/executable"
 	"github.com/flowexec/flow/internal/runner"
 	"github.com/flowexec/flow/internal/runner/exec"
@@ -24,6 +27,7 @@ func RegisterTemplateCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	}
 	registerGenerateTemplateCmd(ctx, templateCmd)
 	registerAddTemplateCmd(ctx, templateCmd)
+	registerRemoveTemplateCmd(ctx, templateCmd)
 	registerListTemplateCmd(ctx, templateCmd)
 	registerGetTemplateCmd(ctx, templateCmd)
 	rootCmd.AddCommand(templateCmd)
@@ -31,7 +35,7 @@ func RegisterTemplateCmd(ctx *context.Context, rootCmd *cobra.Command) {
 
 func registerGenerateTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 	generateCmd := &cobra.Command{
-		Use:     "generate FLOWFILE_NAME [-w WORKSPACE ] [-o OUTPUT_DIR] [-f FILE | -t TEMPLATE]",
+		Use:     "generate FLOWFILE_NAME [-w WORKSPACE ] [-d OUTPUT_DIR] [-f FILE | -t TEMPLATE]",
 		Aliases: []string{"gen", "scaffold"},
 		Short:   "Generate workspace executables and scaffolding from a flowfile template.",
 		Long:    templateLong,
@@ -43,6 +47,7 @@ func registerGenerateTemplateCmd(ctx *context.Context, templateCmd *cobra.Comman
 	RegisterFlag(ctx, generateCmd, *flags.TemplateFlag)
 	RegisterFlag(ctx, generateCmd, *flags.TemplateFilePathFlag)
 	RegisterFlag(ctx, generateCmd, *flags.TemplateWorkspaceFlag)
+	RegisterFlag(ctx, generateCmd, *flags.OutputFormatFlag)
 	MarkFlagMutuallyExclusive(generateCmd, flags.TemplateFlag.Name, flags.TemplateFilePathFlag.Name)
 	MarkOneFlagRequired(generateCmd, flags.TemplateFlag.Name, flags.TemplateFilePathFlag.Name)
 	MarkFlagFilename(ctx, generateCmd, flags.TemplateFilePathFlag.Name)
@@ -70,11 +75,18 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 	if len(args) == 1 {
 		flowFilename = args[0]
 	}
-	if err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath); err != nil {
+	result, err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath)
+	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Template '%s' rendered successfully", flowFilename))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Template '%s' rendered successfully", flowFilename), map[string]any{
+		"flowfileName": result.FlowfileName,
+		"flowfilePath": result.FlowfilePath,
+		"outputDir":    result.OutputDir,
+		"formValues":   result.FormValues,
+		"artifacts":    result.Artifacts,
+	})
 }
 
 func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
@@ -85,6 +97,7 @@ func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 		Args:    cobra.ExactArgs(2),
 		Run:     func(cmd *cobra.Command, args []string) { addTemplateFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, addCmd, *flags.OutputFormatFlag)
 	templateCmd.AddCommand(addCmd)
 }
 
@@ -106,7 +119,45 @@ func addTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Template %s set to %s", name, flowFilePath))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Template %s set to %s", name, flowFilePath), map[string]any{
+		"name": name,
+		"path": flowFilePath,
+	})
+}
+
+func registerRemoveTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
+	removeCmd := &cobra.Command{
+		Use:     "remove NAME",
+		Aliases: []string{"delete", "rm", "unregister"},
+		Short:   "Unregister a flowfile template by name.",
+		Args:    cobra.ExactArgs(1),
+		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+			return slices.Sorted(maps.Keys(ctx.Config.Templates)), cobra.ShellCompDirectiveNoFileComp
+		},
+		Run: func(cmd *cobra.Command, args []string) { removeTemplateFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
+	templateCmd.AddCommand(removeCmd)
+}
+
+func removeTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	name := args[0]
+
+	userConfig := ctx.Config
+	previousPath, found := userConfig.Templates[name]
+	if !found {
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("template %s not found", name))
+	}
+
+	delete(userConfig.Templates, name)
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Template %s removed", name), map[string]any{
+		"name":         name,
+		"previousPath": previousPath,
+	})
 }
 
 func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
@@ -142,7 +193,7 @@ func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 				}
 				ws := ctx.CurrentWorkspace
 				// TODO: support specifying a path/name
-				if err := templates.ProcessTemplate(ctx, tmpl, ws, tmpl.Name(), "//"); err != nil {
+				if _, err := templates.ProcessTemplate(ctx, tmpl, ws, tmpl.Name(), "//"); err != nil {
 					return err
 				}
 				logger.Log().PlainTextSuccess("Template rendered successfully")
@@ -196,4 +247,5 @@ The WORKSPACE_NAME is the name of the workspace to initialize the flowfile templ
 The FLOWFILE_NAME is the name to give the flowfile (if applicable) when rendering its template.
 
 One one of -f or -t must be provided and must point to a valid flowfile template.
-The -o flag can be used to specify an output path within the workspace to create the flowfile and its artifacts in.`
+The -d flag can be used to specify an output directory within the workspace to create
+the flowfile and its artifacts in.`

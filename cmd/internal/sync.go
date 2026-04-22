@@ -8,6 +8,7 @@ import (
 
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	"github.com/flowexec/flow/internal/services/git"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
@@ -32,6 +33,7 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	}
 	RegisterFlag(ctx, subCmd, *flags.GitPullFlag)
 	RegisterFlag(ctx, subCmd, *flags.ForceFlag)
+	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -53,7 +55,9 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	duration := time.Since(start)
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second)))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second)), map[string]any{
+		"duration": duration.Round(time.Second).String(),
+	})
 }
 
 func pullGitWorkspaces(ctx *context.Context, force bool) {

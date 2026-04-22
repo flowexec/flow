@@ -22,4 +22,5 @@ Manage flowfile templates.
 * [flow template generate](flow_template_generate.md)	 - Generate workspace executables and scaffolding from a flowfile template.
 * [flow template get](flow_template_get.md)	 - Get a flowfile template's details. Either it's registered name or file path can be used.
 * [flow template list](flow_template_list.md)	 - List registered flowfile templates.
+* [flow template remove](flow_template_remove.md)	 - Unregister a flowfile template by name.
 

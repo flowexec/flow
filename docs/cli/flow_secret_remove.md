@@ -9,7 +9,8 @@ flow secret remove NAME [flags]
 ### Options
 
 ```
-  -h, --help   help for remove
+  -h, --help            help for remove
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

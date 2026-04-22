@@ -223,8 +223,8 @@ var TemplateWorkspaceFlag = &Metadata{
 }
 
 var TemplateOutputPathFlag = &Metadata{
-	Name:      "output",
-	Shorthand: "o",
+	Name:      "dir",
+	Shorthand: "d",
 	Usage:     "Output directory (within the workspace) to create the flow file and its artifacts. If the directory does not exist, it will be created.",
 	Default:   "",
 	Required:  false,

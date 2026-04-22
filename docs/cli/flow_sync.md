@@ -13,9 +13,10 @@ flow sync [flags]
 ### Options
 
 ```
-      --force   Force update by discarding local changes (hard reset to remote)
-  -g, --git     Pull latest changes for all git-sourced workspaces before syncing
-  -h, --help    help for sync
+      --force           Force update by discarding local changes (hard reset to remote)
+  -g, --git             Pull latest changes for all git-sourced workspaces before syncing
+  -h, --help            help for sync
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

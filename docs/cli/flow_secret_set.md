@@ -9,8 +9,9 @@ flow secret set NAME [VALUE] [flags]
 ### Options
 
 ```
-      --file string   File to read the secret's value from
-  -h, --help          help for set
+      --file string     File to read the secret's value from
+  -h, --help            help for set
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

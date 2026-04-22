@@ -14,6 +14,7 @@ import (
 
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	workspaceIO "github.com/flowexec/flow/internal/io/workspace"
 	"github.com/flowexec/flow/internal/services/git"
 	"github.com/flowexec/flow/pkg/cache"
@@ -60,6 +61,7 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	RegisterFlag(ctx, createCmd, *flags.SetAfterCreateFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitBranchFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitTagFlag)
+	RegisterFlag(ctx, createCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(createCmd)
 }
 
@@ -101,7 +103,10 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure updating cache"))
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' created in %s", name, path))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Workspace '%s' created in %s", name, path), map[string]any{
+		"name": name,
+		"path": path,
+	})
 }
 
 func initLocalWorkspace(name, pathOrURL, branch, tag string) string {
@@ -202,6 +207,7 @@ func registerUpdateWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 		Run: func(cmd *cobra.Command, args []string) { updateWorkspaceFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, updateCmd, *flags.ForceFlag)
+	RegisterFlag(ctx, updateCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(updateCmd)
 }
 
@@ -262,7 +268,10 @@ func updateWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "failure updating cache"))
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Workspace '%s' updated", workspaceName))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Workspace '%s' updated", workspaceName), map[string]any{
+		"name": workspaceName,
+		"path": wsPath,
+	})
 }
 
 func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -277,6 +286,7 @@ func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 		Run: func(cmd *cobra.Command, args []string) { switchWorkspaceFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, workspaceCmd, *flags.FixedWsModeFlag)
+	RegisterFlag(ctx, workspaceCmd, *flags.OutputFormatFlag)
 	setCmd.AddCommand(workspaceCmd)
 }
 
@@ -295,7 +305,9 @@ func switchWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess("Workspace set to " + ws)
+	response.HandleSuccess(ctx, cmd, "Workspace set to "+ws, map[string]any{
+		"name": ws,
+	})
 }
 
 func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
@@ -311,6 +323,7 @@ func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 		},
 		Run: func(cmd *cobra.Command, args []string) { removeWorkspaceFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, deleteCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(deleteCmd)
 }
 
@@ -351,11 +364,13 @@ func removeWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	logger.Log().Warnf("Workspace '%s' deleted", name)
-
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
 		errhandler.HandleFatal(ctx, cmd, errors.Wrap(err, "unable to update cache"))
 	}
+
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Workspace '%s' deleted", name), map[string]any{
+		"name": name,
+	})
 }
 
 func registerListWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {

@@ -1,16 +1,15 @@
-## flow workspace switch
+## flow template remove
 
-Switch the current workspace.
+Unregister a flowfile template by name.
 
 ```
-flow workspace switch NAME [flags]
+flow template remove NAME [flags]
 ```
 
 ### Options
 
 ```
-  -f, --fixed           Set the workspace mode to fixed
-  -h, --help            help for switch
+  -h, --help            help for remove
   -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
@@ -23,5 +22,5 @@ flow workspace switch NAME [flags]
 
 ### SEE ALSO
 
-* [flow workspace](flow_workspace.md)	 - Manage development workspaces.
+* [flow template](flow_template.md)	 - Manage flowfile templates.
 

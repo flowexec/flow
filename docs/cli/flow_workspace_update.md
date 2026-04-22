@@ -16,8 +16,9 @@ flow workspace update [NAME] [flags]
 ### Options
 
 ```
-      --force   Force update by discarding local changes (hard reset to remote)
-  -h, --help    help for update
+      --force           Force update by discarding local changes (hard reset to remote)
+  -h, --help            help for update
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands
