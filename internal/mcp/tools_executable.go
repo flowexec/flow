@@ -13,6 +13,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"gopkg.in/yaml.v3"
 
+	"github.com/flowexec/flow/internal/validation"
 	"github.com/flowexec/flow/pkg/filesystem"
 	"github.com/flowexec/flow/types/executable"
 )
@@ -227,40 +228,29 @@ func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
 			return toolError(ErrCodeValidationFailed, "path must end in .flow or .flow.yaml"), nil
 		}
 
-		// Resolve absolute path
-		absPath := path
-		if !filepath.IsAbs(path) {
-			cfg, err := filesystem.LoadConfig()
-			if err != nil {
-				return toolError(ErrCodeInternal, fmt.Sprintf("failed to load config: %s", err)), nil
-			}
-			if cfg.CurrentWorkspace != "" {
-				if wsPath, ok := cfg.Workspaces[cfg.CurrentWorkspace]; ok {
-					absPath = filepath.Join(wsPath, path)
-				}
-			}
+		absPath, toolErr := resolveFlowfilePath(path)
+		if toolErr != nil {
+			return toolErr, nil
 		}
 
-		// Check if file exists when overwrite is false
-		if !overwrite {
-			if _, err := os.Stat(absPath); err == nil {
-				msg := fmt.Sprintf("file already exists at %s (use overwrite=true to replace)", absPath)
-				return toolError(ErrCodeValidationFailed, msg), nil
-			}
+		if toolErr := checkFlowfileOverwrite(absPath, overwrite); toolErr != nil {
+			return toolErr, nil
 		}
 
-		// Validate YAML content by parsing into FlowFile
+		if toolErr := validateFlowfileContent(content); toolErr != nil {
+			return toolErr, nil
+		}
+
+		// Parse into typed struct for writing.
 		var flowFile executable.FlowFile
 		if err := yaml.Unmarshal([]byte(content), &flowFile); err != nil {
 			return toolError(ErrCodeValidationFailed, fmt.Sprintf("invalid flowfile YAML: %s", err)), nil
 		}
 
-		// Write the flowfile
 		if err := filesystem.WriteFlowFile(absPath, &flowFile); err != nil {
 			return toolError(ErrCodeInternal, fmt.Sprintf("failed to write flowfile: %s", err)), nil
 		}
 
-		// Collect executable names for the summary
 		var execNames []string
 		for _, exec := range flowFile.Executables {
 			execNames = append(execNames, exec.Name)
@@ -276,4 +266,47 @@ func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
 		jsonData, _ := json.Marshal(output)
 		return mcp.NewToolResultText(string(jsonData)), nil
 	}
+}
+
+func resolveFlowfilePath(path string) (string, *mcp.CallToolResult) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+	cfg, err := filesystem.LoadConfig()
+	if err != nil {
+		return "", toolError(ErrCodeInternal, fmt.Sprintf("failed to load config: %s", err))
+	}
+	if cfg.CurrentWorkspace != "" {
+		if wsPath, ok := cfg.Workspaces[cfg.CurrentWorkspace]; ok {
+			return filepath.Join(wsPath, path), nil
+		}
+	}
+	return path, nil
+}
+
+func checkFlowfileOverwrite(absPath string, overwrite bool) *mcp.CallToolResult {
+	if overwrite {
+		return nil
+	}
+	if _, err := os.Stat(absPath); err == nil {
+		return toolError(ErrCodeValidationFailed,
+			fmt.Sprintf("file already exists at %s (use overwrite=true to replace)", absPath))
+	}
+	return nil
+}
+
+func validateFlowfileContent(content string) *mcp.CallToolResult {
+	result, err := validation.ValidateBytes([]byte(content), validation.FileTypeFlowFile, false)
+	if err != nil {
+		return toolError(ErrCodeInternal, fmt.Sprintf("validation error: %s", err))
+	}
+	if !result.Valid {
+		issueStrs := make([]string, 0, len(result.Errors))
+		for _, e := range result.Errors {
+			issueStrs = append(issueStrs, e.String())
+		}
+		return toolError(ErrCodeValidationFailed,
+			fmt.Sprintf("invalid flowfile: %s", strings.Join(issueStrs, "; ")))
+	}
+	return nil
 }

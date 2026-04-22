@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	schemaDir = "docs/public/schemas"
-	idBase    = "https://flowexec.io/schemas"
+	schemaDir         = "docs/public/schemas"
+	validationCopyDir = "internal/validation"
+	idBase            = "https://flowexec.io/schemas"
 )
 
 // The JSON schemas are published at https://flowexec.io/schemas/*.
@@ -39,6 +40,11 @@ func generateJSONSchemas() {
 			}
 			docsPath := filepath.Join(rootDir(), schemaDir, fn.JSONSchemaFile())
 			if err := writeSchemaFile(string(schemaJSON), docsPath); err != nil {
+				panic(err)
+			}
+			// Copy schema to internal/validation/ for go:embed in the CLI binary.
+			validationPath := filepath.Join(rootDir(), validationCopyDir, fn.JSONSchemaFile())
+			if err := writeSchemaFile(string(schemaJSON), validationPath); err != nil {
 				panic(err)
 			}
 		}

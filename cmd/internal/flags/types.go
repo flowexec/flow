@@ -361,6 +361,18 @@ var VaultNameFlag = &Metadata{
 	Required:  false,
 }
 
+var StrictFlag = &Metadata{
+	Name:    "strict",
+	Usage:   "Also check for unknown keys not defined in the schema",
+	Default: false,
+}
+
+var FileTypeFlag = &Metadata{
+	Name:    "type",
+	Usage:   "File type to validate as (flowfile, workspace, config, template). Auto-detected if omitted.",
+	Default: "",
+}
+
 var GlobalCacheFlag = &Metadata{
 	Name:      "global",
 	Shorthand: "g",
