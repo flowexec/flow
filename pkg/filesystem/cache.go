@@ -20,3 +20,16 @@ func CachedDataDirPath() string {
 	}
 	return filepath.Join(dirname, dataDirName)
 }
+
+func EnsureCachedDataDir() error {
+	dir := CachedDataDirPath()
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0750)
+		if err != nil {
+			return errors.Wrap(err, "unable to create cache directory")
+		}
+	} else if err != nil {
+		return errors.Wrap(err, "unable to check for cache directory")
+	}
+	return nil
+}

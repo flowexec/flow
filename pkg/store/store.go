@@ -110,6 +110,10 @@ func NewDataStore(dbPath string) (DataStore, error) {
 		dbPath = Path()
 	}
 
+	if err := filesystem.EnsureCachedDataDir(); err != nil {
+		return nil, fmt.Errorf("failed to ensure cache directory: %w", err)
+	}
+
 	// Verify the path is usable by opening and immediately closing.
 	db, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: openTimeout})
 	if err != nil {
