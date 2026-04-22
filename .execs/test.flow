@@ -27,16 +27,19 @@ executables:
           text: flow
       cmd: |
         echo "Testing flow binary installation..."
-        
-        if [ -f "${BIN_PATH}/${BIN_NAME}" ]; then
+
+        EXT="" && [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]] && EXT=".exe"
+        BIN="${BIN_PATH}/${BIN_NAME}${EXT}"
+
+        if [ -f "$BIN" ]; then
           echo "Testing basic commands..."
-          "${BIN_PATH}/${BIN_NAME}" --version
-          "${BIN_PATH}/${BIN_NAME}" --help
-          "${BIN_PATH}/${BIN_NAME}" exec --help
-          "${BIN_PATH}/${BIN_NAME}" browse --help
-          echo "✅ Binary installation test passed"
+          "$BIN" --version
+          "$BIN" --help
+          "$BIN" exec --help
+          "$BIN" browse --help
+          echo "Binary installation test passed"
         else
-          echo "❌ flow binary not found"
+          echo "flow binary not found at $BIN"
           exit 1
         fi
 
@@ -93,17 +96,17 @@ executables:
       dir: //
       cmd: |
         echo "Combining coverage reports..."
-        
+
         echo "mode: atomic" > merged-coverage.out
-        
+
         if [ -f "unit-coverage.out" ]; then
           tail -n +2 unit-coverage.out >> merged-coverage.out
           echo "Added unit coverage"
         fi
-        
+
         if [ -f "e2e-coverage.out" ]; then
           tail -n +2 e2e-coverage.out >> merged-coverage.out
           echo "Added E2E coverage"
         fi
-        
+
         echo "Coverage reports combined into merged-coverage.out"

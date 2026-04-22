@@ -25,8 +25,9 @@ executables:
         - envKey: BIN_NAME
           text: flow
       cmd: |
-        go build -ldflags "-X github.com/flowexec/flow/internal/version.version=dev" -o ${BIN_PATH}/${BIN_NAME}
-        echo "flow built at ${BIN_PATH}/${BIN_NAME}"
+        EXT="" && [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* ]] && EXT=".exe"
+        go build -ldflags "-X github.com/flowexec/flow/internal/version.version=dev" -o "${BIN_PATH}/${BIN_NAME}${EXT}"
+        echo "flow built at ${BIN_PATH}/${BIN_NAME}${EXT}"
 
   - verb: generate
     name: docs
