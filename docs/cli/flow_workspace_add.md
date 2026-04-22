@@ -20,6 +20,7 @@ flow workspace add NAME PATH_OR_GIT_URL [flags]
 
 ```
   -b, --branch string   Git branch to checkout when cloning a git workspace
+      --depth int       Git clone depth (0 for full history)
   -h, --help            help for add
   -o, --output string   Output format. One of: yaml, json, or tui.
   -s, --set             Set the newly created workspace as the current workspace

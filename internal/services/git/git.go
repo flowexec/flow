@@ -50,8 +50,9 @@ func ClonePath(gitURL string) (string, error) {
 // Clone clones a git repository to the target directory.
 // If branch is non-empty, it checks out that branch.
 // If tag is non-empty, it checks out that tag.
+// If depth > 0, a shallow clone is performed.
 // Progress output goes to stderr.
-func Clone(gitURL, targetDir, branch, tag string) error {
+func Clone(gitURL, targetDir, branch, tag string, depth int) error {
 	if _, err := os.Stat(targetDir); err == nil {
 		entries, readErr := os.ReadDir(targetDir)
 		if readErr == nil && len(entries) > 0 {
@@ -60,6 +61,9 @@ func Clone(gitURL, targetDir, branch, tag string) error {
 	}
 
 	args := []string{"clone", "--progress"}
+	if depth > 0 {
+		args = append(args, "--depth", fmt.Sprintf("%d", depth))
+	}
 	if branch != "" {
 		args = append(args, "--branch", branch)
 	} else if tag != "" {

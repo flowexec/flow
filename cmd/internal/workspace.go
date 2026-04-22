@@ -61,6 +61,7 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	RegisterFlag(ctx, createCmd, *flags.SetAfterCreateFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitBranchFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitTagFlag)
+	RegisterFlag(ctx, createCmd, *flags.GitDepthFlag)
 	RegisterFlag(ctx, createCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(createCmd)
 }
@@ -76,13 +77,14 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	branch := flags.ValueFor[string](cmd, *flags.GitBranchFlag, false)
 	tag := flags.ValueFor[string](cmd, *flags.GitTagFlag, false)
+	depth := flags.ValueFor[int](cmd, *flags.GitDepthFlag, false)
 	if branch != "" && tag != "" {
 		errhandler.HandleUsage(ctx, cmd, "cannot specify both --branch and --tag")
 	}
 
 	var path string
 	if git.IsGitURL(pathOrURL) {
-		path = cloneGitWorkspace(name, pathOrURL, branch, tag)
+		path = cloneGitWorkspace(name, pathOrURL, branch, tag, depth)
 	} else {
 		path = initLocalWorkspace(name, pathOrURL, branch, tag)
 	}
@@ -122,14 +124,14 @@ func initLocalWorkspace(name, pathOrURL, branch, tag string) string {
 	return path
 }
 
-func cloneGitWorkspace(name, gitURL, branch, tag string) string {
+func cloneGitWorkspace(name, gitURL, branch, tag string, depth int) string {
 	clonePath, err := git.ClonePath(gitURL)
 	if err != nil {
 		logger.Log().FatalErr(errors.Wrap(err, "unable to determine clone path"))
 	}
 
 	logger.Log().Infof("Cloning %s...", gitURL)
-	if err := git.Clone(gitURL, clonePath, branch, tag); err != nil {
+	if err := git.Clone(gitURL, clonePath, branch, tag, depth); err != nil {
 		logger.Log().FatalErr(errors.Wrap(err, "unable to clone git repository"))
 	}
 

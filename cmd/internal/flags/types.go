@@ -134,6 +134,12 @@ var GitTagFlag = &Metadata{
 	Default: "",
 }
 
+var GitDepthFlag = &Metadata{
+	Name:    "depth",
+	Usage:   "Git clone depth (0 for full history)",
+	Default: 0,
+}
+
 var GitPullFlag = &Metadata{
 	Name:      "git",
 	Shorthand: "g",
