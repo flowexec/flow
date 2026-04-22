@@ -214,6 +214,7 @@ func registerGetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 	}
 	RegisterFlag(ctx, getCmd, *flags.OutputSecretAsPlainTextFlag)
 	RegisterFlag(ctx, getCmd, *flags.CopyFlag)
+	RegisterFlag(ctx, getCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(getCmd)
 }
 
@@ -240,16 +241,37 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	if asPlainText {
-		logger.Log().PlainTextInfo(s.PlainTextString())
-	} else {
-		logger.Log().PlainTextInfo(s.String())
-	}
-	if copyValue {
-		if err := clipboard.WriteAll(s.PlainTextString()); err != nil {
-			logger.Log().WrapError(err, "\nunable to copy secret value to clipboard")
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+	switch outputFormat {
+	case "json", "yaml", "yml":
+		value := s.String()
+		if asPlainText {
+			value = s.PlainTextString()
+		}
+		data := map[string]any{
+			"name":  reference,
+			"value": value,
+		}
+		if copyValue {
+			if err := clipboard.WriteAll(s.PlainTextString()); err != nil {
+				data["copyError"] = err.Error()
+			} else {
+				data["copied"] = true
+			}
+		}
+		response.HandleSuccess(ctx, cmd, fmt.Sprintf("Secret '%s' retrieved", reference), data)
+	default:
+		if asPlainText {
+			logger.Log().PlainTextInfo(s.PlainTextString())
 		} else {
-			logger.Log().PlainTextSuccess("\ncopied secret value to clipboard")
+			logger.Log().PlainTextInfo(s.String())
+		}
+		if copyValue {
+			if err := clipboard.WriteAll(s.PlainTextString()); err != nil {
+				logger.Log().WrapError(err, "\nunable to copy secret value to clipboard")
+			} else {
+				logger.Log().PlainTextSuccess("\ncopied secret value to clipboard")
+			}
 		}
 	}
 }

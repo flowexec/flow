@@ -9,9 +9,10 @@ flow secret get REFERENCE [flags]
 ### Options
 
 ```
-      --copy        Copy the secret value to the clipboard
-  -h, --help        help for get
-  -p, --plaintext   Output the secret value as plain text instead of an obfuscated string
+      --copy            Copy the secret value to the clipboard
+  -h, --help            help for get
+  -o, --output string   Output format. One of: yaml, json, or tui.
+  -p, --plaintext       Output the secret value as plain text instead of an obfuscated string
 ```
 
 ### Options inherited from parent commands

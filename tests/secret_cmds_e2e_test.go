@@ -4,9 +4,9 @@ package tests_test
 
 import (
 	stdCtx "context"
+	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,13 +37,21 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 		It("should return the generated key", func() {
 			stdOut := ctx.StdOut()
 			keyEnv := "FLOW_TEST_VAULT_KEY"
-			Expect(run.Run(ctx.Context, "vault", "create", "test", "--key-env", keyEnv, "--log-level", "fatal")).
+			Expect(run.Run(ctx.Context, "vault", "create", "test", "--key-env", keyEnv, "--output", "json")).
 				To(Succeed())
 			out, err := readFileContent(stdOut)
 			Expect(err).NotTo(HaveOccurred())
 
-			encryptionKey := strings.TrimSpace(strings.TrimSpace(out))
-			Expect(os.Setenv(keyEnv, encryptionKey)).To(Succeed())
+			var envelope struct {
+				Result struct {
+					Data struct {
+						GeneratedKey string `json:"generatedKey"`
+					} `json:"data"`
+				} `json:"result"`
+			}
+			Expect(json.Unmarshal([]byte(out), &envelope)).To(Succeed())
+			Expect(envelope.Result.Data.GeneratedKey).NotTo(BeEmpty())
+			Expect(os.Setenv(keyEnv, envelope.Result.Data.GeneratedKey)).To(Succeed())
 		})
 
 		It("should create vault with custom path", func() {
@@ -52,10 +60,24 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			defer os.RemoveAll(tmpdir)
 
-			Expect(run.Run(ctx.Context, "vault", "create", "test2", "--type", "aes256", "--path", tmpdir)).To(Succeed())
+			Expect(run.Run(
+				ctx.Context, "vault", "create", "test2", "--type", "aes256", "--path", tmpdir, "--output", "json",
+			)).To(Succeed())
 			out, err := readFileContent(stdOut)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(out).To(ContainSubstring("Vault 'test2' with AES256 encryption created successfully"))
+
+			var envelope struct {
+				Result struct {
+					Message string `json:"message"`
+					Data    struct {
+						Name string `json:"name"`
+						Type string `json:"type"`
+					} `json:"data"`
+				} `json:"result"`
+			}
+			Expect(json.Unmarshal([]byte(out), &envelope)).To(Succeed())
+			Expect(envelope.Result.Message).To(ContainSubstring("test2"))
+			Expect(envelope.Result.Data.Type).To(Equal("aes256"))
 		})
 	})
 

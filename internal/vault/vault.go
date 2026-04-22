@@ -24,7 +24,14 @@ const (
 type Vault = vault.Provider
 type VaultConfig = vault.Config
 
-func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
+// CreateResult contains metadata about a newly created vault.
+type CreateResult struct {
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	GeneratedKey string `json:"generatedKey,omitempty"`
+}
+
+func NewAES256Vault(name, storagePath, keyEnv, keyFile string) (*CreateResult, error) {
 	if keyEnv == "" {
 		logger.Log().Debugf("no AES key provided, using default environment variable %s", DefaultVaultKeyEnv)
 		keyEnv = DefaultVaultKeyEnv
@@ -32,12 +39,18 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 		logger.Log().Debugf("using AES key from environment variable %s", keyEnv)
 	}
 
+	var generatedKey string
 	key := os.Getenv(keyEnv)
 	if key == "" {
-		key = generateAESKey(keyEnv, logLevel)
+		var err error
+		key, err = vault.GenerateEncryptionKey()
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate encryption key: %w", err)
+		}
+		generatedKey = key
 		// this key needs to be set when initializing the vault
 		if err := os.Setenv(keyEnv, key); err != nil {
-			logger.Log().FatalErr(fmt.Errorf("unable to set environment variable %s: %w", keyEnv, err))
+			return nil, fmt.Errorf("unable to set environment variable %s: %w", keyEnv, err)
 		}
 	} else {
 		logger.Log().Debugf("using existing AES key from environment variable %s", keyEnv)
@@ -45,7 +58,7 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 
 	storagePath = utils.ExpandPath(storagePath, CacheDirectory(""), nil)
 	if storagePath == "" {
-		logger.Log().Fatalf("unable to expand storage path: %s", storagePath)
+		return nil, fmt.Errorf("unable to expand storage path")
 	}
 
 	opts := []vault.Option{
@@ -57,7 +70,7 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 	if keyFile != "" {
 		keyFile = utils.ExpandPath(keyFile, CacheDirectory(""), nil)
 		if keyFile == "" {
-			logger.Log().Fatalf("unable to expand key file path: %s", keyFile)
+			return nil, fmt.Errorf("unable to expand key file path")
 		}
 		opts = append(opts, vault.WithAESKeyFromFile(keyFile))
 		if err := writeKeyToFile(key, keyFile); err != nil {
@@ -67,67 +80,42 @@ func NewAES256Vault(name, storagePath, keyEnv, keyFile, logLevel string) {
 
 	v, cfg, err := vault.New(name, opts...)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		return nil, err
 	}
 
 	cfgPath := ConfigFilePath(v.ID())
 	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+		return nil, fmt.Errorf("unable to save vault config: %w", err)
 	}
 
-	if logLevel != "fatal" {
-		logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with AES256 encryption created successfully", v.ID()))
-	}
+	return &CreateResult{Name: v.ID(), Type: "aes256", GeneratedKey: generatedKey}, nil
 }
 
-func generateAESKey(keyEnv, logLevel string) string {
-	key, err := vault.GenerateEncryptionKey()
-	if err != nil {
-		logger.Log().FatalErr(err)
-	}
-
-	if logLevel != "fatal" {
-		// Use Println (unstyled) for the key line so it can be reliably captured
-		// by scripts without ANSI escape codes corrupting the value.
-		logger.Log().Println(fmt.Sprintf("Your vault encryption key is: %s", key))
-		newKeyMsg := fmt.Sprintf(
-			"You will need this key to modify your vault data. Store it somewhere safe!\n"+
-				"Set this value to the %s environment variable to access the vault in the future.\n",
-			keyEnv,
-		)
-		logger.Log().PlainTextInfo(newKeyMsg)
-	} else {
-		// just print the key without additional info
-		logger.Log().Print(key)
-	}
-	return key
-}
-
-func NewUnencryptedVault(name, storagePath string) {
+func NewUnencryptedVault(name, storagePath string) (*CreateResult, error) {
 	storagePath = utils.ExpandPath(storagePath, CacheDirectory(""), nil)
 	if storagePath == "" {
-		logger.Log().Fatalf("unable to expand storage path: %s", storagePath)
+		return nil, fmt.Errorf("unable to expand storage path")
 	}
 
 	opts := []vault.Option{vault.WithUnencryptedPath(storagePath), vault.WithProvider(vault.ProviderTypeUnencrypted)}
 
 	v, cfg, err := vault.New(name, opts...)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		return nil, err
 	}
 
 	cfgPath := ConfigFilePath(v.ID())
 	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+		return nil, fmt.Errorf("unable to save vault config: %w", err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' without encryption created successfully", v.ID()))
+	return &CreateResult{Name: v.ID(), Type: "unencrypted"}, nil
 }
 
-func NewAgeVault(name, storagePath, recipients, identityKey, identityFile string) {
+func NewAgeVault(name, storagePath, recipients, identityKey, identityFile string) (*CreateResult, error) {
 	storagePath = utils.ExpandPath(storagePath, CacheDirectory(""), nil)
 	if storagePath == "" {
-		logger.Log().Fatalf("unable to expand storage path: %s", storagePath)
+		return nil, fmt.Errorf("unable to expand storage path")
 	}
 
 	opts := []vault.Option{vault.WithAgePath(storagePath), vault.WithProvider(vault.ProviderTypeAge)}
@@ -149,60 +137,60 @@ func NewAgeVault(name, storagePath, recipients, identityKey, identityFile string
 
 	v, cfg, err := vault.New(name, opts...)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		return nil, err
 	}
 
 	cfgPath := ConfigFilePath(v.ID())
 	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+		return nil, fmt.Errorf("unable to save vault config: %w", err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with Age encryption created successfully", v.ID()))
+	return &CreateResult{Name: v.ID(), Type: "age"}, nil
 }
 
-func NewKeyringVault(name string) {
+func NewKeyringVault(name string) (*CreateResult, error) {
 	opts := []vault.Option{
 		vault.WithKeyringService(fmt.Sprintf("%s.%s", keyringService, name)),
 		vault.WithProvider(vault.ProviderTypeKeyring)}
 	v, cfg, err := vault.New(name, opts...)
 	if err != nil {
-		logger.Log().FatalErr(err)
+		return nil, err
 	}
 
 	cfgPath := ConfigFilePath(v.ID())
 	if err = vault.SaveConfigJSON(*cfg, cfgPath); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+		return nil, fmt.Errorf("unable to save vault config: %w", err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with Keyring encryption created successfully", v.ID()))
+	return &CreateResult{Name: v.ID(), Type: "keyring"}, nil
 }
 
-func NewExternalVault(providerConfigFile string) {
+func NewExternalVault(providerConfigFile string) (*CreateResult, error) {
 	if providerConfigFile == "" {
-		logger.Log().Fatalf("provider config file path cannot be empty")
+		return nil, fmt.Errorf("provider config file path cannot be empty")
 	}
 
 	providerConfigFile = utils.ExpandPath(providerConfigFile, CacheDirectory(""), nil)
 	if providerConfigFile == "" {
-		logger.Log().Fatalf("unable to expand provider config file path: %s", providerConfigFile)
+		return nil, fmt.Errorf("unable to expand provider config file path")
 	}
 
 	cfg, err := vault.LoadConfigJSON(providerConfigFile)
 	if err != nil {
-		logger.Log().FatalErr(fmt.Errorf("failed to load vault config: %w", err))
+		return nil, fmt.Errorf("failed to load vault config: %w", err)
 	}
 
 	v, _, err := vault.New(cfg.ID, vault.WithExternalConfig(cfg.External))
 	if err != nil {
-		logger.Log().FatalErr(err)
+		return nil, err
 	}
 
 	cfgPath := ConfigFilePath(v.ID())
 	if err = vault.SaveConfigJSON(cfg, cfgPath); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save vault config: %w", err))
+		return nil, fmt.Errorf("unable to save vault config: %w", err)
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' with external provider registered successfully", v.ID()))
+	return &CreateResult{Name: v.ID(), Type: "external"}, nil
 }
 
 func VaultFromName(name string) (*VaultConfig, Vault, error) {

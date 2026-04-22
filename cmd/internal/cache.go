@@ -9,6 +9,7 @@ import (
 
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	cacheIO "github.com/flowexec/flow/internal/io/cache"
 	"github.com/flowexec/flow/pkg/context"
 	"github.com/flowexec/flow/pkg/logger"
@@ -45,6 +46,7 @@ func registerCacheSetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
+	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -85,7 +87,9 @@ func cacheSetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if err := ctx.DataStore.SetProcessVar(bucketName, key, value); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextInfo(fmt.Sprintf("Key %q set in the cache", key))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Key %q set in the cache", key), map[string]any{
+		"key": key,
+	})
 }
 
 func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -100,6 +104,7 @@ func registerCacheGetCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
+	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -115,7 +120,10 @@ func cacheGetFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess(value)
+	response.HandleSuccess(ctx, cmd, value, map[string]any{
+		"key":   key,
+		"value": value,
+	})
 }
 
 func registerCacheListCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -161,6 +169,7 @@ func registerCacheRemoveCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 	RegisterFlag(ctx, subCmd, *flags.GlobalCacheFlag)
+	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -175,7 +184,9 @@ func cacheRemoveFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if err := ctx.DataStore.DeleteProcessVar(bucketName, key); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Key %q removed from the cache", key))
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Key %q removed from the cache", key), map[string]any{
+		"key": key,
+	})
 }
 
 func registerCacheClearCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -190,6 +201,7 @@ func registerCacheClearCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 	RegisterFlag(ctx, subCmd, *flags.StoreAllFlag)
+	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -199,13 +211,13 @@ func cacheClearFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		if err := store.DestroyStore(); err != nil {
 			errhandler.HandleFatal(ctx, cmd, err)
 		}
-		logger.Log().PlainTextSuccess("Cache cleared")
+		response.HandleSuccess(ctx, cmd, "Cache cleared", nil)
 		return
 	}
 	if err := ctx.DataStore.DeleteProcessBucket(store.EnvironmentBucket()); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess("Cache cleared")
+	response.HandleSuccess(ctx, cmd, "Cache cleared", nil)
 }
 
 var dataStoreDescription = "The data store is a key-value store that can be used to persist data across executions. " +

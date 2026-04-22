@@ -10,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
+	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/cmd/internal/response"
 	vaultIO "github.com/flowexec/flow/internal/io/vault"
 	"github.com/flowexec/flow/internal/utils"
 	"github.com/flowexec/flow/internal/vault"
@@ -46,13 +48,13 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			vaultName := args[0]
 			if vaultName == vault.DemoVaultReservedName {
-				logger.Log().Fatalf("create is unsupported for the reserved vaults")
+				errhandler.HandleUsage(ctx, cmd, "create is unsupported for the reserved vaults")
 			} else if err := vault.ValidateIdentifier(vaultName); err != nil {
-				logger.Log().Fatalf("invalid vault name '%s': %v", vaultName, err)
+				errhandler.HandleUsage(ctx, cmd, "invalid vault name '%s': %v", vaultName, err)
 			}
 
 			if _, found := ctx.Config.Vaults[vaultName]; found {
-				logger.Log().Fatalf("vault %s already exists", vaultName)
+				errhandler.HandleUsage(ctx, cmd, "vault %s already exists", vaultName)
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) { createVaultFunc(ctx, cmd, args) },
@@ -62,6 +64,7 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 	RegisterFlag(ctx, createCmd, *flags.VaultPathFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultSetFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultFromFileFlag)
+	RegisterFlag(ctx, createCmd, *flags.OutputFormatFlag)
 	// AES flags
 	RegisterFlag(ctx, createCmd, *flags.VaultKeyEnvFlag)
 	RegisterFlag(ctx, createCmd, *flags.VaultKeyFileFlag)
@@ -79,32 +82,38 @@ func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	vaultPath := flags.ValueFor[string](cmd, *flags.VaultPathFlag, false)
 	setVault := flags.ValueFor[bool](cmd, *flags.VaultSetFlag, false)
 
+	var result *vault.CreateResult
+	var err error
+
 	switch strings.ToLower(vaultType) {
 	case "unencrypted":
-		vault.NewUnencryptedVault(vaultName, vaultPath)
+		result, err = vault.NewUnencryptedVault(vaultName, vaultPath)
 	case "aes256":
 		keyEnv := flags.ValueFor[string](cmd, *flags.VaultKeyEnvFlag, false)
 		keyFile := flags.ValueFor[string](cmd, *flags.VaultKeyFileFlag, false)
-		logLevel := flags.ValueFor[string](cmd, *flags.LogLevel, false)
-		vault.NewAES256Vault(vaultName, vaultPath, keyEnv, keyFile, logLevel)
+		result, err = vault.NewAES256Vault(vaultName, vaultPath, keyEnv, keyFile)
 	case "age":
 		recipients := flags.ValueFor[string](cmd, *flags.VaultRecipientsFlag, false)
 		identityEnv := flags.ValueFor[string](cmd, *flags.VaultIdentityEnvFlag, false)
 		identityFile := flags.ValueFor[string](cmd, *flags.VaultIdentityFileFlag, false)
-		vault.NewAgeVault(vaultName, vaultPath, recipients, identityEnv, identityFile)
+		result, err = vault.NewAgeVault(vaultName, vaultPath, recipients, identityEnv, identityFile)
 	case "keyring":
-		vault.NewKeyringVault(vaultName)
+		result, err = vault.NewKeyringVault(vaultName)
 	case "external":
 		cfgFile := flags.ValueFor[string](cmd, *flags.VaultFromFileFlag, false)
 		if cfgFile == "" {
-			logger.Log().Fatalf("external vault requires a configuration file to be specified with --config")
+			errhandler.HandleUsage(ctx, cmd, "external vault requires a configuration file to be specified with --config")
 		}
-		vault.NewExternalVault(vaultPath)
+		result, err = vault.NewExternalVault(cfgFile)
 	default:
-		logger.Log().Fatalf(
+		errhandler.HandleUsage(
+			ctx, cmd,
 			"unsupported vault type: %s - must be one of 'aes256', 'age', 'unencrypted', 'keyring', or 'external'",
 			vaultType,
 		)
+	}
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
 	if ctx.Config.Vaults == nil {
@@ -122,8 +131,40 @@ func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		logger.Log().Infof("Vault '%s' set as current vault", vaultName)
 	}
 	if err := filesystem.WriteConfig(ctx.Config); err != nil {
-		logger.Log().FatalErr(fmt.Errorf("unable to save user configuration: %w", err))
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("unable to save user configuration: %w", err))
 	}
+
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+	logLevel := flags.ValueFor[string](cmd, *flags.LogLevel, false)
+
+	// In plain-text mode, print the generated key so it can be captured by
+	// scripts or seen by the user before it scrolls away.
+	if result.GeneratedKey != "" && outputFormat == "" {
+		if logLevel == "fatal" {
+			// Bare key output for scripting (e.g. key=$(flow vault create ...))
+			logger.Log().Print(result.GeneratedKey)
+		} else {
+			keyEnv := flags.ValueFor[string](cmd, *flags.VaultKeyEnvFlag, false)
+			if keyEnv == "" {
+				keyEnv = vault.DefaultVaultKeyEnv
+			}
+			logger.Log().Println(fmt.Sprintf("Your vault encryption key is: %s", result.GeneratedKey))
+			logger.Log().PlainTextInfo(fmt.Sprintf(
+				"You will need this key to modify your vault data. Store it somewhere safe!\n"+
+					"Set this value to the %s environment variable to access the vault in the future.\n",
+				keyEnv,
+			))
+		}
+	}
+
+	data := map[string]any{
+		"name": result.Name,
+		"type": result.Type,
+	}
+	if result.GeneratedKey != "" {
+		data["generatedKey"] = result.GeneratedKey
+	}
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Vault '%s' created", result.Name), data)
 }
 
 func registerGetVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
@@ -144,7 +185,7 @@ func registerGetVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 			}
 
 			if err := vault.ValidateIdentifier(vaultName); err != nil {
-				logger.Log().Fatalf("invalid vault name '%s': %v", vaultName, err)
+				errhandler.HandleUsage(ctx, cmd, "invalid vault name '%s': %v", vaultName, err)
 			}
 
 			StartTUI(ctx, cmd)
@@ -213,17 +254,18 @@ func registerRemoveVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
 		},
-		PreRun: func(cmd *cobra.Command, args []string) { validateVaults(ctx.Config) },
+		PreRun: func(cmd *cobra.Command, args []string) { validateVaults(ctx, cmd) },
 		Run:    func(cmd *cobra.Command, args []string) { removeVaultFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
 	vaultCmd.AddCommand(removeCmd)
 }
 
-func removeVaultFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func removeVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	vaultName := args[0]
 
 	if vaultName == vault.DemoVaultReservedName {
-		logger.Log().Fatalf("remove is unsupported for the current vault")
+		errhandler.HandleUsage(ctx, cmd, "remove is unsupported for the reserved vault")
 	}
 
 	form, err := views.NewForm(
@@ -236,10 +278,10 @@ func removeVaultFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 			Title: fmt.Sprintf("Are you sure you want to remove the vault '%s'?", vaultName),
 		})
 	if err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if err := form.Run(ctx); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	resp := form.FindByKey("confirm").Value()
 	if truthy, _ := strconv.ParseBool(resp); !truthy {
@@ -249,18 +291,20 @@ func removeVaultFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 
 	userConfig := ctx.Config
 	if userConfig.CurrentVault != nil && vaultName == *userConfig.CurrentVault {
-		logger.Log().Fatalf("cannot remove the current vault")
+		errhandler.HandleUsage(ctx, cmd, "cannot remove the current vault")
 	}
 	if _, found := userConfig.Vaults[vaultName]; !found {
-		logger.Log().Fatalf("vault %s was not found", vaultName)
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s was not found", vaultName))
 	}
 
 	delete(userConfig.Vaults, vaultName)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	logger.Log().Warnf("Vault '%s' deleted", vaultName)
+	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Vault '%s' deleted", vaultName), map[string]any{
+		"name": vaultName,
+	})
 }
 
 func registerSwitchVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
@@ -278,25 +322,28 @@ func registerSwitchVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 			if reservedName {
 				return
 			}
-			validateVaults(ctx.Config)
+			validateVaults(ctx, cmd)
 			if _, found := ctx.Config.Vaults[vaultName]; !found {
-				logger.Log().Fatalf("vault %s not found", vaultName)
+				errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s not found", vaultName))
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) { switchVaultFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, switchCmd, *flags.OutputFormatFlag)
 	vaultCmd.AddCommand(switchCmd)
 }
 
-func switchVaultFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func switchVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	vaultName := args[0]
 	userConfig := ctx.Config
 	userConfig.CurrentVault = &vaultName
 
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	logger.Log().PlainTextSuccess("Vault set to " + vaultName)
+	response.HandleSuccess(ctx, cmd, "Vault set to "+vaultName, map[string]any{
+		"name": vaultName,
+	})
 }
 
 func registerEditVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
@@ -311,23 +358,24 @@ func registerEditVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			validateVaults(ctx.Config)
+			validateVaults(ctx, cmd)
 			vaultName := args[0]
 			if vaultName == vault.DemoVaultReservedName {
-				logger.Log().Fatalf("edit is unsupported for the current vault")
+				errhandler.HandleUsage(ctx, cmd, "edit is unsupported for the reserved vault")
 			} else if err := vault.ValidateIdentifier(vaultName); err != nil {
-				logger.Log().Fatalf("invalid vault name '%s': %v", vaultName, err)
+				errhandler.HandleUsage(ctx, cmd, "invalid vault name '%s': %v", vaultName, err)
 			}
 
 			userConfig := ctx.Config
 			if _, found := userConfig.Vaults[vaultName]; !found {
-				logger.Log().Fatalf("vault %s not found", vaultName)
+				errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s not found", vaultName))
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) { editVaultFunc(ctx, cmd, args) },
 	}
 
 	RegisterFlag(ctx, editCmd, *flags.VaultPathFlag)
+	RegisterFlag(ctx, editCmd, *flags.OutputFormatFlag)
 	// AES flags
 	RegisterFlag(ctx, editCmd, *flags.VaultKeyEnvFlag)
 	RegisterFlag(ctx, editCmd, *flags.VaultKeyFileFlag)
@@ -339,7 +387,7 @@ func registerEditVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 	vaultCmd.AddCommand(editCmd)
 }
 
-func editVaultFunc(_ *context.Context, cmd *cobra.Command, args []string) {
+func editVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	vaultName := args[0]
 
 	vaultPath := flags.ValueFor[string](cmd, *flags.VaultPathFlag, false)
@@ -352,7 +400,7 @@ func editVaultFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 	cfgPath := vault.ConfigFilePath(vaultName)
 	existingCfg, err := extvault.LoadConfigJSON(cfgPath)
 	if err != nil {
-		logger.Log().Fatalf("failed to load vault configuration: %v", err)
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("failed to load vault configuration: %w", err))
 	}
 
 	// TODO: add support for appending KeySources and IdentitySources instead of overwriting them
@@ -393,14 +441,21 @@ func editVaultFunc(_ *context.Context, cmd *cobra.Command, args []string) {
 			}}
 		}
 	default:
-		logger.Log().Fatalf("unsupported vault type: %s", existingCfg.Type)
+		errhandler.HandleUsage(ctx, cmd, "unsupported vault type: %s", existingCfg.Type)
 	}
 
 	if err = extvault.SaveConfigJSON(existingCfg, cfgPath); err != nil {
-		logger.Log().Fatalf("failed to save vault configuration: %v", err)
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("failed to save vault configuration: %w", err))
 	}
 
-	logger.Log().PlainTextSuccess(fmt.Sprintf("Vault '%s' configuration updated successfully", vaultName))
+	response.HandleSuccess(
+		ctx,
+		cmd,
+		fmt.Sprintf("Vault '%s' configuration updated successfully", vaultName),
+		map[string]any{
+			"name": vaultName,
+		},
+	)
 }
 
 func vaultNames(cfg *config.Config) []string {
@@ -414,8 +469,8 @@ func vaultNames(cfg *config.Config) []string {
 	return names
 }
 
-func validateVaults(cfg *config.Config) {
-	if cfg == nil || cfg.Vaults == nil {
-		logger.Log().Fatalf("no vaults configured")
+func validateVaults(ctx *context.Context, cmd *cobra.Command) {
+	if ctx.Config == nil || ctx.Config.Vaults == nil {
+		errhandler.HandleUsage(ctx, cmd, "no vaults configured")
 	}
 }

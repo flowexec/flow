@@ -15,8 +15,9 @@ flow cache set KEY [VALUE] [flags]
 ### Options
 
 ```
-  -g, --global   Force use of the global cache scope, even when called from within an executable
-  -h, --help     help for set
+  -g, --global          Force use of the global cache scope, even when called from within an executable
+  -h, --help            help for set
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

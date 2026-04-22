@@ -15,8 +15,9 @@ flow cache clear [flags]
 ### Options
 
 ```
-      --all    Force clear all stored data
-  -h, --help   help for clear
+      --all             Force clear all stored data
+  -h, --help            help for clear
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands

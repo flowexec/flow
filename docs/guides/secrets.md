@@ -12,11 +12,11 @@ Whether you're managing API keys, database passwords, or deployment tokens, the 
 Create your first vault and add a secret:
 
 ```shell
-# Create a vault and set it as current (generates a key and shows it in output)
+# Create a vault and set it as current
 flow vault create my-vault --set
 
-# Set the generated key in the default environment variable
-export FLOW_VAULT_KEY="<key-from-output>"
+# Extract and store the generated key using JSON output
+export FLOW_VAULT_KEY=$(flow vault create my-vault --set --output json | jq -r '.result.data.generatedKey')
 
 # Add a secret (you'll be prompted for the value)
 flow secret set database-password
@@ -67,9 +67,9 @@ flow vault create myapp --key-file ~/mykeys/myapp.key
 If you specify a `--key-env` and that environment variable already contains a valid encryption key, the vault will use that existing key instead of generating a new one:
 
 ```shell
-# Create first vault and set the generated key
-flow vault create dev --key-env SHARED_VAULT_KEY
-export SHARED_VAULT_KEY="<key-from-output>"
+# Create first vault and extract the generated key
+export SHARED_VAULT_KEY=$(flow vault create dev --key-env SHARED_VAULT_KEY --output json \
+  | jq -r '.result.data.generatedKey')
 
 # Create additional vaults using the same key
 flow vault create staging --key-env SHARED_VAULT_KEY
@@ -271,6 +271,9 @@ flow secret get my-secret --plaintext
 
 # Copy to clipboard
 flow secret get my-secret --copy
+
+# Extract value as clean JSON (no ANSI colors, ideal for scripts and tools)
+flow secret get my-secret --plaintext --output json | jq -r '.result.data.value'
 ```
 
 ### Updating and Removing

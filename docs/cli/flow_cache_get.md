@@ -15,8 +15,9 @@ flow cache get KEY [flags]
 ### Options
 
 ```
-  -g, --global   Force use of the global cache scope, even when called from within an executable
-  -h, --help     help for get
+  -g, --global          Force use of the global cache scope, even when called from within an executable
+  -h, --help            help for get
+  -o, --output string   Output format. One of: yaml, json, or tui.
 ```
 
 ### Options inherited from parent commands
