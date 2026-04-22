@@ -189,7 +189,7 @@ func resolveLocalPath(path, name string) string {
 		}
 		return filepath.Join(wd, path)
 	default:
-		return path
+		return filepath.Clean(path)
 	}
 }
 
