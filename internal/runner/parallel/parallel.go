@@ -217,11 +217,11 @@ func handleExec(
 			// Shallow-copy the context so each goroutine has its own CurrentTask
 			// and a /dev/null stdin — multiple goroutines sharing a terminal fd
 			// causes escape sequence responses to leak into captured output.
-			taskCtx := *ctx
+			taskCtx := ctx.ShallowCopy()
 			taskCtx.CurrentTask = task
 			devNull, _ := os.Open(os.DevNull)
 			taskCtx.SetIO(devNull, ctx.StdOut())
-			err := runner.Exec(&taskCtx, exec, eng, childEnv, childArgs)
+			err := runner.Exec(taskCtx, exec, eng, childEnv, childArgs)
 			if err != nil {
 				tracker.CompleteTask(task, io.TaskFailed, err)
 				return err

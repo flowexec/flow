@@ -63,7 +63,7 @@ func NewLibraryView(
 	filter Filter,
 	runFunc func(string) error,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	return views.NewLibrary(
 		container.RenderState(),
 		workspacesPage(ctx, workspaces, execs, filter, runFunc),
@@ -197,7 +197,7 @@ func workspacePageRows(
 }
 
 func workspacePageKeys(ctx *context.Context, table *views.Table, wsList workspace.WorkspaceList) []types.KeyCallback {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	return []types.KeyCallback{
 		{Key: "o", Label: "open", Callback: func() error {
 			ws := selectedWorkspace(table, wsList)
@@ -288,7 +288,7 @@ func executablePageKeys(
 	visible executable.ExecutableList,
 	runFunc func(string) error,
 ) []types.KeyCallback {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	selectedExec := func() *executable.Executable {
 		row := table.GetSelectedRow()
 		if row == nil {

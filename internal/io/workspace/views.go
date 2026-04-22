@@ -21,7 +21,7 @@ func NewWorkspaceView(
 	ctx *context.Context,
 	ws *workspace.Workspace,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	var workspaceKeyCallbacks = []types.KeyCallback{
 		{
 			Key: "o", Label: "open",
@@ -69,7 +69,7 @@ func NewWorkspaceListView(
 	ctx *context.Context,
 	workspaces workspace.WorkspaceList,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	if len(workspaces) == 0 {
 		container.HandleError(fmt.Errorf("no workspaces found"))
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/flowexec/tuikit"
@@ -22,20 +23,19 @@ import (
 	"github.com/flowexec/flow/types/workspace"
 )
 
-const (
-	AppName      = "flow"
-	HeaderCtxKey = "ctx"
-)
+const HeaderCtxKey = "ctx"
 
 type Context struct {
+	appName               string
 	ctx                   context.Context
 	cancelFunc            context.CancelFunc
 	stdOut, stdIn, stdErr *os.File
 	callbacks             []func(*Context) error
+	tuiOnce               sync.Once
+	tuiContainer          *tuikit.Container
 
 	Config           *config.Config
 	CurrentWorkspace *workspace.Workspace
-	TUIContainer     *tuikit.Container
 	WorkspacesCache  cache.WorkspaceCache
 	ExecutableCache  cache.ExecutableCache
 	DataStore        store.DataStore
@@ -71,6 +71,8 @@ func WithStdOut(f *os.File) Option { return func(c *Context) { c.stdOut = f } }
 // WithStdErr sets the standard error file. Defaults to os.Stderr.
 func WithStdErr(f *os.File) Option { return func(c *Context) { c.stdErr = f } }
 
+func WithAppName(name string) Option { return func(c *Context) { c.appName = name } }
+
 func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Option) *Context {
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
@@ -102,6 +104,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 	executableCache := cache.NewExecutableCache(workspaceCache, ds)
 
 	c := &Context{
+		appName:          "flow",
 		ctx:              ctx,
 		cancelFunc:       cancelFunc,
 		stdOut:           os.Stdout,
@@ -117,27 +120,36 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 		opt(c)
 	}
 
-	app := tuikit.NewApplication(
-		AppName,
-		tuikit.WithState(HeaderCtxKey, c.String()),
-		tuikit.WithVersion(version.SemVer()),
-		tuikit.WithLoadingMsg("thinking..."),
-	)
-
-	theme := logger.Theme(cfg.Theme.String())
-	if cfg.ColorOverride != nil {
-		theme = overrideThemeColor(theme, cfg.ColorOverride)
-	}
-	c.TUIContainer, err = tuikit.NewContainer(
-		ctx, app,
-		tuikit.WithInput(c.stdIn),
-		tuikit.WithOutput(c.stdOut),
-		tuikit.WithTheme(theme),
-	)
-	if err != nil {
-		panic(errors.Wrap(err, "TUI container initialization error"))
-	}
 	return c
+}
+
+// ShallowCopy returns a pointer to a new Context that shares all backing
+// state (config, caches, data store, TUI container) but has its own mutable
+// fields (CurrentTask, ProcessTmpDir, etc.)
+func (ctx *Context) ShallowCopy() *Context {
+	cp := &Context{
+		appName:          ctx.appName,
+		ctx:              ctx.ctx,
+		cancelFunc:       ctx.cancelFunc,
+		stdOut:           ctx.stdOut,
+		stdIn:            ctx.stdIn,
+		stdErr:           ctx.stdErr,
+		tuiContainer:     ctx.tuiContainer, // share already-initialized container (if any)
+		Config:           ctx.Config,
+		CurrentWorkspace: ctx.CurrentWorkspace,
+		WorkspacesCache:  ctx.WorkspacesCache,
+		ExecutableCache:  ctx.ExecutableCache,
+		DataStore:        ctx.DataStore,
+		RootExecutable:   ctx.RootExecutable,
+		ProcessTmpDir:    ctx.ProcessTmpDir,
+		LogArchiveID:     ctx.LogArchiveID,
+	}
+	// If the parent has already initialized the TUI container, mark the copy
+	// as initialized too so it won't re-create one.
+	if ctx.tuiContainer != nil {
+		cp.tuiOnce.Do(func() {})
+	}
+	return cp
 }
 
 func (ctx *Context) Deadline() (deadline time.Time, ok bool) {
@@ -181,6 +193,10 @@ func (ctx *Context) String() string {
 	return fmt.Sprintf("%s/%s", ws, ns)
 }
 
+func (ctx *Context) AppName() string {
+	return ctx.appName
+}
+
 func (ctx *Context) StdOut() *os.File {
 	return ctx.stdOut
 }
@@ -219,8 +235,46 @@ func (ctx *Context) SetContext(c context.Context, cancelFunc context.CancelFunc)
 	ctx.cancelFunc = cancelFunc
 }
 
+// TUIContainer returns the TUI container, initializing it on first access.
+// This avoids eagerly creating a bubbletea program (which reads terminal state
+// from stdin) for commands that never use the TUI.
+func (ctx *Context) TUIContainer() *tuikit.Container {
+	ctx.tuiOnce.Do(func() {
+		app := tuikit.NewApplication(
+			ctx.appName,
+			tuikit.WithState(HeaderCtxKey, ctx.String()),
+			tuikit.WithVersion(version.SemVer()),
+			tuikit.WithLoadingMsg("thinking..."),
+		)
+
+		theme := logger.Theme(ctx.Config.Theme.String())
+		if ctx.Config.ColorOverride != nil {
+			theme = overrideThemeColor(theme, ctx.Config.ColorOverride)
+		}
+
+		var err error
+		ctx.tuiContainer, err = tuikit.NewContainer(
+			ctx.ctx, app,
+			tuikit.WithInput(ctx.stdIn),
+			tuikit.WithOutput(ctx.stdOut),
+			tuikit.WithTheme(theme),
+		)
+		if err != nil {
+			panic(errors.Wrap(err, "TUI container initialization error"))
+		}
+	})
+	return ctx.tuiContainer
+}
+
+// SetTUIContainer sets the TUI container directly, bypassing lazy init.
+// This is intended for tests that provide a pre-built container.
+func (ctx *Context) SetTUIContainer(c *tuikit.Container) {
+	ctx.tuiOnce.Do(func() {}) // mark as initialized
+	ctx.tuiContainer = c
+}
+
 func (ctx *Context) SetView(view tuikit.View) error {
-	return ctx.TUIContainer.SetView(view)
+	return ctx.TUIContainer().SetView(view)
 }
 
 func (ctx *Context) AddCallback(callback func(*Context) error) {

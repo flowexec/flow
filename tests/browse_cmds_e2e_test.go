@@ -38,7 +38,7 @@ var _ = Describe("browse TUI", func() {
 		}
 
 		container = newTUIContainer(ctx)
-		ctx.TUIContainer = container
+		ctx.SetTUIContainer(container)
 	})
 
 	AfterEach(func() {

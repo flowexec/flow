@@ -129,16 +129,16 @@ func (r *renderRunner) Exec(
 		return nil
 	}
 
-	if err := ctx.TUIContainer.Start(); err != nil {
+	if err := ctx.TUIContainer().Start(); err != nil {
 		return errors.Wrapf(err, "unable to open viewer")
 	}
 	defer func() {
-		ctx.TUIContainer.WaitForExit()
+		ctx.TUIContainer().WaitForExit()
 	}()
 
 	filename := filepath.Base(contentFile)
-	ctx.TUIContainer.SetState("file", filename)
-	return ctx.TUIContainer.SetView(views.NewMarkdownView(ctx.TUIContainer.RenderState(), data))
+	ctx.TUIContainer().SetState("file", filename)
+	return ctx.TUIContainer().SetView(views.NewMarkdownView(ctx.TUIContainer().RenderState(), data))
 }
 
 // renderPlain writes the rendered content bracketed by parseable markers so

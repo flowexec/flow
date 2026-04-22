@@ -208,7 +208,7 @@ func getVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	if TUIEnabled(ctx, cmd) {
-		view := vaultIO.NewVaultView(ctx.TUIContainer, vaultName)
+		view := vaultIO.NewVaultView(ctx.TUIContainer(), vaultName)
 		SetView(ctx, cmd, view)
 	} else {
 		vaultIO.PrintVault(outputFormat, vaultName)
@@ -236,7 +236,7 @@ func listVaultsFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	cfg := ctx.Config
 	if TUIEnabled(ctx, cmd) {
-		view := vaultIO.NewVaultListView(ctx.TUIContainer, maps.Keys(cfg.Vaults))
+		view := vaultIO.NewVaultListView(ctx.TUIContainer(), maps.Keys(cfg.Vaults))
 		SetView(ctx, cmd, view)
 	} else {
 		vaultIO.PrintVaultList(outputFormat, maps.Keys(cfg.Vaults))

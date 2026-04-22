@@ -308,7 +308,7 @@ func getConfigFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	userConfig := ctx.Config
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
-		view := configIO.NewUserConfigView(ctx.TUIContainer, *userConfig)
+		view := configIO.NewUserConfigView(ctx.TUIContainer(), *userConfig)
 		SetView(ctx, cmd, view)
 	} else {
 		configIO.PrintUserConfig(outputFormat, userConfig)

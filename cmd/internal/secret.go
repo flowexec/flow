@@ -186,7 +186,7 @@ func listSecretFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		// Don't close the vault prematurely if we're in interactive mode
 		go func() {
 			if interactiveUI {
-				ctx.TUIContainer.WaitForExit()
+				ctx.TUIContainer().WaitForExit()
 			}
 			_ = v.Close()
 		}()

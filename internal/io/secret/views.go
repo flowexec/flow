@@ -22,7 +22,7 @@ func NewSecretView(
 	ref vault.SecretRef,
 	asPlainText bool,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	if ref.Vault() != vlt.ID() {
 		err := fmt.Errorf(
 			"failure while initializing the secret view secret: vault mismatch -expected %s, got %s",
@@ -161,7 +161,7 @@ func NewSecretListView(
 	vlt vault.Vault,
 	asPlainText bool,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 
 	keys, err := vlt.ListSecrets()
 	if err != nil {

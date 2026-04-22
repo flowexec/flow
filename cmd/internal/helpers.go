@@ -85,7 +85,7 @@ func StartTUI(ctx *context.Context, cmd *cobra.Command) {
 	if !TUIEnabled(ctx, cmd) {
 		return
 	}
-	if err := ctx.TUIContainer.Start(); err != nil {
+	if err := ctx.TUIContainer().Start(); err != nil {
 		logger.Log().FatalErr(err)
 	}
 }
@@ -94,13 +94,13 @@ func WaitForTUI(ctx *context.Context, cmd *cobra.Command) {
 	if !TUIEnabled(ctx, cmd) {
 		return
 	}
-	ctx.TUIContainer.WaitForExit()
+	ctx.TUIContainer().WaitForExit()
 }
 
 func printContext(ctx *context.Context, cmd *cobra.Command) {
 	if TUIEnabled(ctx, cmd) {
 		logger.Log().Println(logger.Theme(ctx.Config.Theme.String()).
-			RenderHeader(context.AppName, version.SemVer(), context.HeaderCtxKey, ctx.String(), 0))
+			RenderHeader(ctx.AppName(), version.SemVer(), context.HeaderCtxKey, ctx.String(), 0))
 	}
 }
 

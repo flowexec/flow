@@ -27,12 +27,12 @@ func NewExecutableView(
 	exec *executable.Executable,
 	runFunc func(string) error,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	var executableKeyCallbacks = []types.KeyCallback{
 		{
 			Key: "r", Label: "run",
 			Callback: func() error {
-				ctx.TUIContainer.Shutdown(func() {
+				ctx.TUIContainer().Shutdown(func() {
 					err := runFunc(exec.Ref().String())
 					if err != nil {
 						logger.Log().WrapError(err, "executable view runner error")
@@ -71,7 +71,7 @@ func NewExecutableListView(
 	executables executable.ExecutableList,
 	runFunc func(string) error,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	if len(executables) == 0 {
 		container.HandleError(fmt.Errorf("no executables found"))
 	}
@@ -141,12 +141,12 @@ func NewTemplateView(
 	template *executable.Template,
 	runFunc func(string) error,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	var templateKeyCallbacks = []types.KeyCallback{
 		{
 			Key: "r", Label: "run",
 			Callback: func() error {
-				ctx.TUIContainer.Shutdown()
+				ctx.TUIContainer().Shutdown()
 				return runFunc(template.Name())
 			},
 		},
@@ -180,7 +180,7 @@ func NewTemplateListView(
 	templates executable.TemplateList,
 	runFunc func(string) error,
 ) tuikit.View {
-	container := ctx.TUIContainer
+	container := ctx.TUIContainer()
 	if len(templates) == 0 {
 		container.HandleError(fmt.Errorf("no templates found"))
 	}

@@ -150,7 +150,7 @@ func cacheListFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
-		view := cacheIO.NewCacheListView(ctx.TUIContainer, data)
+		view := cacheIO.NewCacheListView(ctx.TUIContainer(), data)
 		SetView(ctx, cmd, view)
 	} else {
 		cacheIO.PrintCache(data, outputFormat)

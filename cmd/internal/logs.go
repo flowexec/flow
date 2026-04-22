@@ -110,7 +110,7 @@ func logFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	records = logs.FilterRecords(records, filter)
 
 	if TUIEnabled(ctx, cmd) {
-		view := logs.NewUnifiedLogView(ctx.TUIContainer, records, lastEntry, ctx.DataStore)
+		view := logs.NewUnifiedLogView(ctx.TUIContainer(), records, lastEntry, ctx.DataStore)
 		SetView(ctx, cmd, view)
 		return
 	}
@@ -254,7 +254,7 @@ func logsRunningFunc(ctx *context.Context, cmd *cobra.Command) {
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 
 	if TUIEnabled(ctx, cmd) {
-		view := logs.NewBackgroundRunsView(ctx.TUIContainer, active, ctx.DataStore)
+		view := logs.NewBackgroundRunsView(ctx.TUIContainer(), active, ctx.DataStore)
 		SetView(ctx, cmd, view)
 		return
 	}
