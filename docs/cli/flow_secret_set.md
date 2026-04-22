@@ -12,6 +12,7 @@ flow secret set NAME [VALUE] [flags]
       --file string     File to read the secret's value from
   -h, --help            help for set
   -o, --output string   Output format. One of: yaml, json, or tui.
+  -V, --vault string    Vault name to use instead of the current vault.
 ```
 
 ### Options inherited from parent commands

@@ -13,6 +13,7 @@ flow secret get REFERENCE [flags]
   -h, --help            help for get
   -o, --output string   Output format. One of: yaml, json, or tui.
   -p, --plaintext       Output the secret value as plain text instead of an obfuscated string
+  -V, --vault string    Vault name to use instead of the current vault.
 ```
 
 ### Options inherited from parent commands

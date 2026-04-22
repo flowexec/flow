@@ -11,6 +11,7 @@ flow secret remove NAME [flags]
 ```
   -h, --help            help for remove
   -o, --output string   Output format. One of: yaml, json, or tui.
+  -V, --vault string    Vault name to use instead of the current vault.
 ```
 
 ### Options inherited from parent commands

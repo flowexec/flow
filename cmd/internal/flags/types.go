@@ -353,6 +353,14 @@ var VaultFromFileFlag = &Metadata{
 	Required:  false,
 }
 
+var VaultNameFlag = &Metadata{
+	Name:      "vault",
+	Shorthand: "V",
+	Usage:     "Vault name to use instead of the current vault.",
+	Default:   "",
+	Required:  false,
+}
+
 var GlobalCacheFlag = &Metadata{
 	Name:      "global",
 	Shorthand: "g",

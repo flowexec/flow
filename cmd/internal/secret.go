@@ -44,6 +44,7 @@ func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Args:    cobra.ExactArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { removeSecretFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, removeCmd, *flags.VaultNameFlag)
 	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(removeCmd)
 }
@@ -72,7 +73,7 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		return
 	}
 
-	_, v, err := vault.VaultFromName(currentVault(ctx.Config))
+	_, v, err := vault.VaultFromName(effectiveVault(cmd, ctx.Config))
 	defer v.Close()
 
 	if err != nil {
@@ -95,6 +96,7 @@ func registerSetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Args:    cobra.MinimumNArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { setSecretFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, setCmd, *flags.VaultNameFlag)
 	RegisterFlag(ctx, setCmd, *flags.SecretFromFile)
 	RegisterFlag(ctx, setCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(setCmd)
@@ -143,7 +145,7 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		value = strings.Join(args[1:], " ")
 	}
 
-	vaultName := currentVault(ctx.Config)
+	vaultName := effectiveVault(cmd, ctx.Config)
 	_, v, err := vault.VaultFromName(vaultName)
 	defer v.Close()
 
@@ -169,6 +171,7 @@ func registerListSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		PostRun: func(cmd *cobra.Command, args []string) { WaitForTUI(ctx, cmd) },
 		Run:     func(cmd *cobra.Command, args []string) { listSecretFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, listCmd, *flags.VaultNameFlag)
 	RegisterFlag(ctx, listCmd, *flags.OutputSecretAsPlainTextFlag)
 	RegisterFlag(ctx, listCmd, *flags.OutputFormatFlag)
 	secretCmd.AddCommand(listCmd)
@@ -178,7 +181,7 @@ func listSecretFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	asPlainText := flags.ValueFor[bool](cmd, *flags.OutputSecretAsPlainTextFlag, false)
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 
-	name := currentVault(ctx.Config)
+	name := effectiveVault(cmd, ctx.Config)
 	interactiveUI := TUIEnabled(ctx, cmd)
 
 	_, v, err := vault.VaultFromName(name)
@@ -212,6 +215,7 @@ func registerGetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Args:    cobra.ExactArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { getSecretFunc(ctx, cmd, args) },
 	}
+	RegisterFlag(ctx, getCmd, *flags.VaultNameFlag)
 	RegisterFlag(ctx, getCmd, *flags.OutputSecretAsPlainTextFlag)
 	RegisterFlag(ctx, getCmd, *flags.CopyFlag)
 	RegisterFlag(ctx, getCmd, *flags.OutputFormatFlag)
@@ -228,7 +232,7 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	if rVault == "" {
-		rVault = currentVault(ctx.Config)
+		rVault = effectiveVault(cmd, ctx.Config)
 	}
 	_, v, err := vault.VaultFromName(rVault)
 	defer v.Close()
@@ -276,7 +280,10 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 }
 
-func currentVault(cfg *config.Config) string {
+func effectiveVault(cmd *cobra.Command, cfg *config.Config) string {
+	if v := flags.ValueFor[string](cmd, *flags.VaultNameFlag, false); v != "" {
+		return v
+	}
 	if cfg.CurrentVault == nil {
 		return ""
 	}
