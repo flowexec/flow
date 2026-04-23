@@ -271,6 +271,11 @@
           "type": "string",
           "default": ""
         },
+        "name": {
+          "description": "A human-readable label for this step, used for display purposes.",
+          "type": "string",
+          "default": ""
+        },
         "ref": {
           "$ref": "#/definitions/ExecutableRef",
           "description": "A reference to another executable to run in serial.\nOne of `cmd` or `ref` must be set.\n",
@@ -512,6 +517,11 @@
         },
         "if": {
           "description": "An expression that determines whether the executable should run, using the Expr language syntax.\nThe expression is evaluated at runtime and must resolve to a boolean value.\n\nThe expression has access to OS/architecture information (os, arch), environment variables (env), stored data\n(store), and context information (ctx) like workspace and paths.\n\nFor example, `os == \"darwin\"` will only run on macOS, `len(store[\"feature\"]) \u003e 0` will run if a value exists\nin the store, and `env[\"CI\"] == \"true\"` will run in CI environments.\nSee the [Expr documentation](https://expr-lang.org/docs/language-definition) for more information.\n",
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "description": "A human-readable label for this step, used for display purposes.",
           "type": "string",
           "default": ""
         },

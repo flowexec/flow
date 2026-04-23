@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -47,6 +48,7 @@ func registerGenerateTemplateCmd(ctx *context.Context, templateCmd *cobra.Comman
 	RegisterFlag(ctx, generateCmd, *flags.TemplateFlag)
 	RegisterFlag(ctx, generateCmd, *flags.TemplateFilePathFlag)
 	RegisterFlag(ctx, generateCmd, *flags.TemplateWorkspaceFlag)
+	RegisterFlag(ctx, generateCmd, *flags.TemplateFieldFlag)
 	RegisterFlag(ctx, generateCmd, *flags.OutputFormatFlag)
 	MarkFlagMutuallyExclusive(generateCmd, flags.TemplateFlag.Name, flags.TemplateFilePathFlag.Name)
 	MarkOneFlagRequired(generateCmd, flags.TemplateFlag.Name, flags.TemplateFilePathFlag.Name)
@@ -60,6 +62,15 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 	template := flags.ValueFor[string](cmd, *flags.TemplateFlag, false)
 	templateFilePath := flags.ValueFor[string](cmd, *flags.TemplateFilePathFlag, false)
 	workspaceName := flags.ValueFor[string](cmd, *flags.TemplateWorkspaceFlag, false)
+	fieldOverrides := flags.ValueFor[[]string](cmd, *flags.TemplateFieldFlag, false)
+
+	preseeded := make(map[string]string)
+	for _, override := range fieldOverrides {
+		parts := strings.SplitN(override, "=", 2)
+		if len(parts) == 2 {
+			preseeded[parts[0]] = parts[1]
+		}
+	}
 
 	ws := workspaceOrCurrent(ctx, workspaceName)
 	if ws == nil {
@@ -75,7 +86,7 @@ func generateTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 	if len(args) == 1 {
 		flowFilename = args[0]
 	}
-	result, err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath)
+	result, err := templates.ProcessTemplate(ctx, tmpl, ws, flowFilename, outputPath, preseeded)
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
@@ -193,7 +204,7 @@ func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 				}
 				ws := ctx.CurrentWorkspace
 				// TODO: support specifying a path/name
-				if _, err := templates.ProcessTemplate(ctx, tmpl, ws, tmpl.Name(), "//"); err != nil {
+				if _, err := templates.ProcessTemplate(ctx, tmpl, ws, tmpl.Name(), "//", nil); err != nil {
 					return err
 				}
 				logger.Log().PlainTextSuccess("Template rendered successfully")

@@ -167,13 +167,17 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 		It("should process the template options and render the flowfile", func() {
 			name := "test"
 			outputDir := filepath.Join(ctx.CurrentWorkspace.Location(), "output")
-			reader, writer, err := os.Pipe()
-			Expect(err).NotTo(HaveOccurred())
-			_, err = writer.Write([]byte("test\nhello\n"))
-			Expect(err).ToNot(HaveOccurred())
 
-			ctx.SetIO(reader, ctx.StdOut())
-			Expect(run.Run(ctx.Context, "template", "generate", name, "-t", template.Name(), "-o", outputDir)).To(Succeed())
+			Expect(run.Run(
+				ctx.Context,
+				"template",
+				"generate",
+				name,
+				"-t", template.Name(),
+				"-o", outputDir,
+				"-s", "name=test",
+				"-s", "msg=hello",
+			)).To(Succeed())
 			out, err := readFileContent(ctx.StdOut())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring(fmt.Sprintf("Template '%s' rendered successfully", name)))

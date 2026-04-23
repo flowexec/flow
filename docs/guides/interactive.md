@@ -4,7 +4,7 @@ title: Interactive UI
 
 # Interactive UI
 
-flow provides both a powerful terminal user interface (TUI) and flexible command-line options to fit your workflow. 
+flow provides both a powerful terminal user interface (TUI) and flexible command-line options to fit your workflow.
 This guide covers using the interactive browser, customizing the experience, and working with different output formats.
 
 ## Using the TUI Browser
@@ -80,11 +80,14 @@ Control how flow displays information with output format options.
 ```shell
 # Interactive TUI (default)
 flow browse
+flow browse --output tui
 flow workspace list
+flow workspace list --output tui
 flow secret list
+flow secret list --output tui
 
 # Simple list output
-flow browse --output json 
+flow browse --output json
 flow workspace list --output json
 flow secret list --output yaml
 ```
@@ -111,7 +114,7 @@ Choose from several built-in themes:
 # Available themes
 flow config set theme default      # Everforest (default)
 flow config set theme light        # Light theme
-flow config set theme dark         # Dark theme  
+flow config set theme dark         # Dark theme
 flow config set theme dracula      # Dracula
 flow config set theme tokyo-night  # Tokyo Night
 ```

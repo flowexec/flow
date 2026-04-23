@@ -10,10 +10,26 @@ import (
 	"github.com/flowexec/flow/types/executable"
 )
 
-func showForm(ctx *context.Context, fields executable.FormFields) error {
+func showForm(ctx *context.Context, fields executable.FormFields, preseeded map[string]string) error {
 	if len(fields) == 0 {
 		return nil
 	}
+
+	// Apply pre-seeded values and collect fields that still need interactive input.
+	var interactive []*executable.Field
+	for _, f := range fields {
+		if v, ok := preseeded[f.Key]; ok {
+			f.Set(v)
+		} else {
+			interactive = append(interactive, f)
+		}
+	}
+
+	// All fields were pre-seeded — no form needed.
+	if len(interactive) == 0 {
+		return nil
+	}
+
 	in := ctx.StdIn()
 	out := ctx.StdOut()
 
@@ -21,7 +37,7 @@ func showForm(ctx *context.Context, fields executable.FormFields) error {
 		return fmt.Errorf("invalid form fields: %w", err)
 	}
 	var ff []*views.FormField
-	for _, f := range fields {
+	for _, f := range interactive {
 		var t views.FormFieldType
 		switch f.Type {
 		case executable.FieldTypeMasked:
@@ -54,7 +70,7 @@ func showForm(ctx *context.Context, fields executable.FormFields) error {
 	if err = form.Run(ctx); err != nil {
 		return fmt.Errorf("encountered form run error: %w", err)
 	}
-	for _, f := range fields {
+	for _, f := range interactive {
 		v, ok := form.ValueMap()[f.Key]
 		if !ok {
 			continue

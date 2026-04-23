@@ -52,7 +52,7 @@ The server uses stdio transport and provides AI assistants with:
 Execute flow workflows directly in your GitHub Actions pipelines with the official action.
 
 ```yaml
-name: Build and Deploy
+name: CI
 on: [push]
 
 jobs:
@@ -63,7 +63,13 @@ jobs:
       - uses: flowexec/action@v1
         with:
           executable: 'build app'
+          params: |
+            ENVIRONMENT=production
+          secrets: |
+            API_KEY=${{ secrets.API_KEY }}
 ```
+
+The action installs the flow CLI, registers your repository as a workspace, and runs the specified executable. It supports Linux, macOS, and Windows runners, multi-workspace setups with git-sourced workspaces, vault secret injection, and structured error codes as outputs.
 
 > **Complete documentation**: Visit the [Flow Execute Action](https://github.com/marketplace/actions/flow-execute) on GitHub Marketplace.
 

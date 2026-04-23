@@ -68,7 +68,21 @@ executables:
             echo "📦 Deployment complete!"
 ```
 
-## Step 3: Run Individual Steps
+## Step 3: Validate Your Workflow File
+
+Before syncing, you can validate your flow file against its schema to catch typos or structural issues early:
+
+```shell
+flow schema validate deploy.flow
+```
+
+Use `--strict` to also catch unknown keys that flow would silently ignore:
+
+```shell
+flow schema validate --strict deploy.flow
+```
+
+## Step 4: Run Individual Steps
 
 Sync and try each step:
 
@@ -80,7 +94,7 @@ flow build site
 flow test site
 ```
 
-## Step 4: Run the Full Workflow
+## Step 5: Run the Full Workflow
 
 Now run the complete deployment:
 
@@ -90,7 +104,7 @@ flow deploy full
 
 You'll see each step run in sequence. This is your first multi-step workflow!
 
-## Step 5: Add Configuration with Secrets
+## Step 6: Add Configuration with Secrets
 
 Real deployments need configuration. Let's add some secrets:
 
@@ -103,7 +117,7 @@ flow secret set server-url "https://my-server.com"
 flow secret set api-key "your-secret-key-here"
 ```
 
-## Step 6: Use Secrets in Your Workflow
+## Step 7: Use Secrets in Your Workflow
 
 Update your `deploy.flow` to use secrets:
 
@@ -138,7 +152,7 @@ flow deploy full
 
 Now your workflow uses secure configuration!
 
-## Step 7: Add Interactive Elements
+## Step 8: Add Interactive Elements
 
 Let's make the workflow more interactive by adding prompts:
 
@@ -173,7 +187,7 @@ flow sync
 flow deploy interactive
 ```
 
-## Step 8: Browse Your Workflows
+## Step 9: Browse Your Workflows
 
 Use the TUI to explore what you've built:
 
@@ -187,6 +201,7 @@ Navigate through your executables, view their details, and run them directly fro
 
 Congratulations! You've built a workflow that demonstrates:
 
+✅ **Schema validation** with `flow schema validate`  
 ✅ **Multi-step workflows** with `serial` executables  
 ✅ **Executable references** with `ref` to reuse steps  
 ✅ **Secret management** with secure configuration  

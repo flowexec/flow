@@ -248,6 +248,9 @@ type ParallelRefConfig struct {
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
 
+	// A human-readable label for this step, used for display purposes.
+	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+
 	// A reference to another executable to run in serial.
 	// One of `cmd` or `ref` must be set.
 	//
@@ -458,6 +461,9 @@ type SerialRefConfig struct {
 	// for more information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
+
+	// A human-readable label for this step, used for display purposes.
+	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 
 	// A reference to another executable to run in serial.
 	// One of `cmd` or `ref` must be set.

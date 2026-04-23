@@ -294,6 +294,14 @@ var ParameterValueFlag = &Metadata{
 	Default: []string{},
 }
 
+var TemplateFieldFlag = &Metadata{
+	Name:      "set",
+	Shorthand: "s",
+	Usage: "Set a form field value by key (KEY=value). Repeat for multiple fields. " +
+		"Fields with a matching key will skip the interactive prompt.",
+	Default: []string{},
+}
+
 var VaultSetFlag = &Metadata{
 	Name:      "set",
 	Shorthand: "s",

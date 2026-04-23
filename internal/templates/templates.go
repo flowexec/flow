@@ -40,6 +40,7 @@ func ProcessTemplate(
 	template *executable.Template,
 	ws *workspace.Workspace,
 	flowfileName, flowfileDir string,
+	preseeded map[string]string,
 ) (*TemplateResult, error) {
 	if flowfileName == "" {
 		flowfileName = fmt.Sprintf("executables_%s", time.Now().Format("20060102150405"))
@@ -51,7 +52,7 @@ func ProcessTemplate(
 
 	formMap := make(map[string]string)
 	if template.Form != nil {
-		if err := showForm(ctx, template.Form); err != nil {
+		if err := showForm(ctx, template.Form, preseeded); err != nil {
 			return nil, err
 		}
 		formMap = template.Form.ValueMap()

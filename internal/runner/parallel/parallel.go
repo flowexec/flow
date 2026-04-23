@@ -209,7 +209,9 @@ func handleExec(
 		ref := resolved[i].ref
 		refIdx[ref]++
 		taskName := ref
-		if refCounts[ref] > 1 {
+		if refConfig.Name != "" {
+			taskName = refConfig.Name
+		} else if refCounts[ref] > 1 {
 			taskName = fmt.Sprintf("%s · %d", ref, refIdx[ref])
 		}
 		runExec := func() error {

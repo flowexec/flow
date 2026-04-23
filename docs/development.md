@@ -99,6 +99,14 @@ flow generate cli
 
 **Important**: When modifying types, edit the `schemas/*.yaml` files, not the generated Go files in `types/`.
 
+After regenerating schemas you can validate existing flow files against the updated schema:
+
+```sh
+flow schema validate path/to/file.flow
+# Use --strict to also catch unknown keys
+flow schema validate --strict path/to/file.flow
+```
+
 ### Documentation Generation
 
 CLI and type documentation is generated automatically:

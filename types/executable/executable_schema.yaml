@@ -359,6 +359,10 @@ definitions:
     type: object
     description: Configuration for a parallel executable.
     properties:
+      name:
+        type: string
+        description: A human-readable label for this step, used for display purposes.
+        default: ""
       cmd:
         type: string
         description: |
@@ -537,6 +541,10 @@ definitions:
     type: object
     description: Configuration for a serial executable.
     properties:
+      name:
+        type: string
+        description: A human-readable label for this step, used for display purposes.
+        default: ""
       cmd:
         type: string
         description: |
