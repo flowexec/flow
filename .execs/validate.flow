@@ -9,6 +9,7 @@ executables:
         - ref: lint
         - ref: test
         - ref: validate generated
+        # - ref: validate schemas
         - cmd: echo "✅ All development checks passed"
 
   - verb: validate
@@ -21,7 +22,7 @@ executables:
           echo "Skipping diff validation"
           exit 0
         fi
-        
+
         echo "Checking for uncommitted generated files..."
 
         if [ -n "$(git status --porcelain)" ]; then
@@ -36,6 +37,13 @@ executables:
         else
           echo "✅ All generated files are up to date"
         fi
+
+  - verb: validate
+    name: schemas
+    description: Validate all flow files in the repo against their schemas
+    exec:
+      dir: //
+      cmd: flow schema validate --strict .execs/*.flow
 
   - verb: lint
     parallel:
@@ -59,7 +67,7 @@ executables:
               curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s v2.5.0
               export PATH="$PATH:./bin"
             fi
-            
+
             if [ "$CI" = "true" ]; then
               echo "Running golangci-lint with sarif output..."
               golangci-lint run ./... --fix --output.sarif.path lint.sarif --output.text.path stdout
@@ -78,7 +86,7 @@ executables:
           echo "Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
         fi
-        
+
         if [ "$CI" = "true" ]; then
           govulncheck -format sarif ./... > govuln.sarif
           echo "Security scan completed. Results saved to govuln.sarif"
