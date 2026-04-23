@@ -258,6 +258,7 @@ func registerRemoveVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		Run:    func(cmd *cobra.Command, args []string) { removeVaultFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
+	RegisterFlag(ctx, removeCmd, *flags.YesFlag)
 	vaultCmd.AddCommand(removeCmd)
 }
 
@@ -268,25 +269,28 @@ func removeVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		errhandler.HandleUsage(ctx, cmd, "remove is unsupported for the reserved vault")
 	}
 
-	form, err := views.NewForm(
-		logger.Theme(ctx.Config.Theme.String()),
-		ctx.StdIn(),
-		ctx.StdOut(),
-		&views.FormField{
-			Key:   "confirm",
-			Type:  views.PromptTypeConfirm,
-			Title: fmt.Sprintf("Are you sure you want to remove the vault '%s'?", vaultName),
-		})
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	if err := form.Run(ctx); err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	resp := form.FindByKey("confirm").Value()
-	if truthy, _ := strconv.ParseBool(resp); !truthy {
-		logger.Log().Warnf("Aborting")
-		return
+	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
+	if !skipConfirm {
+		form, err := views.NewForm(
+			logger.Theme(ctx.Config.Theme.String()),
+			ctx.StdIn(),
+			ctx.StdOut(),
+			&views.FormField{
+				Key:   "confirm",
+				Type:  views.PromptTypeConfirm,
+				Title: fmt.Sprintf("Are you sure you want to remove the vault '%s'?", vaultName),
+			})
+		if err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		if err := form.Run(ctx); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		resp := form.FindByKey("confirm").Value()
+		if truthy, _ := strconv.ParseBool(resp); !truthy {
+			logger.Log().Warnf("Aborting")
+			return
+		}
 	}
 
 	userConfig := ctx.Config

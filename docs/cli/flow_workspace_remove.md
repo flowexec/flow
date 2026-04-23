@@ -16,6 +16,7 @@ flow workspace remove NAME [flags]
 ```
   -h, --help            help for remove
   -o, --output string   Output format. One of: yaml, json, or tui.
+  -y, --yes             Skip confirmation prompts
 ```
 
 ### Options inherited from parent commands

@@ -154,6 +154,13 @@ var ForceFlag = &Metadata{
 	Default: false,
 }
 
+var YesFlag = &Metadata{
+	Name:      "yes",
+	Shorthand: "y",
+	Usage:     "Skip confirmation prompts",
+	Default:   false,
+}
+
 var FixedWsModeFlag = &Metadata{
 	Name:      "fixed",
 	Shorthand: "f",

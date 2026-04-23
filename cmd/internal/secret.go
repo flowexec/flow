@@ -46,31 +46,35 @@ func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 	}
 	RegisterFlag(ctx, removeCmd, *flags.VaultNameFlag)
 	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
+	RegisterFlag(ctx, removeCmd, *flags.YesFlag)
 	secretCmd.AddCommand(removeCmd)
 }
 
 func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	reference := args[0]
 
-	form, err := views.NewForm(
-		logger.Theme(ctx.Config.Theme.String()),
-		ctx.StdIn(),
-		ctx.StdOut(),
-		&views.FormField{
-			Key:   "confirm",
-			Type:  views.PromptTypeConfirm,
-			Title: fmt.Sprintf("Are you sure you want to remove the secret '%s'?", reference),
-		})
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	if err := form.Run(ctx); err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	resp := form.FindByKey("confirm").Value()
-	if truthy, _ := strconv.ParseBool(resp); !truthy {
-		logger.Log().Warnf("Aborting")
-		return
+	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
+	if !skipConfirm {
+		form, err := views.NewForm(
+			logger.Theme(ctx.Config.Theme.String()),
+			ctx.StdIn(),
+			ctx.StdOut(),
+			&views.FormField{
+				Key:   "confirm",
+				Type:  views.PromptTypeConfirm,
+				Title: fmt.Sprintf("Are you sure you want to remove the secret '%s'?", reference),
+			})
+		if err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		if err := form.Run(ctx); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		resp := form.FindByKey("confirm").Value()
+		if truthy, _ := strconv.ParseBool(resp); !truthy {
+			logger.Log().Warnf("Aborting")
+			return
+		}
 	}
 
 	_, v, err := vault.VaultFromName(effectiveVault(cmd, ctx.Config))

@@ -10,6 +10,7 @@ flow config reset [flags]
 
 ```
   -h, --help   help for reset
+  -y, --yes    Skip confirmation prompts
 ```
 
 ### Options inherited from parent commands
