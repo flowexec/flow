@@ -117,7 +117,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	e, err := ctx.ExecutableCache.GetExecutableByRef(ref)
-	if err != nil && errors.Is(flowErrors.NewExecutableNotFoundError(ref.String()), err) {
+	if err != nil && errors.Is(err, flowErrors.NewExecutableNotFoundError(ref.String())) {
 		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
 		if err := ctx.ExecutableCache.Update(); err != nil {
 			errhandler.HandleFatal(ctx, cmd, err)
@@ -134,8 +134,9 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	if ctx.CurrentWorkspace != nil && !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
 		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
-			"executable '%s' cannot be executed from workspace %s",
+			"executable '%s' belongs to workspace '%s' and cannot be run from the current workspace '%s'",
 			ref,
+			e.Workspace(),
 			ctx.Config.CurrentWorkspace,
 		))
 	}
@@ -422,75 +423,50 @@ func runByRef(ctx *context.Context, cmd *cobra.Command, argsStr string) error {
 	return nil
 }
 
-//nolint:gocognit
 func pendingFormFields(
 	ctx *context.Context, rootExec *executable.Executable, envMap map[string]string,
 ) []*views.FormField {
-	pending := make([]*views.FormField, 0)
+	var pending []*views.FormField
+
+	if env := rootExec.Env(); env != nil {
+		pending = append(pending, pendingFieldsFromParams(env.Params, envMap)...)
+	}
+
+	var childRefs []executable.Ref
 	switch {
-	case rootExec.Exec != nil:
-		for _, param := range rootExec.Exec.Params {
-			_, exists := envMap[param.EnvKey]
-			if param.Prompt != "" && !exists {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
-	case rootExec.Launch != nil:
-		for _, param := range rootExec.Launch.Params {
-			_, exists := envMap[param.EnvKey]
-			if param.Prompt != "" && !exists {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
-	case rootExec.Request != nil:
-		for _, param := range rootExec.Request.Params {
-			_, exists := envMap[param.EnvKey]
-			if param.Prompt != "" && !exists {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
-	case rootExec.Render != nil:
-		for _, param := range rootExec.Render.Params {
-			_, exists := envMap[param.EnvKey]
-			if param.Prompt != "" && !exists {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
 	case rootExec.Serial != nil:
-		for _, param := range rootExec.Serial.Params {
-			_, exists := envMap[param.EnvKey]
-			if param.Prompt != "" && !exists {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
 		for _, child := range rootExec.Serial.Execs {
 			if child.Ref != "" {
-				childExec, err := ctx.ExecutableCache.GetExecutableByRef(child.Ref)
-				if err != nil {
-					continue
-				}
-				childPending := pendingFormFields(ctx, childExec, envMap)
-				pending = append(pending, childPending...)
+				childRefs = append(childRefs, child.Ref)
 			}
 		}
 	case rootExec.Parallel != nil:
-		for _, param := range rootExec.Parallel.Params {
-			if param.Prompt != "" {
-				pending = append(pending, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
-			}
-		}
 		for _, child := range rootExec.Parallel.Execs {
 			if child.Ref != "" {
-				childExec, err := ctx.ExecutableCache.GetExecutableByRef(child.Ref)
-				if err != nil {
-					continue
-				}
-				childPending := pendingFormFields(ctx, childExec, envMap)
-				pending = append(pending, childPending...)
+				childRefs = append(childRefs, child.Ref)
 			}
 		}
 	}
+	for _, ref := range childRefs {
+		childExec, err := ctx.ExecutableCache.GetExecutableByRef(ref)
+		if err != nil {
+			continue
+		}
+		pending = append(pending, pendingFormFields(ctx, childExec, envMap)...)
+	}
+
 	return pending
+}
+
+func pendingFieldsFromParams(params executable.ParameterList, envMap map[string]string) []*views.FormField {
+	var fields []*views.FormField
+	for _, param := range params {
+		_, exists := envMap[param.EnvKey]
+		if param.Prompt != "" && !exists {
+			fields = append(fields, &views.FormField{Key: param.EnvKey, Title: param.Prompt})
+		}
+	}
+	return fields
 }
 
 //nolint:nestif

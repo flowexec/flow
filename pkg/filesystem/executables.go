@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -87,11 +88,23 @@ func LoadWorkspaceFlowFiles(
 	return cfgs, nil
 }
 
+// defaultExcutablePaths lists directory names and patterns that are never scanned for flow files.
+// Simple directory names (e.g. "node_modules/") use any-depth matching and are skipped wherever
+// they appear in the workspace tree.
 var defaultExcutablePaths = []string{
+	// Version control internals — .git/worktrees contains full repo checkouts
+	".git/",
+
+	// AI coding-assistant worktree directories — these are full repo copies
+	".claude/",
+
+	// Dependency copies — vendored or installed packages may ship their own flow files
 	"vendor/",
 	"third_party/",
 	"external/",
 	"node_modules/",
+
+	// File extension exclusions
 	"*.js.flow",
 }
 
@@ -120,7 +133,10 @@ func findFlowFiles(workspaceCfg *workspace.Workspace) ([]string, error) {
 		}
 		if isPathIncluded(path, workspaceCfg.Location(), includePaths) {
 			if isPathExcluded(path, workspaceCfg.Location(), excludedPaths) {
-				return filepath.SkipDir
+				if entry.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
 			}
 
 			if executable.HasFlowFileExt(entry.Name()) {
@@ -137,41 +153,69 @@ func findFlowFiles(workspaceCfg *workspace.Workspace) ([]string, error) {
 }
 
 func pathMatches(path, basePath string, patterns []string) bool {
-	if patterns == nil {
+	if len(patterns) == 0 {
 		return false
 	}
 
 	relPath, err := filepath.Rel(basePath, path)
 	if err != nil {
-		// fallback to absolute if relative path cannot be determined
 		relPath = path
 	}
+	relSlash := filepath.ToSlash(relPath)
 
 	for _, p := range patterns {
 		pattern := p
 		if strings.HasPrefix(pattern, "//") {
 			pattern = strings.Replace(pattern, "//", basePath+string(filepath.Separator), 1)
 		}
-
-		if path == pattern || strings.HasPrefix(path, pattern) {
+		if singlePatternMatches(pattern, path, relPath, relSlash) {
 			return true
-		}
-		if relPath == pattern || strings.HasPrefix(relPath, pattern) {
-			return true
-		}
-
-		for _, checkPath := range []string{path, relPath} {
-			if strings.Contains(pattern, "*") ||
-				strings.Contains(pattern, "?") ||
-				strings.Contains(pattern, "[") {
-				fileName := filepath.Base(checkPath)
-				isMatch, err := filepath.Match(pattern, fileName)
-				if err == nil && isMatch {
-					return true
-				}
-			}
 		}
 	}
+	return false
+}
+
+// singlePatternMatches reports whether pattern matches path (absolute), relPath, or relSlash.
+// Pattern semantics:
+//   - Trailing "/" is stripped for matching so "node_modules/" matches the dir entry "node_modules".
+//   - Patterns without a path separator match at any depth ("node_modules/" matches "a/b/node_modules").
+//   - Patterns containing *, ?, or [ are matched as globs against the filename and the relative path.
+func singlePatternMatches(pattern, path, relPath, relSlash string) bool {
+	sep := string(filepath.Separator)
+
+	// Strip trailing separator so "node_modules/" also matches the directory entry itself.
+	normal := strings.TrimSuffix(strings.TrimSuffix(pattern, sep), "/")
+
+	// Absolute path: exact or prefix match.
+	if path == normal || path == pattern || strings.HasPrefix(path, normal+sep) {
+		return true
+	}
+
+	// Relative path: exact or prefix match (both OS separator and slash forms).
+	if relPath == normal || relSlash == normal || relPath == pattern ||
+		strings.HasPrefix(relPath, normal+sep) ||
+		strings.HasPrefix(relSlash, normal+"/") {
+		return true
+	}
+
+	// Any-depth match: a pattern with no separator matches the name at any level.
+	// e.g. "node_modules/" matches "frontend/node_modules" and "a/b/node_modules/c".
+	if !strings.Contains(normal, "/") && !strings.Contains(normal, sep) {
+		if slices.Contains(strings.Split(relSlash, "/"), normal) {
+			return true
+		}
+	}
+
+	// Glob match against the filename and the full relative path.
+	if strings.ContainsAny(pattern, "*?[") {
+		if ok, _ := filepath.Match(pattern, filepath.Base(path)); ok {
+			return true
+		}
+		if ok, _ := filepath.Match(pattern, relSlash); ok {
+			return true
+		}
+	}
+
 	return false
 }
 

@@ -1,6 +1,7 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -93,7 +94,7 @@ func SetEnv(
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to set values for parameters: %v", errs)
+		return fmt.Errorf("failed to set values for parameters: %w", errors.Join(errs...))
 	}
 	return nil
 }
@@ -223,7 +224,7 @@ func BuildEnvMap(
 	}
 
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("failed to get values for parameters: %v", errs)
+		return nil, fmt.Errorf("failed to get values for parameters: %w", errors.Join(errs...))
 	}
 	return envMap, nil
 }

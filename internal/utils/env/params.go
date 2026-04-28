@@ -2,6 +2,7 @@ package env
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/flowexec/flow/internal/vault"
 	"github.com/flowexec/flow/types/executable"
@@ -29,7 +30,11 @@ func ResolveParameterValue(
 		}
 		return val, nil
 	case param.SecretRef != "":
-		return resolveSecretValue(currentVault, param.SecretRef)
+		val, err := resolveSecretValue(currentVault, param.SecretRef)
+		if err != nil {
+			return "", fmt.Errorf("parameter %q: %w", param.EnvKey, err)
+		}
+		return val, nil
 	case param.OutputFile != "":
 		return "", errors.New("outputFile parameter value should be resolved using ResolveParameterFileValue")
 	default:
@@ -55,7 +60,7 @@ func resolveSecretValue(
 	defer v.Close()
 	secret, err := v.GetSecret(key)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("secret %q in vault %q: %w", key, rVault, err)
 	}
 	return secret.PlainTextString(), nil
 }

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,20 +48,32 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 
 	start := time.Now()
 
+	var pullFailures []string
 	if pullGit {
-		pullGitWorkspaces(ctx, force)
+		pullFailures = pullGitWorkspaces(ctx, force)
 	}
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	duration := time.Since(start)
-	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second)), map[string]any{
-		"duration": duration.Round(time.Second).String(),
+	msg := fmt.Sprintf("Synced flow cache (%s)", duration.Round(time.Second))
+	if len(pullFailures) > 0 {
+		msg += fmt.Sprintf(" — git pull failed for: %s", strings.Join(pullFailures, ", "))
+	}
+	response.HandleSuccess(ctx, cmd, msg, map[string]any{
+		"duration":     duration.Round(time.Second).String(),
+		"pullFailures": pullFailures,
 	})
 }
 
-func pullGitWorkspaces(ctx *context.Context, force bool) {
+func pullGitWorkspaces(ctx *context.Context, force bool) []string {
+	if err := git.EnsureInstalled(); err != nil {
+		logger.Log().Errorf("Cannot pull git workspaces: %v", err)
+		return []string{"<all>"}
+	}
+
+	var failed []string
 	cfg := ctx.Config
 	for name, path := range cfg.Workspaces {
 		wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
@@ -85,12 +98,14 @@ func pullGitWorkspaces(ctx *context.Context, force bool) {
 		if pullErr != nil {
 			logger.Log().Errorf("Failed to pull workspace '%s': %v", name, pullErr)
 			if !force {
-				logger.Log().Warnf("Hint: use --force to discard local changes and hard reset to remote")
+				logger.Log().Warnf("Hint: if '%s' has local changes blocking the pull, use --force to hard reset to remote", name)
 			}
+			failed = append(failed, name)
 			continue
 		}
 
 		pullDuration := time.Since(pullStart)
 		logger.Log().Infof("Workspace '%s' updated (%s)", name, pullDuration.Round(time.Millisecond))
 	}
+	return failed
 }

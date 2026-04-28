@@ -78,11 +78,12 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 
 	_, v, err := vault.VaultFromName(effectiveVault(cmd, ctx.Config))
-	defer v.Close()
-
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
 	}
+	defer v.Close()
+
 	if err = v.DeleteSecret(reference); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
@@ -151,11 +152,12 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 
 	vaultName := effectiveVault(cmd, ctx.Config)
 	_, v, err := vault.VaultFromName(vaultName)
-	defer v.Close()
-
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
 	}
+	defer v.Close()
+
 	if err = v.SetSecret(reference, vault.NewSecretValue([]byte(value))); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
@@ -239,11 +241,12 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		rVault = effectiveVault(cmd, ctx.Config)
 	}
 	_, v, err := vault.VaultFromName(rVault)
-	defer v.Close()
-
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
 	}
+	defer v.Close()
+
 	s, err := v.GetSecret(key)
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)

@@ -58,7 +58,7 @@ func (c *WorkspaceCacheImpl) Update() error {
 	for name, path := range cfg.Workspaces {
 		wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
 		if err != nil {
-			return errors.Wrap(err, "failed loading workspace config")
+			return errors.Wrapf(err, "failed loading config for workspace %q", name)
 		} else if wsCfg == nil {
 			logger.Log().Error("config not found for workspace", "name", name, "path", path)
 			continue
