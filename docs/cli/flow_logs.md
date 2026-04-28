@@ -10,6 +10,18 @@ View execution history recorded in the data store, with associated log output. O
 flow logs [ref] [flags]
 ```
 
+### Examples
+
+```
+
+  flow logs                          # all history
+  flow logs --last                   # most recent entry with full output
+  flow logs --status failed   # only failed runs
+  flow logs run build                # history for 'run build' executable
+  flow logs --running                # list active background processes
+
+```
+
 ### Options
 
 ```
@@ -33,7 +45,7 @@ flow logs [ref] [flags]
 ### SEE ALSO
 
 * [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
-* [flow logs attach](flow_logs_attach.md)	 - Attach to a background process output.
+* [flow logs attach](flow_logs_attach.md)	 - Stream log output from a running background process by run ID.
 * [flow logs clear](flow_logs_clear.md)	 - Clear execution history and logs.
-* [flow logs kill](flow_logs_kill.md)	 - Terminate a background process.
+* [flow logs kill](flow_logs_kill.md)	 - Terminate a running background process by run ID.
 

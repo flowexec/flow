@@ -22,5 +22,5 @@ flow config get [flags]
 
 ### SEE ALSO
 
-* [flow config](flow_config.md)	 - Update flow configuration values.
+* [flow config](flow_config.md)	 - View and update global flow configuration.
 

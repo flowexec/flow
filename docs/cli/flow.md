@@ -20,11 +20,11 @@ See https://flowexec.io for more information.
 
 * [flow browse](flow_browse.md)	 - Discover and explore available executables.
 * [flow cache](flow_cache.md)	 - Manage temporary key-value data.
-* [flow config](flow_config.md)	 - Update flow configuration values.
+* [flow config](flow_config.md)	 - View and update global flow configuration.
 * [flow exec](flow_exec.md)	 - Execute any executable by reference.
 * [flow logs](flow_logs.md)	 - View execution history and logs.
 * [flow mcp](flow_mcp.md)	 - Start Model Context Provider (MCP) server for AI assistant integration
-* [flow schema](flow_schema.md)	 - Schema utilities for flow files.
+* [flow schema](flow_schema.md)	 - Validate flowfiles and workspace configs against their schemas.
 * [flow secret](flow_secret.md)	 - Manage secrets stored in a vault.
 * [flow sync](flow_sync.md)	 - Refresh workspace cache and discover new executables.
 * [flow template](flow_template.md)	 - Manage flowfile templates.

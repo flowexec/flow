@@ -2,6 +2,15 @@
 
 Manage sensitive secret stores.
 
+### Synopsis
+
+Manage secret stores (vaults). A vault is an encrypted key-value store that holds secrets
+referenced by your executables. Multiple vault types are supported (e.g. age encryption,
+AES-256, system keyring, or environment-variable passthrough).
+
+One vault is active at a time; use 'vault switch' to change the active vault. Secrets
+within a vault are managed with the 'secret' subcommands.
+
 ### Options
 
 ```

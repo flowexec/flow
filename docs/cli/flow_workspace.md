@@ -2,6 +2,15 @@
 
 Manage development workspaces.
 
+### Synopsis
+
+Manage flow workspaces. A workspace is a directory (local or git-sourced) that contains
+flow files defining your executables. One workspace is active at a time.
+
+Workspaces are registered globally so flow can find executables across projects.
+Use 'workspace add' to register a new workspace, 'workspace switch' to change the
+active workspace, and 'workspace update' to pull the latest changes from a remote source.
+
 ### Options
 
 ```

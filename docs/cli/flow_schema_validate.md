@@ -28,5 +28,5 @@ flow schema validate FILE... [flags]
 
 ### SEE ALSO
 
-* [flow schema](flow_schema.md)	 - Schema utilities for flow files.
+* [flow schema](flow_schema.md)	 - Validate flowfiles and workspace configs against their schemas.
 

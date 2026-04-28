@@ -6,6 +6,16 @@ Create a new vault.
 flow vault create NAME [flags]
 ```
 
+### Examples
+
+```
+
+  flow vault create myvault --type age --set
+  flow vault create myvault --type aes256 --key-env VAULT_KEY
+  flow vault create myvault --type keyring
+
+```
+
 ### Options
 
 ```

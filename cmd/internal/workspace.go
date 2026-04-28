@@ -32,6 +32,7 @@ func RegisterWorkspaceCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "workspace",
 		Aliases: []string{"ws", "workspaces"},
 		Short:   "Manage development workspaces.",
+		Long:    workspaceLong,
 	}
 	registerAddWorkspaceCmd(ctx, wsCmd)
 	registerUpdateWorkspaceCmd(ctx, wsCmd)
@@ -281,6 +282,7 @@ func registerSwitchWorkspaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 		Use:     "switch NAME",
 		Aliases: []string{"set", "use"},
 		Short:   "Switch the current workspace.",
+		Example: workspaceSwitchExamples,
 		Args:    cobra.ExactArgs(1),
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]cobra.Completion, cobra.ShellCompDirective) {
 			return maps.Keys(ctx.Config.Workspaces), cobra.ShellCompDirectiveNoFileComp
@@ -446,6 +448,20 @@ func registerGetWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	RegisterFlag(ctx, viewCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(viewCmd)
 }
+
+const (
+	workspaceLong = `Manage flow workspaces. A workspace is a directory (local or git-sourced) that contains
+flow files defining your executables. One workspace is active at a time.
+
+Workspaces are registered globally so flow can find executables across projects.
+Use 'workspace add' to register a new workspace, 'workspace switch' to change the
+active workspace, and 'workspace update' to pull the latest changes from a remote source.`
+
+	workspaceSwitchExamples = `
+  flow workspace switch myproject
+  flow workspace switch myproject --fixed
+`
+)
 
 func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	var workspaceName, wsPath string

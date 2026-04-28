@@ -1,6 +1,6 @@
 ## flow logs attach
 
-Attach to a background process output.
+Stream log output from a running background process by run ID.
 
 ### Synopsis
 

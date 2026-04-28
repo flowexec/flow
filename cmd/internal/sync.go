@@ -19,8 +19,9 @@ import (
 
 func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	subCmd := &cobra.Command{
-		Use:   "sync",
-		Short: "Refresh workspace cache and discover new executables.",
+		Use:     "sync",
+		Short:   "Refresh workspace cache and discover new executables.",
+		Example: syncExamples,
 		Long: "Refresh the workspace cache and discover new executables. " +
 			"Use --git to also pull latest changes for all git-sourced workspaces before syncing. " +
 			"Use --force with --git to discard local changes and hard reset to the remote.",
@@ -109,3 +110,9 @@ func pullGitWorkspaces(ctx *context.Context, force bool) []string {
 	}
 	return failed
 }
+
+const syncExamples = `
+  flow sync               # rescan all workspaces for new executables
+  flow sync --git         # pull all git-sourced workspaces, then rescan
+  flow sync --git --force # hard-reset git workspaces before rescan
+`

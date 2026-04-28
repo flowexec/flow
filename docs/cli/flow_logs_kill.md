@@ -1,6 +1,6 @@
 ## flow logs kill
 
-Terminate a background process.
+Terminate a running background process by run ID.
 
 ### Synopsis
 

@@ -23,7 +23,8 @@ func RegisterConfigCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	setCmd := &cobra.Command{
 		Use:     "config",
 		Aliases: []string{"cfg"},
-		Short:   "Update flow configuration values.",
+		Short:   "View and update global flow configuration.",
+		Long:    configLong,
 	}
 	registerConfigResetCmd(ctx, setCmd)
 	registerConfigGetCmd(ctx, setCmd)
@@ -106,6 +107,7 @@ func registerSetNamespaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 		Use:     "namespace NAME",
 		Aliases: []string{"ns"},
 		Short:   "Change the current namespace.",
+		Example: configNamespaceExamples,
 		Args:    cobra.ExactArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { setNamespaceFunc(ctx, cmd, args) },
 	}
@@ -318,3 +320,15 @@ func getConfigFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		configIO.PrintUserConfig(outputFormat, userConfig)
 	}
 }
+
+const (
+	configLong = `Manage global flow configuration. Settings are stored in the flow config file and apply
+across all workspaces unless overridden.
+
+Use 'config get' to view current values and 'config set <setting>' subcommands to change them.`
+
+	configNamespaceExamples = `
+  flow config set namespace myproject
+  flow config set namespace default
+`
+)

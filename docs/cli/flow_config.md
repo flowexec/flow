@@ -1,6 +1,13 @@
 ## flow config
 
-Update flow configuration values.
+View and update global flow configuration.
+
+### Synopsis
+
+Manage global flow configuration. Settings are stored in the flow config file and apply
+across all workspaces unless overridden.
+
+Use 'config get' to view current values and 'config set <setting>' subcommands to change them.
 
 ### Options
 

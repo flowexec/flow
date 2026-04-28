@@ -27,6 +27,7 @@ func RegisterVaultCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "vault",
 		Aliases: []string{"vlt", "vaults"},
 		Short:   "Manage sensitive secret stores.",
+		Long:    vaultLong,
 		Args:    cobra.NoArgs,
 	}
 	registerCreateVaultCmd(ctx, vaultCmd)
@@ -44,6 +45,7 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		Use:     "create NAME",
 		Aliases: []string{"new", "add"},
 		Short:   "Create a new vault.",
+		Example: vaultCreateExamples,
 		Args:    cobra.ExactArgs(1),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			vaultName := args[0]
@@ -478,3 +480,18 @@ func validateVaults(ctx *context.Context, cmd *cobra.Command) {
 		errhandler.HandleUsage(ctx, cmd, "no vaults configured")
 	}
 }
+
+const (
+	vaultLong = `Manage secret stores (vaults). A vault is an encrypted key-value store that holds secrets
+referenced by your executables. Multiple vault types are supported (e.g. age encryption,
+AES-256, system keyring, or environment-variable passthrough).
+
+One vault is active at a time; use 'vault switch' to change the active vault. Secrets
+within a vault are managed with the 'secret' subcommands.`
+
+	vaultCreateExamples = `
+  flow vault create myvault --type age --set
+  flow vault create myvault --type aes256 --key-env VAULT_KEY
+  flow vault create myvault --type keyring
+`
+)

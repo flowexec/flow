@@ -27,14 +27,14 @@ jobs:
         with:
           executable: 'install docs:'
           timeout: '5m'
-      - name: Deploy to Netlify
+      - name: Deploy to Cloudflare Pages
         uses: flowexec/action@v1
         with:
-          executable: "deploy docs:netlify ${{ github.event.inputs.environment || 'production' }}"
+          executable: "deploy docs:cloudflare ${{ github.event.inputs.environment || 'production' }}"
           timeout: '5m'
           flow-version: 'main'
           secrets: |
             {
-              "netlify-flow-site-id": "${{ secrets.NETLIFY_SITE_ID }}",
-              "netlify-pat": "${{ secrets.NETLIFY_AUTH_TOKEN }}"
+              "flow-cloudflare-account-id": "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+              "flow-cloudflare-api-token": "${{ secrets.CLOUDFLARE_API_TOKEN }}"
             }

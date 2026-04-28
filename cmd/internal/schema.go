@@ -19,7 +19,8 @@ import (
 func RegisterSchemaCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	schemaCmd := &cobra.Command{
 		Use:   "schema",
-		Short: "Schema utilities for flow files.",
+		Short: "Validate flowfiles and workspace configs against their schemas.",
+		Long:  schemaLong,
 	}
 
 	registerSchemaValidateCmd(ctx, schemaCmd)
@@ -124,6 +125,9 @@ func validateFiles(
 	}
 	return results
 }
+
+const schemaLong = `Utilities for working with flow YAML schemas. Use these commands to validate flowfiles
+and workspace configs against their JSON schemas — useful in CI pipelines and pre-commit hooks.`
 
 func handleValidationFailure(ctx *context.Context, cmd *cobra.Command, results []fileResult) {
 	var msgs []string

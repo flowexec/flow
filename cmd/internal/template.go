@@ -25,6 +25,7 @@ func RegisterTemplateCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "template",
 		Aliases: []string{"tmpl", "templates"},
 		Short:   "Manage flowfile templates.",
+		Long:    templateParentLong,
 	}
 	registerGenerateTemplateCmd(ctx, templateCmd)
 	registerAddTemplateCmd(ctx, templateCmd)
@@ -252,11 +253,17 @@ func getTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	}
 }
 
+const templateParentLong = `Manage flowfile templates. A template is a reusable flowfile scaffold that can generate
+executables, directory structures, and configuration files via 'template generate'.
+
+Templates are registered by name for easy reuse. Use 'template add' to register a
+template, 'template generate' to scaffold from one, and 'template list' to see what's available.`
+
 var templateLong = `Add rendered executables from a flowfile template to a workspace.
 
 The WORKSPACE_NAME is the name of the workspace to initialize the flowfile template in.
 The FLOWFILE_NAME is the name to give the flowfile (if applicable) when rendering its template.
 
-One one of -f or -t must be provided and must point to a valid flowfile template.
+One of -f or -t must be provided and must point to a valid flowfile template.
 The -d flag can be used to specify an output directory within the workspace to create
 the flowfile and its artifacts in.`

@@ -2,6 +2,14 @@
 
 Manage flowfile templates.
 
+### Synopsis
+
+Manage flowfile templates. A template is a reusable flowfile scaffold that can generate
+executables, directory structures, and configuration files via 'template generate'.
+
+Templates are registered by name for easy reuse. Use 'template add' to register a
+template, 'template generate' to scaffold from one, and 'template list' to see what's available.
+
 ### Options
 
 ```

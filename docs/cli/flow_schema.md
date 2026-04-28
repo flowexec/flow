@@ -1,6 +1,11 @@
 ## flow schema
 
-Schema utilities for flow files.
+Validate flowfiles and workspace configs against their schemas.
+
+### Synopsis
+
+Utilities for working with flow YAML schemas. Use these commands to validate flowfiles
+and workspace configs against their JSON schemas — useful in CI pipelines and pre-commit hooks.
 
 ### Options
 

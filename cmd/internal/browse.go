@@ -22,17 +22,9 @@ func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "browse [EXECUTABLE-REFERENCE]",
 		Short:   "Discover and explore available executables.",
 		Aliases: []string{"ls", "library"},
-		Long: "Browse executables across workspaces.\n\n" +
-			"  flow browse                # Interactive multi-pane executable browser\n" +
-			"  flow browse --list         # Simple list view of executables\n" +
-			"  flow browse VERB [ID]      # Detailed view of specific executable\n\n" +
-			fmt.Sprintf(
-				"See %s for more information on executable verbs and "+
-					"%s for more information on executable references.",
-				io.TypesDocsURL("flowfile", "executableverb"),
-				io.TypesDocsURL("flowfile", "executableref"),
-			),
-		Args: cobra.MaximumNArgs(2),
+		Example: browseExamples,
+		Long:    browseLong,
+		Args:    cobra.MaximumNArgs(2),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			verbStr := cmd.CalledAs()
 			verb := executable.Verb(verbStr)
@@ -253,3 +245,22 @@ func isValidVisibility(v common.Visibility) bool {
 		return false
 	}
 }
+
+const browseExamples = `
+  flow browse                              # interactive multi-pane browser
+  flow browse --list                       # flat list of all executables
+  flow browse --verb run                   # list only 'run' executables
+  flow browse --namespace myproject        # filter by namespace
+`
+
+var browseLong = fmt.Sprintf(`Browse executables across workspaces.
+
+  flow browse           # Interactive multi-pane executable browser
+  flow browse --list    # Simple list view of executables
+  flow browse VERB [ID] # Detailed view of specific executable
+
+See %s for more information on executable verbs and
+%s for more information on executable references.`,
+	io.TypesDocsURL("flowfile", "executableverb"),
+	io.TypesDocsURL("flowfile", "executableref"),
+)

@@ -2,6 +2,14 @@
 
 Manage secrets stored in a vault.
 
+### Synopsis
+
+Manage secrets stored in the active vault. Secrets are encrypted key-value pairs that
+can be referenced inside flowfiles using the secret reference syntax (e.g. ${secret:MY_KEY}).
+
+The active vault is used by default; pass --vault to target a different one. Use
+'vault' subcommands to create and manage vaults.
+
 ### Options
 
 ```

@@ -28,6 +28,7 @@ func RegisterSecretCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "secret",
 		Aliases: []string{"scrt", "secrets"},
 		Short:   "Manage secrets stored in a vault.",
+		Long:    secretLong,
 	}
 	registerSetSecretCmd(ctx, secretCmd)
 	registerListSecretCmd(ctx, secretCmd)
@@ -98,6 +99,7 @@ func registerSetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Use:     "set NAME [VALUE]",
 		Aliases: []string{"new", "create", "update"},
 		Short:   "Set a secret in the current vault. If no value is provided, you will be prompted to enter one.",
+		Example: secretSetExamples,
 		Args:    cobra.MinimumNArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { setSecretFunc(ctx, cmd, args) },
 	}
@@ -218,6 +220,7 @@ func registerGetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 		Use:     "get REFERENCE",
 		Aliases: []string{"show", "view"},
 		Short:   "Get the value of a secret in the current vault.",
+		Example: secretGetExamples,
 		Args:    cobra.ExactArgs(1),
 		Run:     func(cmd *cobra.Command, args []string) { getSecretFunc(ctx, cmd, args) },
 	}
@@ -286,6 +289,28 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		}
 	}
 }
+
+const (
+	secretLong = `Manage secrets stored in the active vault. Secrets are encrypted key-value pairs that
+can be referenced inside flowfiles using the secret reference syntax (e.g. ${secret:MY_KEY}).
+
+The active vault is used by default; pass --vault to target a different one. Use
+'vault' subcommands to create and manage vaults.`
+
+	//nolint:gosec // example strings, not real credentials
+	secretSetExamples = `
+  flow secret set MY_TOKEN              # prompted securely
+  flow secret set MY_TOKEN s3cr3t       # inline value
+  flow secret set MY_TOKEN --from-file ./token.txt
+`
+
+	//nolint:gosec // example strings, not real credentials
+	secretGetExamples = `
+  flow secret get MY_TOKEN
+  flow secret get MY_TOKEN --as-plain-text
+  flow secret get MY_TOKEN --copy
+`
+)
 
 func effectiveVault(cmd *cobra.Command, cfg *config.Config) string {
 	if v := flags.ValueFor[string](cmd, *flags.VaultNameFlag, false); v != "" {

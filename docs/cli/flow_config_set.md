@@ -17,7 +17,7 @@ Set a global configuration value.
 
 ### SEE ALSO
 
-* [flow config](flow_config.md)	 - Update flow configuration values.
+* [flow config](flow_config.md)	 - View and update global flow configuration.
 * [flow config set log-mode](flow_config_set_log-mode.md)	 - Set the default log mode.
 * [flow config set namespace](flow_config_set_namespace.md)	 - Change the current namespace.
 * [flow config set notifications](flow_config_set_notifications.md)	 - Enable or disable notifications.

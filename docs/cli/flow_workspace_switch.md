@@ -6,6 +6,15 @@ Switch the current workspace.
 flow workspace switch NAME [flags]
 ```
 
+### Examples
+
+```
+
+  flow workspace switch myproject
+  flow workspace switch myproject --fixed
+
+```
+
 ### Options
 
 ```

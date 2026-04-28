@@ -47,14 +47,9 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "exec EXECUTABLE_ID [-- args...]",
 		Aliases: executable.SortedValidVerbs(),
 		Short:   "Execute any executable by reference.",
-		Long: execDocumentation + fmt.Sprintf(
-			"\n\nSee %s for more information on executable verbs and "+
-				"%s for more information on executable IDs.\n\n%s",
-			io.TypesDocsURL("flowfile", "executableverb"),
-			io.TypesDocsURL("flowfile", "executableref"),
-			execExamples,
-		),
-		Args: cobra.ArbitraryArgs,
+		Long:    execLong,
+		Example: execExamples,
+		Args:    cobra.ArbitraryArgs,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			verbStr := cmd.CalledAs()
 			verb := executable.Verb(verbStr)
@@ -506,41 +501,37 @@ func applyParameterOverrides(overrides []string, envMap map[string]string) {
 }
 
 var (
-	//nolint:lll
-	execDocumentation = `
-Execute an executable where EXECUTABLE_ID is the target executable's ID in the form of 'ws/ns:name'.
-The flow subcommand used should match the target executable's verb or one of its aliases.
-
-If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.
-Flag arguments use standard '--flag=value' or '--flag value' syntax. Boolean flags can omit the value (e.g., '--verbose' implies true).
-Positional arguments are specified as values without any prefix.
-`
 	execExamples = `
-#### Examples
-**Execute a nameless flow in the current workspace with the 'install' verb**
+  # Execute a nameless flow in the current workspace with the 'install' verb
+  flow install
 
-flow install
+  # Execute a nameless flow in the 'ws' workspace with the 'test' verb
+  flow test ws/
 
-**Execute a nameless flow in the 'ws' workspace with the 'test' verb**
+  # Execute the 'build' flow in the current workspace and namespace
+  flow exec build
+  flow run build   # 'run' is an alias for the 'exec' verb
 
-flow test ws/
+  # Execute the 'docs' flow with the 'show' verb
+  flow show docs
 
-**Execute the 'build' flow in the current workspace and namespace**
+  # Execute in a specific workspace and namespace
+  flow exec ws/ns:build
 
-flow exec build
-
-flow run build  (Equivalent to the above since 'run' is an alias for the 'exec' verb)
-
-**Execute the 'docs' flow with the 'show' verb in the current workspace and namespace**
-
-flow show docs
-
-**Execute the 'build' flow in the 'ws' workspace and 'ns' namespace**
-
-flow exec ws/ns:build
-
-**Execute the 'build' flow in the 'ws' workspace and 'ns' namespace with flag and positional arguments**
-
-flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
+  # Pass flag and positional arguments to the executable
+  flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 `
+)
+
+var execLong = fmt.Sprintf(
+	"Execute an executable where EXECUTABLE_ID is the target executable's ID in the form of 'ws/ns:name'.\n"+
+		"The flow subcommand used should match the target executable's verb or one of its aliases.\n\n"+
+		"If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.\n"+
+		"Flag arguments use standard '--flag=value' or '--flag value' syntax. "+
+		"Boolean flags can omit the value (e.g. '--verbose' implies true).\n"+
+		"Positional arguments are specified as values without any prefix.\n\n"+
+		"See %s for more information on executable verbs.\n"+
+		"See %s for more information on executable IDs.",
+	io.TypesDocsURL("flowfile", "executableverb"),
+	io.TypesDocsURL("flowfile", "executableref"),
 )

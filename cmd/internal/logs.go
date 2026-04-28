@@ -27,6 +27,7 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "logs [ref]",
 		Aliases: []string{"log", "history", "hist"},
 		Short:   "View execution history and logs.",
+		Example: logsExamples,
 		Long: "View execution history recorded in the data store, with associated log output. " +
 			"Optionally filter by executable reference.",
 		Args:    cobra.ArbitraryArgs,
@@ -56,7 +57,7 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 
 	killCmd := &cobra.Command{
 		Use:   "kill RUN_ID",
-		Short: "Terminate a background process.",
+		Short: "Terminate a running background process by run ID.",
 		Long:  "Send a termination signal to a running background process identified by its run ID.",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -66,7 +67,7 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 
 	attachCmd := &cobra.Command{
 		Use:   "attach RUN_ID",
-		Short: "Attach to a background process output.",
+		Short: "Stream log output from a running background process by run ID.",
 		Long:  "Stream the log output of a background process identified by its run ID.",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -363,3 +364,11 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 		time.Sleep(200 * time.Millisecond)
 	}
 }
+
+const logsExamples = `
+  flow logs                          # all history
+  flow logs --last                   # most recent entry with full output
+  flow logs --status failed   # only failed runs
+  flow logs run build                # history for 'run build' executable
+  flow logs --running                # list active background processes
+`

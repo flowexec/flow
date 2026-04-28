@@ -6,6 +6,16 @@ Get the value of a secret in the current vault.
 flow secret get REFERENCE [flags]
 ```
 
+### Examples
+
+```
+
+  flow secret get MY_TOKEN
+  flow secret get MY_TOKEN --as-plain-text
+  flow secret get MY_TOKEN --copy
+
+```
+
 ### Options
 
 ```

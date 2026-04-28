@@ -6,6 +6,15 @@ Change the current namespace.
 flow config set namespace NAME [flags]
 ```
 
+### Examples
+
+```
+
+  flow config set namespace myproject
+  flow config set namespace default
+
+```
+
 ### Options
 
 ```

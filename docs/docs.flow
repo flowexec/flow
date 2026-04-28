@@ -4,9 +4,45 @@ imports:
 
 executables:
   - verb: deploy
-    name: netlify
-    description: Generate, build, and deploy documentation to Netlify
+    name: cloudflare
+    description: Generate, build, and deploy documentation to Cloudflare Pages
     tags: [docs, deploy]
+    exec:
+      args:
+          - envKey: ENVIRONMENT
+            default: preview
+            pos: 1
+            required: false
+      params:
+        - envKey: CLOUDFLARE_API_TOKEN
+          secretRef: flow-cloudflare-api-token
+        - envKey: CLOUDFLARE_ACCOUNT_ID
+          secretRef: flow-cloudflare-account-id
+      cmd: |
+          # Generate deploy message from git log
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+          # Check if branch is dirty
+          if ! git diff-index --quiet HEAD --; then
+            DIRTY=" (dirty)"
+          else
+            DIRTY=""
+          fi
+
+          MESSAGE="${BRANCH}@${COMMIT_SHA}${DIRTY}: ${COMMIT_MSG}"
+
+          if [ "${ENVIRONMENT}" = "production" ]; then
+            npx wrangler pages deploy dist --project-name=flow-docs --branch=main --commit-message="${MESSAGE}"
+          else
+            npx wrangler pages deploy dist --project-name=flow-docs --branch=preview --commit-message="${MESSAGE}"
+          fi
+
+  - verb: deploy
+    name: netlify
+    description: (DEPRECATED) Deploy documentation to Netlify - use cloudflare instead
+    tags: [docs, deploy, deprecated]
     exec:
       args:
           - envKey: ENVIRONMENT

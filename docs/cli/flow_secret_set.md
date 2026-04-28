@@ -6,6 +6,16 @@ Set a secret in the current vault. If no value is provided, you will be prompted
 flow secret set NAME [VALUE] [flags]
 ```
 
+### Examples
+
+```
+
+  flow secret set MY_TOKEN              # prompted securely
+  flow secret set MY_TOKEN s3cr3t       # inline value
+  flow secret set MY_TOKEN --from-file ./token.txt
+
+```
+
 ### Options
 
 ```

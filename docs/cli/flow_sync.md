@@ -10,6 +10,16 @@ Refresh the workspace cache and discover new executables. Use --git to also pull
 flow sync [flags]
 ```
 
+### Examples
+
+```
+
+  flow sync               # rescan all workspaces for new executables
+  flow sync --git         # pull all git-sourced workspaces, then rescan
+  flow sync --git --force # hard-reset git workspaces before rescan
+
+```
+
 ### Options
 
 ```
