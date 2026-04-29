@@ -45,7 +45,7 @@ flow complements existing CLI tools by adding multi-project organization, built-
 - **Composable workflows** - Reference and chain workflows within and across projects
 - **Platform integrations** - GitHub Actions, AI assistants (MCP), and more
 
-<p align="center"><img src="docs/_media/demo.gif" alt="flow" width="1600"/></p>
+<p align="center"><img src="docs/demo/hero.gif" alt="flow" width="1600"/></p>
 
 ## Example Workflows
 

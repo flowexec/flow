@@ -7,7 +7,7 @@ View and update global flow configuration.
 Manage global flow configuration. Settings are stored in the flow config file and apply
 across all workspaces unless overridden.
 
-Use 'config get' to view current values and 'config set <setting>' subcommands to change them.
+Use 'config get' to view current values and 'config set &lt;setting&gt;' subcommands to change them.
 
 ### Options
 

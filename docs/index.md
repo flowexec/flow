@@ -40,6 +40,6 @@ features:
     details: GitHub Actions, AI assistants via MCP, and more
 ---
 
-<p align="center"><img src="/demo.gif" width="100%" style="max-width: 1600px"></p>
+<p align="center"><video autoplay loop muted playsinline style="width: 100%; max-width: 900px; display: block; margin: 0 auto;"><source src="/demo/hero.mp4" type="video/mp4"><img src="/demo/hero.gif" style="width: 100%; max-width: 900px;"></video></p>
 
 Browse examples in the [examples repo](https://github.com/flowexec/examples) and [flow project](https://github.com/flowexec/flow/tree/main/.execs)

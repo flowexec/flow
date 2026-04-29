@@ -54,7 +54,7 @@ export default defineConfig({
                 { text: 'Executables', link: '/guides/executables' },
                 { text: 'Workspaces', link: '/guides/workspaces' },
                 { text: 'Secrets', link: '/guides/secrets' },
-                { text: 'Execution History & Logs', link: '/guides/execution-history' },
+                { text: 'History & Logs', link: '/guides/execution-history' },
             ]},
             { text: 'Advanced',
             items: [

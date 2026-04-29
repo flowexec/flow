@@ -19,13 +19,9 @@ executables:
       cmd: go install ./...
 
   - verb: start
-    name: recording
-    aliases: [vhs]
-    description: Record a demo of the Flow CLI and save it
-    tags: [vhs]
+    name: hero-recording
+    description: Record the hero demo clip (full story, for README/homepage)
+    tags: [vhs, demo]
     exec:
-      params:
-        - envKey: OUTPUT
-          text: docs/_media/demo.gif
       dir: //
-      cmd: vhs -o $OUTPUT docs/demo.tape
+      cmd: vhs docs/demo/hero.tape

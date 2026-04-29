@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://flowexec.io/schemas/flowfile_schema.json
+namespace: demo
+visibility: public
+
+executables:
+  - verb: run
+    name: greet
+    tags: [text]
+    description: Greet someone by name
+    exec:
+      params:
+        - envKey: NAME
+          prompt: What is your name?
+      cmd: |
+        echo "Hello, $NAME!"
+
+  - verb: build
+    name: app
+    tags: [ci]
+    description: Build the application binary
+    exec:
+      cmd: |
+        echo "Building app..."
+
+  - verb: test
+    name: unit
+    tags: [ci]
+    description: Run unit tests with coverage
+    exec:
+      cmd: |
+        echo "Running tests..."
+        echo "all passed"
+
+  - verb: deploy
+    name: staging
+    description: Full deploy pipeline to staging
+    tags: [deploy, ci]
+    serial:
+      execs:
+        - cmd: echo "Checking environment..."
+        - cmd: sleep 0.3 && echo "Go 1.25 detected"
+        - cmd: sleep 0.3 && echo "Dependencies up to date"
+        - cmd: sleep 0.3 && echo "Deploying to staging... done"
