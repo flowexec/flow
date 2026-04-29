@@ -36,6 +36,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | `interactive` |  | [Interactive](#interactive) |  |  |
 | `templates` | A map of flowfile template names to their paths. | `map` (`string` -> `string`) | map[] |  |
 | `theme` | The theme of the interactive UI. | `string` | default |  |
+| `updateCheck` | Whether to check for CLI updates in the background. When enabled, flow will periodically check GitHub for a newer version and display a notice if one is available after each command. Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.  | `boolean` | false |  |
 | `vaults` | A map of vault names to their paths. The path should be a valid absolute path to the vault file created by flow. | `map` (`string` -> `string`) |  |  |
 | `workspaceMode` | The mode of the workspace. This can be either `fixed` or `dynamic`. In `fixed` mode, the current workspace used at runtime is always the one set in the currentWorkspace config field. In `dynamic` mode, the current workspace used at runtime is determined by the current directory. If the current directory is within a workspace, that workspace is used.  | `string` | dynamic |  |
 | `workspaces` | Map of workspace names to their paths. The path should be a valid absolute path to the workspace directory.  | `map` (`string` -> `string`) |  |  |

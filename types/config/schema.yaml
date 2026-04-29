@@ -154,6 +154,14 @@ properties:
   currentVault:
     type: string
     description: The name of the current vault. This should match a key in the `vaults` map.
+  updateCheck:
+    type: boolean
+    description: |
+      Whether to check for CLI updates in the background.
+      When enabled, flow will periodically check GitHub for a newer version and
+      display a notice if one is available after each command.
+      Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.
+    default: false
 required:
   - workspaces
   - currentWorkspace

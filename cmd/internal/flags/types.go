@@ -376,6 +376,12 @@ var VaultNameFlag = &Metadata{
 	Required:  false,
 }
 
+var CLIVersionFlag = &Metadata{
+	Name:    "version",
+	Usage:   "Target version to install (e.g. v2.1.0). Defaults to the latest release.",
+	Default: "",
+}
+
 var StrictFlag = &Metadata{
 	Name:    "strict",
 	Usage:   "Also check for unknown keys not defined in the schema",

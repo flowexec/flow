@@ -9,6 +9,7 @@ import (
 	"github.com/flowexec/flow/cmd/internal"
 	errhandler "github.com/flowexec/flow/cmd/internal/errors"
 	"github.com/flowexec/flow/cmd/internal/flags"
+	"github.com/flowexec/flow/internal/updater"
 	"github.com/flowexec/flow/internal/version"
 	"github.com/flowexec/flow/pkg/cache"
 	"github.com/flowexec/flow/pkg/context"
@@ -44,9 +45,15 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 					errhandler.HandleFatal(ctx, cmd, err)
 				}
 			}
+			updater.CheckInBackground(ctx.DataStore, ctx.Config.UpdateCheck)
 		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) { ctx.Finalize() },
-		Version:           version.String(),
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			if !isCliUpdateCmd(cmd) {
+				printUpdateNotice(ctx, cmd)
+			}
+			ctx.Finalize()
+		},
+		Version: version.String(),
 	}
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.LogLevel)
 	internal.RegisterPersistentFlag(ctx, rootCmd, *flags.SyncCacheFlag)
@@ -75,6 +82,24 @@ func Execute(ctx *context.Context, rootCmd *cobra.Command) error {
 	return nil
 }
 
+func isCliUpdateCmd(cmd *cobra.Command) bool {
+	return cmd.Use == "update" && cmd.Parent() != nil && cmd.Parent().Use == "cli"
+}
+
+func printUpdateNotice(ctx *context.Context, cmd *cobra.Command) {
+	// Skip notice when structured output is requested to avoid polluting JSON/YAML.
+	for _, c := range []*cobra.Command{cmd, cmd.Root()} {
+		if flags.HasFlag(c, *flags.OutputFormatFlag) {
+			if v := flags.ValueFor[string](c, *flags.OutputFormatFlag, false); v == "json" || v == "yaml" || v == "yml" {
+				return
+			}
+		}
+	}
+	if notice := updater.CachedUpdateNotice(ctx.DataStore); notice != "" {
+		logger.Log().Infof("\n%s", notice)
+	}
+}
+
 func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	if ctx == nil {
 		panic("current context is not initialized")
@@ -94,4 +119,5 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	internal.RegisterSyncCmd(ctx, rootCmd)
 	internal.RegisterSchemaCmd(ctx, rootCmd)
 	internal.RegisterMCPCmd(ctx, rootCmd)
+	internal.RegisterCliCmd(ctx, rootCmd)
 }

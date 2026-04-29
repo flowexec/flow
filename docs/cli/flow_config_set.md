@@ -24,5 +24,6 @@ Set a global configuration value.
 * [flow config set theme](flow_config_set_theme.md)	 - Set the theme for the TUI views
 * [flow config set timeout](flow_config_set_timeout.md)	 - Set the default timeout for executables.
 * [flow config set tui](flow_config_set_tui.md)	 - Enable or disable the interactive terminal UI experience.
+* [flow config set update-check](flow_config_set_update-check.md)	 - Enable or disable background CLI update checks.
 * [flow config set workspace-mode](flow_config_set_workspace-mode.md)	 - Switch between fixed and dynamic workspace modes.
 

@@ -113,6 +113,13 @@ type Config struct {
 	// The theme of the interactive UI.
 	Theme ConfigTheme `json:"theme,omitempty" yaml:"theme,omitempty" mapstructure:"theme,omitempty"`
 
+	// Whether to check for CLI updates in the background.
+	// When enabled, flow will periodically check GitHub for a newer version and
+	// display a notice if one is available after each command.
+	// Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.
+	//
+	UpdateCheck bool `json:"updateCheck,omitempty" yaml:"updateCheck,omitempty" mapstructure:"updateCheck,omitempty"`
+
 	// A map of vault names to their paths. The path should be a valid absolute path
 	// to the vault file created by flow.
 	Vaults ConfigVaults `json:"vaults,omitempty" yaml:"vaults,omitempty" mapstructure:"vaults,omitempty"`

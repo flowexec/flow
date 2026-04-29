@@ -112,7 +112,10 @@ func (r *renderRunner) Exec(
 		}
 	}
 
-	tmpl := expression.NewTemplate(filepath.Base(renderSpec.TemplateFile), map[string]interface{}{"data": templateData})
+	tmpl := expression.NewTemplate(filepath.Base(renderSpec.TemplateFile), map[string]any{
+		"data": templateData,
+		"env":  envMap,
+	})
 	if err = tmpl.ParseFile(contentFile); err != nil {
 		return errors.Wrapf(err, "unable to parse template file %s", contentFile)
 	}

@@ -72,7 +72,10 @@ func LoadWorkspaceFlowFiles(
 	for _, cfgFile := range cfgFiles {
 		cfg, err := LoadFlowFile(cfgFile)
 		if err != nil {
-			logger.Log().Error("unable to load executable config file", "configFile", cfgFile, "err", err)
+			logger.Log().Error(
+				fmt.Sprintf("unable to load flow file: %s", errors.Cause(err)),
+				"file", cfgFile,
+			)
 			continue
 		}
 		cfg.SetDefaults()

@@ -20,6 +20,7 @@ See https://flowexec.io for more information.
 
 * [flow browse](flow_browse.md)	 - Discover and explore available executables.
 * [flow cache](flow_cache.md)	 - Manage temporary key-value data.
+* [flow cli](flow_cli.md)	 - Manage the flow CLI itself.
 * [flow config](flow_config.md)	 - View and update global flow configuration.
 * [flow exec](flow_exec.md)	 - Execute any executable by reference.
 * [flow logs](flow_logs.md)	 - View execution history and logs.

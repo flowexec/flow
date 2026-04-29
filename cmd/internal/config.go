@@ -99,6 +99,7 @@ func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
 	registerSetNotificationsCmd(ctx, setCmd)
 	registerSetThemeCmd(ctx, setCmd)
 	registerSetTimeoutCmd(ctx, setCmd)
+	registerSetUpdateCheckCmd(ctx, setCmd)
 	configCmd.AddCommand(setCmd)
 }
 
@@ -196,9 +197,9 @@ func setInteractiveFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		logger.Log().FatalErr(err)
 	}
-	strVal := "disabled"
+	strVal := strDisabled
 	if enabled {
-		strVal = "enabled"
+		strVal = strEnabled
 	}
 	logger.Log().PlainTextSuccess("Interactive UI " + strVal)
 }
@@ -233,9 +234,9 @@ func setNotificationsFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		logger.Log().FatalErr(err)
 	}
-	strVal := "disabled"
+	strVal := strDisabled
 	if enabled {
-		strVal = "enabled"
+		strVal = strEnabled
 	}
 	logger.Log().PlainTextSuccess("Notifications " + strVal)
 }
@@ -269,6 +270,35 @@ func setThemeFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 		logger.Log().FatalErr(err)
 	}
 	logger.Log().PlainTextSuccess("Theme set to " + themeName)
+}
+
+func registerSetUpdateCheckCmd(ctx *context.Context, setCmd *cobra.Command) {
+	updateCheckCmd := &cobra.Command{
+		Use:       "update-check [true|false]",
+		Short:     "Enable or disable background CLI update checks.",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"true", "false"},
+		Run:       func(cmd *cobra.Command, args []string) { setUpdateCheckFunc(ctx, cmd, args) },
+	}
+	setCmd.AddCommand(updateCheckCmd)
+}
+
+func setUpdateCheckFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+	enabled, err := strconv.ParseBool(args[0])
+	if err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "invalid boolean value"))
+	}
+
+	userConfig := ctx.Config
+	userConfig.UpdateCheck = enabled
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		logger.Log().FatalErr(err)
+	}
+	strVal := strDisabled
+	if enabled {
+		strVal = strEnabled
+	}
+	logger.Log().PlainTextSuccess("CLI update checks " + strVal)
 }
 
 func registerSetTimeoutCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -331,4 +361,7 @@ Use 'config get' to view current values and 'config set <setting>' subcommands t
   flow config set namespace myproject
   flow config set namespace default
 `
+
+	strEnabled  = "enabled"
+	strDisabled = "disabled"
 )
