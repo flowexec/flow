@@ -1,0 +1,96 @@
+{
+  "name": "flowfile",
+  "displayName": "Flow File",
+  "scopeName": "source.flowfile",
+  "fileTypes": ["flow", "flow.yaml"],
+  "patterns": [{ "include": "#root" }],
+  "repository": {
+    "root": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#doc-separator" },
+        { "include": "#verb-key" },
+        { "include": "#exec-type-key" },
+        { "include": "#core-field-key" },
+        { "include": "#config-field-key" },
+        { "include": "#block-scalar-indicator" },
+        { "include": "#string-double" },
+        { "include": "#string-single" },
+        { "include": "#constant" }
+      ]
+    },
+
+    "comment": {
+      "match": "(?:^|(?<=[ \\t]))(#.*)$",
+      "captures": {
+        "1": { "name": "comment.line.number-sign.flowfile" }
+      }
+    },
+
+    "doc-separator": {
+      "match": "^---[ \\t]*$",
+      "name": "punctuation.definition.document.flowfile"
+    },
+
+    "verb-key": {
+      "match": "(?<![\\w-])(verb)([ \\t]*:[ \\t]*)(run|exec|start|build|push|deploy|get|set|create|delete|update|list|check|install|validate|generate|open|show|launch|send|fetch|clean|test|lint|release|configure|view|sync|watch|apply|remove|edit|format)?(?=[ \\t]|$|[ \\t]*#)",
+      "captures": {
+        "1": { "name": "entity.name.function.flowfile" },
+        "2": { "name": "punctuation.separator.key-value.flowfile" },
+        "3": { "name": "variable.parameter.flowfile" }
+      }
+    },
+
+    "exec-type-key": {
+      "match": "(?<![\\w-])(exec|parallel|serial|request|render|launch)([ \\t]*:)(?=[ \\t]|$|[ \\t]*#)",
+      "captures": {
+        "1": { "name": "entity.name.tag.flowfile" },
+        "2": { "name": "punctuation.separator.key-value.flowfile" }
+      }
+    },
+
+    "core-field-key": {
+      "match": "(?<![\\w-])(namespace|executables|name|description|tags|timeout|visibility|aliases|displayName|descriptionFile|verbAliases)([ \\t]*:)(?=[ \\t]|$|[ \\t]*#)",
+      "captures": {
+        "1": { "name": "storage.type.flowfile" },
+        "2": { "name": "punctuation.separator.key-value.flowfile" }
+      }
+    },
+
+    "config-field-key": {
+      "match": "(?<![\\w-])(cmd|file|dir|logMode|args|params|envKey|secretRef|prompt|default|pos|flag|required|maxThreads|failFast|execs|ref|method|url|headers|body|statusCode|contentType|text|app|envFile|out|workspaceName|fromFile|templateId|values|retries|retryDelay)([ \\t]*:)(?=[ \\t]|$|[ \\t]*#)",
+      "captures": {
+        "1": { "name": "meta.property-name.flowfile" },
+        "2": { "name": "punctuation.separator.key-value.flowfile" }
+      }
+    },
+
+    "block-scalar-indicator": {
+      "match": "(\\||>)[+-]?(?=[ \\t]*(?:#.*)?$)",
+      "captures": {
+        "1": { "name": "keyword.operator.flowfile" }
+      }
+    },
+
+    "string-double": {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.flowfile",
+      "patterns": [
+        { "match": "\\\\.", "name": "constant.character.escape.flowfile" },
+        { "match": "\\$\\{[^}]+\\}", "name": "variable.other.flowfile" }
+      ]
+    },
+
+    "string-single": {
+      "begin": "'",
+      "end": "'",
+      "name": "string.quoted.single.flowfile"
+    },
+
+    "constant": {
+      "match": "(?<![\\w-])(?:true|false|yes|no|on|off|null|~|-?[0-9]+(?:\\.[0-9]+)?)(?![\\w])",
+      "name": "constant.language.flowfile"
+    }
+  }
+}

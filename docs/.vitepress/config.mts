@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
+import flowfileGrammar from './flowfile.tmLanguage.json'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -20,6 +21,7 @@ export default defineConfig({
     config(md) {
       md.use(tabsMarkdownPlugin)
     },
+    languages: [flowfileGrammar as never],
   },
 
   themeConfig: {
@@ -33,6 +35,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guides', link: '/guides/', activeMatch: '/guides/'},
+      { text: 'Examples', link: '/examples', activeMatch: '/examples' },
       { text: 'CLI Reference', link: '/cli/', activeMatch: '/cli/' },
       { text: 'Config Reference', link: '/types/', activeMatch: '/types/' }
     ],
@@ -184,7 +187,8 @@ export default defineConfig({
           text: 'Getting Started',
           items: [
             { text: 'Installation', link: '/installation' },
-            { text: 'Quick Start', link: '/quickstart' }
+            { text: 'Quick Start', link: '/quickstart' },
+            { text: 'Examples', link: '/examples' }
           ]
         },
         {

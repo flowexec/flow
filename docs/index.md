@@ -42,4 +42,4 @@ features:
 
 <p align="center"><video autoplay loop muted playsinline style="width: 100%; max-width: 900px; display: block; margin: 0 auto;"><source src="/demo/hero.mp4" type="video/mp4"><img src="/demo/hero.gif" style="width: 100%; max-width: 900px;"></video></p>
 
-Browse examples in the [examples repo](https://github.com/flowexec/examples) and [flow project](https://github.com/flowexec/flow/tree/main/.execs)
+Browse real-world workflows in the [Examples gallery](/examples) or explore the [flow project's own executables](https://github.com/flowexec/flow/tree/main/.execs).
