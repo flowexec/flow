@@ -20,7 +20,7 @@ func executableDetailOpts(exec *executable.Executable) views.DetailContentOpts {
 		Tags:     common.ColorizeTags(exec.Tags),
 		Metadata: execMetadataFields(exec),
 		Body:     execBodyMarkdown(exec),
-		Footer:   fmt.Sprintf("_Located in %s_", exec.FlowFilePath()),
+		Footer:   fmt.Sprintf("_Located in %s_", common.ShortenPath(exec.FlowFilePath())),
 		Entity:   exec,
 	}
 }
@@ -350,7 +350,7 @@ func templateDetailOpts(t *executable.Template) views.DetailContentOpts {
 		Subtitle: "Template",
 		Metadata: templateMetadataFields(t),
 		Body:     templateBodyMarkdown(t),
-		Footer:   fmt.Sprintf("_Located in %s_", t.Location()),
+		Footer:   fmt.Sprintf("_Located in %s_", common.ShortenPath(t.Location())),
 		Entity:   t,
 	}
 }

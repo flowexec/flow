@@ -27,6 +27,7 @@ jobs:
         with:
           executable: 'install docs:'
           timeout: '5m'
+          flow-version: 'main'
       - name: Deploy to Cloudflare Pages
         uses: flowexec/action@v1
         with:

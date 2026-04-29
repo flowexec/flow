@@ -1,16 +1,33 @@
 package common
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 )
 
-// ShortenPath returns the last two directory components of a path prefixed
-// with "…/". If the path has two or fewer components, it is returned as-is.
+const maxPathSegments = 5
+
+// ShortenPath returns a display-friendly version of p:
+// the home directory prefix is replaced with ~/, and if the result still has
+// more than maxPathSegments slash-separated components the last four are kept
+// preceded by …/.
 func ShortenPath(p string) string {
-	parts := strings.Split(filepath.ToSlash(p), "/")
-	if len(parts) <= 2 {
+	if p == "" {
 		return p
 	}
-	return "…/" + strings.Join(parts[len(parts)-2:], "/")
+
+	slashP := filepath.ToSlash(p)
+	if home, err := os.UserHomeDir(); err == nil {
+		slashHome := filepath.ToSlash(home)
+		if strings.HasPrefix(slashP, slashHome+"/") {
+			slashP = "~/" + slashP[len(slashHome)+1:]
+		}
+	}
+
+	parts := strings.Split(slashP, "/")
+	if len(parts) <= maxPathSegments {
+		return slashP
+	}
+	return "…/" + strings.Join(parts[len(parts)-4:], "/")
 }

@@ -61,3 +61,29 @@ func SemVer() string {
 
 	return strings.TrimSpace(version)
 }
+
+// Short returns a simplified version string.
+// Examples: "v2", "v2.1", "v2.1.3" (pre-release tags dropped, trailing .0 segments removed)
+func Short() string {
+	if version == unknown {
+		return ""
+	}
+
+	mainVersion := strings.TrimSpace(strings.SplitN(version, "-", 2)[0])
+	if !strings.HasPrefix(mainVersion, "v") {
+		mainVersion = "v" + mainVersion
+	}
+	segments := strings.Split(mainVersion, ".")
+	if len(segments) < 3 {
+		return mainVersion
+	}
+
+	switch {
+	case segments[1] == "0" && segments[2] == "0":
+		return segments[0]
+	case segments[2] == "0":
+		return strings.Join(segments[:2], ".")
+	default:
+		return mainVersion
+	}
+}

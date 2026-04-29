@@ -70,7 +70,7 @@ func NewVaultView(
 
 	var footer string
 	if v.Path != "" {
-		footer = fmt.Sprintf("_Located in %s_", v.Path)
+		footer = fmt.Sprintf("_Located in %s_", common.ShortenPath(v.Path))
 	}
 
 	opts := views.DetailContentOpts{

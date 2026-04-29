@@ -243,7 +243,7 @@ func (ctx *Context) TUIContainer() *tuikit.Container {
 		app := tuikit.NewApplication(
 			ctx.appName,
 			tuikit.WithState(HeaderCtxKey, ctx.String()),
-			tuikit.WithVersion(version.SemVer()),
+			tuikit.WithVersion(version.Short()),
 			tuikit.WithLoadingMsg("thinking..."),
 		)
 

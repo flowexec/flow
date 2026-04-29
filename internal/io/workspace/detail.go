@@ -24,7 +24,7 @@ func workspaceDetailOpts(ws *workspace.Workspace) views.DetailContentOpts {
 		Tags:     common.ColorizeTags(ws.Tags),
 		Metadata: workspaceMetadataFields(ws),
 		Body:     workspaceBodyMarkdown(ws),
-		Footer:   fmt.Sprintf("_Located in %s_", ws.Location()),
+		Footer:   fmt.Sprintf("_Located in %s_", common.ShortenPath(ws.Location())),
 		Entity:   ws,
 	}
 }
