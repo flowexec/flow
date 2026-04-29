@@ -36,7 +36,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		ff := filepath.Join(wd, "testdata", "test"+executable.FlowFileExt)
-		flowFile = &executable.FlowFile{Imports: make(executable.FromFile, 0)}
+		flowFile = &executable.FlowFile{Imports: make(executable.Imports, 0)}
 		flowFile.SetContext("ws", filepath.Join(wd, "testdata"), ff)
 	})
 

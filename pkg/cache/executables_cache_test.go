@@ -107,7 +107,7 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				execCfg := &executable.FlowFile{
 					Namespace:  "testdata",
 					Visibility: &v,
-					FromFile:   []string{"from-file.sh"},
+					Imports:    []string{"from-file.sh"},
 				}
 				execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, "test"+executable.FlowFileExt))
 				err = filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)

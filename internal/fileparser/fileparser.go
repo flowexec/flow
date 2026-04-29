@@ -20,7 +20,7 @@ func ExecutablesFromImports(
 	wsPath := flowFile.WorkspacePath()
 	flowFilePath := flowFile.ConfigPath()
 	flowFileNs := flowFile.Namespace
-	files := append(flowFile.FromFile, flowFile.Imports...) //nolint:gocritic
+	files := flowFile.Imports
 
 	setCtx := func(execs ...*executable.Executable) {
 		for _, e := range execs {

@@ -3,12 +3,12 @@ $id: "https://raw.githubusercontent.com/flowexec/flow/HEAD/types/executable/flow
 
 title: FlowFile
 description: |
-  Configuration for a group of Flow CLI executables. The file must have the extension `.flow`, `.flow.yaml`, or `.flow.yml` 
-  in order to be discovered by the CLI. It's configuration is used to define a group of executables with shared metadata 
+  Configuration for a group of Flow CLI executables. The file must have the extension `.flow`, `.flow.yaml`, or `.flow.yml`
+  in order to be discovered by the CLI. It's configuration is used to define a group of executables with shared metadata
   (namespace, tags, etc). A workspace can have multiple flow files located anywhere in the workspace directory
 
 definitions:
-  FromFile:
+  Imports:
     type: array
     description: A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated executables in the file's executable group.
     items:
@@ -22,20 +22,16 @@ properties:
     goJSONSchema:
       type: "common.Visibility"
       imports: ["github.com/flowexec/flow/types/common"]
-  fromFile:
-    $ref: '#/definitions/FromFile'
-    default: []
-    description: "DEPRECATED: Use `imports` instead"
   imports:
-    $ref: '#/definitions/FromFile'
+    $ref: '#/definitions/Imports'
     default: []
   namespace:
     type: string
     description: |
       The namespace to be given to all executables in the flow file.
-      If not set, the executables in the file will be grouped into the root (*) namespace. 
+      If not set, the executables in the file will be grouped into the root (*) namespace.
       Namespaces can be reused across multiple flow files.
-      
+
       Namespaces are used to reference executables in the CLI using the format `workspace:namespace/name`.
     default: ""
   executables:

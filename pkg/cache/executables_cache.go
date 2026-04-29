@@ -77,7 +77,7 @@ func (c *ExecutableCacheImpl) Update() error { //nolint:gocognit
 			continue
 		}
 		for _, flowFile := range flowFiles {
-			if len(flowFile.FromFile) > 0 || len(flowFile.Imports) > 0 {
+			if len(flowFile.Imports) > 0 {
 				generated, err := fileparser.ExecutablesFromImports(name, flowFile)
 				if err != nil {
 					logger.Log().Error(

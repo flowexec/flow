@@ -198,6 +198,7 @@ export default defineConfig({
             { text: 'CLI Reference', link: '/cli/' },
             { text: 'Configuration Reference', link: '/types/' },
             { text: 'Contributing', link: '/development' },
+            { text: 'Breaking Changes', link: '/breaking-changes' },
             { text: 'TUI Kit', link: '/tuikit' }
           ]
         }

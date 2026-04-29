@@ -4,19 +4,20 @@ title: Installation
 
 # Installation
 
-> **System Requirements:** flow supports Linux, macOS, and Windows systems. On Linux, you'll need `xclip` installed for clipboard features and `notify-send` (from `libnotify`) for desktop notifications.
->
-> **Optional:** [Git](https://git-scm.com/) is required for [git workspace](guides/workspaces.md#git-workspaces) features (`workspace add` from URLs, `workspace update`, `sync --git`).
+> [!NOTE] System requirements
+> Flow supports Linux, macOS, and Windows systems.
+> - Linux: requires `xclip` for clipboard features and `notify-send` (from `libnotify`) for desktop notifications.
+> - Optional: [Git](https://git-scm.com/) is required for [git workspace features](guides/workspaces.md#git-workspaces).
 
 ## Quick Install
 
 ::: code-group
 ```shell [macOS / Linux]
-curl -sSL https://raw.githubusercontent.com/flowexec/flow/main/scripts/install.sh | bash
+curl -sSL https://install.flowexec.io | bash
 ```
 
 ```powershell [Windows (PowerShell)]
-irm https://raw.githubusercontent.com/flowexec/flow/main/scripts/install.ps1 | iex
+irm https://install.flowexec.io/win | iex
 ```
 :::
 
@@ -34,13 +35,6 @@ brew install flowexec/tap/flow
 go install github.com/flowexec/flow@latest
 ```
 
-### Scoop (Windows)
-
-```powershell
-scoop bucket add flowexec https://github.com/flowexec/scoop-bucket
-scoop install flow
-```
-
 ### Manual Download
 
 Download the latest release from the [releases page](https://github.com/flowexec/flow/releases) and add the binary to your `PATH`.
@@ -49,6 +43,46 @@ Each release includes checksums for verification.
 ::: tip Windows
 Download the `.zip` archive for your architecture, extract `flow.exe`, and add its directory to your `PATH` environment variable.
 :::
+
+## Upgrading
+
+### Using the built-in update command
+
+flow can check for and install updates itself:
+
+```shell
+# Check for an update and prompt before installing
+flow cli update
+
+# Install the latest version without confirmation
+flow cli update --yes
+
+# Install a specific version
+flow cli update --version v2.1.0
+```
+
+`flow cli update` replaces the running binary in-place — no additional steps needed.
+
+#### Automatic update notifications
+
+flow can check for new releases in the background and print a notice after your next command completes. This is disabled by default and opt-in:
+
+```shell
+# Enable background update checks
+flow config set update-check true
+
+# Disable them again
+flow config set update-check false
+```
+
+When a newer version is available, you'll see a one-line notice at the end of your next command's output. Run `flow cli update` to act on it.
+
+### Using your original install method
+
+Re-run the same command you used to install — see [Quick Install](#quick-install) and [Alternative Install Methods](#alternative-install-methods) above. Homebrew uses `brew upgrade flowexec/tap/flow`.
+
+> [!NOTE]
+> Review the [Breaking Changes guide](breaking-changes) before upgrading.
 
 ## Verify Installation
 

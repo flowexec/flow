@@ -6,8 +6,8 @@ title: FlowFile
 
 # FlowFile
 
-Configuration for a group of Flow CLI executables. The file must have the extension `.flow`, `.flow.yaml`, or `.flow.yml` 
-in order to be discovered by the CLI. It's configuration is used to define a group of executables with shared metadata 
+Configuration for a group of Flow CLI executables. The file must have the extension `.flow`, `.flow.yaml`, or `.flow.yml`
+in order to be discovered by the CLI. It's configuration is used to define a group of executables with shared metadata
 (namespace, tags, etc). A workspace can have multiple flow files located anywhere in the workspace directory
 
 
@@ -22,9 +22,8 @@ in order to be discovered by the CLI. It's configuration is used to define a gro
 | `description` | A description of the executables defined within the flow file. This description will used as a shared description for all executables in the flow file.  | `string` |  |  |
 | `descriptionFile` | A path to a markdown file that contains the description of the executables defined within the flow file. | `string` |  |  |
 | `executables` |  | `array` ([Executable](#executable)) | [] |  |
-| `fromFile` | DEPRECATED: Use `imports` instead | [FromFile](#fromfile) | [] |  |
-| `imports` |  | [FromFile](#fromfile) | [] |  |
-| `namespace` | The namespace to be given to all executables in the flow file. If not set, the executables in the file will be grouped into the root (*) namespace.  Namespaces can be reused across multiple flow files.  Namespaces are used to reference executables in the CLI using the format `workspace:namespace/name`.  | `string` |  |  |
+| `imports` |  | [Imports](#imports) | [] |  |
+| `namespace` | The namespace to be given to all executables in the flow file. If not set, the executables in the file will be grouped into the root (*) namespace. Namespaces can be reused across multiple flow files.  Namespaces are used to reference executables in the CLI using the format `workspace:namespace/name`.  | `string` |  |  |
 | `tags` | Tags to be applied to all executables defined within the flow file. | `array` (`string`) | [] |  |
 | `visibility` |  | [CommonVisibility](#commonvisibility) |  |  |
 
@@ -560,7 +559,7 @@ while maintaining simplicity and flexibility for diverse development and operati
 
 
 
-### FromFile
+### Imports
 
 A list of script files (`.sh`, `.bat`, `.cmd`, `.ps1`) to convert into generated executables in the file's executable group.
 
