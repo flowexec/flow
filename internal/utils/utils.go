@@ -73,7 +73,8 @@ func ExpandPath(path, fallbackDir string, env map[string]string) string {
 func ExpandDirectory(dir, wsPath, execPath string, env map[string]string) string {
 	expandedPath := dir
 	if wsPath != "" && strings.HasPrefix(dir, "//") {
-		expandedPath = strings.Replace(expandedPath, "//", wsPath+string(filepath.Separator), 1)
+		rest := strings.TrimPrefix(dir, "//")
+		expandedPath = filepath.Join(wsPath, filepath.FromSlash(rest))
 	}
 	expandedPath = ExpandPath(expandedPath, filepath.Dir(execPath), env)
 

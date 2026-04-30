@@ -50,12 +50,7 @@ func InitConfig() error {
 		DefaultLogMode: "logfmt",
 	}
 
-	_, err := os.Create(UserConfigFilePath())
-	if err != nil {
-		return errors.Wrap(err, "unable to create config file")
-	}
-	err = WriteConfig(defaultCfg)
-	if err != nil {
+	if err := WriteConfig(defaultCfg); err != nil {
 		return errors.Wrap(err, "unable to write default config")
 	}
 	return nil

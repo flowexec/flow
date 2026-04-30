@@ -39,6 +39,9 @@ var _ = ginkgo.Describe("Context", func() {
 		})
 
 		ginkgo.AfterEach(func() {
+			// On Windows the process cannot delete a directory it is cwd'd into,
+			// so navigate away first.
+			_ = os.Chdir(os.TempDir())
 			_ = os.RemoveAll(tmpDir)
 		})
 

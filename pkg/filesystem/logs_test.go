@@ -2,6 +2,7 @@ package filesystem_test
 
 import (
 	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,7 +34,7 @@ var _ = Describe("Logs", func() {
 	Describe("LogsDir", func() {
 		It("returns the correct logs directory path", func() {
 			logsDir := filesystem.LogsDir()
-			Expect(logsDir).To(Equal(tmpDir + "/logs"))
+			Expect(logsDir).To(Equal(filepath.Join(tmpDir, "logs")))
 		})
 	})
 

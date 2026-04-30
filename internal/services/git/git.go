@@ -44,6 +44,7 @@ func ClonePath(gitURL string) (string, error) {
 	}
 	repoPath = strings.TrimSuffix(repoPath, ".git")
 	repoPath = strings.TrimPrefix(repoPath, "/")
+	repoPath = strings.ReplaceAll(repoPath, ":", "_") // sanitize Windows drive-letter colons
 	return filepath.Join(filesystem.CachedDataDirPath(), "git-workspaces", host, repoPath), nil
 }
 

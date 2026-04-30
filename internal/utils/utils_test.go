@@ -3,6 +3,7 @@ package utils_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/flowexec/tuikit/io/mocks"
@@ -20,13 +21,11 @@ func TestUtils(t *testing.T) {
 }
 
 var _ = Describe("Utils", func() {
-	const (
-		testHomeDir = "/Users/testuser"
-		wsDir       = "/workspace"
-		execDir     = "/execPath"
-	)
-
 	var (
+		testHomeDir = ap("/Users/testuser")
+		wsDir       = ap("/workspace")
+		execDir     = ap("/execPath")
+
 		mockLogger        *mocks.MockLogger
 		testWorkingDir, _ = os.UserConfigDir()
 		execPath          = filepath.Join(execDir, "exec.flow")
@@ -39,6 +38,7 @@ var _ = Describe("Utils", func() {
 		logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
 		Expect(os.Chdir(testWorkingDir)).To(Succeed())
 		Expect(os.Setenv("HOME", testHomeDir)).To(Succeed())
+		Expect(os.Setenv("USERPROFILE", testHomeDir)).To(Succeed())
 	})
 
 	Describe("ExpandDirectory", func() {
@@ -52,28 +52,28 @@ var _ = Describe("Utils", func() {
 			Entry("dir is .", ".", testWorkingDir),
 			Entry("dir starts with ./", "./dir", filepath.Join(testWorkingDir, "dir")),
 			Entry("dir starts with ~/", "~/dir", filepath.Join(testHomeDir, "dir")),
-			Entry("dir starts with /", "/dir", "/dir"),
+			Entry("dir starts with /", ap("/dir"), ap("/dir")),
 			Entry("default case", "dir", filepath.Join(execDir, "dir")),
-			Entry("hidden dir with extension-like name", "/path/.config", "/path/.config"),
-			Entry("file with extension returns parent dir", "/path/file.txt", "/path"),
+			Entry("hidden dir with extension-like name", ap("/path/.config"), ap("/path/.config")),
+			Entry("file with extension returns parent dir", ap("/path/file.txt"), ap("/path")),
 		)
 
 		When("env vars are in the dir", func() {
 			It("expands the env vars", func() {
 				envMap := map[string]string{"VAR1": "one", "VAR2": "two"}
-				Expect(utils.ExpandDirectory("/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
-					To(Equal("/one/two"))
+				Expect(utils.ExpandDirectory(ap("/${VAR1}/${VAR2}"), wsDir, execPath, envMap)).
+					To(Equal(ap("/one/two")))
 			})
 			It("expands the env vars with a ws prefix", func() {
 				envMap := map[string]string{"VAR1": "one"}
 				Expect(utils.ExpandDirectory("//dir/${VAR1}", wsDir, execPath, envMap)).
-					To(Equal("/workspace/dir/one"))
+					To(Equal(filepath.Join(wsDir, "dir", "one")))
 			})
 			It("logs a warning if the env var is not found", func() {
 				envMap := map[string]string{"VAR1": "one"}
 				mockLogger.EXPECT().Warn("unable to find env key in path expansion", "key", "VAR2")
-				Expect(utils.ExpandDirectory("/${VAR1}/${VAR2}", wsDir, execPath, envMap)).
-					To(Equal("/one"))
+				Expect(utils.ExpandDirectory(ap("/${VAR1}/${VAR2}"), wsDir, execPath, envMap)).
+					To(Equal(ap("/one")))
 			})
 		})
 	})
@@ -96,7 +96,7 @@ var _ = Describe("Utils", func() {
 		When("path is a sibling directory", func() {
 			It("returns the relative path", func() {
 				result, err := utils.PathFromWd(filepath.Join(filepath.Dir(testWorkingDir), "sibling"))
-				Expect(result).To(Equal("../sibling"))
+				Expect(result).To(Equal(filepath.Join("..", "sibling")))
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -145,3 +145,20 @@ var _ = Describe("Utils", func() {
 		)
 	})
 })
+
+// vol is the volume name of the working directory on Windows (e.g. "C:").
+// Empty on all other platforms.
+var vol = func() string {
+	if runtime.GOOS == "windows" {
+		wd, _ := os.Getwd()
+		return filepath.VolumeName(wd)
+	}
+	return ""
+}()
+
+// ap (absolute path) converts a POSIX-style absolute path such as "/foo/bar"
+// into a native absolute path. On Windows it prepends the current volume so
+// that filepath.IsAbs returns true; on other platforms it is a no-op.
+func ap(p string) string {
+	return filepath.FromSlash(vol + p)
+}

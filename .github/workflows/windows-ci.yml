@@ -1,0 +1,182 @@
+name: Windows CI
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: "Test / unit tests (Windows)"
+    runs-on: windows-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test:windows')
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "^1.25"
+          cache: true
+      - name: Run unit tests
+        uses: flowexec/action@v1
+        with:
+          executable: 'test unit'
+          params: 'CI=true'
+          timeout: '5m'
+          flow-version: 'v2.0.0-beta.3'
+      - name: Upload unit test coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-unit-coverage
+          path: unit-coverage.out
+
+  e2e-tests:
+    name: "Test / E2E tests (Windows)"
+    runs-on: windows-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test:windows')
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "^1.25"
+          cache: true
+      - name: Run E2E tests
+        uses: flowexec/action@v1
+        with:
+          executable: 'test e2e'
+          params: 'CI=true'
+          timeout: '10m'
+          flow-version: 'v2.0.0-beta.3'
+          secrets: |
+            test-secret=test-value-from-action
+            another-secret=another-test-value
+      - name: Upload E2E test coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-e2e-coverage
+          path: e2e-coverage.out
+
+  build-binary:
+    name: "Build / Windows binary"
+    runs-on: windows-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test:windows')
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "^1.25"
+          cache: true
+      - name: Build flow binary
+        uses: flowexec/action@v1
+        with:
+          executable: 'build binary'
+          timeout: '10m'
+          flow-version: 'v2.0.0-beta.3'
+      - name: Upload built binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-flow-binary
+          path: .bin/flow.exe
+          retention-days: 1
+
+  binary-smoke:
+    name: "Test / binary smoke test (Windows)"
+    runs-on: windows-latest
+    needs: build-binary
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "^1.25"
+          cache: true
+      - name: Download built binary
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-flow-binary
+          path: .bin
+      - name: Run binary smoke test
+        uses: flowexec/action@v1
+        with:
+          executable: 'test binary'
+          timeout: '5m'
+          flow-version: 'v2.0.0-beta.3'
+
+  native-scripts:
+    name: "Test / native script execution (Windows)"
+    runs-on: windows-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'test:windows')
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "^1.25"
+          cache: true
+      - name: Run .bat and .ps1 file execution tests
+        uses: flowexec/action@v1
+        with:
+          executable: 'test windows-scripts'
+          timeout: '5m'
+          flow-version: 'v2.0.0-beta.3'
+
+  windows-validation-complete:
+    name: "Windows validation complete"
+    runs-on: ubuntu-latest
+    needs: [unit-tests, e2e-tests, build-binary, binary-smoke, native-scripts]
+    if: always()
+    steps:
+      - name: Evaluate results and write summary
+        shell: bash
+        run: |
+          unit="${{ needs.unit-tests.result }}"
+          e2e="${{ needs.e2e-tests.result }}"
+          build="${{ needs.build-binary.result }}"
+          smoke="${{ needs.binary-smoke.result }}"
+          scripts="${{ needs.native-scripts.result }}"
+
+          {
+            echo "## Windows CI Summary"
+            echo ""
+            echo "| Job | Result |"
+            echo "|-----|--------|"
+            echo "| Unit tests              | $unit    |"
+            echo "| E2E tests               | $e2e     |"
+            echo "| Build binary            | $build   |"
+            echo "| Binary smoke            | $smoke   |"
+            echo "| Native script execution | $scripts |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          for result in "$unit" "$e2e" "$build" "$smoke" "$scripts"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -eq 0 ]; then
+            echo "All Windows validation jobs passed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "One or more Windows validation jobs failed." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
