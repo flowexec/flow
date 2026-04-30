@@ -15,7 +15,7 @@ This guide will walk you through exploring real examples and creating your first
 The fastest way to get a feel for flow is to add the examples workspace — a real collection of runnable workflows you can browse and run immediately:
 
 ```shell
-flow workspace add examples https://github.com/flowexec/examples --set
+flow workspace add examples https://github.com/flowexec/examples.git --set
 flow browse
 ```
 
@@ -93,12 +93,12 @@ executables:
       - prompt: What is your name?
         envKey: NAME
       cmd: echo "Hello, $NAME! Welcome to flow 🎉"
-  
+
   - verb: open
     name: docs
     launch:
       uri: https://flowexec.io
-  
+
   - verb: test
     name: system
     exec:

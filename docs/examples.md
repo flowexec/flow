@@ -10,7 +10,7 @@ Real-world flow files from the [flow-examples](https://github.com/flowexec/examp
 
 ```sh
 # Register the examples repo as a workspace
-flow workspace add flow-examples https://github.com/flowexec/examples --set
+flow workspace add examples https://github.com/flowexec/examples.git --set
 
 # Browse all executables interactively
 flow browse

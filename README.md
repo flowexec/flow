@@ -26,7 +26,7 @@ Flow sits above your projects, not inside them: one place to see, run, and compo
 curl -sSL https://install.flowexec.io | bash
 
 # Add the examples workspace
-flow workspace add examples https://github.com/flowexec/examples --set
+flow workspace add examples https://github.com/flowexec/examples.git --set
 
 # Explore all workflows in the TUI
 flow browse
