@@ -7,6 +7,11 @@ title: Interactive UI
 flow provides both a powerful terminal user interface (TUI) and flexible command-line options to fit your workflow.
 This guide covers using the interactive browser, customizing the experience, and working with different output formats.
 
+::: tip Looking for a native desktop experience?
+Mochi is a desktop app built on Flow with a full GUI for browsing, running, and managing your workflows.
+[Join the waitlist →](https://mochiexec.io)
+:::
+
 ## Using the TUI Browser
 
 The `flow browse` command launches an interactive browser for discovering and running executables.

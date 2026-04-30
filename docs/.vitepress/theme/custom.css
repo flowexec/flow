@@ -3,6 +3,11 @@
   --vp-c-brand-2: #83C092;
   --vp-c-brand-3: #D699B6;
   --vp-home-hero-name-color: #D699B6;
+
+  --vp-custom-block-tip-border: #7FBBB3;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: rgba(127, 187, 179, 0.1);
+  --vp-custom-block-tip-code-bg: rgba(127, 187, 179, 0.15);
 }
 
 /* Hero image glow effect */
