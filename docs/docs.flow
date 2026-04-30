@@ -3,6 +3,12 @@ imports:
   - package.json
 
 executables:
+  - verb: install
+    description: Install documentation dependencies using the lockfile
+    exec:
+      dir: //docs
+      cmd: npm ci
+
   - verb: deploy
     name: cloudflare
     description: Generate, build, and deploy documentation to Cloudflare Pages
@@ -19,6 +25,8 @@ executables:
         - envKey: CLOUDFLARE_ACCOUNT_ID
           secretRef: flow-cloudflare-account-id
       cmd: |
+          npm run build
+
           # Generate deploy message from git log
           COMMIT_SHA=$(git rev-parse --short HEAD)
           COMMIT_MSG=$(git log -1 --pretty=%s)
