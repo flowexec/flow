@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: "flow"
-  text: "The local-first developer automation platform."
-  tagline: "Define your workflows in YAML\nRun them from anywhere"
+  name: ""
+  text: "Built to flow with you."
+  tagline: "One place for all your scripts, secrets, and automation."
   image:
     src: /icon.png
     alt: flow
@@ -21,23 +21,23 @@ hero:
 
 features:
   - icon: 📁
-    title: Multi-Project Workspaces
-    details: Organize and share workflows across all your projects
+    title: Works Across All Your Projects
+    details: Register any repo as a workspace and run its workflows from anywhere on your machine
   - icon: 🖥️
-    title: Interactive TUI Browser
-    details: Discover and execute workflows with filtering and search
-  - icon: 🔄
-    title: Flexible Execution Types
-    details: Run tasks serially, in parallel, make requests, or launch apps
-  - icon: 📝
-    title: Template Generation
-    details: Bootstrap new projects from customizable workflow templates
+    title: Find Anything Instantly
+    details: Browse, search, and filter all workflows across all projects from one TUI
   - icon: 🔒
-    title: Encrypted Secret Vaults
-    details: Securely store credentials with multiple backend options
+    title: Secrets as First-Class Citizens
+    details: Encrypted local vaults with multiple backends — secrets inject at runtime, never hardcoded
+  - icon: ⚙️
+    title: Any Execution Pattern
+    details: Serial, parallel, conditional, HTTP requests, interactive prompts, and background jobs
+  - icon: 📄
+    title: Reusable Templates
+    details: Bootstrap new projects with flow-ready scaffolding from your own templates
   - icon: 🔌
-    title: Platform Integrations
-    details: GitHub Actions, AI assistants via MCP, and more
+    title: Works with Your AI Tools
+    details: Let Claude Code, Cursor, and other AI tools run your workflows directly
 ---
 
 <p align="center"><video autoplay loop muted playsinline style="width: 100%; max-width: 900px; display: block; margin: 0 auto;"><source src="/demo/hero.mp4" type="video/mp4"><img src="/demo/hero.gif" style="width: 100%; max-width: 900px;"></video></p>

@@ -18,8 +18,15 @@ The flow MCP server enables AI assistants to discover, understand, and execute y
 
 Add the MCP server command to your favorite MCP client:
 
-```shell
-flow mcp
+```json
+{
+  "mcpServers": {
+    "flow": {
+      "command": "flow",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
 The server uses stdio transport and provides AI assistants with:
@@ -29,11 +36,19 @@ The server uses stdio transport and provides AI assistants with:
 - `execute` - Execute flow workflows
 - `list_workspaces` - List all registered workspaces
 - `get_workspace` - Get details about a specific workspace
+- `get_workspace_config` - Get the full configuration for a specific workspace
 - `switch_workspace` - Change the current workspace
 - `list_executables` - List and filter executables across workspaces
 - `get_executable` - Get detailed information about an executable
 - `get_execution_logs` - Retrieve recent execution logs
 - `sync_executables` - Sync workspace and executable state
+- `write_flowfile` - Create or update a flow file in a workspace
+
+**Available Resources:**
+- `flow://workspace/{name}` - Workspace metadata and configuration as JSON
+- `flow://executable/{workspace}/{namespace}/{name}` - Executable definition and metadata as JSON
+- `flow://flowfile/{path}` - Raw flowfile YAML content
+- `flow://logs/{run_id}` - Output of a specific execution run as plain text
 
 **Available Prompts:**
 - `generate_executable` - Generate flow executable configurations

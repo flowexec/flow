@@ -8,10 +8,16 @@
 </p>
 
 <p align="center">
-    <b>flow</b> is a local-first developer automation platform — organize workflows across projects with built-in secrets, templates, and a full-featured TUI. Define your executables in YAML and run them from anywhere.
+    <code>flow</code> is a workflow manager for developers who work across many projects. One interface for all your scripts, secrets, and automation — no matter the stack.
 </p>
 
 ---
+
+## Why Flow
+
+Most projects come with their own Makefile, npm scripts, or shell scripts — each with different conventions, flags and undocumented quirks. AI-generated tools and side projects have made this worse. The real cost isn't running the scripts; it's remembering how everything works every time you switch contexts.
+
+Flow sits above your projects, not inside them: one place to see, run, and compose everything — regardless of what's underneath.
 
 ## Quick Start
 
@@ -19,30 +25,27 @@
 # Install
 curl -sSL https://install.flowexec.io | bash
 
-# Create your first workflow
-flow workspace add my-project . --set
-echo 'executables:
-  - verb: run
-    name: hello
-    exec:
-      cmd: echo "Hello from flow!"' > hello.flow
+# Add the examples workspace
+flow workspace add examples https://github.com/flowexec/examples --set
 
-# Run it
-flow sync
-flow run hello
+# Explore all workflows in the TUI
+flow browse
 ```
+
+You'll have a real workspace with runnable examples immediately. No configuration needed.
+
+See the [full quickstart guide](https://flowexec.io/quickstart) to define your own workflows.
 
 ## Key Features
 
 flow complements existing CLI tools by adding multi-project organization, built-in security, and visual discovery to your automation toolkit.
 
-- **Workspace organization** - Group and manage workflows across multiple projects
-- **Encrypted secret vaults** - Multiple backends (AES, Age, keyring, external tools)
-- **Interactive discovery** - Browse, search, and filter workflows visually
-- **Flexible execution** - Serial, parallel, conditional, and interactive workflows
-- **Workflow generation** - Create projects and workflows from reusable templates
-- **Composable workflows** - Reference and chain workflows within and across projects
-- **Platform integrations** - GitHub Actions, AI assistants (MCP), and more
+- **Works across all your projects** — Register any repo as a workspace; run its workflows from anywhere on your machine
+- **Find anything instantly** — Browse, search, and filter all workflows across all projects from one TUI
+- **Secrets as first-class citizens** — Encrypted local vaults with multiple backends; secrets inject at runtime, never hardcoded
+- **Any execution pattern** — Serial, parallel, conditional, HTTP requests, interactive prompts, background jobs
+- **Reusable templates** — Bootstrap new projects with flow-ready scaffolding from your own templates
+- **AI-native** — MCP server lets Claude Code, Cursor, and other AI tools run your workflows directly
 
 <p align="center"><img src="docs/demo/hero.gif" alt="flow" width="1600"/></p>
 

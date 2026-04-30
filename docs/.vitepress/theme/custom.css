@@ -2,7 +2,10 @@
   --vp-c-brand-1: #7FBBB3;
   --vp-c-brand-2: #83C092;
   --vp-c-brand-3: #D699B6;
-  --vp-home-hero-name-color: #D699B6;
+  --vp-home-hero-name-color: #7FBBB3;
+  --vp-button-brand-bg: #7FBBB3;
+  --vp-button-brand-hover-bg: #6BAAA2;
+  --vp-button-brand-active-bg: #7FBBB3;
 
   --vp-custom-block-tip-border: #7FBBB3;
   --vp-custom-block-tip-text: var(--vp-c-text-1);
@@ -10,8 +13,16 @@
   --vp-custom-block-tip-code-bg: rgba(127, 187, 179, 0.15);
 }
 
-/* Hero image glow effect */
+/* Hero layout */
+.VPHero {
+  padding-top: 140px !important;
+  padding-bottom: 80px !important;
+}
+
+/* Hero image */
 .VPHero .image-src {
+  max-width: 220px !important;
+  max-height: 220px !important;
   filter: drop-shadow(5px 5px 100px #D699B6);
 }
 
@@ -28,4 +39,20 @@
 .VPHero .tagline {
   font-size: 1.4em !important;
   line-height: 1.8em !important;
+}
+
+@media (max-width: 639px) {
+  .VPHero {
+    padding-top: 72px !important;
+    padding-bottom: 48px !important;
+    overflow-x: hidden;
+  }
+
+  .VPHero .text {
+    font-size: 2em !important;
+  }
+
+  .VPHero .tagline {
+    font-size: 1.1em !important;
+  }
 }
