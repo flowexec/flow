@@ -48,7 +48,7 @@ TMP_DIR=$(mktemp -d)
 DOWNLOAD_PATH="${TMP_DIR}/${BINARY}_${VERSION}_${OS}_${ARCH}.${EXT}"
 
 echo "Downloading $BINARY $VERSION for $OS/$ARCH..."
-wget -q "$DOWNLOAD_URL" -O "$DOWNLOAD_PATH"
+curl -fsSL "$DOWNLOAD_URL" -o "$DOWNLOAD_PATH"
 if [ $? -ne 0 ]; then
     echo "Failed to download $DOWNLOAD_URL"
     exit 1
