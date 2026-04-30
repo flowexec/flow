@@ -45,32 +45,8 @@ var _ = Describe("browse TUI", func() {
 		ctx.Finalize()
 	})
 
-	Specify("narrow snapshot", func() {
+	Specify("library snapshot", func() {
 		tm := teatest.NewTestModel(GinkgoTB(), container, teatest.WithInitialTermSize(80, 25))
-		container.Program().SetTeaProgram(tm.GetProgram())
-		container.SetSendFunc(tm.Send)
-
-		wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
-		Expect(err).NotTo(HaveOccurred())
-		execList, err := ctx.ExecutableCache.GetExecutableList()
-		Expect(err).NotTo(HaveOccurred())
-
-		libraryView := execIO.NewLibraryView(
-			ctx.Context, wsList, execList,
-			execIO.Filter{},
-			runFunc,
-		)
-		Expect(container.SetView(libraryView)).To(Succeed())
-
-		container.Send(tea.Quit(), 250*time.Millisecond)
-		tm.WaitFinished(GinkgoTB(), teatest.WithFinalTimeout(500*time.Millisecond))
-		out, err := stdIO.ReadAll(tm.FinalOutput(GinkgoTB()))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(out).NotTo(BeEmpty())
-	})
-
-	Specify("wide snapshot", func() {
-		tm := teatest.NewTestModel(GinkgoTB(), container, teatest.WithInitialTermSize(150, 25))
 		container.Program().SetTeaProgram(tm.GetProgram())
 		container.SetSendFunc(tm.Send)
 

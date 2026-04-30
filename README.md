@@ -8,8 +8,7 @@
 </p>
 
 <p align="center">
-    <b>flow</b> is your local-first developer platform - organize automation across all your projects with built-in secrets, templates, and cross-project workflows.
-    Define workflows in YAML, browse auto-generated documentation, and run them anywhere.
+    <b>flow</b> is a local-first developer automation platform — organize workflows across projects with built-in secrets, templates, and a full-featured TUI. Define your executables in YAML and run them from anywhere.
 </p>
 
 ---
@@ -18,7 +17,7 @@
 
 ```bash
 # Install
-curl -sSL https://raw.githubusercontent.com/flowexec/flow/main/scripts/install.sh | bash
+curl -sSL https://install.flowexec.io | bash
 
 # Create your first workflow
 flow workspace add my-project . --set
@@ -85,8 +84,8 @@ flow browse
 
 - [Installation](https://flowexec.io/installation) - Multiple installation methods
 - [Quick Start](https://flowexec.io/quickstart) - Get up and running in 5 minutes
-- [Core Concepts](https://flowexec.io/guide/concepts) - Understand workspaces, executables, and vaults
-- [User Guides](https://flowexec.io/guide/README) - Comprehensive guides for all features
+- [Core Concepts](https://flowexec.io/guides/concepts) - Understand workspaces, executables, and vaults
+- [User Guides](https://flowexec.io/guides) - Comprehensive guides for all features
 
 ## Community
 

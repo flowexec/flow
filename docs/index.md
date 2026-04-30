@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: "flow"
-  text: "Local developer automation platform that flows with you."
-  tagline: "Define your executables in YAML\nBrowse and execute with ease"
+  text: "The local-first developer automation platform."
+  tagline: "Define your workflows in YAML\nRun them from anywhere"
   image:
     src: /icon.png
     alt: flow

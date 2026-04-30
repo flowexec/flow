@@ -9,7 +9,7 @@ executables:
         - ref: lint
         - ref: test
         - ref: validate generated
-        # - ref: validate schemas
+        - ref: validate schemas
         - cmd: echo "✅ All development checks passed"
 
   - verb: validate

@@ -55,12 +55,18 @@ flow build binary ./bin/flow
 flow validate
 
 # Run specific checks
-flow test                 # All tests
-flow generate             # Code generation
+flow test                 # All tests (unit + e2e)
+flow test unit            # Unit tests only
+flow test e2e             # E2E tests only
+flow generate             # Code generation (CLI types + docs)
 flow lint                 # Linting only
+flow scan security        # Vulnerability scanning
 
 # Install/update Go tools
 flow install tools
+
+# Update Go dependencies
+flow update modules
 ```
 
 ## Project Structure
@@ -137,15 +143,16 @@ flow build binary ./bin/flow-dev
 
 These are installed automatically by `flow install tools`:
 
-- [mockgen](https://github.com/uber-go/mock) - Generate test mocks
+- [cobra-cli](https://github.com/spf13/cobra-cli) - CLI scaffolding
+- [goreleaser](https://goreleaser.com/) - Binary builds and package distribution
 - [golangci-lint](https://golangci-lint.run/) - Code linting
-- [go-jsonschema](https://github.com/atombender/go-jsonschema) - Generate Go types from YAML schemas
+- [ginkgo](https://onsi.github.io/ginkgo/) - BDD testing framework
+- [mockgen](https://github.com/uber-go/mock) - Generate test mocks
 
 ### Additional Tools
 
-- [goreleaser](https://goreleaser.com/) - Binary builds and package distribution
+- [go-jsonschema](https://github.com/atombender/go-jsonschema) - Generate Go types from YAML schemas (used by `flow generate cli`)
 - [Docker Buildx](https://docs.docker.com/buildx/) - Multi-arch container builds (included with Docker Desktop)
-- [ginkgo](https://onsi.github.io/ginkgo/) - BDD testing framework
 
 ## Testing Releases Locally
 
