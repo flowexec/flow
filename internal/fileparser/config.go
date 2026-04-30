@@ -52,8 +52,10 @@ func ExtractExecConfig(data, prefix string) (*ParseResult, error) {
 		Params:       make(executable.ParameterList, 0),
 		Args:         make(executable.ArgumentList, 0),
 	}
+	data = strings.ReplaceAll(data, "\r\n", "\n")
+	data = strings.ReplaceAll(data, "\r", "\n")
 	processingMultiLineDescription := false
-	for _, line := range strings.Split(data, "\n") {
+	for line := range strings.SplitSeq(data, "\n") {
 		isComment := strings.HasPrefix(line, strings.TrimSpace(prefix))
 		if trimmedLine := strings.TrimSpace(line); !isComment && trimmedLine != "" {
 			// If the line is not a comment or empty, break out of the loop.
