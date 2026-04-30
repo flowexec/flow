@@ -232,6 +232,12 @@ func createTempIOFiles(tb testing.TB) (stdIn *os.File, stdOut *os.File) {
 	if err != nil {
 		tb.Fatalf("unable to create temp file: %v", err)
 	}
+	// Registered after tb.TempDir() so it runs first (LIFO), ensuring handles
+	// are closed before the temp directories are removed on Windows.
+	tb.Cleanup(func() {
+		_ = stdOut.Close()
+		_ = stdIn.Close()
+	})
 	return
 }
 
