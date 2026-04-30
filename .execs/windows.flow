@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://flowexec.io/schemas/flowfile_schema.json
+visibility: private
+tags: [development, test, windows]
+executables:
+  - verb: test
+    name: windows-scripts
+    description: Test Windows-native script file execution (.bat and .ps1)
+    serial:
+      execs:
+        - ref: test windows-bat
+          name: batch file execution
+        - ref: test windows-ps1
+          name: powershell file execution
+
+  - verb: test
+    name: windows-bat
+    description: Test .bat file execution via cmd.exe
+    exec:
+      dir: //
+      file: .execs/scripts/test-win.bat
+
+  - verb: test
+    name: windows-ps1
+    description: Test .ps1 file execution via pwsh/powershell
+    exec:
+      dir: //
+      file: .execs/scripts/test-win.ps1
