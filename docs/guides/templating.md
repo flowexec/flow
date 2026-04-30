@@ -225,25 +225,46 @@ flow template generate my-app \
 
 ## Template Language
 
-flow uses [Expr](https://expr-lang.org) language for all template evaluation, but with Go template syntax. 
-You write templates using familiar <span v-pre>`{{ }}`</span> syntax, but the expressions inside are evaluated using Expr.
+flow uses the [Expr language](./expressions) for all template evaluation, wrapped in familiar `{{ }}` syntax. The engine automatically preprocesses every `{{ }}` block — you write plain Expr expressions and the runtime handles the rest.
 
-**Available Variables:**
+> [!WARNING]
+> **Coming from Hugo, Jekyll, or Go text/template?**
+>
+> `{{ if eq .Name "" }}` will **fail**. `eq`, `ne`, `gt`, `lt` are Go template built-ins — they don't exist in Expr. And `.Name` dot notation is only valid inside `{{ range }}` or `{{ with }}` blocks, not at the top level.
+>
+> Write this instead: `{{ if name == "" }}`
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `name` | Generated file name | <span v-pre>`{{ name }}`</span> |
-| `workspace` | Target workspace | <span v-pre>`{{ workspace }}`</span> |
-| `form` | Form input values | <span v-pre>`{{ form["replicas"] }}`</span> |
-| `env` | Environment variables | <span v-pre>`{{ env["USER"] }}`</span> |
-| `os` | Operating system | <span v-pre>`{{ os }}`</span> |
-| `arch` | System architecture | <span v-pre>`{{ arch }}`</span> |
-| `workspacePath` | Full path to workspace | <span v-pre>`{{ workspacePath }}`</span> |
-| `flowFilePath` | Full path to target flow file | <span v-pre>`{{ flowFilePath }}`</span> |
-| `templatePath` | Path to template file | <span v-pre>`{{ templatePath }}`</span> |
-| `directory` | Target directory | <span v-pre>`{{ directory }}`</span> |
+### How the Preprocessor Works
 
-**Template Examples:**
+You write expressions without any special prefix and the engine converts them internally:
+
+| What you write | What the engine compiles |
+|----------------|--------------------------|
+| <span v-pre>`{{ name }}`</span> | <span v-pre>`{{ expr \`name\` }}`</span> |
+| <span v-pre>`{{ form["key"] }}`</span> | <span v-pre>`{{ expr \`form["key"]\` }}`</span> |
+| <span v-pre>`{{ if form["type"] == "web" }}`</span> | <span v-pre>`{{ if exprBool \`form["type"] == "web"\` }}`</span> |
+
+Go template variables (`$var`) pass through unchanged — `{{ $x := someExpr }}` works as expected.
+
+### Available Variables (Template Generators)
+
+These variables are available in `.flow.tmpl` template files:
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | Generated flow file name |
+| `workspace` | `string` | Target workspace name |
+| `workspacePath` | `string` | Full path to target workspace |
+| `form` | `map[string]string` | User input collected from form fields |
+| `env` | `map[string]string` | Environment variables and params |
+| `os` | `string` | Operating system (`"linux"`, `"darwin"`, `"windows"`) |
+| `arch` | `string` | System architecture (`"amd64"`, `"arm64"`) |
+| `directory` | `string` | Target output directory |
+| `flowFilePath` | `string` | Full path to the generated flow file |
+| `templatePath` | `string` | Full path to the template file |
+
+### Template Examples
+
 ```yaml
 # Basic variable access
 template: |
@@ -257,7 +278,7 @@ template: |
       exec:
         cmd: kubectl apply -f {{ form["manifest"] }}
 
-# Conditionals
+# Conditionals — use Expr operators, not Go template builtins
 {{ if form["type"] == "web" }}
     - verb: start
       exec:
@@ -266,17 +287,22 @@ template: |
 
 # String functions
 {{ upper(name) }}
-{{ form["image"] | replace(":", "-") }}
+{{ replace(form["image"], ":", "-") }}
+
+# Go template variables pass through unchanged
+{{ $tag := form["version"] }}
+image: myapp:{{ $tag }}
 ```
 
-**`if` fields in artifacts/hooks:**
-For `if` fields in artifacts, preRun, and postRun sections, use Expr directly (no <span v-pre>`{{ }}`</span> needed):
+### `if` Fields in Artifacts and Hooks
+
+For `if` fields in artifacts, `preRun`, and `postRun`, write bare Expr — no `{{ }}` needed:
 
 ```yaml
 artifacts:
   - srcName: "web.conf"
     if: form["type"] == "web"
-  - srcName: "api.conf" 
+  - srcName: "api.conf"
     if: form["type"] == "api" and len(form["endpoints"]) > 0
 
 postRun:
@@ -284,4 +310,10 @@ postRun:
     if: form["deploy"] and form["environment"] == "production"
 ```
 
-See the [Expr language documentation](https://expr-lang.org/docs/language-definition) for more information on Expr syntax and functions.
+See the [Expression Language](./expressions) guide for the full syntax reference and built-in function list.
+
+## Render Executables
+
+The `render` executable type produces output from a template file — dashboards, reports, or any dynamically-generated text. Unlike template generators (`.flow.tmpl`), render executables don't create flow files; they display or write arbitrary output.
+
+See [Executables: render](./executables#render---dynamic-documentation) for the full reference, available variables, and a complete example.

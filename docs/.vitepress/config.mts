@@ -63,6 +63,7 @@ export default defineConfig({
             items: [
               { text: 'Imported Executables', link: '/guides/generated-config' },
               { text: 'Templates & Workflow Generation', link: '/guides/templating' },
+              { text: 'Expression Language', link: '/guides/expressions' },
               { text: 'Advanced Workflows', link: '/guides/advanced' },
               { text: 'Interactive UI', link: '/guides/interactive' },
               { text: 'Integrations', link: '/guides/integrations' },

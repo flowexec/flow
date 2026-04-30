@@ -4,7 +4,7 @@ title: Executables
 
 # Executables
 
-Executables are the building blocks of flow automation. They can be simple commands, complex multi-step workflows, HTTP requests, or even GUI applications. 
+Executables are the building blocks of flow automation. They can be simple commands, complex multi-step workflows, HTTP requests, or even GUI applications.
 This guide covers all executable types and configuration options.
 
 ## Finding Executables
@@ -67,7 +67,7 @@ Customize executable behavior with environment variables or temporary files usin
 
 > [!INFO]
 > Executables inherit environment variables from their parent executable, workspace, and system.
-> 
+>
 > By default, values defined in the `.env` file at the workspace root are automatically loaded. This can be overriden
 > in the workspace configuration file with the `envFiles` field.
 
@@ -87,15 +87,15 @@ executables:
           envKey: API_TOKEN
         - secretRef: production/database-url
           envKey: DATABASE_URL
-        
+
         # Interactive prompts
         - prompt: "Which environment?"
           envKey: ENVIRONMENT
-        
+
         # Static values
         - text: "production"
           envKey: DEPLOY_ENV
-          
+
         # Env File (key=value format)
         - envFile: "development.env"
         - envFile: "staging.env"
@@ -127,13 +127,13 @@ executables:
         - pos: 1
           envKey: IMAGE_TAG
           required: true
-        
+
         # Flag arguments
         - flag: publish
           envKey: PUBLISH
           type: bool
           default: false
-        
+
         - flag: registry
           envKey: REGISTRY
           default: "docker.io"
@@ -179,19 +179,19 @@ executables:
     exec:
       cmd: npm run build
       dir: "./frontend"  # Relative to flowfile
-  
+
   - verb: clean
     name: downloads
     exec:
       cmd: rm -rf downloads/*
       dir: "~/Downloads"  # User home directory
-  
+
   - verb: deploy
     name: from-root
     exec:
       cmd: kubectl apply -f k8s/
       dir: "//"  # Workspace root
-  
+
   - verb: test
     name: isolated
     exec:
@@ -220,7 +220,7 @@ executables:
     name: app
     exec:
       cmd: npm run build && npm test
-  
+
   - verb: deploy
     name: app
     exec:
@@ -299,12 +299,12 @@ executables:
     launch:
       uri: "$FLOW_WORKSPACE_PATH"
       app: "Visual Studio Code"
-  
+
   - verb: open
     name: docs
     launch:
       uri: "https://flowexec.io"
-  
+
   - verb: open
     name: note
     launch:
@@ -338,8 +338,7 @@ executables:
       timeout: 30s
       validStatusCodes: [200, 201]
       logResponse: true
-      transformResponse: |
-        "Deployment " + fromJSON(data)["status"]
+      transformResponse: '"Deployed " + fromJSON(body)["status"]'
       responseFile:
         filename: "deploy-response.json"
 ```
@@ -348,16 +347,51 @@ executables:
 - `method`: HTTP method (GET, POST, PUT, PATCH, DELETE)
 - `url`: Request URL (required)
 - `headers`: Custom headers
-- `body`: Request body with Expr templating
+- `body`: Request body
 - `timeout`: Request timeout
 - `validStatusCodes`: Acceptable status codes
 - `logResponse`: Log response body
-- `transformResponse`: Transform response with Expr templating
+- `transformResponse`: Expr expression to reshape the response before output or file save
 - `responseFile`: Save response to file
+
+**Transforming responses with `transformResponse`:**
+
+The `transformResponse` field is a single [Expr expression](./expressions) evaluated after the request completes. Its result replaces the raw response body in any output or `responseFile`. The expression has access to:
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `body` | `string` | Raw response body |
+| `code` | `int` | HTTP status code (e.g. `200`, `404`) |
+| `status` | `string` | Full status line (e.g. `"200 OK"`) |
+| `headers` | `map[string][]string` | Response headers |
+
+> [!NOTE]
+> `headers` is a `map[string][]string` — each name maps to a slice of values. Access the first value with `headers["Content-Type"][0]`, not `headers["Content-Type"]`.
+
+Common patterns:
+
+```yaml
+# Extract a field from a JSON body
+transformResponse: fromJSON(body)["name"]
+
+# Uppercase a status field
+transformResponse: upper(fromJSON(body)["status"])
+
+# Format an array as newline-separated output
+transformResponse: join(map(fromJSON(body)["items"], #["name"]), "\n")
+
+# Conditional with fallback
+transformResponse: code == 200 ? fromJSON(body)["result"] : "error " + string(code) + ": " + body
+
+# Let binding to avoid reparsing
+transformResponse: let data = fromJSON(body); data["id"] + " — " + data["name"]
+```
+
+See the [Expression Language](./expressions) guide for the full syntax reference.
 
 ### render - Dynamic Documentation
 
-Generate and display markdown with templates:
+Process a template file and display its output — useful for status dashboards, reports, and any dynamically-generated text:
 
 ```yaml
 executables:
@@ -368,25 +402,41 @@ executables:
       templateDataFile: "status-data.json"
 ```
 
-**Template file example:**
-```markdown
-# System Status
-
-Current time: {{ data["timestamp"] }}
-
-## Services
-{{- range .services }}
-- **{{ .name }}**: {{ data["status"] }}
-{{- end }}
-
-## Metrics
-- CPU: {{ data["cpu"] }}%
-- Memory: {{ data["memory"] }}%
-```
-
 **Options:**
 - `templateFile`: Markdown template file (required)
-- `templateDataFile`: JSON/YAML data file
+- `templateDataFile`: JSON/YAML data file for the `data` variable
+- `dir`: Working directory
+- `params`: Environment variable definitions (available as `env["KEY"]`)
+
+**Available template variables:**
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `env` | `map[string]string` | Params and environment variables from the executable |
+| `data` | `any` | Parsed contents of `templateDataFile` (nil if not set) |
+
+`data` is typed based on the file content — a JSON object becomes a map, a JSON array becomes a slice. Access fields with bracket notation: `data["key"]` or `data[0]["field"]`.
+
+**Template file example** — given a `status-data.json`:
+```json
+{"service": "api", "version": "2.1.0", "replicas": 3}
+```
+
+A `status-template.md` template:
+```markdown
+# Deployment Status
+
+Service: {{ data["service"] }}
+Version: {{ data["version"] }}
+Replicas: {{ string(data["replicas"]) }}
+Environment: {{ env["DEPLOY_ENV"] }}
+
+{{ if data["version"] != "" }}
+Last deployed: {{ data["version"] }}
+{{ end }}
+```
+
+The template syntax uses `{{ expression }}` delimiters where expressions are evaluated using the [Expr language](./expressions). See the [Expression Language](./expressions) guide for syntax and built-ins.
 
 ## Importing Executables
 
@@ -508,12 +558,12 @@ services:
     build: .
     ports:
       - "3000:3000"
-  
+
   db:
     image: postgres:13
     environment:
       POSTGRES_DB: myapp
-  
+
   redis:
     image: redis:6
 ```
@@ -539,12 +589,12 @@ executables:
     name: api
     exec:
       cmd: docker build -t api .
-  
+
   - verb: test
     name: api
     exec:
       cmd: npm test
-  
+
   # Composite workflows
   - verb: deploy
     name: full
@@ -553,7 +603,7 @@ executables:
         - ref: build api
         - ref: test api
         - cmd: kubectl apply -f api.yaml
-  
+
   # Cross-workspace references (requires public visibility)
   - verb: deploy
     name: with-monitoring
