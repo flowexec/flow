@@ -96,7 +96,7 @@ var _ = Describe("Utils", func() {
 		When("path is a sibling directory", func() {
 			It("returns the relative path", func() {
 				result, err := utils.PathFromWd(filepath.Join(filepath.Dir(testWorkingDir), "sibling"))
-				Expect(result).To(Equal("../sibling"))
+				Expect(result).To(Equal(filepath.Join("..", "sibling")))
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

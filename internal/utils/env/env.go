@@ -277,7 +277,9 @@ func createEnvValueFile(destination, content, wsPath, flowFileDir string, envMap
 		return "", fmt.Errorf("failed to create directory for temp file: %w", err)
 	}
 
-	filename := filepath.Base(destination)
+	// Strip one leading slash before calling filepath.Base: on Windows,
+	// paths starting with "//" are parsed as UNC paths, causing Base("//x") → ".".
+	filename := filepath.Base(strings.TrimPrefix(destination, "/"))
 	dest := filepath.Clean(filepath.Join(destDir, filename))
 	if err := os.WriteFile(dest, []byte(content), 0600); err != nil {
 		return "", fmt.Errorf("failed to write temp file: %w", err)
