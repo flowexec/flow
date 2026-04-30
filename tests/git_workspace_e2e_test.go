@@ -34,7 +34,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 
 		// Create a local bare git repo with a flow.yaml as a test fixture.
 		bareRepoDir = initBareRepo(GinkgoTB())
-		bareRepoURL = "file://" + bareRepoDir
+		bareRepoURL = localFileURL(bareRepoDir)
 	})
 
 	BeforeEach(func() {
@@ -141,6 +141,17 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 		})
 	})
 })
+
+// localFileURL converts an absolute filesystem path to a file:// URL that is
+// valid on all platforms. On Windows, the drive-letter path (e.g. C:\foo) is
+// converted to file:///C:/foo; on Unix the result is file:///path.
+func localFileURL(absPath string) string {
+	slashed := filepath.ToSlash(absPath)
+	if slashed[0] != '/' {
+		slashed = "/" + slashed
+	}
+	return "file://" + slashed
+}
 
 // initBareRepo creates a local bare git repo with a flow.yaml file,
 // suitable for use as a test "remote" without any network calls.
