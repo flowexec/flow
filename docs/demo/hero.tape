@@ -39,6 +39,9 @@ Sleep 1s
 Type "Flow"
 Enter
 Sleep 1s
+Type "pink"
+Enter
+Sleep 2s
 
 # ── ACT 2: Enter the library ─────────────────────────────────────────────────
 Type "flow browse"
@@ -70,4 +73,4 @@ Sleep 1s
 Sleep 1s
 Type "r"
 # The TUI exits immediately; output runs in the shell.
-Sleep 3s
+Sleep 4s

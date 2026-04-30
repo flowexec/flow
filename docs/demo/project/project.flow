@@ -11,8 +11,11 @@ executables:
       params:
         - envKey: NAME
           prompt: What is your name?
+        - envKey: COLOR
+          prompt: What is your favorite color?
       cmd: |
         echo "Hello, $NAME!"
+        echo "I like $COLOR too :)"
 
   - verb: build
     name: app
@@ -37,7 +40,18 @@ executables:
     tags: [deploy, ci]
     serial:
       execs:
-        - cmd: echo "Checking environment..."
-        - cmd: sleep 0.3 && echo "Go 1.25 detected"
-        - cmd: sleep 0.3 && echo "Dependencies up to date"
-        - cmd: sleep 0.3 && echo "Deploying to staging... done"
+        - name: envcheck
+          cmd: |
+            echo "Checking environment..."
+            sleep 0.3 && echo "Go 1.25 detected"
+            sleep 0.3 && echo "Dependencies up to date"
+        - name: build
+          cmd: |
+            echo "Building application..."
+            sleep 0.3 && echo "Build succeeded"
+        - name: deploy
+          cmd: |
+            echo "Deploying to staging..."
+            sleep 0.3 && echo "Staging environment ready"
+            sleep 0.3 && echo "Syncing files..."
+            sleep 0.3 && echo "Done"
