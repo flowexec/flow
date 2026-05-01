@@ -12,8 +12,8 @@ flow uses the [Expr language](https://expr-lang.org) for dynamic expressions and
 |---------|--------|-------------------|:-----------:|
 | Step `if` conditions | Bare expression (no delimiters) | `os`, `arch`, `env`, `store`, `ctx` | ✓ |
 | `transformResponse` | Bare expression (no delimiters) | `body`, `code`, `status`, `headers` | |
-| Template files (`.flow.tmpl`) | `{{ expression }}` delimiters | `name`, `form`, `env`, `os`, `arch`, … | |
-| Render templates (render `.md`) | `{{ expression }}` delimiters | `env`, `data` | |
+| Template files (`.flow.tmpl`) | <span v-pre>`{{ expression }}`</span> delimiters | `name`, `form`, `env`, `os`, `arch`, … | |
+| Render templates (render `.md`) | <span v-pre>`{{ expression }}`</span> delimiters | `env`, `data` | |
 
 For the variables available in each surface, see the context-specific docs:
 - **Step conditions** — [Advanced Workflows: Conditional Execution](./advanced#conditional-execution)
@@ -57,7 +57,7 @@ headers["Content-Type"][0]
 fromJSON(body)["items"]
 ```
 
-Dot notation (`.field`) is **only** valid inside `{{ range }}` or `{{ with }}` template blocks — it does not work in bare expressions or at the top level of a template.
+Dot notation (`.field`) is **only** valid inside <span v-pre>`{{ range }}`</span> or <span v-pre>`{{ with }}`</span> template blocks — it does not work in bare expressions or at the top level of a template.
 
 ### JSON Handling
 

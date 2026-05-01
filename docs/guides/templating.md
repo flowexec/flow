@@ -225,26 +225,32 @@ flow template generate my-app \
 
 ## Template Language
 
-flow uses the [Expr language](./expressions) for all template evaluation, wrapped in familiar `{{ }}` syntax. The engine automatically preprocesses every `{{ }}` block — you write plain Expr expressions and the runtime handles the rest.
+flow uses the [Expr language](./expressions) for all template evaluation, wrapped in familiar <span v-pre>`{{ }}`</span> syntax. The engine automatically preprocesses every <span v-pre>`{{ }}`</span> block — you write plain Expr expressions and the runtime handles the rest.
 
 > [!WARNING]
 > **Coming from Hugo, Jekyll, or Go text/template?**
 >
-> `{{ if eq .Name "" }}` will **fail**. `eq`, `ne`, `gt`, `lt` are Go template built-ins — they don't exist in Expr. And `.Name` dot notation is only valid inside `{{ range }}` or `{{ with }}` blocks, not at the top level.
+> <span v-pre>`{{ if eq .Name "" }}`</span> will **fail**. `eq`, `ne`, `gt`, `lt` are Go template built-ins — they don't exist in Expr. And `.Name` dot notation is only valid inside <span v-pre>`{{ range }}`</span> or <span v-pre>`{{ with }}`</span> blocks, not at the top level.
 >
-> Write this instead: `{{ if name == "" }}`
+> Write this instead: <span v-pre>`{{ if name == "" }}`</span>
 
 ### How the Preprocessor Works
 
-You write expressions without any special prefix and the engine converts them internally:
+You write expressions directly inside <span v-pre>`{{ }}`</span> — no special prefix needed. The engine automatically wraps them for Expr evaluation.
 
-| What you write | What the engine compiles |
-|----------------|--------------------------|
-| <span v-pre>`{{ name }}`</span> | <span v-pre>`{{ expr \`name\` }}`</span> |
-| <span v-pre>`{{ form["key"] }}`</span> | <span v-pre>`{{ expr \`form["key"]\` }}`</span> |
-| <span v-pre>`{{ if form["type"] == "web" }}`</span> | <span v-pre>`{{ if exprBool \`form["type"] == "web"\` }}`</span> |
+<div v-pre>
 
-Go template variables (`$var`) pass through unchanged — `{{ $x := someExpr }}` works as expected.
+| What you write | Behavior |
+|----------------|----------|
+| `{{ name }}` | Evaluates the `name` variable |
+| `{{ form["key"] }}` | Accesses a form field |
+| `{{ upper(name) }}` | Calls an Expr function |
+| `{{ if form["type"] == "web" }}` | Conditional block; condition is an Expr expression |
+| `{{ $x := someValue }}` | Go template variable — passes through unchanged |
+
+</div>
+
+Go template variables (`$var`) are the only Go template syntax that works unchanged — assign with `:=` and reference by name later in the same template.
 
 ### Available Variables (Template Generators)
 
@@ -296,7 +302,7 @@ image: myapp:{{ $tag }}
 
 ### `if` Fields in Artifacts and Hooks
 
-For `if` fields in artifacts, `preRun`, and `postRun`, write bare Expr — no `{{ }}` needed:
+For `if` fields in artifacts, `preRun`, and `postRun`, write bare Expr — no <span v-pre>`{{ }}`</span> needed:
 
 ```yaml
 artifacts:

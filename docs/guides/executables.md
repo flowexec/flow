@@ -436,7 +436,7 @@ Last deployed: {{ data["version"] }}
 {{ end }}
 ```
 
-The template syntax uses `{{ expression }}` delimiters where expressions are evaluated using the [Expr language](./expressions). See the [Expression Language](./expressions) guide for syntax and built-ins.
+The template syntax uses <span v-pre>`{{ expression }}`</span> delimiters where expressions are evaluated using the [Expr language](./expressions). See the [Expression Language](./expressions) guide for syntax and built-ins.
 
 ## Importing Executables
 
