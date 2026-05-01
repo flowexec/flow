@@ -1,6 +1,7 @@
 package serial
 
 import (
+	"bufio"
 	"fmt"
 	"maps"
 	"os"
@@ -288,7 +289,7 @@ func runSerialExecFunc(
 	}
 	if step < len(serialSpec.Execs) && refConfig.ReviewRequired {
 		logger.Log().Println("Do you want to proceed with the next execution? (y/n)")
-		if !inputConfirmed(os.Stdin) {
+		if !inputConfirmed(ctx.StdIn()) {
 			return fmt.Errorf("stopping runner early (%d/%d)", step+1, len(serialSpec.Execs))
 		}
 	}
@@ -296,8 +297,8 @@ func runSerialExecFunc(
 }
 
 func inputConfirmed(in *os.File) bool {
-	var response string
-	_, _ = fmt.Fscanf(in, response)
+	reader := bufio.NewReader(in)
+	response, _ := reader.ReadString('\n')
 	response = strings.TrimSpace(strings.ToLower(response))
 	return response == "y" || response == "yes"
 }
