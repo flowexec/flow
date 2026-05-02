@@ -2,7 +2,7 @@ name: Windows CI
 
 on:
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [ labeled, synchronize, reopened ]
   workflow_dispatch:
 
 permissions:
@@ -29,10 +29,10 @@ jobs:
       - name: Run unit tests
         uses: flowexec/action@v1
         with:
-          executable: 'test unit'
-          params: 'CI=true'
-          timeout: '5m'
-          flow-version: 'v2.0.0-beta.3'
+          executable: "test unit"
+          params: "CI=true"
+          timeout: "5m"
+          flow-version: "main"
       - name: Upload unit test coverage
         if: always()
         uses: actions/upload-artifact@v7
@@ -56,10 +56,10 @@ jobs:
       - name: Run E2E tests
         uses: flowexec/action@v1
         with:
-          executable: 'test e2e'
-          params: 'CI=true'
-          timeout: '10m'
-          flow-version: 'v2.0.0-beta.3'
+          executable: "test e2e"
+          params: "CI=true"
+          timeout: "10m"
+          flow-version: "main"
           secrets: |
             test-secret=test-value-from-action
             another-secret=another-test-value
@@ -86,9 +86,9 @@ jobs:
       - name: Build flow binary
         uses: flowexec/action@v1
         with:
-          executable: 'build binary'
-          timeout: '10m'
-          flow-version: 'v2.0.0-beta.3'
+          executable: "build binary"
+          timeout: "10m"
+          flow-version: "latest" # use latest to test the install script
       - name: Upload built binary
         uses: actions/upload-artifact@v7
         with:
@@ -115,9 +115,9 @@ jobs:
       - name: Run binary smoke test
         uses: flowexec/action@v1
         with:
-          executable: 'test binary'
-          timeout: '5m'
-          flow-version: 'v2.0.0-beta.3'
+          executable: "test binary"
+          timeout: "5m"
+          flow-version: "main"
 
   native-scripts:
     name: "Test / native script execution (Windows)"
@@ -135,14 +135,14 @@ jobs:
       - name: Run .bat and .ps1 file execution tests
         uses: flowexec/action@v1
         with:
-          executable: 'test windows-scripts'
-          timeout: '5m'
-          flow-version: 'v2.0.0-beta.3'
+          executable: "test windows-scripts"
+          timeout: "5m"
+          flow-version: "main"
 
   windows-validation-complete:
     name: "Windows validation complete"
     runs-on: ubuntu-latest
-    needs: [unit-tests, e2e-tests, build-binary, binary-smoke, native-scripts]
+    needs: [ unit-tests, e2e-tests, build-binary, binary-smoke, native-scripts ]
     if: always()
     steps:
       - name: Evaluate results and write summary
