@@ -59,17 +59,23 @@ export default defineConfig({
                 { text: 'Workspaces', link: '/guides/workspaces' },
                 { text: 'Secrets', link: '/guides/secrets' },
                 { text: 'History & Logs', link: '/guides/execution-history' },
-            ]},
+              ]
+            },
             { text: 'Advanced',
-            items: [
-              { text: 'Imported Executables', link: '/guides/generated-config' },
-              { text: 'Templates & Workflow Generation', link: '/guides/templating' },
-              { text: 'Expression Language', link: '/guides/expressions' },
-              { text: 'Advanced Workflows', link: '/guides/advanced' },
-              { text: 'Interactive UI', link: '/guides/interactive' },
-              { text: 'Integrations', link: '/guides/integrations' },
-              { text: 'AI Tools', link: '/guides/ai-tools' },
-            ]},
+              items: [
+                { text: 'Expression Language', link: '/guides/expressions' },
+                { text: 'Advanced Workflows', link: '/guides/advanced' },
+                { text: 'Imported Executables', link: '/guides/generated-config' },
+                { text: 'Templates & Workflow Generation', link: '/guides/templating' },
+              ]
+            },
+            { text: 'Integrations & Tools',
+              items: [
+                { text: 'Interactive UI', link: '/guides/interactive' },
+                { text: 'AI Tools', link: '/guides/ai-tools' },
+                { text: 'Integrations', link: '/guides/integrations' },
+              ]
+            },
           ]
         }
       ],
@@ -78,20 +84,15 @@ export default defineConfig({
           text: 'CLI Reference',
           items: [
             { text: 'Overview', link: '/cli/flow' },
-            { text: 'flow browse', link: '/cli/flow_browse' },
-            { text: 'flow exec', link: '/cli/flow_exec' },
             {
-              text: 'Logs',
-              collapsed: true,
+              text: 'Core',
               items: [
-                { text: 'flow logs', link: '/cli/flow_logs' },
-                { text: 'flow logs attach', link: '/cli/flow_logs_attach' },
-                { text: 'flow logs clear', link: '/cli/flow_logs_clear' },
-                { text: 'flow logs kill', link: '/cli/flow_logs_kill' }
+                { text: 'flow browse', link: '/cli/flow_browse' },
+                { text: 'flow exec', link: '/cli/flow_exec' },
+                { text: 'flow mcp', link: '/cli/flow_mcp' },
+                { text: 'flow sync', link: '/cli/flow_sync' },
               ]
             },
-            { text: 'flow mcp', link: '/cli/flow_mcp' },
-            { text: 'flow sync', link: '/cli/flow_sync' },
             {
               text: 'Cache',
               collapsed: true,
@@ -118,8 +119,19 @@ export default defineConfig({
                 { text: 'flow config set theme', link: '/cli/flow_config_set_theme' },
                 { text: 'flow config set timeout', link: '/cli/flow_config_set_timeout' },
                 { text: 'flow config set tui', link: '/cli/flow_config_set_tui' },
+                { text: 'flow config set update-check', link: '/cli/flow_config_set_update-check' },
                 { text: 'flow config set workspace', link: '/cli/flow_config_set_workspace' },
                 { text: 'flow config set workspace-mode', link: '/cli/flow_config_set_workspace-mode' }
+              ]
+            },
+            {
+              text: 'Logs',
+              collapsed: true,
+              items: [
+                { text: 'flow logs', link: '/cli/flow_logs' },
+                { text: 'flow logs attach', link: '/cli/flow_logs_attach' },
+                { text: 'flow logs clear', link: '/cli/flow_logs_clear' },
+                { text: 'flow logs kill', link: '/cli/flow_logs_kill' }
               ]
             },
             {
@@ -141,7 +153,8 @@ export default defineConfig({
                 { text: 'flow template add', link: '/cli/flow_template_add' },
                 { text: 'flow template generate', link: '/cli/flow_template_generate' },
                 { text: 'flow template get', link: '/cli/flow_template_get' },
-                { text: 'flow template list', link: '/cli/flow_template_list' }
+                { text: 'flow template list', link: '/cli/flow_template_list' },
+                { text: 'flow template remove', link: '/cli/flow_template_remove' }
               ]
             },
             {
@@ -167,7 +180,18 @@ export default defineConfig({
                 { text: 'flow workspace list', link: '/cli/flow_workspace_list' },
                 { text: 'flow workspace remove', link: '/cli/flow_workspace_remove' },
                 { text: 'flow workspace switch', link: '/cli/flow_workspace_switch' },
+                { text: 'flow workspace update', link: '/cli/flow_workspace_update' },
                 { text: 'flow workspace view', link: '/cli/flow_workspace_view' }
+              ]
+            },
+            {
+              text: 'Tools',
+              collapsed: true,
+              items: [
+                { text: 'flow cli', link: '/cli/flow_cli' },
+                { text: 'flow cli update', link: '/cli/flow_cli_update' },
+                { text: 'flow schema', link: '/cli/flow_schema' },
+                { text: 'flow schema validate', link: '/cli/flow_schema_validate' }
               ]
             }
           ]
