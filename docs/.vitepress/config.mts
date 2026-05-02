@@ -14,7 +14,8 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }]
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['link', { rel: 'alternate', type: 'text/plain', title: 'llms.txt', href: 'https://flowexec.io/llms.txt' }]
   ],
 
   markdown: {
@@ -67,6 +68,7 @@ export default defineConfig({
               { text: 'Advanced Workflows', link: '/guides/advanced' },
               { text: 'Interactive UI', link: '/guides/interactive' },
               { text: 'Integrations', link: '/guides/integrations' },
+              { text: 'AI Tools', link: '/guides/ai-tools' },
             ]},
           ]
         }

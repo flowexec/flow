@@ -96,3 +96,4 @@ flow browse
 - [Issue Tracker](https://github.com/flowexec/flow/issues) - Report bugs and request features
 - [Examples Repository](https://github.com/flowexec/examples) - Real-world workflow patterns
 - [Contributing Guide](https://flowexec.io/development) - Help make flow better
+- [llms.txt](https://flowexec.io/llms.txt) - Documentation index for AI tools

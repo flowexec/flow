@@ -27,6 +27,7 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 - [Advanced Workflows](https://flowexec.io/guides/advanced): Serial/parallel pipelines, retries, conditional execution, arguments/params
 - [Interactive UI](https://flowexec.io/guides/interactive): TUI customization and keybindings
 - [Integrations](https://flowexec.io/guides/integrations): MCP server, GitHub Actions, Docker, CI pipelines
+- [AI Tools](https://flowexec.io/guides/ai-tools): MCP setup, llms.txt, JSON schemas, Claude Code skills and settings
 
 ## Configuration Reference
 

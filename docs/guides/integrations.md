@@ -9,6 +9,8 @@ flow integrates with popular CI/CD platforms, AI assistants, and containerized e
 
 ## AI Assistant Integration
 
+> For a full guide covering MCP, llms.txt, JSON schemas, and Claude Code integration, see [AI Tools](/guides/ai-tools).
+
 ### Model Context Protocol (MCP)
 
 Connect flow to AI assistants through the local Model Context Protocol server for natural language workflow management.

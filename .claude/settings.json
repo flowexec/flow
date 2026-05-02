@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(go doc:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(go generate:*)",
+      "Bash(go env:*)",
+      "Bash(flow build:*)",
+      "Bash(flow test:*)",
+      "Bash(flow lint:*)",
+      "Bash(flow validate:*)",
+      "Bash(flow generate:*)",
+      "Bash(flow browse:*)",
+      "Bash(flow mcp:*)",
+      "Bash(flow exec:*)",
+      "Bash(node:*)",
+      "Bash(npm view:*)",
+      "mcp__flow__list_executables",
+      "mcp__flow__get_info",
+      "mcp__flow__get_executable",
+      "mcp__flow__get_workspace",
+      "mcp__flow__list_workspaces",
+      "mcp__flow__execute"
+    ],
+    "deny": []
+  }
+}

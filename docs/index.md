@@ -35,14 +35,9 @@ features:
   - icon: 📄
     title: Reusable Templates
     details: Bootstrap new projects with flow-ready scaffolding from your own templates
-  - icon: 🔌
-    title: Works with Your AI Tools
-    details: Let Claude Code, Cursor, and other AI tools run your workflows directly
----
-
-<p align="center"><video autoplay loop muted playsinline style="width: 100%; max-width: 900px; display: block; margin: 0 auto;"><source src="/demo/hero.mp4" type="video/mp4"><img src="/demo/hero.gif" style="width: 100%; max-width: 900px;"></video></p>
-
-Browse real-world workflows in the [Examples gallery](/examples) or explore the [flow project's own executables](https://github.com/flowexec/flow/tree/main/.execs).
+  - icon: 🤖
+    title: Works with AI Tools
+    details: Connect Claude Code, Cursor, or any MCP client and your assistant can discover, run, and write your workflows
 
 ::: tip Mochi: Your workflows, neatly wrapped
 Want a desktop UI, workflow auto-discovery, and AI enrichment on top of Flow?

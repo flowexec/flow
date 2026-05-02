@@ -1,114 +1,185 @@
-# flow repo LLM Context
+# flow repo — Claude Code Context
 
 ## Project Overview
 
-**flow** is a workflow automation hub that helps with organizing automation across multiple projects (workspaces) with built-in secrets, templates, and cross-workspace composition. Users define workflows in YAML flow files, discover them visually, and run them anywhere.
+**flow** is a workflow automation hub for organizing automation across multiple projects (workspaces) with built-in secrets, templates, and cross-workspace composition. Users define workflows in YAML flow files, discover them visually, and run them anywhere.
 
-This is the main repository for the flow CLI tool and desktop application, written in Go with additional desktop components in Rust/React/TypeScript.
+This repo contains the flow CLI (Go). flow itself is used for all dev automation — build, test, generate, lint, release — via `.execs/*.flow` files.
+
+---
+
+## Critical Rules
+
+Read these before touching any code:
+
+1. **NEVER edit generated files** — `types/**/*.go`, `docs/cli/*.md`, `docs/types/*.md` are all auto-generated. Edit the schema source, not the output.
+2. **Run `flow generate` after any schema change** in `types/*/schema.yaml` — CI will reject uncommitted generated diffs.
+3. **Remove test focus markers before committing** — `FDescribe`, `FIt`, `FEntry` are temporary debugging tools, never ship them.
+4. **Never use `logger.Log().FatalErr()` in `cmd/`** — use `errhandler.HandleFatal(ctx, cmd, err)` instead.
+5. **`pkg/` is the stable API surface; `internal/` is unexported** — packages in `pkg/` may be imported outside the binary; `internal/` may not.
+
+---
 
 ## Repository Structure
 
 ```
 flow/
-├── cmd/                # CLI entry point and command handlers
-├── internal/           # Core application logic
-│   ├── cache/          # Executable and workspace caching logic  
-│   ├── context/        # Global application context
-│   ├── io/             # Terminal user interface and I/O
-│   ├── runner/         # Executable execution engine
-│   ├── services/       # Business logic services
-│   ├── templates/      # Templating system for workflows
-│   └── vault/          # Secret management
-├── types/              # Generated Go types from YAML schemas
-├── tests/              # CLI end-to-end test suite
-├── docs/               # Documentation (hosted at flowexec.io)
-├── desktop/            # Desktop application (Tauri + React + TypeScript)
-│   ├── src/            # React frontend code
-│   ├── src-tauri/      # Rust backend code
-│   └── scripts/        # Build and type generation scripts
-└── tools/              # Code generation and build tools
+├── cmd/                 # Cobra CLI entry points and command handlers
+├── pkg/                 # Shared, importable packages
+│   ├── cache/           # Workspace and executable cache management
+│   ├── cli/             # Shared CLI helpers and flag definitions
+│   ├── context/         # Global app context (workspace, config, vault)
+│   ├── errors/          # Typed errors with machine-readable codes
+│   ├── filesystem/      # Path helpers and workspace file I/O
+│   ├── logger/          # Structured logging
+│   └── store/           # Persistence layer interfaces and implementations
+├── internal/            # App logic NOT exported outside the binary
+│   ├── fileparser/      # Flow file YAML parsing and validation
+│   ├── io/              # Terminal UI and output rendering (tuikit)
+│   ├── mcp/             # MCP server implementation (tools, resources)
+│   ├── runner/          # Executable execution engine
+│   ├── services/        # Business logic orchestration layer
+│   ├── templates/       # Workflow template expansion
+│   ├── updater/         # Auto-update logic
+│   ├── utils/           # Internal utilities
+│   ├── validation/      # Schema and config validation
+│   ├── vault/           # Secret management
+│   └── version/         # Build version info
+├── types/               # Generated Go types from YAML schemas — DO NOT EDIT
+├── tests/               # E2E test suite (Ginkgo, -tags=e2e)
+├── docs/                # Documentation source (flowexec.io) — CLI/type docs are generated
+├── tools/               # Code generation and build tooling
+└── .execs/              # flow dev automation executables (build, test, lint, release)
 ```
 
-## Key Technologies & Frameworks
+---
 
-### Go CLI Application
-- **Language**: Go 1.25+ (see go.mod:3)
-- **CLI Framework**: Cobra (github.com/spf13/cobra)
-- **TUI Framework**: Custom tuikit (github.com/flowexec/tuikit) based on github.com/charmbracelet/bubbletea 
-- **Testing**: Ginkgo BDD framework (github.com/onsi/ginkgo/v2)
+## Architecture
 
-### Desktop Application  
-- **Frontend**: React 18 with TypeScript
-- **UI Library**: Mantine v8 (@mantine/core)
-- **Backend**: Rust with Tauri v2
-- **Build Tool**: Vite
-- **Testing**: Vitest with Storybook for component development
+**CLI execution path:**
+```
+cmd/ (Cobra command) → pkg/context (workspace + config resolution)
+  → internal/services (business logic) → internal/runner (execution engine)
+  → type-specific handler in internal/runner/
+```
+
+**Type generation pipeline:**
+```
+types/*/schema.yaml → go-jsonschema → types/*/generated.go (DO NOT EDIT)
+  → internal/fileparser (YAML parsing and validation)
+```
+
+**MCP server:**
+`internal/mcp` exposes the same execution pipeline to AI tools over the Model Context Protocol. The `flow mcp` command starts the server. Claude Code, Cursor, and other MCP clients can call `mcp__flow__*` tools to run executables directly.
+
+---
+
+## Key Technologies
+
+### Go CLI
+- **Language**: Go 1.25+ (`go.mod:3`)
+- **CLI Framework**: Cobra (`github.com/spf13/cobra`)
+- **TUI**: Custom tuikit (`github.com/flowexec/tuikit`) built on Bubble Tea
+- **Testing**: Ginkgo v2 BDD framework (`github.com/onsi/ginkgo/v2`)
+
+---
 
 ## Development Workflow
 
-The project uses **flow itself** for development automation. Key commands:
+The project uses flow itself for dev automation:
 
 ```bash
-# Build the CLI binary
-flow build binary ./bin/flow
-
-# Run all validation (tests, linting, code generation)
-flow validate
-
-# Run specific checks
-flow test                 # All tests
-flow generate             # Code generation  
-flow lint                 # Linting only
-flow install tools        # Install/update Go tools
+flow build binary ./bin/flow   # Build the CLI binary
+flow test                      # Run all tests (unit + e2e) in parallel
+flow lint                      # Run golangci-lint
+flow generate                  # Run all code generation
+flow validate                  # Full check: generate → lint → test → diff validation
+flow install tools             # Install/update Go tools
+flow mcp                       # Start the MCP server
+flow browse                    # TUI explorer for discovering executables
 ```
 
-These "executables" are defined in the flow files in the `.execs` directory.
+### Using flow's MCP Tools in Sessions
 
-## Go Testing Strategy
+During a Claude Code session, prefer MCP tools over raw shell when possible — they respect workspace config and handle environment setup:
 
-- **Go Tests**: Uses Ginkgo BDD framework for both unit and e2e tests
-- **Location**: Unit tests in `internal/*_test.go`, e2e tests in `tests/`
-- **Run Command**: `flow test` or standard `go test`
-- **Focusing test**: `FDescribe`, `FIt`, `FEntry`, etc. should be used temporarily to filter when troubleshooting / writing tests
+```
+mcp__flow__list_executables    # Browse all available executables
+mcp__flow__execute             # Run an executable (e.g., ref: "test unit", ref: "lint")
+mcp__flow__get_executable      # Inspect a specific executable's definition
+mcp__flow__get_info            # Get current workspace context
+mcp__flow__get_workspace       # Get workspace details
+```
+
+---
+
+## Testing
+
+- **Unit tests** (`-tags=unit`): Fast, no binary needed. `go test -race -tags=unit ./...`
+- **E2E tests** (`-tags=e2e`): Require the `flow` binary on PATH. Build first: `flow build binary ./bin/flow`, then `go test -race -tags=e2e ./tests/...`
+- **Focusing tests**: Use `FDescribe`/`FIt`/`FEntry` temporarily to filter — **always remove before committing**
+- **Golden file updates**: Set `UPDATE_GOLDEN_FILES=true` when output changes are intentional
+
+Run both together: `flow test` (parallel, handles tags and env automatically)
+
+---
 
 ## Code Generation
 
-The project heavily uses code generation:
+The project generates code from YAML schemas. **Always edit schemas, never generated output.**
 
-1. **Go Types**: Generated from YAML schemas in `types/*/schema.yaml` using go-jsonschema
-2. **Documentation**: CLI and type docs auto-generated from the go schema definitions
-3. **TypeScript and Rust Types**: Generated for desktop app from JSON schemas that docgen creates
+| Source | Generated output |
+|--------|-----------------|
+| `types/*/schema.yaml` | `types/**/*.go` |
+| Go definitions | `docs/cli/*.md`, `docs/types/*.md` |
 
-**Important**: Always edit schema files, not generated code!
+After any schema change: `flow generate` — CI runs `validate generated` which fails on uncommitted diffs.
+
+---
+
+## Error Handling
+
+The CLI surfaces a structured JSON/YAML error envelope (`{"error":{"code","message","details"}}`) on stderr when the user passes `--output json` or `--output yaml`, and plain-text otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
+
+**In `cmd/` handlers:**
+- Use `errhandler.HandleFatal(ctx, cmd, err)` — not `logger.Log().FatalErr(err)`
+- Use `errhandler.HandleUsage(ctx, cmd, "...", args...)` for flag/arg misuse → callers see `INVALID_INPUT` + exit 2
+
+**Typed errors in `pkg/errors/errors.go`** implement `Code() string`. Extend that set rather than returning bare `fmt.Errorf` when a stable machine-readable code matters.
+
+Available codes: `INVALID_INPUT`, `NOT_FOUND`, `EXECUTION_FAILED`, `TIMEOUT`, `CANCELLED`, `VALIDATION_FAILED`, `INTERNAL_ERROR`, `PERMISSION_DENIED`
+
+---
+
+## Common Pitfalls
+
+- **Editing `types/*.go` directly** → CI fails on `validate generated`. Edit `types/*/schema.yaml` instead.
+- **`go test ./...` without build tags** → most tests silently skip. Always use `-tags=unit` or `-tags=e2e`.
+- **Running e2e tests without a built binary** → tests panic. Run `flow build binary ./bin/flow` first.
+- **Leaving `FDescribe`/`FIt` in committed code** → all other tests in that suite are silently excluded.
+- **Adding a Cobra command with bare `log.Fatal`** → breaks structured error output. Use `errhandler`.
+
+---
+
+## PR & Code Quality
+
+Before marking a PR ready, run `flow validate` — it runs generate, lint, test, and checks for uncommitted generated diffs in one shot.
+
+- Commit messages: imperative mood, lowercase, ≤72 chars (`fix: ...`, `feat: ...`, `refactor: ...`)
+- No WIP code in PRs: remove all `FDescribe`/`FIt` focus markers, debug prints, and open TODOs
+
+---
 
 ## Configuration Files
 
-- **flow.yaml**: Workspace configuration for the flow repo itself
-- **go.mod**: Go dependencies and version (Go 1.25+)
-- **desktop/package.json**: Node.js dependencies for desktop app
-- **desktop/src-tauri/tauri.conf.json**: Tauri desktop app configuration
-- **.execs/**: flow development workflows (executables)
+- **`flow.yaml`**: Workspace configuration for the flow repo itself
+- **`go.mod`**: Go dependencies and version (Go 1.25+)
+- **`.execs/`**: flow dev workflow definitions (build, test, lint, release, etc.)
+- **`.claude/settings.local.json`**: Claude Code permission allowlist for this project
 
 ## Development Setup
 
-1. **Prerequisites**: Go 1.25+, flow CLI installed
-2. **Setup**: `flow workspace add flow . --set`
-3. **Dependencies**: `flow install tools`
-4. **Verification**: `flow validate`
-
-## Important Context for Claude Code Sessions
-
-- **Testing**: Always use `flow test` or `go test` - Ginkgo is the testing framework
-- **Linting**: Use `flow lint` for Go linting
-- **Code Gen**: Run `flow generate` after schema changes
-- **Desktop**: The `desktop/` directory is a separate Tauri/React app
-  - Use `flow build desktop` to build the Tauri app
-  - Code should be written in a way that would enable easy testing in the future
-- **Documentation**: Lives in `docs/` and is hosted at flowexec.io
-- **Build**: Use `flow build binary ./bin/flow` for development CLI builds
-
-## Error handling in CLI commands
-
-The CLI surfaces a structured JSON/YAML error envelope (`{"error":{"code","message","details"}}`) on stderr when the user passes `--output json` or `--output yaml`, and a plain-text fatal message otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
-
-When authoring a new cobra `Run` func (or touching an existing one), prefer `errhandler.HandleFatal(ctx, cmd, err)` over `logger.Log().FatalErr(err)`. Use `errhandler.HandleUsage(ctx, cmd, "...", args...)` for flag/argument misuse so callers see `INVALID_INPUT` + exit code 2. Typed errors in [pkg/errors/errors.go](pkg/errors/errors.go) implement `Code() string` for classification — extend that set rather than returning bare `fmt.Errorf` when a stable machine-readable code matters.
+1. Prerequisites: Go 1.25+, flow CLI installed
+2. `flow workspace add flow . --set`
+3. `flow install tools`
+4. `flow validate`

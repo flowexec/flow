@@ -20,7 +20,9 @@ import (
 
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	getExecutable := mcp.NewTool("get_executable",
-		mcp.WithDescription("Get detailed information about an executable"),
+		mcp.WithDescription("Get the full definition of a specific flow workflow — what command it runs, "+
+			"what parameters it accepts, and what secrets it requires. "+
+			"Use before executing an unfamiliar executable or when debugging a failure."),
 		mcp.WithString("executable_verb", mcp.Required(),
 			mcp.Enum(executable.SortedValidVerbs()...),
 			mcp.Description("Executable verb")),
@@ -37,7 +39,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getExecutable, getExecutableHandler(executor))
 
 	listExecutables := mcp.NewTool("list_executables",
-		mcp.WithDescription("List and filter executables across all workspaces"),
+		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
+			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
+			"already handles it. Returns names, verbs, descriptions, and tags."),
 		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
 		mcp.WithString("verb", mcp.Description("Verb filter (optional)")),
@@ -54,7 +58,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(listExecutables, listExecutablesHandler(executor))
 
 	executeFlow := mcp.NewTool("execute",
-		mcp.WithDescription("Execute a flow executable"),
+		mcp.WithDescription("Run a flow workflow by verb and optional ID. Prefer this over direct shell commands "+
+			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
+			"secret injection, retries, and logging automatically."),
 		mcp.WithString("executable_verb", mcp.Required(),
 			mcp.Enum(executable.SortedValidVerbs()...),
 			mcp.Description("Executable verb")),
@@ -76,7 +82,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
 
 	writeFlowfile := mcp.NewTool("write_flowfile",
-		mcp.WithDescription("Create or update a flow file with YAML content. Validates the YAML before writing."),
+		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
+			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
+			"writing. Prefer this over writing YAML files directly."),
 		mcp.WithString("path", mcp.Required(),
 			mcp.Description("Absolute or workspace-relative path for the flowfile (must end in .flow or .flow.yaml)")),
 		mcp.WithString("content", mcp.Required(),

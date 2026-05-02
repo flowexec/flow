@@ -26,6 +26,8 @@ executable_output.txt
 .idea
 
 .claude/*
+!.claude/settings.json
+!.claude/skills/
 
 # build files
 .bin

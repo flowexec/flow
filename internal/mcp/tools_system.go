@@ -28,9 +28,10 @@ const (
 func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	getFlowInfo := mcp.NewTool("get_info",
 		mcp.WithDescription(
-			"Get information about flow, it's usage, and the current workflow execution context. "+
-				"This includes file JSON schemas for flow executable, template, and workspace files, concepts guides, "+
-				"and the current user configuration and state details."),
+			"Bootstrap context about the flow environment. Returns the current workspace, "+
+				"schema URLs for authoring .flow files, and the docs index (llms.txt). "+
+				"Call this at the start of a session to understand the project's automation setup, "+
+				"or whenever you need schema URLs to author or validate flow configuration."),
 		mcp.WithOutputSchema[FlowInfoOutput](),
 	)
 	getFlowInfo.Annotations = mcp.ToolAnnotation{
@@ -41,7 +42,8 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getFlowInfo, getInfoHandler)
 
 	getExecutionLogs := mcp.NewTool("get_execution_logs",
-		mcp.WithDescription("Get a list of the recent flow execution logs"),
+		mcp.WithDescription("Retrieve output from recent flow executions. "+
+			"Use when debugging a failed run or when the user asks about the results of a previous task."),
 		mcp.WithBoolean("last", mcp.Description("Get only the last execution logs")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
 		mcp.WithOutputSchema[LogListOutput](),
@@ -54,7 +56,8 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getExecutionLogs, getExecutionLogsHandler(executor))
 
 	sync := mcp.NewTool("sync_executables",
-		mcp.WithDescription("Sync the flow workspace and executable state"),
+		mcp.WithDescription("Refresh the cached workspace and executable state. "+
+			"Use when executables seem out of date or after adding new .flow files."),
 		mcp.WithOutputSchema[SyncOutput](),
 	)
 	sync.Annotations = mcp.ToolAnnotation{
