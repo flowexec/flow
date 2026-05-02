@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/flowexec/flow/pkg/store"
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // UpdateAll refreshes all caches using the provided DataStore.

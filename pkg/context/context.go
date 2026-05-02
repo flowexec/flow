@@ -13,14 +13,14 @@ import (
 	"github.com/flowexec/tuikit/themes"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/version"
-	"github.com/flowexec/flow/pkg/cache"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/config"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/version"
+	"github.com/flowexec/flow/v2/pkg/cache"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 const HeaderCtxKey = "ctx"

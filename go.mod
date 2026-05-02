@@ -1,4 +1,4 @@
-module github.com/flowexec/flow
+module github.com/flowexec/flow/v2
 
 go 1.25.8
 

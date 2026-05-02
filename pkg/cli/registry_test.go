@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/pkg/cli"
+	"github.com/flowexec/flow/v2/pkg/cli"
 )
 
 var _ = Describe("Command Registry", func() {

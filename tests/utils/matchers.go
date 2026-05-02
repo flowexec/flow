@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 type refMatcher struct {

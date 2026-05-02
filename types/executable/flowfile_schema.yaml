@@ -21,7 +21,7 @@ properties:
     $ref: '../common/schema.yaml#/definitions/Visibility'
     goJSONSchema:
       type: "common.Visibility"
-      imports: ["github.com/flowexec/flow/types/common"]
+      imports: ["github.com/flowexec/flow/v2/types/common"]
   imports:
     $ref: '#/definitions/Imports'
     default: []
@@ -51,7 +51,7 @@ properties:
     $ref: '../common/schema.yaml#/definitions/Annotations'
     goJSONSchema:
       type: "common.Annotations"
-      imports: ["github.com/flowexec/flow/types/common"]
+      imports: ["github.com/flowexec/flow/v2/types/common"]
     default: {}
   description:
     type: string

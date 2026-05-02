@@ -13,8 +13,8 @@ import (
 	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/vault"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/internal/vault"
 )
 
 type vaultEntity struct {

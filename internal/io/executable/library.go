@@ -13,14 +13,14 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/services/open"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	flowCommon "github.com/flowexec/flow/types/common"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/internal/services/open"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	flowCommon "github.com/flowexec/flow/v2/types/common"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 // Filter narrows the executables shown by the library view.

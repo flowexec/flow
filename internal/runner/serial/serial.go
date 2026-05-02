@@ -12,14 +12,14 @@ import (
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/engine"
-	envUtils "github.com/flowexec/flow/internal/utils/env"
-	execUtils "github.com/flowexec/flow/internal/utils/executables"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/engine"
+	envUtils "github.com/flowexec/flow/v2/internal/utils/env"
+	execUtils "github.com/flowexec/flow/v2/internal/utils/executables"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 type serialRunner struct{}

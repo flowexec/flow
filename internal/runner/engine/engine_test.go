@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/runner/engine"
+	"github.com/flowexec/flow/v2/internal/runner/engine"
 )
 
 func TestEngine_Execute(t *testing.T) {

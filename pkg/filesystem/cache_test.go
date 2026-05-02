@@ -3,7 +3,7 @@ package filesystem_test
 import (
 	"os"
 
-	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

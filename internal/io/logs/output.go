@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 type recordOutput struct {

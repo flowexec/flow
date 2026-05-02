@@ -8,16 +8,16 @@ import (
 
 	"github.com/spf13/cobra"
 
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/cmd/internal/response"
-	"github.com/flowexec/flow/internal/io/executable"
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/exec"
-	"github.com/flowexec/flow/internal/templates"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/cmd/internal/response"
+	"github.com/flowexec/flow/v2/internal/io/executable"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/exec"
+	"github.com/flowexec/flow/v2/internal/templates"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 func RegisterTemplateCmd(ctx *context.Context, rootCmd *cobra.Command) {

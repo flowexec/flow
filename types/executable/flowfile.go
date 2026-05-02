@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/types/common"
+	"github.com/flowexec/flow/v2/types/common"
 )
 
 //go:generate go run github.com/atombender/go-jsonschema@v0.16.0 -et --only-models -p executable -o flowfile.gen.go flowfile_schema.yaml

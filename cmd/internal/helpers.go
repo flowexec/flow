@@ -7,14 +7,14 @@ import (
 	"github.com/flowexec/tuikit"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/cmd/internal/flags"
-	flowIO "github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/version"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	flowIO "github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/version"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 func RegisterFlag(ctx *context.Context, cmd *cobra.Command, flag flags.Metadata) {

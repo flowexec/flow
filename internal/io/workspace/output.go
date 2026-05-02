@@ -1,9 +1,9 @@
 package workspace
 
 import (
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 func PrintWorkspaceList(format string, workspaces workspace.WorkspaceList) {

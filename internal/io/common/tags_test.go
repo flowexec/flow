@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flowexec/flow/internal/io/common"
+	"github.com/flowexec/flow/v2/internal/io/common"
 )
 
 func TestTagColor_Deterministic(t *testing.T) {

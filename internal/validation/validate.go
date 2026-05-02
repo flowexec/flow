@@ -13,7 +13,7 @@ import (
 	"golang.org/x/text/message"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 // FileType identifies which schema to validate against.

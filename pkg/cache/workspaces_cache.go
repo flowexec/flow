@@ -8,15 +8,15 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 const wsCacheKey = "workspaces"
 
-//go:generate mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/pkg/cache WorkspaceCache
+//go:generate mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache WorkspaceCache
 type WorkspaceCache interface {
 	Update() error
 	GetData() *WorkspaceCacheData

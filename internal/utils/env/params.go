@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/flowexec/flow/internal/vault"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/vault"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func ResolveParameterValue(

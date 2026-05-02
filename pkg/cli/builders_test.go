@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/pkg/cli"
-	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/cli"
+	"github.com/flowexec/flow/v2/pkg/context"
 )
 
 func TestBuilders(t *testing.T) {

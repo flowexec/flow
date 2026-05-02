@@ -8,9 +8,9 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/io/logs"
-	"github.com/flowexec/flow/pkg/store"
-	storeMocks "github.com/flowexec/flow/pkg/store/mocks"
+	"github.com/flowexec/flow/v2/internal/io/logs"
+	"github.com/flowexec/flow/v2/pkg/store"
+	storeMocks "github.com/flowexec/flow/v2/pkg/store/mocks"
 )
 
 func rec(ref string, exit int, at time.Time) logs.UnifiedRecord {

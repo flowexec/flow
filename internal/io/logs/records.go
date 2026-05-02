@@ -7,7 +7,7 @@ import (
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
-	"github.com/flowexec/flow/pkg/store"
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // RecordFilter holds optional criteria for filtering unified records.

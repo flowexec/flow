@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/utils"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/utils"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 // SetEnv sets environment variables based on the parameters and arguments defined in the executable environment.

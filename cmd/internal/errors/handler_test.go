@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/pkg/context"
-	flowerrors "github.com/flowexec/flow/pkg/errors"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 )
 
 type exitCall struct{ code int }

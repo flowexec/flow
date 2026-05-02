@@ -1,9 +1,9 @@
 package executable
 
 import (
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func PrintExecutableList(format string, executables executable.ExecutableList) {

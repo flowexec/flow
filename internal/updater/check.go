@@ -10,8 +10,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/flowexec/flow/internal/version"
-	"github.com/flowexec/flow/pkg/store"
+	"github.com/flowexec/flow/v2/internal/version"
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 const (

@@ -10,12 +10,12 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	flowIO "github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/engine/mocks"
-	"github.com/flowexec/flow/internal/runner/render"
-	testUtils "github.com/flowexec/flow/tests/utils"
-	"github.com/flowexec/flow/types/executable"
+	flowIO "github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/engine/mocks"
+	"github.com/flowexec/flow/v2/internal/runner/render"
+	testUtils "github.com/flowexec/flow/v2/tests/utils"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func TestRender(t *testing.T) {

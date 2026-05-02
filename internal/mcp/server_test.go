@@ -14,9 +14,9 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	flowMcp "github.com/flowexec/flow/internal/mcp"
-	"github.com/flowexec/flow/internal/mcp/mocks"
-	"github.com/flowexec/flow/pkg/filesystem"
+	flowMcp "github.com/flowexec/flow/v2/internal/mcp"
+	"github.com/flowexec/flow/v2/internal/mcp/mocks"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 func TestServer(t *testing.T) {

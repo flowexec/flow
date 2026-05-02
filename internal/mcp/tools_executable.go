@@ -13,9 +13,9 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/validation"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/validation"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {

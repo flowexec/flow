@@ -2,7 +2,7 @@
 
 package workspace
 
-import "github.com/flowexec/flow/types/common"
+import "github.com/flowexec/flow/v2/types/common"
 
 type ExecutableFilter struct {
 	// A list of directories or file patterns to exclude from the executable search.

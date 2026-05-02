@@ -5,7 +5,7 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/types/config"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func NewUserConfigView(

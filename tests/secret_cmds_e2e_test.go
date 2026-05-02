@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/tests/utils"
+	"github.com/flowexec/flow/v2/tests/utils"
 )
 
 var _ = Describe("vault/secrets e2e", Ordered, func() {

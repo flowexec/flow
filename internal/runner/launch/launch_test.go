@@ -9,11 +9,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/engine/mocks"
-	"github.com/flowexec/flow/internal/runner/launch"
-	testUtils "github.com/flowexec/flow/tests/utils"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/engine/mocks"
+	"github.com/flowexec/flow/v2/internal/runner/launch"
+	testUtils "github.com/flowexec/flow/v2/tests/utils"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func TestLaunch(t *testing.T) {

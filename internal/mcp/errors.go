@@ -5,7 +5,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	flowerrors "github.com/flowexec/flow/pkg/errors"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 )
 
 // Machine-readable error codes for structured error responses.

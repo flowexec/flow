@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/runner/engine/retry"
+	"github.com/flowexec/flow/v2/internal/runner/engine/retry"
 )
 
 func TestRetry(t *testing.T) {

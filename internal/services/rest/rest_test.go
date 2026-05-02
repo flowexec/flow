@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/services/rest"
+	"github.com/flowexec/flow/v2/internal/services/rest"
 )
 
 func TestRest(t *testing.T) {

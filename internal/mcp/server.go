@@ -6,7 +6,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/flowexec/flow/internal/io"
+	"github.com/flowexec/flow/v2/internal/io"
 )
 
 //go:embed resources/server-instructions.md

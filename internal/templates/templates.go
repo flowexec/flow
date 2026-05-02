@@ -13,16 +13,16 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/utils"
-	argUtils "github.com/flowexec/flow/internal/utils/env"
-	execUtils "github.com/flowexec/flow/internal/utils/executables"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/engine"
+	"github.com/flowexec/flow/v2/internal/utils"
+	argUtils "github.com/flowexec/flow/v2/internal/utils/env"
+	execUtils "github.com/flowexec/flow/v2/internal/utils/executables"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 // TemplateResult contains structured metadata about a successful template

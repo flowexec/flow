@@ -10,7 +10,7 @@ import (
 	"github.com/flowexec/tuikit/io"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 const (

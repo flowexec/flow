@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/flowexec/flow/internal/io/common"
+	"github.com/flowexec/flow/v2/internal/io/common"
 )
 
 func TestShortenPath(t *testing.T) {

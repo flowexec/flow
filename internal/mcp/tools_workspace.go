@@ -9,7 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {

@@ -15,9 +15,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	execIO "github.com/flowexec/flow/internal/io/executable"
-	"github.com/flowexec/flow/tests/utils"
-	"github.com/flowexec/flow/types/executable"
+	execIO "github.com/flowexec/flow/v2/internal/io/executable"
+	"github.com/flowexec/flow/v2/tests/utils"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 var _ = Describe("browse TUI", func() {

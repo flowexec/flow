@@ -22,9 +22,9 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags: >-
       -s -w
-      -X "github.com/flowexec/flow/internal/version.gitCommit={{ .Commit }}"
-      -X "github.com/flowexec/flow/internal/version.version={{ .Version }}"
-      -X "github.com/flowexec/flow/internal/version.buildDate={{ .Date }}"
+      -X "github.com/flowexec/flow/v2/internal/version.gitCommit={{ .Commit }}"
+      -X "github.com/flowexec/flow/v2/internal/version.version={{ .Version }}"
+      -X "github.com/flowexec/flow/v2/internal/version.buildDate={{ .Date }}"
 
 gomod:
   proxy: false

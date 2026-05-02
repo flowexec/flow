@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 type makeTarget struct {

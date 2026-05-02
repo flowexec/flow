@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func LoadFlowFileTemplate(flowfileName, templatePath string) (*executable.Template, error) {

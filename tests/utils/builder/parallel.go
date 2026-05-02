@@ -1,7 +1,7 @@
 package builder
 
 import (
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func ParallelExecByRefConfig(opts ...Option) *executable.Executable {

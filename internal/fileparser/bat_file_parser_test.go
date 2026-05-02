@@ -6,8 +6,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/fileparser"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/fileparser"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 var _ = Describe("ExecutablesFromBatFile", func() {

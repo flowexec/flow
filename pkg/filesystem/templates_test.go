@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 var _ = Describe("Templates", func() {

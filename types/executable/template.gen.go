@@ -2,7 +2,7 @@
 
 package executable
 
-import "github.com/flowexec/flow/types/common"
+import "github.com/flowexec/flow/v2/types/common"
 
 // File source and destination configuration.
 // Go templating from form data is supported in all fields.

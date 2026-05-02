@@ -8,8 +8,8 @@ import (
 
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 func workspaceDetailOpts(ws *workspace.Workspace) views.DetailContentOpts {

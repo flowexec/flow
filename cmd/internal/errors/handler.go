@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/pkg/context"
-	flowerrors "github.com/flowexec/flow/pkg/errors"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 func ExitFunc(code int) { flowerrors.ExitFunc(code) }

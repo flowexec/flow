@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/flowexec/flow/internal/utils"
+	"github.com/flowexec/flow/v2/internal/utils"
 )
 
 const (

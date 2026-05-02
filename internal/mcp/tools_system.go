@@ -9,7 +9,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 // Documentation URLs — kept as constants so a get_info call returns pointers rather

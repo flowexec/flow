@@ -10,9 +10,9 @@ import (
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func copyAllArtifacts(

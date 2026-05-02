@@ -7,7 +7,7 @@ import (
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func SimpleExec(opts ...Option) *executable.Executable {

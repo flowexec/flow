@@ -12,7 +12,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 	boltErrors "go.etcd.io/bbolt/errors"
 
-	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 // DataStore manages structured internal state (cache, execution history, and process env vars).
 // It is intentionally in pkg/ so external consumers (e.g. pro wrapper) can import it.
 //
-//go:generate mockgen -destination=mocks/mock_data_store.go -package=mocks github.com/flowexec/flow/pkg/store DataStore
+//go:generate mockgen -destination=mocks/mock_data_store.go -package=mocks github.com/flowexec/flow/v2/pkg/store DataStore
 type DataStore interface { //nolint:interfacebloat // single backing store with cache, history, and process var concerns
 	SetCacheEntry(key string, value []byte) error
 	GetCacheEntry(key string) ([]byte, error)

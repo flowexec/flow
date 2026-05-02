@@ -171,7 +171,7 @@ properties:
     $ref: '../common/schema.yaml#/definitions/Annotations'
     goJSONSchema:
       type: "common.Annotations"
-      imports: ["github.com/flowexec/flow/types/common"]
+      imports: ["github.com/flowexec/flow/v2/types/common"]
     default: {}
   location:
     type: string

@@ -10,13 +10,13 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/utils/env"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/config"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/utils/env"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 func TestEnv(t *testing.T) {

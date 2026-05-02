@@ -6,15 +6,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/io"
-	execIO "github.com/flowexec/flow/internal/io/executable"
-	"github.com/flowexec/flow/pkg/context"
-	flowErrors "github.com/flowexec/flow/pkg/errors"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/common"
-	"github.com/flowexec/flow/types/executable"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/internal/io"
+	execIO "github.com/flowexec/flow/v2/internal/io/executable"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/common"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func RegisterBrowseCmd(ctx *context.Context, rootCmd *cobra.Command) {

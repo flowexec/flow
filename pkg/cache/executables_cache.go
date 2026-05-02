@@ -9,19 +9,19 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/fileparser"
-	flowErrors "github.com/flowexec/flow/pkg/errors"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/common"
-	"github.com/flowexec/flow/types/executable"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/fileparser"
+	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/common"
+	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 const execCacheKey = "executables"
 
-//go:generate mockgen -destination=mocks/mock_executable_cache.go -package=mocks github.com/flowexec/flow/pkg/cache ExecutableCache
+//go:generate mockgen -destination=mocks/mock_executable_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache ExecutableCache
 type ExecutableCache interface {
 	Update() error
 	GetExecutableByRef(ref executable.Ref) (*executable.Executable, error)

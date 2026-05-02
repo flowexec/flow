@@ -11,12 +11,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/cmd/internal/flags"
-	configIO "github.com/flowexec/flow/internal/io/config"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/config"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	configIO "github.com/flowexec/flow/v2/internal/io/config"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func RegisterConfigCmd(ctx *context.Context, rootCmd *cobra.Command) {

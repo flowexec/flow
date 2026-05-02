@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/pkg/cli"
-	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/v2/cmd"
+	"github.com/flowexec/flow/v2/pkg/cli"
+	"github.com/flowexec/flow/v2/pkg/context"
 )
 
 type CommandRunner struct{}

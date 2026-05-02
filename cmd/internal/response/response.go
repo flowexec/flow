@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 // SuccessEnvelope is the top-level JSON/YAML payload for structured success responses.

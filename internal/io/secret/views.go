@@ -10,10 +10,10 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	ioCommon "github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/internal/vault"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
+	ioCommon "github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/internal/vault"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 func NewSecretView(

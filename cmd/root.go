@@ -6,15 +6,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/cmd/internal"
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/updater"
-	"github.com/flowexec/flow/internal/version"
-	"github.com/flowexec/flow/pkg/cache"
-	"github.com/flowexec/flow/pkg/context"
-	flowerrors "github.com/flowexec/flow/pkg/errors"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/cmd/internal"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/internal/updater"
+	"github.com/flowexec/flow/v2/internal/version"
+	"github.com/flowexec/flow/v2/pkg/cache"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 func NewRootCmd(ctx *context.Context) *cobra.Command {

@@ -2,7 +2,7 @@
 
 package executable
 
-import "github.com/flowexec/flow/types/common"
+import "github.com/flowexec/flow/v2/types/common"
 import "github.com/flowexec/tuikit/io"
 import "time"
 

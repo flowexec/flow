@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/config"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func PrintUserConfig(format string, userConfig *config.Config) {

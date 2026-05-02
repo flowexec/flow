@@ -1,8 +1,8 @@
 package builder
 
 import (
-	"github.com/flowexec/flow/types/common"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/types/common"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func sharedExecTags() executable.ExecutableTags {

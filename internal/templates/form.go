@@ -5,9 +5,9 @@ import (
 
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func showForm(ctx *context.Context, fields executable.FormFields, preseeded map[string]string) error {

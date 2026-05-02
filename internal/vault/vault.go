@@ -8,9 +8,9 @@ import (
 
 	"github.com/flowexec/vault"
 
-	"github.com/flowexec/flow/internal/utils"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/internal/utils"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 const (

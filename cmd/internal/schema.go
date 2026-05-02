@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/cmd/internal/response"
-	"github.com/flowexec/flow/internal/validation"
-	"github.com/flowexec/flow/pkg/context"
-	flowerrors "github.com/flowexec/flow/pkg/errors"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/cmd/internal/response"
+	"github.com/flowexec/flow/v2/internal/validation"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 )
 
 func RegisterSchemaCmd(ctx *context.Context, rootCmd *cobra.Command) {

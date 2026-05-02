@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/types/config"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func TestContext(t *testing.T) {

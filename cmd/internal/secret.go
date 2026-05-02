@@ -11,16 +11,16 @@ import (
 	"github.com/flowexec/tuikit/views"
 	"github.com/spf13/cobra"
 
-	errhandler "github.com/flowexec/flow/cmd/internal/errors"
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/cmd/internal/response"
-	"github.com/flowexec/flow/internal/io/secret"
-	"github.com/flowexec/flow/internal/utils"
-	envUtils "github.com/flowexec/flow/internal/utils/env"
-	"github.com/flowexec/flow/internal/vault"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/config"
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/cmd/internal/response"
+	"github.com/flowexec/flow/v2/internal/io/secret"
+	"github.com/flowexec/flow/v2/internal/utils"
+	envUtils "github.com/flowexec/flow/v2/internal/utils/env"
+	"github.com/flowexec/flow/v2/internal/vault"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func RegisterSecretCmd(ctx *context.Context, rootCmd *cobra.Command) {

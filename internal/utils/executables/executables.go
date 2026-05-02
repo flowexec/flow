@@ -3,9 +3,9 @@ package executables
 import (
 	"fmt"
 
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/types/common"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/types/common"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func ExecutableForRef(

@@ -13,7 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/flowexec/flow/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 var sshURLPattern = regexp.MustCompile(`^[\w.-]+@[\w.-]+:[\w./-]+$`)

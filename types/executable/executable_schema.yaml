@@ -623,7 +623,7 @@ properties:
     $ref: '../common/schema.yaml#/definitions/Visibility'
     goJSONSchema:
       type: "common.Visibility"
-      imports: ["github.com/flowexec/flow/types/common"]
+      imports: ["github.com/flowexec/flow/v2/types/common"]
   aliases:
     $ref: '../common/schema.yaml#/definitions/Aliases'
     goJSONSchema:

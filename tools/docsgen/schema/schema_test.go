@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/tools/docsgen/schema"
+	"github.com/flowexec/flow/v2/tools/docsgen/schema"
 )
 
 func TestSchema(t *testing.T) {

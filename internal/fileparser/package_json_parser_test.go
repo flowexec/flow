@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/fileparser"
+	"github.com/flowexec/flow/v2/internal/fileparser"
 )
 
 var _ = Describe("ExecutablesFromPackageJSON", func() {

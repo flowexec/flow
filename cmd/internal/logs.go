@@ -13,13 +13,13 @@ import (
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/cmd/internal/flags"
-	"github.com/flowexec/flow/internal/io/logs"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/internal/io/logs"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {

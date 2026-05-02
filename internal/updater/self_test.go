@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/flowexec/flow/internal/updater"
+	"github.com/flowexec/flow/v2/internal/updater"
 )
 
 func makeTarGz(binaryName string, content []byte) string {

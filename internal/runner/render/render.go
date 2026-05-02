@@ -13,13 +13,13 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/internal/runner"
-	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/internal/utils/env"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/runner"
+	"github.com/flowexec/flow/v2/internal/runner/engine"
+	"github.com/flowexec/flow/v2/internal/utils/env"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 // Markers wrap rendered content when render runs in non-TUI (plain) mode so

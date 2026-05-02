@@ -15,17 +15,17 @@ import (
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flowexec/flow/internal/runner/mocks"
-	"github.com/flowexec/flow/pkg/cache"
-	cacheMocks "github.com/flowexec/flow/pkg/cache/mocks"
-	"github.com/flowexec/flow/pkg/context"
-	flowerrors "github.com/flowexec/flow/pkg/errors"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/tests/utils/builder"
-	"github.com/flowexec/flow/types/config"
-	"github.com/flowexec/flow/types/workspace"
+	"github.com/flowexec/flow/v2/internal/runner/mocks"
+	"github.com/flowexec/flow/v2/pkg/cache"
+	cacheMocks "github.com/flowexec/flow/v2/pkg/cache/mocks"
+	"github.com/flowexec/flow/v2/pkg/context"
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/tests/utils/builder"
+	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 const (

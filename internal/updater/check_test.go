@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/flowexec/flow/internal/updater"
-	storemocks "github.com/flowexec/flow/pkg/store/mocks"
+	"github.com/flowexec/flow/v2/internal/updater"
+	storemocks "github.com/flowexec/flow/v2/pkg/store/mocks"
 )
 
 var _ = Describe("IsNewer", func() {

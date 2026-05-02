@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/pkg/context"
+	"github.com/flowexec/flow/v2/cmd"
+	"github.com/flowexec/flow/v2/pkg/context"
 )
 
 // BuildRootCommand creates a new root command with optional configuration.

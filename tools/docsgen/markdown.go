@@ -11,7 +11,7 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/flowexec/flow/tools/docsgen/schema"
+	"github.com/flowexec/flow/v2/tools/docsgen/schema"
 )
 
 const (

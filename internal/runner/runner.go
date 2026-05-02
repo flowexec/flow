@@ -7,13 +7,13 @@ import (
 
 	"github.com/jahvon/expression"
 
-	"github.com/flowexec/flow/internal/runner/engine"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/runner/engine"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
-//go:generate mockgen -destination=mocks/mock_runner.go -package=mocks github.com/flowexec/flow/internal/runner Runner
+//go:generate mockgen -destination=mocks/mock_runner.go -package=mocks github.com/flowexec/flow/v2/internal/runner Runner
 type Runner interface {
 	Name() string
 	Exec(

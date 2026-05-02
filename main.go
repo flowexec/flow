@@ -9,14 +9,14 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/flowexec/flow/cmd"
-	"github.com/flowexec/flow/internal/io"
-	"github.com/flowexec/flow/pkg/cli"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/filesystem"
-	"github.com/flowexec/flow/pkg/logger"
-	"github.com/flowexec/flow/pkg/store"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/cmd"
+	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/pkg/cli"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func main() {

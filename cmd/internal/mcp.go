@@ -3,9 +3,9 @@ package internal
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/flowexec/flow/internal/mcp"
-	"github.com/flowexec/flow/pkg/context"
-	"github.com/flowexec/flow/pkg/logger"
+	"github.com/flowexec/flow/v2/internal/mcp"
+	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
 func RegisterMCPCmd(ctx *context.Context, rootCmd *cobra.Command) {

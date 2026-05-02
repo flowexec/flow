@@ -10,7 +10,7 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/pkg/store"
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // NewUnifiedLogView creates a TUI view for unified execution records.

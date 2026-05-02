@@ -7,8 +7,8 @@ import (
 
 	"github.com/flowexec/tuikit/views"
 
-	"github.com/flowexec/flow/internal/io/common"
-	"github.com/flowexec/flow/types/executable"
+	"github.com/flowexec/flow/v2/internal/io/common"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 const mdArgsHeader = "   - **Arguments**\n"
