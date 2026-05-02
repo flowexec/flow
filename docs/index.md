@@ -38,6 +38,7 @@ features:
   - icon: 🤖
     title: Works with AI Tools
     details: Connect Claude Code, Cursor, or any MCP client and your assistant can discover, run, and write your workflows
+---
 
 ::: tip Mochi: Your workflows, neatly wrapped
 Want a desktop UI, workflow auto-discovery, and AI enrichment on top of Flow?
