@@ -200,30 +200,19 @@ func translateEnv(envMap map[string]string, mounts []run.Mount, wsRoot, mountPoi
 }
 
 // parseVolume expands a user-supplied "host:container[:options]" volume string
-// into a Mount. The host side is expanded locally (never via utils.ExpandPath,
-// which fatally exits on validation failure).
+// into a Mount. Structural parsing (including Windows drive-letter handling) is
+// shared with schema validation via ExecContainerVolume.Parts; the host side is
+// expanded locally (never via utils.ExpandPath, which fatally exits on failure).
 func parseVolume(v, wsRoot string) (run.Mount, error) {
-	segments := strings.SplitN(v, ":", 3)
-	if len(segments) < 2 {
-		return run.Mount{}, errors.Errorf("invalid volume %q (expected host:container[:options])", v)
-	}
-	host := strings.TrimSpace(segments[0])
-	container := strings.TrimSpace(segments[1])
-	if host == "" || container == "" {
-		return run.Mount{}, errors.Errorf("invalid volume %q (host and container paths are required)", v)
-	}
-	if !path.IsAbs(container) {
-		return run.Mount{}, errors.Errorf("invalid volume %q (container path must be absolute)", v)
+	host, container, options, err := executable.ExecContainerVolume(v).Parts()
+	if err != nil {
+		return run.Mount{}, err
 	}
 	hostExpanded, err := expandVolumeHost(host, wsRoot)
 	if err != nil {
 		return run.Mount{}, err
 	}
-	m := run.Mount{HostPath: hostExpanded, ContainerPath: container}
-	if len(segments) == 3 {
-		m.Options = strings.TrimSpace(segments[2])
-	}
-	return m, nil
+	return run.Mount{HostPath: hostExpanded, ContainerPath: container, Options: options}, nil
 }
 
 func expandVolumeHost(host, wsRoot string) (string, error) {

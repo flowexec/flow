@@ -1,7 +1,5 @@
 package run
 
-import "sync"
-
 // Test seams for the container backend. These expose unexported helpers and the
 // PATH-lookup seam so the external _test package can assert argv construction and
 // runtime detection without spawning real containers.
@@ -16,6 +14,11 @@ func WriteEnvFileForTest(env map[string]string) (string, error) {
 	return writeEnvFile(env)
 }
 
+// ContainerAlreadyGoneForTest exposes containerAlreadyGone.
+func ContainerAlreadyGoneForTest(output string) bool {
+	return containerAlreadyGone(output)
+}
+
 // SetLookPathForTest swaps the PATH-lookup seam and returns a restore func.
 func SetLookPathForTest(fn func(string) (string, error)) func() {
 	prev := lookPath
@@ -26,7 +29,7 @@ func SetLookPathForTest(fn func(string) (string, error)) func() {
 // ResetRuntimeCacheForTest clears the memoized "auto" runtime resolution so each
 // test observes a fresh detection.
 func ResetRuntimeCacheForTest() {
-	autoRuntimeOnce = sync.Once{}
+	autoRuntimeMu.Lock()
+	defer autoRuntimeMu.Unlock()
 	autoRuntime = ""
-	errAutoRuntime = nil
 }

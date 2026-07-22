@@ -42,12 +42,14 @@ type ContainerSpec struct {
 	Script        string // container-side path to a script; XOR Cmd
 }
 
-// runtime detection cache for the "auto" preference.
+// runtime detection cache for the "auto" preference. Only a successful detection
+// is memoized: a negative result must not be cached, otherwise a long-lived
+// process (e.g. `flow mcp`) that starts before the runtime is available would
+// keep failing even after the runtime comes up.
 var (
-	lookPath        = osexec.LookPath // test seam
-	autoRuntimeOnce sync.Once
-	autoRuntime     string
-	errAutoRuntime  error
+	lookPath      = osexec.LookPath // test seam
+	autoRuntimeMu sync.Mutex
+	autoRuntime   string
 )
 
 // ResolveRuntime resolves a runtime preference ("auto", "docker", "podman", or
@@ -61,18 +63,20 @@ func ResolveRuntime(pref string) (string, error) {
 		}
 		return pref, nil
 	case "", "auto":
-		autoRuntimeOnce.Do(func() {
-			for _, rt := range []string{"docker", "podman"} {
-				if _, err := lookPath(rt); err == nil {
-					autoRuntime = rt
-					return
-				}
+		autoRuntimeMu.Lock()
+		defer autoRuntimeMu.Unlock()
+		if autoRuntime != "" {
+			return autoRuntime, nil
+		}
+		for _, rt := range []string{"docker", "podman"} {
+			if _, err := lookPath(rt); err == nil {
+				autoRuntime = rt
+				return rt, nil
 			}
-			errAutoRuntime = flowerrors.NewContainerRuntimeError("",
-				fmt.Errorf("no container runtime found: install docker or podman, "+
-					"or set exec.container.runtime"))
-		})
-		return autoRuntime, errAutoRuntime
+		}
+		return "", flowerrors.NewContainerRuntimeError("",
+			fmt.Errorf("no container runtime found: install docker or podman, "+
+				"or set exec.container.runtime"))
 	default:
 		return "", flowerrors.NewContainerRuntimeError(pref,
 			fmt.Errorf("unknown container runtime %q", pref))
@@ -123,20 +127,31 @@ func RunContainer(
 	return nil
 }
 
-// ForceRemoveContainer removes a container by name, treating a missing container
-// as success. Used as a cleanup callback to guard against orphaned containers.
+// ForceRemoveContainer removes a container by name, treating an already-removed
+// container as success. Used as a cleanup callback to guard against orphaned
+// containers. Because runs use --rm, the container is usually already gone by the
+// time this runs, so a "no such container" result is the normal path - and the
+// exact wording differs between docker ("No such container") and podman
+// ("no such container"), so the match must be case-insensitive.
 func ForceRemoveContainer(runtime, name string) error {
 	if runtime == "" || name == "" {
 		return nil
 	}
 	out, err := osexec.Command(runtime, "rm", "-f", name).CombinedOutput()
 	if err != nil {
-		if strings.Contains(string(out), "No such container") {
+		if containerAlreadyGone(string(out)) {
 			return nil
 		}
 		return fmt.Errorf("failed to remove container %s - %w", name, err)
 	}
 	return nil
+}
+
+// containerAlreadyGone reports whether a `rm -f` failure is just the container
+// being absent (the normal case under --rm). Docker says "No such container" and
+// podman "no such container", so the match is case-insensitive.
+func containerAlreadyGone(output string) bool {
+	return strings.Contains(strings.ToLower(output), "no such container")
 }
 
 // buildRunArgs constructs the runtime argv (excluding the runtime binary itself).
@@ -177,7 +192,10 @@ func buildRunArgs(spec ContainerSpec, envFile string) []string {
 		args = append(args, "--entrypoint", spec.Entrypoint)
 	}
 
-	args = append(args, spec.Image)
+	// End-of-options separator: ensures a user-controlled image (or any value that
+	// happens to start with "-") is treated as the image positional and never
+	// parsed as a runtime flag.
+	args = append(args, "--", spec.Image)
 
 	switch {
 	case spec.Script != "":

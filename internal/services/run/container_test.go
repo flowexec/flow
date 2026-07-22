@@ -29,9 +29,27 @@ var _ = Describe("Container backend", func() {
 				"--name", "flow-demo-abcd1234",
 				"-w", "/workspace",
 				"--entrypoint", "sh",
-				"alpine:3",
+				"--", "alpine:3",
 				"-c", "echo hi",
 			}))
+		})
+
+		It("inserts an end-of-options separator so the image is never parsed as a flag", func() {
+			spec := run.ContainerSpec{
+				Runtime: "docker", Image: "-v/etc:/host",
+				Cmd: "true", OverrideEntry: true, Entrypoint: "sh",
+			}
+			args := run.BuildRunArgsForTest(spec, "")
+			// "--" must immediately precede the image.
+			idx := -1
+			for i, a := range args {
+				if a == "--" {
+					idx = i
+					break
+				}
+			}
+			Expect(idx).To(BeNumerically(">=", 0))
+			Expect(args[idx+1]).To(Equal("-v/etc:/host"))
 		})
 
 		It("omits --env-file when no env file is provided", func() {
@@ -129,6 +147,18 @@ var _ = Describe("Container backend", func() {
 		})
 	})
 
+	Describe("containerAlreadyGone", func() {
+		DescribeTable("recognizes an already-removed container across runtimes",
+			func(output string, want bool) {
+				Expect(run.ContainerAlreadyGoneForTest(output)).To(Equal(want))
+			},
+			Entry("docker", "Error response from daemon: No such container: flow-x", true),
+			Entry("podman", `Error: no container with name or ID "flow-x" found: no such container`, true),
+			Entry("unrelated failure", "Error: permission denied while trying to connect", false),
+			Entry("empty", "", false),
+		)
+	})
+
 	Describe("ResolveRuntime", func() {
 		AfterEach(func() { run.ResetRuntimeCacheForTest() })
 
@@ -183,6 +213,26 @@ var _ = Describe("Container backend", func() {
 			defer restore()
 			_, err := run.ResolveRuntime("podman")
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("does not cache a negative result, so detection recovers once a runtime appears", func() {
+			run.ResetRuntimeCacheForTest()
+			available := false
+			restore := run.SetLookPathForTest(func(name string) (string, error) {
+				if available && name == "docker" {
+					return "/usr/bin/docker", nil
+				}
+				return "", errors.New("not found")
+			})
+			defer restore()
+
+			_, err := run.ResolveRuntime("auto")
+			Expect(err).To(HaveOccurred()) // runtime not up yet
+
+			available = true // e.g. Docker Desktop finished booting
+			rt, err := run.ResolveRuntime("auto")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rt).To(Equal("docker"))
 		})
 	})
 })

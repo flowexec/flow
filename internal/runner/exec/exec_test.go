@@ -4,6 +4,7 @@ import (
 	stdCtx "context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -241,6 +242,75 @@ var _ = Describe("Exec Runner", func() {
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 			Expect(containerSpecs[0].OverrideEntry).To(BeFalse())
 		})
+
+		It("uses an explicit user verbatim", func() {
+			user := "1000:1000"
+			c := &executable.ExecContainer{Image: "alpine:3", User: &user}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].User).To(Equal("1000:1000"))
+		})
+
+		It("expands and mounts workspace-relative and absolute volumes", func() {
+			c := &executable.ExecContainer{
+				Image:   "alpine:3",
+				Volumes: []executable.ExecContainerVolume{"//cache:/cache", "/opt/data:/data:ro"},
+			}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+
+			mounts := containerSpecs[0].Mounts
+			// mounts[0] is the workspace; the two user volumes follow in order.
+			Expect(mounts[len(mounts)-2].HostPath).To(Equal(filepath.Join(wsPath, "cache")))
+			Expect(mounts[len(mounts)-2].ContainerPath).To(Equal("/cache"))
+			Expect(mounts[len(mounts)-1].HostPath).To(Equal("/opt/data"))
+			Expect(mounts[len(mounts)-1].ContainerPath).To(Equal("/data"))
+			Expect(mounts[len(mounts)-1].Options).To(Equal("ro"))
+		})
+
+		It("returns an error for a malformed volume", func() {
+			c := &executable.ExecContainer{
+				Image:   "alpine:3",
+				Volumes: []executable.ExecContainerVolume{"/host:relative-container"},
+			}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			err := execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)
+			Expect(err).To(MatchError(ContainSubstring("container path must be absolute")))
+			Expect(containerSpecs).To(BeEmpty())
+		})
+
+		It("maps a workspace-relative file to its container script path", func() {
+			Expect(os.WriteFile(filepath.Join(wsPath, "build.sh"), []byte("echo hi\n"), 0o600)).To(Succeed())
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				File:      "build.sh",
+				Dir:       executable.Directory(wsPath),
+				Container: &executable.ExecContainer{Image: "alpine:3"},
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), wsPath, "", "")
+			e.SetDefaults()
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs).To(HaveLen(1))
+			Expect(containerSpecs[0].Cmd).To(BeEmpty())
+			Expect(containerSpecs[0].Script).To(Equal("/workspace/build.sh"))
+		})
+
+		DescribeTable("expands volume host paths",
+			func(host string, wantErr bool, wantSuffix string) {
+				got, err := exec.ExpandVolumeHostForTest(host, "/ws/root")
+				if wantErr {
+					Expect(err).To(HaveOccurred())
+					return
+				}
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveSuffix(wantSuffix))
+			},
+			Entry("workspace-relative", "//sub/dir", false, filepath.Join("/ws/root", "sub", "dir")),
+			Entry("absolute", "/opt/data", false, "/opt/data"),
+			Entry("home-relative", "~/thing", false, "thing"),
+			Entry("cwd-relative", "./local", false, "local"),
+			Entry("bare relative is rejected", "relative/path", true, ""),
+		)
 
 		It("rejects a PowerShell file in a container", func() {
 			e := &executable.Executable{Exec: &executable.ExecExecutableType{

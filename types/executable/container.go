@@ -79,30 +79,41 @@ func (c *ExecContainer) Validate() error {
 		return fmt.Errorf("container mountWorkspace must be an absolute path, got %q", c.MountWorkspace)
 	}
 	for _, v := range c.Volumes {
-		if _, _, _, err := v.parts(); err != nil {
+		if _, _, _, err := v.Parts(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// parts splits a volume string into its host path, container path, and optional
-// mount options. It validates structure but does not expand the host path.
-func (v ExecContainerVolume) parts() (host, container, options string, err error) {
-	segments := strings.SplitN(string(v), ":", 3)
+// Parts splits a volume string into its host path, container path, and optional
+// mount options. It validates structure but does not expand the host path. A
+// leading Windows drive letter (e.g. `C:\data`) is kept with the host segment so
+// its colon is not mistaken for the host:container separator.
+func (v ExecContainerVolume) Parts() (host, container, options string, err error) {
+	s := string(v)
+	var drive string
+	if len(s) >= 2 && s[1] == ':' && isDriveLetter(s[0]) {
+		drive, s = s[:2], s[2:]
+	}
+	segments := strings.SplitN(s, ":", 3)
 	if len(segments) < 2 {
 		return "", "", "", fmt.Errorf("invalid volume %q (expected host:container[:options])", string(v))
 	}
-	host = strings.TrimSpace(segments[0])
+	host = drive + strings.TrimSpace(segments[0])
 	container = strings.TrimSpace(segments[1])
 	if len(segments) == 3 {
 		options = strings.TrimSpace(segments[2])
 	}
-	if host == "" || container == "" {
+	if strings.TrimSpace(host) == "" || container == "" {
 		return "", "", "", fmt.Errorf("invalid volume %q (host and container paths are required)", string(v))
 	}
 	if !path.IsAbs(container) {
 		return "", "", "", fmt.Errorf("invalid volume %q (container path must be absolute)", string(v))
 	}
 	return host, container, options, nil
+}
+
+func isDriveLetter(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }

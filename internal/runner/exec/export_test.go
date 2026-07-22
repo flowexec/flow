@@ -61,3 +61,8 @@ func SetLookPathForContainerTest() func() {
 	resolveRuntimeFn = func(string) (string, error) { return "docker", nil }
 	return func() { resolveRuntimeFn = prev }
 }
+
+// ExpandVolumeHostForTest exposes expandVolumeHost.
+func ExpandVolumeHostForTest(host, wsRoot string) (string, error) {
+	return expandVolumeHost(host, wsRoot)
+}

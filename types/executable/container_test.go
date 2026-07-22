@@ -76,6 +76,41 @@ func TestContainerResolveEntrypoint(t *testing.T) {
 	}
 }
 
+func TestContainerVolumeParts(t *testing.T) {
+	cases := []struct {
+		name          string
+		vol           executable.ExecContainerVolume
+		wantHost      string
+		wantContainer string
+		wantOptions   string
+		wantErr       bool
+	}{
+		{"posix", "/home/u/ws:/workspace", "/home/u/ws", "/workspace", "", false},
+		{"posix with options", "/data:/data:ro", "/data", "/data", "ro", false},
+		{"workspace-relative host", "//cache:/cache", "//cache", "/cache", "", false},
+		{"windows drive host", `C:\data:/data`, `C:\data`, "/data", "", false},
+		{"windows drive host with options", `D:\src:/src:ro`, `D:\src`, "/src", "ro", false},
+		{"missing container", "/host", "", "", "", true},
+		{"relative container", "/host:rel", "", "", "", true},
+		{"empty host", ":/data", "", "", "", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			host, container, options, err := tc.vol.Parts()
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("Parts() err = %v, wantErr %v", err, tc.wantErr)
+			}
+			if tc.wantErr {
+				return
+			}
+			if host != tc.wantHost || container != tc.wantContainer || options != tc.wantOptions {
+				t.Errorf("Parts() = (%q, %q, %q), want (%q, %q, %q)",
+					host, container, options, tc.wantHost, tc.wantContainer, tc.wantOptions)
+			}
+		})
+	}
+}
+
 func TestContainerValidate(t *testing.T) {
 	type ec = executable.ExecContainer
 	vols := func(v ...executable.ExecContainerVolume) []executable.ExecContainerVolume { return v }
