@@ -295,6 +295,72 @@ definitions:
     default: ""
 
 ### Executable Types
+  ExecContainerVolume:
+    type: string
+    description: |
+      A bind mount in `host:container` or `host:container:options` form.
+      The host path may be absolute, `~/`-prefixed, or `//`-prefixed (workspace-relative).
+      The container path must be absolute.
+
+  ExecContainer:
+    type: object
+    required: [image]
+    description: |
+      Run the command or file inside a container instead of on the host.
+      Requires `docker` or `podman` on the PATH.
+    properties:
+      image:
+        type: string
+        description: The container image to run in (e.g. `golang:1.21-alpine`).
+        default: ""
+      runtime:
+        type: string
+        enum: [auto, docker, podman]
+        description: |
+          The container runtime to use. `auto` prefers `docker` and falls back to `podman`
+          if `docker` is not on the PATH.
+        default: auto
+      workdir:
+        type: string
+        description: |
+          The working directory inside the container. If unset, the executable's resolved
+          `dir` is translated to its path inside the workspace mount.
+        default: ""
+      mountWorkspace:
+        type: string
+        description: The path inside the container where the workspace root is mounted.
+        default: /workspace
+      volumes:
+        type: array
+        items:
+          $ref: '#/definitions/ExecContainerVolume'
+        description: Additional bind mounts to add to the container.
+        default: []
+      inheritEnv:
+        type: boolean
+        description: |
+          Pass the flow-resolved environment (parameters, arguments, and `FLOW_*` variables)
+          into the container. Defaults to `true`. The host process environment is never
+          forwarded regardless of this setting.
+      entrypoint:
+        type: string
+        description: |
+          The container entrypoint. Defaults to `sh` so that `cmd` behaves as a shell command
+          regardless of the image's own ENTRYPOINT. Set to an empty string to use the image's
+          ENTRYPOINT instead.
+      user:
+        type: string
+        description: |
+          The user to run as inside the container, in `uid`, `uid:gid`, or `name` form.
+          On Linux, defaults to the current host user so that files written to mounted
+          volumes are not owned by root. Set to `root` to opt out.
+      network:
+        type: string
+        description: |
+          The container network to attach to (e.g. `host`, `none`, or a named network).
+          If unset, the runtime default is used.
+        default: ""
+
   ExecExecutableType:
     type: object
     description: Standard executable type. Runs a command/file in a subprocess.
@@ -318,6 +384,8 @@ definitions:
           The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`).
           Only one of `cmd` or `file` must be set.
         default: ""
+      container:
+        $ref: '#/definitions/ExecContainer'
       logMode:
         type: string
         goJSONSchema:

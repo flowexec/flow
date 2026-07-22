@@ -14,8 +14,10 @@ import (
 
 // Test seams: swapped by tests to avoid spawning real subshells.
 var (
-	runCmdFn  = run.RunCmd
-	runFileFn = run.RunFile
+	runCmdFn         = run.RunCmd
+	runFileFn        = run.RunFile
+	runContainerFn   = run.RunContainer
+	resolveRuntimeFn = run.ResolveRuntime
 )
 
 type execRunner struct{}
@@ -79,11 +81,27 @@ func (r *execRunner) Exec(
 	logMode := execSpec.LogMode
 	logFields := execSpec.GetLogFields()
 
-	switch {
-	case execSpec.Cmd == "" && execSpec.File == "":
+	if execSpec.Cmd == "" && execSpec.File == "" {
 		return errors.New("either cmd or file must be specified")
-	case execSpec.Cmd != "" && execSpec.File != "":
+	}
+	if execSpec.Cmd != "" && execSpec.File != "" {
 		return errors.New("cannot set both cmd and file")
+	}
+
+	if execSpec.Container != nil {
+		spec, err := buildContainerSpec(e, targetDir, envMap)
+		if err != nil {
+			return err
+		}
+		// Register cleanup before launch so an orphaned container is removed even
+		// if the run is abandoned by the timeout goroutine in the runner.
+		ctx.AddCallback(func(*context.Context) error {
+			return run.ForceRemoveContainer(spec.Runtime, spec.Name)
+		})
+		return runContainerFn(ctx, spec, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
+	}
+
+	switch {
 	case execSpec.Cmd != "":
 		return runCmdFn(execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
 	case execSpec.File != "":

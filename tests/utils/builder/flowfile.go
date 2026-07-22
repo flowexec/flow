@@ -35,6 +35,7 @@ func ExamplesExecFlowFile(opts ...Option) *executable.FlowFile {
 			ExecWithTimeout(opts...),
 			ExecWithEnvOutputFiles(opts...),
 			ExecWithWorkspaceEnv(opts...),
+			ExecWithContainer(opts...),
 		},
 	}
 	if len(opts) > 0 {

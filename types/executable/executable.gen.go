@@ -65,6 +65,68 @@ const ArgumentTypeString ArgumentType = "string"
 // Environment variables in the path will be expended at runtime.
 type Directory string
 
+// Run the command or file inside a container instead of on the host.
+// Requires `docker` or `podman` on the PATH.
+type ExecContainer struct {
+	// The container entrypoint. Defaults to `sh` so that `cmd` behaves as a shell
+	// command
+	// regardless of the image's own ENTRYPOINT. Set to an empty string to use the
+	// image's
+	// ENTRYPOINT instead.
+	//
+	Entrypoint *string `json:"entrypoint,omitempty" yaml:"entrypoint,omitempty" mapstructure:"entrypoint,omitempty"`
+
+	// The container image to run in (e.g. `golang:1.21-alpine`).
+	Image string `json:"image" yaml:"image" mapstructure:"image"`
+
+	// Pass the flow-resolved environment (parameters, arguments, and `FLOW_*`
+	// variables)
+	// into the container. Defaults to `true`. The host process environment is never
+	// forwarded regardless of this setting.
+	//
+	InheritEnv *bool `json:"inheritEnv,omitempty" yaml:"inheritEnv,omitempty" mapstructure:"inheritEnv,omitempty"`
+
+	// The path inside the container where the workspace root is mounted.
+	MountWorkspace string `json:"mountWorkspace,omitempty" yaml:"mountWorkspace,omitempty" mapstructure:"mountWorkspace,omitempty"`
+
+	// The container network to attach to (e.g. `host`, `none`, or a named network).
+	// If unset, the runtime default is used.
+	//
+	Network string `json:"network,omitempty" yaml:"network,omitempty" mapstructure:"network,omitempty"`
+
+	// The container runtime to use. `auto` prefers `docker` and falls back to
+	// `podman`
+	// if `docker` is not on the PATH.
+	//
+	Runtime ExecContainerRuntime `json:"runtime,omitempty" yaml:"runtime,omitempty" mapstructure:"runtime,omitempty"`
+
+	// The user to run as inside the container, in `uid`, `uid:gid`, or `name` form.
+	// On Linux, defaults to the current host user so that files written to mounted
+	// volumes are not owned by root. Set to `root` to opt out.
+	//
+	User *string `json:"user,omitempty" yaml:"user,omitempty" mapstructure:"user,omitempty"`
+
+	// Additional bind mounts to add to the container.
+	Volumes []ExecContainerVolume `json:"volumes,omitempty" yaml:"volumes,omitempty" mapstructure:"volumes,omitempty"`
+
+	// The working directory inside the container. If unset, the executable's resolved
+	// `dir` is translated to its path inside the workspace mount.
+	//
+	Workdir string `json:"workdir,omitempty" yaml:"workdir,omitempty" mapstructure:"workdir,omitempty"`
+}
+
+type ExecContainerRuntime string
+
+const ExecContainerRuntimeAuto ExecContainerRuntime = "auto"
+const ExecContainerRuntimeDocker ExecContainerRuntime = "docker"
+const ExecContainerRuntimePodman ExecContainerRuntime = "podman"
+
+// A bind mount in `host:container` or `host:container:options` form.
+// The host path may be absolute, `~/`-prefixed, or `//`-prefixed
+// (workspace-relative).
+// The container path must be absolute.
+type ExecContainerVolume string
+
 // Standard executable type. Runs a command/file in a subprocess.
 type ExecExecutableType struct {
 	// Args corresponds to the JSON schema field "args".
@@ -74,6 +136,9 @@ type ExecExecutableType struct {
 	// Only one of `cmd` or `file` must be set.
 	//
 	Cmd string `json:"cmd,omitempty" yaml:"cmd,omitempty" mapstructure:"cmd,omitempty"`
+
+	// Container corresponds to the JSON schema field "container".
+	Container *ExecContainer `json:"container,omitempty" yaml:"container,omitempty" mapstructure:"container,omitempty"`
 
 	// Dir corresponds to the JSON schema field "dir".
 	Dir Directory `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`

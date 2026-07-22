@@ -235,6 +235,10 @@ func (e *Executable) SetDefaults() {
 			}
 		}
 	}
+
+	if e.Exec != nil && e.Exec.Container != nil {
+		e.Exec.Container.SetDefaults()
+	}
 }
 
 func (e *Executable) Validate() error {
@@ -268,6 +272,12 @@ func (e *Executable) Validate() error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if e.Exec != nil && e.Exec.Container != nil {
+		if err := e.Exec.Container.Validate(); err != nil {
+			return fmt.Errorf("container validation failed - %w", err)
+		}
 	}
 
 	if e.Workspace() == "" {

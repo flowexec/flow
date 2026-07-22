@@ -238,6 +238,26 @@ func ExecWithEnvOutputFiles(opts ...Option) *executable.Executable {
 	return e
 }
 
+func ExecWithContainer(opts ...Option) *executable.Executable {
+	name := "with-container"
+	e := &executable.Executable{
+		Verb:       "run",
+		Name:       name,
+		Visibility: privateExecVisibility(),
+		Exec: &executable.ExecExecutableType{
+			Cmd: fmt.Sprintf("echo 'hello from %s'; echo \"in-container=$FLOW_IN_CONTAINER\"; pwd", name),
+			Container: &executable.ExecContainer{
+				Image: "alpine:3",
+			},
+		},
+	}
+	if len(opts) > 0 {
+		vals := NewOptionValues(opts...)
+		e.SetContext(vals.WorkspaceName, vals.WorkspacePath, vals.NamespaceName, vals.FlowFilePath)
+	}
+	return e
+}
+
 func ExecWithWorkspaceEnv(opts ...Option) *executable.Executable {
 	name := "with-workspace-env"
 	e := &executable.Executable{
