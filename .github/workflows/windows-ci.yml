@@ -20,11 +20,11 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test:windows')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run unit tests
         uses: flowexec/action@v1
@@ -47,11 +47,11 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test:windows')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run E2E tests
         uses: flowexec/action@v1
@@ -77,11 +77,11 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test:windows')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Build flow binary
         uses: flowexec/action@v1
@@ -101,11 +101,11 @@ jobs:
     runs-on: windows-latest
     needs: build-binary
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Download built binary
         uses: actions/download-artifact@v8
@@ -126,11 +126,11 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'test:windows')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run .bat and .ps1 file execution tests
         uses: flowexec/action@v1
