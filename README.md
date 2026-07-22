@@ -5,6 +5,7 @@
     <a href="https://pkg.go.dev/github.com/flowexec/flow"><img src="https://pkg.go.dev/badge/github.com/flowexec/flow.svg" alt="Go Reference"></a>
     <a href="https://discord.gg/CtByNKNMxM"><img src="https://img.shields.io/badge/discord-join%20community-7289da?logo=discord&logoColor=white" alt="Join Discord"></a>
     <a href="https://github.com/flowexec/flow"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/flowexec/flow"></a>
+    <a href="https://deepwiki.com/flowexec/flow"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 <p align="center">
