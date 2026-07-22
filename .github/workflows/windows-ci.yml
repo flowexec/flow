@@ -24,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run unit tests
         uses: flowexec/action@v1
@@ -51,7 +51,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run E2E tests
         uses: flowexec/action@v1
@@ -81,7 +81,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Build flow binary
         uses: flowexec/action@v1
@@ -105,7 +105,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Download built binary
         uses: actions/download-artifact@v8
@@ -130,7 +130,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "^1.25"
+          go-version: "1.25.x"
           cache: true
       - name: Run .bat and .ps1 file execution tests
         uses: flowexec/action@v1
