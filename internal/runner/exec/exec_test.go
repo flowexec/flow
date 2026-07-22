@@ -202,7 +202,8 @@ var _ = Describe("Exec Runner", func() {
 		})
 
 		It("honors a custom mountWorkspace for the mount and workdir", func() {
-			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3", MountWorkspace: "/src"}, executable.Directory(wsPath))
+			c := &executable.ExecContainer{Image: "alpine:3", MountWorkspace: "/src"}
+			e := newContainerExec(c, executable.Directory(wsPath))
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 			Expect(containerSpecs[0].Workdir).To(Equal("/src"))
 			Expect(containerSpecs[0].Mounts[0].ContainerPath).To(Equal("/src"))
@@ -228,7 +229,8 @@ var _ = Describe("Exec Runner", func() {
 
 		It("passes no env when inheritEnv is false", func() {
 			inherit := false
-			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3", InheritEnv: &inherit}, executable.Directory(wsPath))
+			c := &executable.ExecContainer{Image: "alpine:3", InheritEnv: &inherit}
+			e := newContainerExec(c, executable.Directory(wsPath))
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 			Expect(containerSpecs[0].Env).To(BeEmpty())
 		})

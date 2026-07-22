@@ -28,5 +28,5 @@ func SetLookPathForTest(fn func(string) (string, error)) func() {
 func ResetRuntimeCacheForTest() {
 	autoRuntimeOnce = sync.Once{}
 	autoRuntime = ""
-	autoRuntimeErr = nil
+	errAutoRuntime = nil
 }

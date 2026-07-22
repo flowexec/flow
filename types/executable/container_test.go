@@ -77,20 +77,22 @@ func TestContainerResolveEntrypoint(t *testing.T) {
 }
 
 func TestContainerValidate(t *testing.T) {
+	type ec = executable.ExecContainer
+	vols := func(v ...executable.ExecContainerVolume) []executable.ExecContainerVolume { return v }
 	cases := []struct {
 		name    string
-		c       *executable.ExecContainer
+		c       *ec
 		wantErr bool
 	}{
-		{"valid minimal", &executable.ExecContainer{Image: "alpine:3"}, false},
-		{"missing image", &executable.ExecContainer{}, true},
-		{"invalid runtime", &executable.ExecContainer{Image: "x", Runtime: executable.ExecContainerRuntime("containerd")}, true},
-		{"relative workdir", &executable.ExecContainer{Image: "x", Workdir: "sub/dir"}, true},
-		{"relative mountWorkspace", &executable.ExecContainer{Image: "x", MountWorkspace: "rel"}, true},
-		{"valid volume", &executable.ExecContainer{Image: "x", Volumes: []executable.ExecContainerVolume{"/host:/container"}}, false},
-		{"valid volume with options", &executable.ExecContainer{Image: "x", Volumes: []executable.ExecContainerVolume{"/host:/container:ro"}}, false},
-		{"volume missing container", &executable.ExecContainer{Image: "x", Volumes: []executable.ExecContainerVolume{"/host"}}, true},
-		{"volume relative container", &executable.ExecContainer{Image: "x", Volumes: []executable.ExecContainerVolume{"/host:rel"}}, true},
+		{"valid minimal", &ec{Image: "alpine:3"}, false},
+		{"missing image", &ec{}, true},
+		{"invalid runtime", &ec{Image: "x", Runtime: executable.ExecContainerRuntime("containerd")}, true},
+		{"relative workdir", &ec{Image: "x", Workdir: "sub/dir"}, true},
+		{"relative mountWorkspace", &ec{Image: "x", MountWorkspace: "rel"}, true},
+		{"valid volume", &ec{Image: "x", Volumes: vols("/host:/container")}, false},
+		{"valid volume with options", &ec{Image: "x", Volumes: vols("/host:/container:ro")}, false},
+		{"volume missing container", &ec{Image: "x", Volumes: vols("/host")}, true},
+		{"volume relative container", &ec{Image: "x", Volumes: vols("/host:rel")}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

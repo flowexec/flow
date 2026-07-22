@@ -47,7 +47,7 @@ var (
 	lookPath        = osexec.LookPath // test seam
 	autoRuntimeOnce sync.Once
 	autoRuntime     string
-	autoRuntimeErr  error
+	errAutoRuntime  error
 )
 
 // ResolveRuntime resolves a runtime preference ("auto", "docker", "podman", or
@@ -68,11 +68,11 @@ func ResolveRuntime(pref string) (string, error) {
 					return
 				}
 			}
-			autoRuntimeErr = flowerrors.NewContainerRuntimeError("",
+			errAutoRuntime = flowerrors.NewContainerRuntimeError("",
 				fmt.Errorf("no container runtime found: install docker or podman, "+
 					"or set exec.container.runtime"))
 		})
-		return autoRuntime, autoRuntimeErr
+		return autoRuntime, errAutoRuntime
 	default:
 		return "", flowerrors.NewContainerRuntimeError(pref,
 			fmt.Errorf("unknown container runtime %q", pref))
@@ -129,7 +129,6 @@ func ForceRemoveContainer(runtime, name string) error {
 	if runtime == "" || name == "" {
 		return nil
 	}
-	//nolint:gosec // runtime is a validated runtime name; name is flow-generated
 	out, err := osexec.Command(runtime, "rm", "-f", name).CombinedOutput()
 	if err != nil {
 		if strings.Contains(string(out), "No such container") {
