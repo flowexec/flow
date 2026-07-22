@@ -4,6 +4,7 @@ import (
 	stdCtx "context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -14,6 +15,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/runner"
 	"github.com/flowexec/flow/v2/internal/runner/engine/mocks"
 	"github.com/flowexec/flow/v2/internal/runner/exec"
+	"github.com/flowexec/flow/v2/internal/services/run"
 	testUtils "github.com/flowexec/flow/v2/tests/utils"
 	"github.com/flowexec/flow/v2/types/executable"
 )
@@ -36,13 +38,16 @@ var _ = Describe("Exec Runner", func() {
 		ctx        *testUtils.ContextWithMocks
 		mockEngine *mocks.MockEngine
 
-		cmdCalls  []runCall
-		fileCalls []runCall
-		cmdErr    error
-		fileErr   error
+		cmdCalls       []runCall
+		fileCalls      []runCall
+		containerSpecs []run.ContainerSpec
+		cmdErr         error
+		fileErr        error
+		containerErr   error
 
-		restoreCmd  func()
-		restoreFile func()
+		restoreCmd       func()
+		restoreFile      func()
+		restoreContainer func()
 	)
 
 	BeforeEach(func() {
@@ -53,8 +58,10 @@ var _ = Describe("Exec Runner", func() {
 
 		cmdCalls = nil
 		fileCalls = nil
+		containerSpecs = nil
 		cmdErr = nil
 		fileErr = nil
+		containerErr = nil
 
 		restoreCmd = exec.SetRunCmdFnForTest(func(
 			s, dir string, envList []string, logMode tuikitIO.LogMode,
@@ -70,11 +77,19 @@ var _ = Describe("Exec Runner", func() {
 			fileCalls = append(fileCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
 			return fileErr
 		})
+		restoreContainer = exec.SetRunContainerFnForTest(func(
+			_ stdCtx.Context, spec run.ContainerSpec, _ tuikitIO.LogMode,
+			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
+		) error {
+			containerSpecs = append(containerSpecs, spec)
+			return containerErr
+		})
 	})
 
 	AfterEach(func() {
 		restoreCmd()
 		restoreFile()
+		restoreContainer()
 	})
 
 	Context("Name", func() {
@@ -153,6 +168,162 @@ var _ = Describe("Exec Runner", func() {
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, inputEnv, nil)).To(Succeed())
 			Expect(cmdCalls).To(HaveLen(1))
 			Expect(cmdCalls[0].envList).To(ContainElement("FLOW_TEST_VAR=hello"))
+		})
+	})
+
+	Describe("Exec with container", func() {
+		var wsPath string
+
+		newContainerExec := func(c *executable.ExecContainer, dir executable.Directory) *executable.Executable {
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{Cmd: "echo hi", Dir: dir, Container: c}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), wsPath, "", "")
+			e.SetDefaults() // container tests build literals, so defaults must be applied explicitly
+			return e
+		}
+
+		BeforeEach(func() {
+			wsPath = ctx.Ctx.CurrentWorkspace.Location()
+			restore := exec.SetLookPathForContainerTest()
+			DeferCleanup(restore)
+		})
+
+		It("routes to the container backend instead of runCmd", func() {
+			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(cmdCalls).To(BeEmpty())
+			Expect(containerSpecs).To(HaveLen(1))
+			Expect(containerSpecs[0].Image).To(Equal("alpine:3"))
+			Expect(containerSpecs[0].Cmd).To(Equal("echo hi"))
+		})
+
+		It("translates a workspace-relative dir to the mount path", func() {
+			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Workdir).To(Equal("/workspace"))
+		})
+
+		It("honors a custom mountWorkspace for the mount and workdir", func() {
+			c := &executable.ExecContainer{Image: "alpine:3", MountWorkspace: "/src"}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Workdir).To(Equal("/src"))
+			Expect(containerSpecs[0].Mounts[0].ContainerPath).To(Equal("/src"))
+		})
+
+		It("mounts an out-of-workspace tmp dir at the fallback workdir", func() {
+			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory("f:tmp"))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Workdir).To(Equal("/flow/workdir"))
+			Expect(containerSpecs[0].Mounts).To(HaveLen(2))
+			Expect(containerSpecs[0].Mounts[1].ContainerPath).To(Equal("/flow/workdir"))
+		})
+
+		It("drops host-only FLOW_* vars and rewrites the workspace path", func() {
+			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			env := containerSpecs[0].Env
+			Expect(env).NotTo(HaveKey("FLOW_CONFIG_PATH"))
+			Expect(env).NotTo(HaveKey("FLOW_CACHE_PATH"))
+			Expect(env).To(HaveKeyWithValue("FLOW_WORKSPACE_PATH", "/workspace"))
+			Expect(env).To(HaveKeyWithValue("FLOW_IN_CONTAINER", "true"))
+		})
+
+		It("passes no env when inheritEnv is false", func() {
+			inherit := false
+			c := &executable.ExecContainer{Image: "alpine:3", InheritEnv: &inherit}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Env).To(BeEmpty())
+		})
+
+		It("uses the image entrypoint when entrypoint is explicitly empty", func() {
+			empty := ""
+			e := newContainerExec(&executable.ExecContainer{Image: "node:18", Entrypoint: &empty}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].OverrideEntry).To(BeFalse())
+		})
+
+		It("uses an explicit user verbatim", func() {
+			user := "1000:1000"
+			c := &executable.ExecContainer{Image: "alpine:3", User: &user}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].User).To(Equal("1000:1000"))
+		})
+
+		It("expands and mounts workspace-relative and absolute volumes", func() {
+			c := &executable.ExecContainer{
+				Image:   "alpine:3",
+				Volumes: []executable.ExecContainerVolume{"//cache:/cache", "/opt/data:/data:ro"},
+			}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+
+			mounts := containerSpecs[0].Mounts
+			// mounts[0] is the workspace; the two user volumes follow in order.
+			Expect(mounts[len(mounts)-2].HostPath).To(Equal(filepath.Join(wsPath, "cache")))
+			Expect(mounts[len(mounts)-2].ContainerPath).To(Equal("/cache"))
+			Expect(mounts[len(mounts)-1].HostPath).To(Equal("/opt/data"))
+			Expect(mounts[len(mounts)-1].ContainerPath).To(Equal("/data"))
+			Expect(mounts[len(mounts)-1].Options).To(Equal("ro"))
+		})
+
+		It("returns an error for a malformed volume", func() {
+			c := &executable.ExecContainer{
+				Image:   "alpine:3",
+				Volumes: []executable.ExecContainerVolume{"/host:relative-container"},
+			}
+			e := newContainerExec(c, executable.Directory(wsPath))
+			err := execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)
+			Expect(err).To(MatchError(ContainSubstring("container path must be absolute")))
+			Expect(containerSpecs).To(BeEmpty())
+		})
+
+		It("maps a workspace-relative file to its container script path", func() {
+			Expect(os.WriteFile(filepath.Join(wsPath, "build.sh"), []byte("echo hi\n"), 0o600)).To(Succeed())
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				File:      "build.sh",
+				Dir:       executable.Directory(wsPath),
+				Container: &executable.ExecContainer{Image: "alpine:3"},
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), wsPath, "", "")
+			e.SetDefaults()
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs).To(HaveLen(1))
+			Expect(containerSpecs[0].Cmd).To(BeEmpty())
+			Expect(containerSpecs[0].Script).To(Equal("/workspace/build.sh"))
+		})
+
+		DescribeTable("expands volume host paths",
+			func(host string, wantErr bool, wantSuffix string) {
+				got, err := exec.ExpandVolumeHostForTest(host, "/ws/root")
+				if wantErr {
+					Expect(err).To(HaveOccurred())
+					return
+				}
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got).To(HaveSuffix(wantSuffix))
+			},
+			Entry("workspace-relative", "//sub/dir", false, filepath.Join("/ws/root", "sub", "dir")),
+			Entry("absolute", "/opt/data", false, "/opt/data"),
+			Entry("home-relative", "~/thing", false, "thing"),
+			Entry("cwd-relative", "./local", false, "local"),
+			Entry("bare relative is rejected", "relative/path", true, ""),
+		)
+
+		It("rejects a PowerShell file in a container", func() {
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				File:      "script.ps1",
+				Dir:       executable.Directory(wsPath),
+				Container: &executable.ExecContainer{Image: "alpine:3"},
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), wsPath, "", "")
+			e.SetDefaults()
+
+			err := execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)
+			Expect(err).To(MatchError(ContainSubstring("does not support")))
+			Expect(containerSpecs).To(BeEmpty())
 		})
 	})
 })

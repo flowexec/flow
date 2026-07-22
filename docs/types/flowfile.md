@@ -86,6 +86,15 @@ If not set, the visibility will default to `public`.
 
 
 
+### ExecContainerVolume
+
+
+
+
+
+
+
+
 ### Executable
 
 The executable schema defines the structure of an executable in the Flow CLI.
@@ -160,6 +169,30 @@ Environment variables in the path will be expended at runtime.
 
 
 
+### ExecutableExecContainer
+
+Run the command or file inside a container instead of on the host.
+Requires `docker` or `podman` on the PATH.
+
+
+**Type:** `object`
+
+
+
+**Properties:**
+
+| Field | Description | Type | Default | Required |
+| ----- | ----------- | ---- | ------- | :--------: |
+| `entrypoint` | The container entrypoint. Defaults to `sh` so that `cmd` behaves as a shell command regardless of the image's own ENTRYPOINT. Set to an empty string to use the image's ENTRYPOINT instead.  | `string` |  |  |
+| `image` | The container image to run in (e.g. `golang:1.21-alpine`). | `string` |  | ✘ |
+| `inheritEnv` | Pass the flow-resolved environment (parameters, arguments, and `FLOW_*` variables) into the container. Defaults to `true`. The host process environment is never forwarded regardless of this setting.  | `boolean` |  |  |
+| `mountWorkspace` | The path inside the container where the workspace root is mounted. | `string` | /workspace |  |
+| `network` | The container network to attach to (e.g. `host`, `none`, or a named network). If unset, the runtime default is used.  | `string` |  |  |
+| `runtime` | The container runtime to use. `auto` prefers `docker` and falls back to `podman` if `docker` is not on the PATH.  | `string` | auto |  |
+| `user` | The user to run as inside the container, in `uid`, `uid:gid`, or `name` form. On Linux, defaults to the current host user so that files written to mounted volumes are not owned by root. Set to `root` to opt out.  | `string` |  |  |
+| `volumes` | Additional bind mounts to add to the container. | `array` ([ExecContainerVolume](#execcontainervolume)) | [] |  |
+| `workdir` | The working directory inside the container. If unset, the executable's resolved `dir` is translated to its path inside the workspace mount.  | `string` |  |  |
+
 ### ExecutableExecExecutableType
 
 Standard executable type. Runs a command/file in a subprocess.
@@ -174,6 +207,7 @@ Standard executable type. Runs a command/file in a subprocess.
 | ----- | ----------- | ---- | ------- | :--------: |
 | `args` |  | [ExecutableArgumentList](#executableargumentlist) |  |  |
 | `cmd` | The command to execute. Only one of `cmd` or `file` must be set.  | `string` |  |  |
+| `container` |  | [ExecutableExecContainer](#executableexeccontainer) |  |  |
 | `dir` |  | [ExecutableDirectory](#executabledirectory) |  |  |
 | `file` | The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`). Only one of `cmd` or `file` must be set.  | `string` |  |  |
 | `logMode` | The log mode to use when running the executable. This can either be `hidden`, `json`, `logfmt` or `text`  | `string` | logfmt |  |

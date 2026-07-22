@@ -76,6 +76,28 @@ func NewUsageError(format string, args ...any) UsageError {
 	return UsageError{Msg: fmt.Sprintf(format, args...)}
 }
 
+// ContainerRuntimeError indicates the host could not satisfy a containerized
+// execution - typically because no container runtime is installed.
+type ContainerRuntimeError struct {
+	Runtime string
+	Err     error
+}
+
+func (e ContainerRuntimeError) Error() string {
+	if e.Runtime != "" {
+		return fmt.Sprintf("container runtime %q unavailable - %v", e.Runtime, e.Err)
+	}
+	return e.Err.Error()
+}
+
+func (e ContainerRuntimeError) Unwrap() error { return e.Err }
+
+func (e ContainerRuntimeError) Code() string { return ErrCodeExecutionFailed }
+
+func NewContainerRuntimeError(runtime string, err error) ContainerRuntimeError {
+	return ContainerRuntimeError{Runtime: runtime, Err: err}
+}
+
 // ValidationError indicates a value failed semantic or schema validation.
 type ValidationError struct {
 	Msg     string

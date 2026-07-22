@@ -232,6 +232,59 @@ executables:
 - `cmd`: Inline command to run
 - `file`: Script file to execute
 - `logMode`: How to format command output
+- `container`: Run the command or file inside a container image (see below)
+
+#### Running in a container
+
+Set `exec.container` to run the command inside a container instead of on the host. This gives you a
+pinned, reproducible toolchain without installing it locally. Requires `docker` or `podman` on the
+`PATH`.
+
+```yaml
+executables:
+  - verb: build
+    name: go-app
+    exec:
+      cmd: go build -o bin/app ./cmd/app
+      container:
+        image: golang:1.21-alpine
+```
+
+The workspace root is auto-mounted (by default at `/workspace`) and the executable's directory
+becomes the working directory inside the container, so relative paths behave the same as they would
+on the host. Parameters, arguments, and `FLOW_*` variables are passed in automatically (secrets go
+through a temporary `--env-file`, never the command line).
+
+Advanced options:
+
+```yaml
+exec:
+  cmd: npm test
+  container:
+    image: node:18-alpine
+    runtime: auto          # auto (default), docker, or podman
+    workdir: /app          # override the working directory
+    mountWorkspace: /app   # container path for the workspace mount
+    volumes:
+      - "//cache:/cache"   # //-, ~/-, ./-, or absolute host paths
+    inheritEnv: true       # pass params/args/FLOW_* into the container (default true)
+    entrypoint: ""         # "" uses the image's ENTRYPOINT; unset defaults to sh
+    user: "1000:1000"      # defaults to the host user on Linux
+    network: host
+```
+
+Notes and limitations:
+- By default flow overrides the image entrypoint with `sh` so `cmd` behaves as a shell command on
+  any image. Set `entrypoint: ""` to use the image's own `ENTRYPOINT`.
+- On Linux, flow runs as your host user by default so mounted files are not root-owned. Set
+  `user: root` to opt out.
+- `.bat`, `.cmd`, and `.ps1` files are not supported with `container`.
+- `container` applies to `exec` executables only; inline `cmd` steps inside `serial`/`parallel` do
+  not inherit it — reference a container-backed executable instead.
+- `outputFile` destinations for params/args should resolve under the workspace root so the container
+  can see them (use `//`-prefixed or flow-file-relative paths).
+- On macOS, Docker Desktop does not share `/var/folders` by default, so `dir: f:tmp` may fail to
+  mount; use a workspace-relative directory instead.
 
 ### serial - Sequential Execution
 
