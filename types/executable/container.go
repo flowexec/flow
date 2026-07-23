@@ -117,3 +117,46 @@ func (v ExecContainerVolume) Parts() (host, container, options string, err error
 func isDriveLetter(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
+
+// ContainerConfigMarkdown renders the container configuration as a markdown
+// block (a bold label followed by a bullet list). It returns "" when no
+// container is configured, so callers can conditionally append it. Effective
+// values are shown, so defaults applied by SetDefaults (runtime, workspace
+// mount) are visible.
+func ContainerConfigMarkdown(c *ExecContainer) string {
+	if c == nil {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("**Container**\n")
+	fmt.Fprintf(&b, "- Image: `%s`\n", c.Image)
+	if c.Runtime != "" {
+		fmt.Fprintf(&b, "- Runtime: %s\n", c.Runtime)
+	}
+	if c.Workdir != "" {
+		fmt.Fprintf(&b, "- Workdir: `%s`\n", c.Workdir)
+	}
+	if c.MountWorkspace != "" {
+		fmt.Fprintf(&b, "- Workspace mount: `%s`\n", c.MountWorkspace)
+	}
+	for _, v := range c.Volumes {
+		fmt.Fprintf(&b, "- Volume: `%s`\n", string(v))
+	}
+	if c.User != nil {
+		fmt.Fprintf(&b, "- User: `%s`\n", *c.User)
+	}
+	if c.Network != "" {
+		fmt.Fprintf(&b, "- Network: `%s`\n", c.Network)
+	}
+	if c.Entrypoint != nil {
+		if *c.Entrypoint == "" {
+			b.WriteString("- Entrypoint: image default\n")
+		} else {
+			fmt.Fprintf(&b, "- Entrypoint: `%s`\n", *c.Entrypoint)
+		}
+	}
+	if !c.EnvInherited() {
+		b.WriteString("- Inherit env: false\n")
+	}
+	return b.String()
+}

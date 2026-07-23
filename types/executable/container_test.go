@@ -1,6 +1,7 @@
 package executable_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/flowexec/flow/v2/types/executable"
@@ -73,6 +74,40 @@ func TestContainerResolveEntrypoint(t *testing.T) {
 				t.Errorf("ResolveEntrypoint() = (%q, %v), want (%q, %v)", entry, override, tc.wantEntry, tc.wantOverride)
 			}
 		})
+	}
+}
+
+func TestContainerConfigMarkdown(t *testing.T) {
+	if got := executable.ContainerConfigMarkdown(nil); got != "" {
+		t.Errorf("nil container should render empty, got %q", got)
+	}
+
+	user := "1000:1000"
+	imageDefault := ""
+	c := &executable.ExecContainer{
+		Image:   "golang:1.21-alpine",
+		Volumes: []executable.ExecContainerVolume{"//cache:/cache"},
+		User:    &user,
+		Network: "host",
+		// entrypoint explicitly empty => image default
+		Entrypoint: &imageDefault,
+	}
+	c.SetDefaults()
+	got := executable.ContainerConfigMarkdown(c)
+
+	for _, want := range []string{
+		"**Container**",
+		"Image: `golang:1.21-alpine`",
+		"Runtime: auto",
+		"Workspace mount: `/workspace`",
+		"Volume: `//cache:/cache`",
+		"User: `1000:1000`",
+		"Network: `host`",
+		"Entrypoint: image default",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("markdown missing %q; got:\n%s", want, got)
+		}
 	}
 }
 

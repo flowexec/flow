@@ -152,6 +152,9 @@ func shellExecConfig(e *executable.ExecutableEnvironment, s *executable.ExecExec
 	} else if s.File != "" {
 		md += fmt.Sprintf("**File:** `%s`\n\n", s.File)
 	}
+	if container := executable.ContainerConfigMarkdown(s.Container); container != "" {
+		md += container + "\n"
+	}
 	md += envTable(e)
 	return md
 }

@@ -102,6 +102,9 @@ func shellExecMarkdown(e *ExecutableEnvironment, s *ExecExecutableType) string {
 	} else if s.File != "" {
 		mkdwn += fmt.Sprintf("**File:** `%s`\n", s.File)
 	}
+	if container := ContainerConfigMarkdown(s.Container); container != "" {
+		mkdwn += "\n" + container
+	}
 	mkdwn += execEnvTable(e)
 
 	return mkdwn
