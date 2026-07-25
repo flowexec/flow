@@ -1,21 +1,42 @@
 package logs
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
+	"github.com/flowexec/flow/v2/internal/utils/process"
 	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // RecordFilter holds optional criteria for filtering unified records.
 type RecordFilter struct {
 	Workspace string
-	Status    string // "success" or "failure"
+	Status    string // lifecycle status: running/completed/failed (success/failure accepted as aliases)
+	Source    string // provenance origin: "cli" or "mcp"
+	Session   string // provenance session ID
+	Client    string // provenance client name (e.g. "claude", "cursor")
 	Since     time.Time
 	Limit     int
+}
+
+// matchStatus reports whether a record's lifecycle status matches the requested filter value,
+// accepting friendly aliases (success/failure) alongside the canonical running/completed/failed.
+func matchStatus(r UnifiedRecord, want string) bool {
+	canonical := CanonicalStatus(r)
+	switch strings.ToLower(strings.TrimSpace(want)) {
+	case "success", "completed", "complete", "ok":
+		return canonical == store.RunCompleted
+	case "failure", "failed", "error":
+		return canonical == store.RunFailed
+	case "running", "active", "in-progress":
+		return canonical == store.RunRunning
+	default:
+		return string(canonical) == strings.ToLower(strings.TrimSpace(want))
+	}
 }
 
 // extractWorkspace parses the workspace from a ref formatted as "verb ws/ns:name".
@@ -42,17 +63,17 @@ func FilterRecords(records []UnifiedRecord, f RecordFilter) []UnifiedRecord {
 				continue
 			}
 		}
-		if f.Status != "" {
-			switch f.Status {
-			case "success":
-				if r.ExitCode != 0 {
-					continue
-				}
-			case "failure":
-				if r.ExitCode == 0 {
-					continue
-				}
-			}
+		if f.Status != "" && !matchStatus(r, f.Status) {
+			continue
+		}
+		if f.Source != "" && !strings.EqualFold(r.Source, f.Source) {
+			continue
+		}
+		if f.Session != "" && r.SessionID != f.Session {
+			continue
+		}
+		if f.Client != "" && !strings.EqualFold(r.ClientName, f.Client) {
+			continue
 		}
 		if !f.Since.IsZero() && r.StartedAt.Before(f.Since) {
 			continue
@@ -71,6 +92,66 @@ type UnifiedRecord struct {
 	LogEntry *tuikitIO.ArchiveEntry
 }
 
+// CanonicalStatus returns the lifecycle status of a record (running/completed/failed), deriving it
+// from the exit code for legacy records that predate the Status field.
+func CanonicalStatus(r UnifiedRecord) store.RunStatus {
+	if r.Status != "" {
+		return r.Status
+	}
+	if r.ExitCode == 0 {
+		return store.RunCompleted
+	}
+	return store.RunFailed
+}
+
+// StatusText returns a human-readable status for display: "running" for in-progress runs,
+// otherwise "ok" or "exit(N)" derived from the exit code.
+func StatusText(r UnifiedRecord) string {
+	if CanonicalStatus(r) == store.RunRunning {
+		return "running"
+	}
+	if r.ExitCode == 0 {
+		return "ok"
+	}
+	return fmt.Sprintf("exit(%d)", r.ExitCode)
+}
+
+// OriginText returns a compact label identifying who launched a run for at-a-glance display:
+// the client name when known (e.g. "claude"), otherwise the source ("cli"/"mcp"), or "-" for
+// legacy records that predate provenance capture.
+func OriginText(r UnifiedRecord) string {
+	if r.ClientName != "" {
+		return r.ClientName
+	}
+	if r.Source != "" {
+		return r.Source
+	}
+	return "-"
+}
+
+// reconcileStale marks any "running" record whose process is no longer alive as failed, persisting
+// the correction back to the store. This prevents an abnormally-terminated run from lingering as
+// active, mirroring the stale-detection done for background runs in `flow logs --running`.
+func reconcileStale(ds store.DataStore, records []store.ExecutionRecord) []store.ExecutionRecord {
+	for i := range records {
+		r := &records[i]
+		if r.Status != store.RunRunning || r.PID == 0 || process.Alive(r.PID) {
+			continue
+		}
+		now := time.Now()
+		r.Status = store.RunFailed
+		r.ExitCode = 1
+		r.CompletedAt = &now
+		if r.Error == "" {
+			r.Error = "process exited unexpectedly"
+		}
+		if ds != nil && r.ID != "" {
+			_ = ds.RecordExecution(*r)
+		}
+	}
+	return records
+}
+
 // LoadRecords retrieves all execution history from the data store, joined with any matching log archive entries.
 // If ds is nil, returns empty (log-only fallback is not supported without metadata).
 func LoadRecords(ds store.DataStore, logsDir string) ([]UnifiedRecord, error) {
@@ -82,6 +163,7 @@ func LoadRecords(ds store.DataStore, logsDir string) ([]UnifiedRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	records = reconcileStale(ds, records)
 
 	archiveIndex := buildArchiveIndex(logsDir)
 	return joinRecords(records, archiveIndex), nil
@@ -97,6 +179,7 @@ func LoadRecordsForRef(ds store.DataStore, logsDir string, ref string, limit int
 	if err != nil {
 		return nil, err
 	}
+	records = reconcileStale(ds, records)
 
 	archiveIndex := buildArchiveIndex(logsDir)
 	return joinRecords(records, archiveIndex), nil

@@ -35,14 +35,16 @@ The server uses stdio transport and provides AI assistants with:
 
 **Available Tools:**
 - `get_info` - Get flow information, schemas, and current context
-- `execute` - Execute flow workflows
+- `execute` - Run a named executable by ref
+- `run_command` - Run arbitrary shell command(s) through flow, captured in history
+- `run_executable` - Run a transient executable of any type from an inline spec
 - `list_workspaces` - List all registered workspaces
 - `get_workspace` - Get details about a specific workspace
 - `get_workspace_config` - Get the full configuration for a specific workspace
 - `switch_workspace` - Change the current workspace
 - `list_executables` - List and filter executables across workspaces
 - `get_executable` - Get detailed information about an executable
-- `get_execution_logs` - Retrieve recent execution logs
+- `get_execution_logs` - Retrieve recent execution logs, with provenance filters
 - `sync_executables` - Sync workspace and executable state
 - `write_flowfile` - Create or update a flow file in a workspace
 

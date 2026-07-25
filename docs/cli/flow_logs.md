@@ -16,7 +16,10 @@ flow logs [ref] [flags]
 
   flow logs                          # all history
   flow logs --last                   # most recent entry with full output
-  flow logs --status failed   # only failed runs
+  flow logs --status failed          # only failed runs
+  flow logs --status running         # only in-progress runs
+  flow logs --source mcp             # only runs launched by an AI/MCP client
+  flow logs --session <id>           # everything one agent session ran
   flow logs run build                # history for 'run build' executable
   flow logs --running                # list active background processes
 
@@ -25,13 +28,16 @@ flow logs [ref] [flags]
 ### Options
 
 ```
+      --client string      Filter history by the client that launched the run (e.g. 'claude', 'cursor').
   -h, --help               help for logs
       --last               Print the last execution's logs
       --limit int          Maximum number of records to display.
   -o, --output string      Output format. One of: yaml, json, or tui.
       --running            Show only active background processes.
+      --session string     Filter history to a single provenance session ID (e.g. an AI agent session).
       --since string       Filter history to entries after a duration (e.g. 1h, 30m, 7d).
-      --status string      Filter history by status (success or failure).
+      --source string      Filter history by run origin: 'cli' or 'mcp'.
+      --status string      Filter history by status (running, completed, or failed; success/failure accepted as aliases).
   -w, --workspace string   Filter history by workspace name.
 ```
 

@@ -89,6 +89,8 @@ var _ = Describe("MCP Server", func() {
 				"get_executable",
 				"list_executables",
 				"execute",
+				"run_command",
+				"run_executable",
 				"get_execution_logs",
 				"sync_executables",
 				"write_flowfile",
@@ -100,19 +102,17 @@ var _ = Describe("MCP Server", func() {
 			}
 		})
 
-		It("should include output schema on list tools", func() {
+		It("should include output schema on the execution tools", func() {
 			toolsResult, err := mcpClient.ListTools(ctx, mcp.ListToolsRequest{})
 			Expect(err).ToNot(HaveOccurred())
 
-			// Verify tools that should have output schemas
+			// Output schemas are advertised only on the execution tools (small, high-value). The
+			// read/list tools omit them to keep the always-loaded tool surface small — they still
+			// return structuredContent at call time.
 			toolsWithSchema := map[string]bool{
-				"list_workspaces":      true,
-				"list_executables":     true,
-				"get_workspace":        true,
-				"get_execution_logs":   true,
-				"get_info":             true,
-				"write_flowfile":       true,
-				"get_workspace_config": true,
+				"execute":        true,
+				"run_command":    true,
+				"run_executable": true,
 			}
 
 			for _, tool := range toolsResult.Tools {
@@ -322,6 +322,66 @@ var _ = Describe("MCP Server", func() {
 			})
 		})
 
+		Context("run_command tool", func() {
+			It("should run an ad-hoc command via flow exec --cmd with label and dir", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--label", "greet", "--dir", "/tmp").
+					Return("command result", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+					"command": "echo hi",
+					"label":   "greet",
+					"dir":     "/tmp",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("command result"))
+			})
+
+			It("should run multiple commands in one call with a mode", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo a", "--cmd", "echo b", "--mode", "parallel").
+					Return("batch result", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+					"commands": []interface{}{"echo a", "echo b"},
+					"mode":     "parallel",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("batch result"))
+			})
+
+			It("should require a command or commands", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+			})
+		})
+
+		Context("run_executable tool", func() {
+			It("should run a transient executable from an inline spec", func() {
+				spec := `{"verb":"run","serial":{"execs":[{"cmd":"echo one"}]}}`
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--spec", spec, "--label", "batch").
+					Return("spec result", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_executable", map[string]interface{}{
+					"spec":  spec,
+					"label": "batch",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("spec result"))
+			})
+
+			It("should require a spec", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_executable", map[string]interface{}{}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+			})
+		})
+
 		Context("get_execution_logs tool", func() {
 			It("should call executor with correct arguments", func() {
 				expectedOutput := "execution logs result"
@@ -335,6 +395,20 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
+			})
+
+			It("should forward source/session/status filters to the CLI", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json", "--source", "mcp", "--session", "sess-1", "--status", "running").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{
+					"source":  "mcp",
+					"session": "sess-1",
+					"status":  "running",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 

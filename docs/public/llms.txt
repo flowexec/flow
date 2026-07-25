@@ -18,7 +18,7 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 - [Executables](https://flowexec.io/guides/executables): Full reference for executable types (exec, serial, parallel, request, launch, render)
 - [Workspaces](https://flowexec.io/guides/workspaces): How workspaces organize projects and domains
 - [Secrets](https://flowexec.io/guides/secrets): Vault-backed secret storage and injection into executions
-- [Execution History & Logs](https://flowexec.io/guides/execution-history): Viewing, attaching to, and inspecting past runs
+- [Execution History & Logs](https://flowexec.io/guides/execution-history): Viewing, attaching to, and inspecting past runs, including live run status and provenance (which client/session launched a run)
 
 ## Advanced
 
@@ -27,7 +27,7 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 - [Advanced Workflows](https://flowexec.io/guides/advanced): Serial/parallel pipelines, retries, conditional execution, arguments/params
 - [Interactive UI](https://flowexec.io/guides/interactive): TUI customization and keybindings
 - [Integrations](https://flowexec.io/guides/integrations): MCP server, GitHub Actions, Docker, CI pipelines
-- [AI Tools](https://flowexec.io/guides/ai-tools): MCP setup, llms.txt, JSON schemas, Claude Code skills and settings
+- [AI Tools](https://flowexec.io/guides/ai-tools): MCP setup and tools (including running arbitrary commands through flow), execution observability/provenance, llms.txt, JSON schemas, Claude Code skills and settings
 
 ## Configuration Reference
 
@@ -54,7 +54,7 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 
 ### Logs
 
-- [flow logs](https://flowexec.io/cli/flow_logs): View execution history
+- [flow logs](https://flowexec.io/cli/flow_logs): View execution history, filterable by status/workspace/source/session/client
 - [flow logs attach](https://flowexec.io/cli/flow_logs_attach): Attach to a running background execution
 - [flow logs clear](https://flowexec.io/cli/flow_logs_clear): Clear log history
 - [flow logs kill](https://flowexec.io/cli/flow_logs_kill): Terminate a background execution

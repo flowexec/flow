@@ -24,12 +24,11 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 			"what parameters it accepts, and what secrets it requires. "+
 			"Use before executing an unfamiliar executable or when debugging a failure."),
 		mcp.WithString("executable_verb", mcp.Required(),
-			mcp.Enum(executable.SortedValidVerbs()...),
-			mcp.Description("Executable verb")),
+			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
+				"Validated server-side; see the flow docs for the full verb list.")),
 		mcp.WithString("executable_id",
 			mcp.Pattern(`^([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)?:)?[a-zA-Z0-9_-]+$`),
 			mcp.Description("Executable ID (workspace/namespace:name or just name if using the current workspace/namespace)")),
-		mcp.WithOutputSchema[ExecutableOutput](),
 	)
 	getExecutable.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a specific executable by reference",
@@ -48,7 +47,6 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithString("keyword", mcp.Description("Keyword filter (optional)")),
 		mcp.WithString("tag", mcp.Description("Tag filter (optional)")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
-		mcp.WithOutputSchema[ExecutableListOutput](),
 	)
 	listExecutables.Annotations = mcp.ToolAnnotation{
 		Title:           "List executables",
@@ -62,8 +60,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
 			"secret injection, retries, and logging automatically."),
 		mcp.WithString("executable_verb", mcp.Required(),
-			mcp.Enum(executable.SortedValidVerbs()...),
-			mcp.Description("Executable verb")),
+			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
+				"Validated server-side; see the flow docs for the full verb list.")),
 		mcp.WithString("executable_id",
 			mcp.Pattern(`^([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)?:)?[a-zA-Z0-9_-]+$`),
 			mcp.Description(
@@ -81,6 +79,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	}
 	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
 
+	addRunCommandTool(srv, executor)
+	addRunExecutableTool(srv, executor)
+
 	writeFlowfile := mcp.NewTool("write_flowfile",
 		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
 			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
@@ -91,7 +92,6 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 			mcp.Description("Full YAML content of the flowfile")),
 		mcp.WithBoolean("overwrite",
 			mcp.Description("Whether to overwrite an existing file (default: false)")),
-		mcp.WithOutputSchema[WriteFlowFileOutput](),
 	)
 	writeFlowfile.Annotations = mcp.ToolAnnotation{
 		Title:           "Write a flow file",
@@ -167,7 +167,7 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			TotalCount:  totalCount,
 		}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
 
@@ -197,6 +197,9 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 			cmdArgs = append(cmdArgs, "--sync")
 		}
 
+		// Capture the MCP caller's identity so the resulting execution record records who ran it.
+		ctx = withProvenance(ctx, mcpProvenance(ctx))
+
 		sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
 		output, err := executor.ExecuteContext(ctx, cmdArgs...)
 
@@ -215,8 +218,155 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		result := ExecutionOutput{Output: output}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
+}
+
+func addRunCommandTool(srv *server.MCPServer, executor CommandExecutor) {
+	runCommand := mcp.NewTool("run_command",
+		mcp.WithDescription("Run one or more shell commands through flow instead of a raw shell tool. Commands run "+
+			"with the current workspace's environment and secrets, output is captured to flow's logs, and each run "+
+			"is recorded in execution history with provenance (visible via get_execution_logs / `flow logs`). "+
+			"Prefer this for build, test, run, and one-off commands so the work is observable and reproducible. "+
+			"Pass `commands` (with `mode`) to run several commands in a single call."),
+		mcp.WithString("command",
+			mcp.Description("A single shell command to run. Provide this or `commands`.")),
+		mcp.WithArray("commands", mcp.WithStringItems(),
+			mcp.Description("Multiple shell commands to run in one call (as a serial or parallel batch — see `mode`). "+
+				"Provide this or `command`.")),
+		mcp.WithString("mode",
+			mcp.Description("How to run `commands`: 'serial' (default, stop on first failure) or 'parallel'.")),
+		mcp.WithString("label",
+			mcp.Description("Short human-readable label describing what the command(s) do (recorded in history).")),
+		mcp.WithString("dir",
+			mcp.Description("Working directory for the command (defaults to the current directory).")),
+		mcp.WithString("workspace",
+			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
+				"the working directory, then the current workspace. Does not change the global current workspace.")),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+		mcp.WithOutputSchema[ExecutionOutput](),
+	)
+	runCommand.Annotations = mcp.ToolAnnotation{
+		Title:        "Run ad-hoc shell command(s) through flow",
+		ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
+	}
+	srv.AddTool(runCommand, runCommandHandler(srv, executor))
+}
+
+func runCommandHandler(srv *server.MCPServer, executor CommandExecutor) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var commands []string
+		if c := request.GetString("command", ""); c != "" {
+			commands = append(commands, c)
+		}
+		commands = append(commands, request.GetStringSlice("commands", nil)...)
+		if len(commands) == 0 {
+			return toolError(ErrCodeInvalidInput, "command or commands is required"), nil
+		}
+
+		cmdArgs := []string{"exec"}
+		for _, c := range commands {
+			cmdArgs = append(cmdArgs, "--cmd", c)
+		}
+		if mode := request.GetString("mode", ""); mode != "" {
+			cmdArgs = append(cmdArgs, "--mode", mode)
+		}
+		if label := request.GetString("label", ""); label != "" {
+			cmdArgs = append(cmdArgs, "--label", label)
+		}
+		if dir := request.GetString("dir", ""); dir != "" {
+			cmdArgs = append(cmdArgs, "--dir", dir)
+		}
+		if ws := request.GetString("workspace", ""); ws != "" {
+			cmdArgs = append(cmdArgs, "--workspace", ws)
+		}
+		if request.GetBool("sync", false) {
+			cmdArgs = append(cmdArgs, "--sync")
+		}
+
+		return runTransientTool(ctx, srv, request, executor, cmdArgs, "command failed")
+	}
+}
+
+func addRunExecutableTool(srv *server.MCPServer, executor CommandExecutor) {
+	runExecutable := mcp.NewTool("run_executable",
+		mcp.WithDescription("Run a transient executable of ANY type from an inline definition, without saving a "+
+			".flow file. Use this when a single command (run_command) isn't enough — e.g. a `serial`/`parallel` "+
+			"batch of steps, an HTTP `request`, or a `render`/`launch`. The spec is the same shape as one entry "+
+			"under a flowfile's `executables:` list. Runs with workspace env/secrets and is recorded in history. "+
+			"Author non-trivial specs against the flowfile schema (see get_info schemaUrls.flowFile)."),
+		mcp.WithString("spec", mcp.Required(),
+			mcp.Description("A single executable definition as YAML or JSON (e.g. {\"verb\":\"run\",\"serial\":"+
+				"{\"execs\":[{\"cmd\":\"...\"},{\"cmd\":\"...\"}]}}).")),
+		mcp.WithString("label",
+			mcp.Description("Short human-readable label recorded in history (defaults to the executable's name).")),
+		mcp.WithString("workspace",
+			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
+				"the working directory, then the current workspace. Does not change the global current workspace.")),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+		mcp.WithOutputSchema[ExecutionOutput](),
+	)
+	runExecutable.Annotations = mcp.ToolAnnotation{
+		Title:        "Run a transient executable of any type",
+		ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
+	}
+	srv.AddTool(runExecutable, runExecutableHandler(srv, executor))
+}
+
+func runExecutableHandler(srv *server.MCPServer, executor CommandExecutor) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		spec, err := request.RequireString("spec")
+		if err != nil {
+			return toolError(ErrCodeInvalidInput, "spec is required"), nil
+		}
+		cmdArgs := []string{"exec", "--spec", spec}
+		if label := request.GetString("label", ""); label != "" {
+			cmdArgs = append(cmdArgs, "--label", label)
+		}
+		if ws := request.GetString("workspace", ""); ws != "" {
+			cmdArgs = append(cmdArgs, "--workspace", ws)
+		}
+		if request.GetBool("sync", false) {
+			cmdArgs = append(cmdArgs, "--sync")
+		}
+		return runTransientTool(ctx, srv, request, executor, cmdArgs, "executable failed")
+	}
+}
+
+// runTransientTool shells out to `flow exec` for the transient run tools (run_command, run_executable),
+// tagging the run with MCP provenance and returning a structured result.
+func runTransientTool(
+	ctx context.Context, srv *server.MCPServer, request mcp.CallToolRequest,
+	executor CommandExecutor, cmdArgs []string, failMsg string,
+) (*mcp.CallToolResult, error) {
+	var progressToken any
+	if request.Params.Meta != nil {
+		progressToken = request.Params.Meta.ProgressToken
+	}
+
+	// Tag the run as MCP-originated with the caller's identity.
+	ctx = withProvenance(ctx, mcpProvenance(ctx))
+
+	sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
+	output, err := executor.ExecuteContext(ctx, cmdArgs...)
+
+	if ctx.Err() != nil {
+		return toolError(ErrCodeCancelled, "execution was cancelled"), nil
+	}
+
+	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
+
+	if err != nil {
+		return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s: %s", failMsg, output)), nil
+	}
+
+	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
+
+	result := ExecutionOutput{Output: output}
+	jsonData, _ := json.Marshal(result)
+	return mcp.NewToolResultStructured(result, string(jsonData)), nil
 }
 
 func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
@@ -272,7 +422,7 @@ func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
 			Overwritten: overwrite,
 		}
 		jsonData, _ := json.Marshal(output)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(output, string(jsonData)), nil
 	}
 }
 

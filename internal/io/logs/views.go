@@ -31,19 +31,13 @@ func NewUnifiedLogView(
 	return unifiedListView(container, records, ds)
 }
 
-func statusText(exitCode int) string {
-	if exitCode == 0 {
-		return "ok"
-	}
-	return fmt.Sprintf("exit(%d)", exitCode)
-}
-
 func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds store.DataStore) tuikit.View {
 	columns := []views.TableColumn{
-		{Title: fmt.Sprintf("History (%d)", len(records)), Percentage: 35},
-		{Title: "Time", Percentage: 25},
-		{Title: "Duration", Percentage: 20},
-		{Title: "Status", Percentage: 20},
+		{Title: fmt.Sprintf("History (%d)", len(records)), Percentage: 30},
+		{Title: "Time", Percentage: 22},
+		{Title: "Duration", Percentage: 16},
+		{Title: "Status", Percentage: 16},
+		{Title: "Origin", Percentage: 16},
 	}
 	rows := make([]views.TableRow, 0, len(records))
 	for i, r := range records {
@@ -52,7 +46,8 @@ func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds st
 				r.Ref,
 				r.StartedAt.Format(time.RFC3339),
 				r.Duration.Round(time.Millisecond).String(),
-				statusText(r.ExitCode),
+				StatusText(r),
+				OriginText(r),
 				fmt.Sprintf("%d", i),
 			},
 		})
@@ -61,11 +56,11 @@ func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds st
 	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
 	table.SetOnSelect(func(_ int) error {
 		row := table.GetSelectedRow()
-		if row == nil || len(row.Data()) < 5 {
+		if row == nil || len(row.Data()) < 6 {
 			return fmt.Errorf("no record selected")
 		}
 		var idx int
-		if _, err := fmt.Sscanf(row.Data()[4], "%d", &idx); err != nil || idx >= len(records) {
+		if _, err := fmt.Sscanf(row.Data()[5], "%d", &idx); err != nil || idx >= len(records) {
 			return fmt.Errorf("invalid record")
 		}
 		return container.SetView(unifiedDetailView(container, records[idx], ds))
@@ -112,9 +107,26 @@ func unifiedDetailView(container *tuikit.Container, record UnifiedRecord, ds sto
 
 	metadata := []views.DetailField{
 		{Key: "Executable", Value: record.Ref},
-		{Key: "Time", Value: record.StartedAt.Format(time.RFC3339)},
-		{Key: "Duration", Value: record.Duration.Round(time.Millisecond).String()},
-		{Key: "Status", Value: statusText(record.ExitCode)},
+	}
+	if record.Label != "" {
+		metadata = append(metadata, views.DetailField{Key: "Label", Value: record.Label})
+	}
+	if record.Command != "" {
+		metadata = append(metadata, views.DetailField{Key: "Command", Value: record.Command})
+	}
+	metadata = append(metadata,
+		views.DetailField{Key: "Time", Value: record.StartedAt.Format(time.RFC3339)},
+		views.DetailField{Key: "Duration", Value: record.Duration.Round(time.Millisecond).String()},
+		views.DetailField{Key: "Status", Value: StatusText(record)},
+	)
+	if record.Source != "" {
+		metadata = append(metadata, views.DetailField{Key: "Source", Value: record.Source})
+	}
+	if record.ClientName != "" {
+		metadata = append(metadata, views.DetailField{Key: "Client", Value: record.ClientName})
+	}
+	if record.SessionID != "" {
+		metadata = append(metadata, views.DetailField{Key: "Session", Value: record.SessionID})
 	}
 	if record.Error != "" {
 		metadata = append(metadata, views.DetailField{Key: "Error", Value: record.Error})

@@ -140,6 +140,43 @@ var _ = Describe("BoltDataStore", func() {
 			Expect(ds.DeleteExecutionHistory("unknown/ns:exec")).To(Succeed())
 		})
 
+		It("should upsert records that share an ID (running -> terminal)", func() {
+			start := time.Now().UTC().Truncate(time.Millisecond)
+			Expect(ds.RecordExecution(store.ExecutionRecord{
+				ID:        "run-1",
+				Ref:       ref,
+				StartedAt: start,
+				Status:    store.RunRunning,
+				PID:       4242,
+			})).To(Succeed())
+
+			// Same ID upserts in place rather than appending a second record.
+			done := start.Add(time.Second)
+			Expect(ds.RecordExecution(store.ExecutionRecord{
+				ID:          "run-1",
+				Ref:         ref,
+				StartedAt:   start,
+				CompletedAt: &done,
+				Duration:    time.Second,
+				Status:      store.RunCompleted,
+			})).To(Succeed())
+
+			history, err := ds.GetExecutionHistory(ref, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(1))
+			Expect(history[0].Status).To(Equal(store.RunCompleted))
+			Expect(history[0].CompletedAt).NotTo(BeNil())
+		})
+
+		It("should append records without an ID (legacy behavior)", func() {
+			Expect(ds.RecordExecution(store.ExecutionRecord{Ref: ref})).To(Succeed())
+			Expect(ds.RecordExecution(store.ExecutionRecord{Ref: ref})).To(Succeed())
+
+			history, err := ds.GetExecutionHistory(ref, 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(history).To(HaveLen(2))
+		})
+
 		It("should maintain separate history per ref", func() {
 			ref2 := "ws/ns:other"
 			Expect(ds.RecordExecution(store.ExecutionRecord{Ref: ref, ExitCode: 0})).To(Succeed())

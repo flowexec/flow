@@ -32,7 +32,6 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 				"schema URLs for authoring .flow files, and the docs index (llms.txt). "+
 				"Call this at the start of a session to understand the project's automation setup, "+
 				"or whenever you need schema URLs to author or validate flow configuration."),
-		mcp.WithOutputSchema[FlowInfoOutput](),
 	)
 	getFlowInfo.Annotations = mcp.ToolAnnotation{
 		Title:           "Get flow information and current context",
@@ -43,10 +42,15 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 
 	getExecutionLogs := mcp.NewTool("get_execution_logs",
 		mcp.WithDescription("Retrieve output from recent flow executions. "+
-			"Use when debugging a failed run or when the user asks about the results of a previous task."),
+			"Use when debugging a failed run or when the user asks about the results of a previous task. "+
+			"Set `mine` to see only what this session has run so far."),
 		mcp.WithBoolean("last", mcp.Description("Get only the last execution logs")),
+		mcp.WithBoolean("mine", mcp.Description("Only return runs launched by this MCP session "+
+			"(useful for reviewing what you have run so far).")),
+		mcp.WithString("source", mcp.Description("Filter by run origin: 'cli' or 'mcp'.")),
+		mcp.WithString("session", mcp.Description("Filter to a single provenance session ID.")),
+		mcp.WithString("status", mcp.Description("Filter by status: running, completed, or failed.")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
-		mcp.WithOutputSchema[LogListOutput](),
 	)
 	getExecutionLogs.Annotations = mcp.ToolAnnotation{
 		Title:           "Get execution logs",
@@ -58,7 +62,6 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	sync := mcp.NewTool("sync_executables",
 		mcp.WithDescription("Refresh the cached workspace and executable state. "+
 			"Use when executables seem out of date or after adding new .flow files."),
-		mcp.WithOutputSchema[SyncOutput](),
 	)
 	sync.Annotations = mcp.ToolAnnotation{
 		Title:           "Sync executable and workspace state",
@@ -116,17 +119,39 @@ func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResu
 		return toolError(ErrCodeInternal, fmt.Sprintf("failed to marshal response: %s", err)), nil
 	}
 
-	return mcp.NewToolResultText(string(jsonData)), nil
+	return mcp.NewToolResultStructured(output, string(jsonData)), nil
 }
 
 func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
-	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		last := request.GetBool("last", false)
 		cursor := request.GetString("cursor", "")
+		source := request.GetString("source", "")
+		session := request.GetString("session", "")
+		status := request.GetString("status", "")
+
+		// `mine` scopes results to the calling MCP session's own runs so an agent can review
+		// exactly what it launched — resolved from the live session, not client-supplied.
+		if request.GetBool("mine", false) {
+			prov := mcpProvenance(ctx)
+			source = prov.Source
+			if prov.Session != "" {
+				session = prov.Session
+			}
+		}
 
 		cmdArgs := []string{"logs", "--output", "json"}
 		if last {
 			cmdArgs = append(cmdArgs, "--last")
+		}
+		if source != "" {
+			cmdArgs = append(cmdArgs, "--source", source)
+		}
+		if session != "" {
+			cmdArgs = append(cmdArgs, "--session", session)
+		}
+		if status != "" {
+			cmdArgs = append(cmdArgs, "--status", status)
 		}
 
 		output, err := executor.Execute(cmdArgs...)
@@ -146,7 +171,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 				TotalCount: 1,
 			}
 			jsonData, _ := json.Marshal(result)
-			return mcp.NewToolResultText(string(jsonData)), nil
+			return mcp.NewToolResultStructured(result, string(jsonData)), nil
 		}
 
 		// Parse the CLI list output and apply pagination.
@@ -168,7 +193,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			TotalCount: totalCount,
 		}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
 
@@ -195,6 +220,6 @@ func syncStateHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 
 		result := SyncOutput{Output: output}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }

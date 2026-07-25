@@ -16,7 +16,6 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	getWorkspace := mcp.NewTool("get_workspace",
 		mcp.WithString("workspace_name", mcp.Required(), mcp.Description("Registered workspace name")),
 		mcp.WithDescription("Get details about a registered flow workspaces"),
-		mcp.WithOutputSchema[WorkspaceOutput](),
 	)
 	getWorkspace.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a specific workspace by name",
@@ -28,7 +27,6 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	listWorkspaces := mcp.NewTool("list_workspaces",
 		mcp.WithDescription("List all registered flow workspaces"),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
-		mcp.WithOutputSchema[WorkspaceListOutput](),
 	)
 	listWorkspaces.Annotations = mcp.ToolAnnotation{
 		Title:           "List workspaces",
@@ -40,7 +38,6 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	switchWorkspace := mcp.NewTool("switch_workspace",
 		mcp.WithString("workspace_name", mcp.Required(), mcp.Description("Registered workspace name")),
 		mcp.WithDescription("Change the current workspace"),
-		mcp.WithOutputSchema[SwitchWorkspaceOutput](),
 	)
 	switchWorkspace.Annotations = mcp.ToolAnnotation{
 		Title:           "Change the current workspace",
@@ -52,7 +49,6 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	getWorkspaceConfig := mcp.NewTool("get_workspace_config",
 		mcp.WithString("name", mcp.Required(), mcp.Description("Workspace name")),
 		mcp.WithDescription("Get the full workspace configuration as structured JSON"),
-		mcp.WithOutputSchema[WorkspaceConfigOutput](),
 	)
 	getWorkspaceConfig.Annotations = mcp.ToolAnnotation{
 		Title:           "Get workspace configuration",
@@ -81,7 +77,7 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		}
 
 		jsonData, _ := json.Marshal(ws)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(ws, string(jsonData)), nil
 	}
 }
 
@@ -112,7 +108,7 @@ func listWorkspacesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			TotalCount: totalCount,
 		}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
 
@@ -132,7 +128,7 @@ func switchWorkspaceHandler(srv *server.MCPServer, executor CommandExecutor) ser
 
 		result := SwitchWorkspaceOutput{Output: output}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
 
@@ -176,6 +172,6 @@ func getWorkspaceConfigHandler() server.ToolHandlerFunc {
 		}
 
 		jsonData, _ := json.Marshal(output)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(output, string(jsonData)), nil
 	}
 }

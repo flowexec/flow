@@ -98,12 +98,18 @@ type ExecutionOutput struct {
 
 // LogEntry represents a single execution log record.
 type LogEntry struct {
-	Ref       string `json:"ref"`
-	StartedAt string `json:"startedAt"`
-	Duration  string `json:"duration"`
-	ExitCode  int    `json:"exitCode"`
-	Error     string `json:"error,omitempty"`
-	LogFile   string `json:"logFile,omitempty"`
+	Ref        string `json:"ref"`
+	StartedAt  string `json:"startedAt"`
+	Duration   string `json:"duration"`
+	Status     string `json:"status,omitempty"`
+	ExitCode   int    `json:"exitCode"`
+	Error      string `json:"error,omitempty"`
+	LogFile    string `json:"logFile,omitempty"`
+	Command    string `json:"command,omitempty"`
+	Label      string `json:"label,omitempty"`
+	Source     string `json:"source,omitempty"`
+	ClientName string `json:"clientName,omitempty"`
+	SessionID  string `json:"sessionId,omitempty"`
 }
 
 // LogListOutput is the output of the get_execution_logs tool.

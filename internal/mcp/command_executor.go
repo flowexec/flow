@@ -2,13 +2,50 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/pkg/errors"
+
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 const cliBinaryEnvKey = "FLOW_CLI_BINARY"
+
+// provenanceCtxKey keys the run provenance carried on a context into the flow subprocess env.
+type provenanceCtxKey struct{}
+
+// runProvenance identifies who/what is launching a run, propagated to the flow subprocess as env vars.
+type runProvenance struct {
+	Source  string
+	Client  string
+	Session string
+}
+
+// withProvenance returns a context carrying run provenance for ExecuteContext to forward as env vars.
+func withProvenance(ctx context.Context, p runProvenance) context.Context {
+	return context.WithValue(ctx, provenanceCtxKey{}, p)
+}
+
+func provenanceFromContext(ctx context.Context) (runProvenance, bool) {
+	p, ok := ctx.Value(provenanceCtxKey{}).(runProvenance)
+	return p, ok
+}
+
+// mcpProvenance builds run provenance for an MCP-originated command, capturing the calling client's
+// name and session ID from the MCP session (when the transport exposes them).
+func mcpProvenance(ctx context.Context) runProvenance {
+	prov := runProvenance{Source: store.RunSourceMCP}
+	if sess := server.ClientSessionFromContext(ctx); sess != nil {
+		prov.Session = sess.SessionID()
+		if withInfo, ok := sess.(server.SessionWithClientInfo); ok {
+			prov.Client = withInfo.GetClientInfo().Name
+		}
+	}
+	return prov
+}
 
 //go:generate mockgen -destination=mocks/command_executor.go -package=mocks . CommandExecutor
 type CommandExecutor interface {
@@ -34,6 +71,13 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		name = envName
 	}
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
+	if p, ok := provenanceFromContext(ctx); ok {
+		cmd.Env = append(os.Environ(),
+			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),
+			fmt.Sprintf("%s=%s", store.RunClientEnv, p.Client),
+			fmt.Sprintf("%s=%s", store.RunSessionEnv, p.Session),
+		)
+	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Only return an error if it's not an exit error.

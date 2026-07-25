@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,6 +27,17 @@ const (
 	BucketEnv = "FLOW_PROCESS_BUCKET"
 	// RootBucket is the name of the global (root) process bucket.
 	RootBucket = "root"
+
+	// RunSourceEnv, RunClientEnv, and RunSessionEnv carry execution provenance into a run.
+	// They are set by callers (e.g. the MCP server) on the flow subprocess so the resulting
+	// execution record can record who/what launched it.
+	RunSourceEnv  = "FLOW_RUN_SOURCE"
+	RunClientEnv  = "FLOW_RUN_CLIENT"
+	RunSessionEnv = "FLOW_RUN_SESSION"
+
+	// RunSourceCLI and RunSourceMCP are the recognized values for RunSourceEnv / ExecutionRecord.Source.
+	RunSourceCLI = "cli"
+	RunSourceMCP = "mcp"
 
 	openTimeout = 3 * time.Second
 )
@@ -63,15 +75,45 @@ type DataStore interface { //nolint:interfacebloat // single backing store with 
 	Close() error
 }
 
+// RunStatus represents the lifecycle state of an execution record.
+type RunStatus string
+
+const (
+	RunRunning   RunStatus = "running"
+	RunCompleted RunStatus = "completed"
+	RunFailed    RunStatus = "failed"
+)
+
 // ExecutionRecord holds metadata about a single executable run.
+//
+// A record is written once at run start with Status=running, then upserted (by ID) into its
+// terminal state at completion. Records without an ID (e.g. legacy history) are appended rather
+// than upserted, so an in-progress row is never shown for them.
 type ExecutionRecord struct {
-	Ref       string        `json:"ref"`
-	StartedAt time.Time     `json:"startedAt"`
-	Duration  time.Duration `json:"duration"`
-	ExitCode  int           `json:"exitCode"`
-	Error     string        `json:"error,omitempty"`
+	// ID is a stable per-run identifier (the run's log archive UUID) used as the upsert key.
+	// Empty for legacy records, which fall back to append-only storage.
+	ID          string        `json:"id,omitempty"`
+	Ref         string        `json:"ref"`
+	StartedAt   time.Time     `json:"startedAt"`
+	CompletedAt *time.Time    `json:"completedAt,omitempty"`
+	Duration    time.Duration `json:"duration"`
+	Status      RunStatus     `json:"status,omitempty"`
+	ExitCode    int           `json:"exitCode"`
+	Error       string        `json:"error,omitempty"`
+	// PID identifies the OS process for an in-progress run, used to detect stale "running" records.
+	PID int `json:"pid,omitempty"`
 	// LogArchiveID links this record to a tuikit log archive entry for cross-referencing.
 	LogArchiveID string `json:"logArchiveId,omitempty"`
+
+	// Command is the shell command for an ad-hoc (transient) run; empty for named executables.
+	Command string `json:"command,omitempty"`
+	// Label is a human-readable, self-documenting name for an ad-hoc run.
+	Label string `json:"label,omitempty"`
+
+	// Provenance: who/what launched the run.
+	Source     string `json:"source,omitempty"`     // "cli" | "mcp"
+	ClientName string `json:"clientName,omitempty"` // e.g. "claude", "cursor"
+	SessionID  string `json:"sessionId,omitempty"`
 }
 
 // BackgroundRunStatus represents the state of a background run.
@@ -224,6 +266,12 @@ func (s *BoltDataStore) RecordExecution(record ExecutionRecord) error {
 			if err != nil {
 				return fmt.Errorf("failed to open ref bucket for %s: %w", record.Ref, err)
 			}
+			// When the record carries a stable ID, key by it so the start-write (running) and
+			// completion-write (terminal) for the same run overwrite in place. Records without an
+			// ID (legacy) fall back to an auto-incrementing sequence key (append-only).
+			if record.ID != "" {
+				return refBucket.Put([]byte(record.ID), data)
+			}
 			seq, err := refBucket.NextSequence()
 			if err != nil {
 				return fmt.Errorf("failed to generate sequence for %s: %w", record.Ref, err)
@@ -247,24 +295,28 @@ func (s *BoltDataStore) GetExecutionHistory(ref string, limit int) ([]ExecutionR
 			if refBucket == nil {
 				return nil
 			}
-			var all [][]byte
-			_ = refBucket.ForEach(func(_, v []byte) error {
-				cp := make([]byte, len(v))
-				copy(cp, v)
-				all = append(all, cp)
+			var all []ExecutionRecord
+			if err := refBucket.ForEach(func(_, v []byte) error {
+				var rec ExecutionRecord
+				if err := json.Unmarshal(v, &rec); err != nil {
+					return fmt.Errorf("failed to unmarshal execution record: %w", err)
+				}
+				all = append(all, rec)
 				return nil
+			}); err != nil {
+				return err
+			}
+			// Keys are no longer strictly chronological (records may be keyed by run ID), so sort
+			// by start time and keep the most recent `limit` entries. Stable sort preserves
+			// insertion order for records that share a timestamp (e.g. legacy seq-keyed records).
+			sort.SliceStable(all, func(i, j int) bool {
+				return all[i].StartedAt.Before(all[j].StartedAt)
 			})
 			start := 0
 			if limit > 0 && len(all) > limit {
 				start = len(all) - limit
 			}
-			for _, v := range all[start:] {
-				var rec ExecutionRecord
-				if err := json.Unmarshal(v, &rec); err != nil {
-					return fmt.Errorf("failed to unmarshal execution record: %w", err)
-				}
-				records = append(records, rec)
-			}
+			records = append(records, all[start:]...)
 			return nil
 		})
 	})

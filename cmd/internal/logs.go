@@ -15,6 +15,7 @@ import (
 
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
 	"github.com/flowexec/flow/v2/internal/io/logs"
+	"github.com/flowexec/flow/v2/internal/utils/process"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
@@ -41,6 +42,9 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterWorkspaceFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterStatusFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogFilterSourceFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogFilterSessionFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogFilterClientFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterSinceFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterLimitFlag)
 
@@ -150,6 +154,9 @@ func buildRecordFilter(cmd *cobra.Command) logs.RecordFilter {
 
 	f.Workspace = flags.ValueFor[string](cmd, *flags.LogFilterWorkspaceFlag, false)
 	f.Status = strings.ToLower(flags.ValueFor[string](cmd, *flags.LogFilterStatusFlag, false))
+	f.Source = strings.ToLower(flags.ValueFor[string](cmd, *flags.LogFilterSourceFlag, false))
+	f.Session = flags.ValueFor[string](cmd, *flags.LogFilterSessionFlag, false)
+	f.Client = flags.ValueFor[string](cmd, *flags.LogFilterClientFlag, false)
 	f.Limit = flags.ValueFor[int](cmd, *flags.LogFilterLimitFlag, false)
 
 	sinceStr := flags.ValueFor[string](cmd, *flags.LogFilterSinceFlag, false)
@@ -241,7 +248,7 @@ func logsRunningFunc(ctx *context.Context, cmd *cobra.Command) {
 		if run.Status != store.BackgroundRunning {
 			continue
 		}
-		if !isProcessAlive(run.PID) {
+		if !process.Alive(run.PID) {
 			now := time.Now()
 			run.Status = store.BackgroundFailed
 			run.Error = "process exited unexpectedly"
@@ -343,7 +350,7 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 		}
 
 		// No new data — check if the process is still alive.
-		if !isProcessAlive(run.PID) {
+		if !process.Alive(run.PID) {
 			// Final drain.
 			for {
 				n, _ = f.ReadAt(buf, pos)
@@ -368,7 +375,10 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 const logsExamples = `
   flow logs                          # all history
   flow logs --last                   # most recent entry with full output
-  flow logs --status failed   # only failed runs
+  flow logs --status failed          # only failed runs
+  flow logs --status running         # only in-progress runs
+  flow logs --source mcp             # only runs launched by an AI/MCP client
+  flow logs --session <id>           # everything one agent session ran
   flow logs run build                # history for 'run build' executable
   flow logs --running                # list active background processes
 `

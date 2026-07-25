@@ -14,7 +14,9 @@ Open the interactive log viewer:
 flow logs
 ```
 
-This shows a table of recent executions with the executable reference, time, duration, and status. Press `Enter` to view full details and log output for any entry.
+This shows a table of recent executions with the executable reference, time, duration, status, and origin (which client launched the run). Press `Enter` to view full details and log output for any entry.
+
+Each record is **lifecycle-aware**: it appears as `running` the moment a run starts and updates to `completed` or `failed` when it finishes — so an in-progress foreground run is visible from another terminal, not just after it exits. (A run whose process dies unexpectedly is reconciled to `failed` the next time you view history.)
 
 **TUI keyboard shortcuts:**
 
@@ -57,13 +59,29 @@ Use flags to narrow results:
 
 ```shell
 flow logs -w my-workspace            # filter by workspace
-flow logs --status failure            # only failed executions
+flow logs --status failed             # running, completed, or failed
+flow logs --status running            # only in-progress runs
 flow logs --since 1h                  # last hour (supports d, h, m, s)
 flow logs --limit 5                   # at most 5 records
-flow logs -w api --status success --since 7d
+flow logs -w api --status completed --since 7d
 ```
 
+`--status` accepts the lifecycle values `running`, `completed`, and `failed` (`success`/`failure` still work as aliases).
+
 Filters work with all output modes (`--last`, `-o yaml`, TUI, etc.).
+
+### By Origin (Provenance)
+
+Every run records **where it came from**: `cli` for a run you started, or `mcp` for one launched by an AI assistant through the [MCP server](ai-tools.md) — along with the client name and session ID for MCP runs. This turns history into an audit trail of what an assistant did on your behalf.
+
+```shell
+flow logs --source mcp               # only runs launched by an AI client
+flow logs --session <id>             # everything one agent session ran
+flow logs --client cursor            # runs launched by a specific client
+flow logs --source mcp --status failed
+```
+
+An assistant connected over MCP can review its own runs the same way — see [AI Tools → Observability](ai-tools.md#observability).
 
 ## Background Execution
 
