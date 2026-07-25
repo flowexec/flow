@@ -18,6 +18,8 @@ Prefer running work **through flow** over a raw shell tool — you get the works
 
 Every run you launch is attributed to this session. `get_execution_logs` with `mine: true` returns only what *this* session has run — use it to review your own recent work; `source`/`session`/`status` filter more broadly.
 
+By default `get_execution_logs` returns only run **metadata** (ref, status, exitCode, error). To read the captured **output**, set `tail` (last N lines — best for debugging, since errors surface at the end), `grep` (a regex to pull just the matching lines out of a large log), or `content: true` (the whole log). Output is always byte-capped to protect the context window; `contentTruncated` in the response tells you when part of a log was omitted (widen with `tail`/`grep`/`max_bytes`, or open `logFile` directly). This reads the log live, so it also works on a **still-running** execution — you get a snapshot of what has been written so far.
+
 ## Notes
 
 - `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands. If the executable defines `args`, pass them in `args`; if it defines prompt `params`, pass them in `params` as an EnvKey→value map.

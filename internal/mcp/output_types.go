@@ -110,6 +110,14 @@ type LogEntry struct {
 	Source     string `json:"source,omitempty"`
 	ClientName string `json:"clientName,omitempty"`
 	SessionID  string `json:"sessionId,omitempty"`
+
+	// Content and its companions are populated only when log output is requested
+	// (via the tail/grep/content parameters). Content is sliced to the requested
+	// window; ContentTruncated reports whether any of the log was omitted.
+	Content              string `json:"content,omitempty"`
+	ContentTruncated     bool   `json:"contentTruncated,omitempty"`
+	ContentTotalLines    int    `json:"contentTotalLines,omitempty"`
+	ContentReturnedLines int    `json:"contentReturnedLines,omitempty"`
 }
 
 // LogListOutput is the output of the get_execution_logs tool.

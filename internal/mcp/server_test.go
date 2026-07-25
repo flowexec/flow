@@ -410,6 +410,41 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("should request content with the default byte cap when tail is set", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json", "--content", "--max-bytes", "50000", "--tail", "20").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{
+					"tail": 20,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should forward grep and clamp an oversized max_bytes", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json", "--content", "--max-bytes", "200000", "--grep", "error").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{
+					"grep":      "error",
+					"max_bytes": 999999,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should not request content when no content option is set", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{}))
+
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 
 		Context("sync_executables tool", func() {

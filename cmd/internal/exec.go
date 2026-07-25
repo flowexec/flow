@@ -129,9 +129,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
 
 	// Handle --background: spawn a detached child process and return immediately.
-	background := flags.ValueFor[bool](cmd, *flags.BackgroundFlag, false)
-	if background {
-		launchBackground(ctx, ref, verb, args)
+	if maybeLaunchBackground(ctx, cmd, ref) {
 		return
 	}
 
@@ -269,6 +267,9 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 		}
 	}
 	setTransientContext(ctx, cmd, e, dir)
+	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
+		return
+	}
 	runTransientExecutable(ctx, cmd, e, joined, label)
 }
 
@@ -276,6 +277,12 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 // --cmd, the spec can be any executable type (exec, serial, parallel, request, render, launch); it
 // is never written to disk but runs through the normal engine and is recorded in history.
 func execTransientSpec(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, spec string) {
+	// A detached background child inherits no stdin, so a spec piped via stdin can't be re-read.
+	if spec == "-" && flags.ValueFor[bool](cmd, *flags.BackgroundFlag, false) {
+		errhandler.HandleUsage(ctx, cmd, "--background cannot be combined with a --spec read from stdin ('-')")
+		return
+	}
+
 	content, err := resolveSpecContent(spec)
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
@@ -298,10 +305,27 @@ func execTransientSpec(ctx *context.Context, cmd *cobra.Command, verb executable
 	}
 
 	label := flags.ValueFor[string](cmd, *flags.LabelFlag, false)
+	// A spec may omit `name`; fall back to a ref-safe name derived from --label so history and
+	// the background-run record show a meaningful ref rather than an empty "verb ws/".
+	if e.Name == "" {
+		e.Name = transientSpecName(label)
+	}
 	if label == "" {
 		label = e.Name
 	}
+	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
+		return
+	}
 	runTransientExecutable(ctx, cmd, e, "", label)
+}
+
+// transientSpecName derives a ref-safe name for a --spec run that omitted `name`, preferring the
+// --label and falling back to a generic default.
+func transientSpecName(label string) string {
+	if slug := slugify(label); slug != "" {
+		return "spec-" + slug
+	}
+	return "spec"
 }
 
 // resolveSpecContent resolves a --spec value into raw definition content: '-' reads stdin,
@@ -472,17 +496,32 @@ func slugify(s string) string {
 	return out
 }
 
-// launchBackground spawns a detached flow process for the given executable and returns immediately.
-func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.Verb, args []string) {
+// maybeLaunchBackground spawns a detached child process for the run and returns true when it did,
+// signalling the caller to return without executing inline. It is a no-op (returns false) unless
+// --background is set and this process is not itself a background child — the latter guard prevents
+// the detached child, which re-runs the same command, from forking again forever.
+func maybeLaunchBackground(ctx *context.Context, cmd *cobra.Command, ref executable.Ref) bool {
+	if !flags.ValueFor[bool](cmd, *flags.BackgroundFlag, false) {
+		return false
+	}
+	if os.Getenv(backgroundRunIDEnv) != "" {
+		return false
+	}
+	launchBackground(ctx, ref)
+	return true
+}
+
+// launchBackground spawns a detached flow process for the current invocation and returns
+// immediately. The child re-runs this exact command (verb, args, and every flag) so ad-hoc
+// (--cmd), transient (--spec), and named executables all background identically.
+func launchBackground(ctx *context.Context, ref executable.Ref) {
 	runID := uuid.New().String()[:8]
 
-	// Build the child command: same verb + args. Stdout/stderr are set to nil so
-	// Go redirects them to /dev/null — terminal output is suppressed but the tuikit
-	// archive handler still writes to the log file normally.
-	childArgs := []string{string(verb)}
-	if len(args) > 0 {
-		childArgs = append(childArgs, args...)
-	}
+	// Reconstruct the child command from this process's own args, dropping only the background
+	// flag so the child runs inline. Stdout/stderr/stdin are nil so Go redirects them to
+	// /dev/null — terminal output is suppressed but the tuikit archive handler still writes to
+	// the log file normally.
+	childArgs := backgroundChildArgs(os.Args[1:])
 
 	flowBin, err := os.Executable()
 	if err != nil {
@@ -517,6 +556,32 @@ func launchBackground(ctx *context.Context, ref executable.Ref, verb executable.
 	_ = child.Process.Release()
 
 	logger.Log().Println(fmt.Sprintf("Started background run %s (PID %d) for %s", runID, run.PID, ref))
+}
+
+// backgroundChildArgs returns the CLI args for a detached child: the current process's args with
+// the --background/-b flag removed so the child executes inline instead of forking again. Both the
+// long and short forms are stripped, including the `--background=true` value form. Anything after a
+// `--` separator is passed through untouched so a passthrough arg to the target isn't mistaken for
+// the flag.
+func backgroundChildArgs(args []string) []string {
+	out := make([]string, 0, len(args))
+	passthrough := false
+	for _, a := range args {
+		if passthrough {
+			out = append(out, a)
+			continue
+		}
+		if a == "--" {
+			passthrough = true
+			out = append(out, a)
+			continue
+		}
+		if a == "--background" || a == "-b" || strings.HasPrefix(a, "--background=") {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 // linkBackgroundArchive eagerly writes the log archive path into the background run

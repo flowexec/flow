@@ -199,28 +199,42 @@ func getAllExecutionHistory(ds store.DataStore) ([]store.ExecutionRecord, error)
 	return all, nil
 }
 
-// buildArchiveIndex loads log archive entries from disk and indexes them by path for O(1) lookup.
-func buildArchiveIndex(logsDir string) map[string]tuikitIO.ArchiveEntry {
+// archiveIndex indexes log archive entries for O(1) lookup by both their on-disk
+// path and their archive ID, so records can be resolved by whichever they carry.
+type archiveIndex struct {
+	byPath map[string]tuikitIO.ArchiveEntry
+	byID   map[string]tuikitIO.ArchiveEntry
+}
+
+// buildArchiveIndex loads log archive entries from disk and indexes them by path and by ID.
+func buildArchiveIndex(logsDir string) archiveIndex {
+	idx := archiveIndex{
+		byPath: map[string]tuikitIO.ArchiveEntry{},
+		byID:   map[string]tuikitIO.ArchiveEntry{},
+	}
 	entries, err := tuikitIO.ListArchiveEntries(logsDir)
-	if err != nil || len(entries) == 0 {
-		return nil
+	if err != nil {
+		return idx
 	}
-	index := make(map[string]tuikitIO.ArchiveEntry, len(entries))
 	for _, e := range entries {
-		index[e.Path] = e
+		idx.byPath[e.Path] = e
+		idx.byID[e.ID] = e
 	}
-	return index
+	return idx
 }
 
 // joinRecords merges execution records with their log archive entries and sorts by StartedAt descending.
-func joinRecords(records []store.ExecutionRecord, archiveIndex map[string]tuikitIO.ArchiveEntry) []UnifiedRecord {
+func joinRecords(records []store.ExecutionRecord, idx archiveIndex) []UnifiedRecord {
 	unified := make([]UnifiedRecord, 0, len(records))
 	for _, r := range records {
 		ur := UnifiedRecord{ExecutionRecord: r}
-		if archiveIndex != nil {
-			if entry, ok := archiveIndex[r.LogArchiveID]; ok {
-				ur.LogEntry = &entry
-			}
+		if entry, ok := idx.byPath[r.LogArchiveID]; ok {
+			ur.LogEntry = &entry
+		} else if entry, ok := idx.byID[r.ID]; ok {
+			// In-progress records store only the archive ID — the resolved path is
+			// written on completion — so fall back to an ID match to make the live
+			// log file of a still-running execution readable.
+			ur.LogEntry = &entry
 		}
 		unified = append(unified, ur)
 	}

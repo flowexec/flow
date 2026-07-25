@@ -47,6 +47,10 @@ func RegisterLogsCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.LogFilterClientFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterSinceFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogFilterLimitFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogContentFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogTailFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogGrepFlag)
+	RegisterFlag(ctx, subCmd, *flags.LogMaxBytesFlag)
 
 	clearCmd := &cobra.Command{
 		Use:   "clear [ref]",
@@ -120,14 +124,30 @@ func logFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		return
 	}
 
+	contentOpts, includeContent := buildContentOptions(cmd)
+
 	if lastEntry {
 		if len(records) == 0 {
 			logger.Log().Fatalf("No execution history found")
 		}
-		logs.PrintLastRecord(outputFormat, records[0], ctx.StdOut())
+		logs.PrintLastRecord(outputFormat, records[0], ctx.StdOut(), contentOpts, includeContent)
 	} else {
-		logs.PrintRecords(outputFormat, records)
+		logs.PrintRecords(outputFormat, records, contentOpts, includeContent)
 	}
+}
+
+// buildContentOptions reads the log-content flags into a ContentOptions and reports whether
+// log output should be included in json/yaml output. Any of --tail/--grep/--max-bytes implies
+// content inclusion, matching their "implies --content" flag documentation.
+func buildContentOptions(cmd *cobra.Command) (logs.ContentOptions, bool) {
+	opts := logs.ContentOptions{
+		Tail:     flags.ValueFor[int](cmd, *flags.LogTailFlag, false),
+		Grep:     flags.ValueFor[string](cmd, *flags.LogGrepFlag, false),
+		MaxBytes: flags.ValueFor[int](cmd, *flags.LogMaxBytesFlag, false),
+	}
+	includeContent := flags.ValueFor[bool](cmd, *flags.LogContentFlag, false) ||
+		opts.Tail > 0 || opts.Grep != "" || opts.MaxBytes > 0
+	return opts, includeContent
 }
 
 // durationWithDays extends time.ParseDuration to support a "d" (day) suffix.
@@ -381,4 +401,6 @@ const logsExamples = `
   flow logs --session <id>           # everything one agent session ran
   flow logs run build                # history for 'run build' executable
   flow logs --running                # list active background processes
+  flow logs -o json --tail 50        # include the last 50 lines of each run's output
+  flow logs --last --grep ERROR      # last run, only lines matching /ERROR/
 `

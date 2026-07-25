@@ -248,6 +248,34 @@ var LogFilterLimitFlag = &Metadata{
 	Required: false,
 }
 
+var LogContentFlag = &Metadata{
+	Name:     "content",
+	Usage:    "Include each record's log output (json/yaml only; already shown for --last text output).",
+	Default:  false,
+	Required: false,
+}
+
+var LogTailFlag = &Metadata{
+	Name:     "tail",
+	Usage:    "Include only the last N lines of log output (implies --content).",
+	Default:  0,
+	Required: false,
+}
+
+var LogGrepFlag = &Metadata{
+	Name:     "grep",
+	Usage:    "Include only log lines matching this regular expression (implies --content).",
+	Default:  "",
+	Required: false,
+}
+
+var LogMaxBytesFlag = &Metadata{
+	Name:     "max-bytes",
+	Usage:    "Cap included log output to the last N bytes, keeping the tail (implies --content).",
+	Default:  0,
+	Required: false,
+}
+
 var TemplateWorkspaceFlag = &Metadata{
 	Name:      "workspace",
 	Shorthand: "w",
