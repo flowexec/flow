@@ -22,6 +22,8 @@ flow logs [ref] [flags]
   flow logs --session <id>           # everything one agent session ran
   flow logs run build                # history for 'run build' executable
   flow logs --running                # list active background processes
+  flow logs -o json --tail 50        # include the last 50 lines of each run's output
+  flow logs --last --grep ERROR      # last run, only lines matching /ERROR/
 
 ```
 
@@ -29,15 +31,19 @@ flow logs [ref] [flags]
 
 ```
       --client string      Filter history by the client that launched the run (e.g. 'claude', 'cursor').
+      --content            Include each record's log output (json/yaml only; already shown for --last text output).
+      --grep string        Include only log lines matching this regular expression (implies --content).
   -h, --help               help for logs
       --last               Print the last execution's logs
       --limit int          Maximum number of records to display.
+      --max-bytes int      Cap included log output to the last N bytes, keeping the tail (implies --content).
   -o, --output string      Output format. One of: yaml, json, or tui.
       --running            Show only active background processes.
       --session string     Filter history to a single provenance session ID (e.g. an AI agent session).
       --since string       Filter history to entries after a duration (e.g. 1h, 30m, 7d).
       --source string      Filter history by run origin: 'cli' or 'mcp'.
       --status string      Filter history by status (running, completed, or failed; success/failure accepted as aliases).
+      --tail int           Include only the last N lines of log output (implies --content).
   -w, --workspace string   Filter history by workspace name.
 ```
 

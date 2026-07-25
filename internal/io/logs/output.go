@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	tuikitIO "github.com/flowexec/tuikit/io"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/v2/internal/io/common"
@@ -25,13 +26,19 @@ type recordOutput struct {
 	Source     string `json:"source,omitempty"     yaml:"source,omitempty"`
 	ClientName string `json:"clientName,omitempty" yaml:"clientName,omitempty"`
 	SessionID  string `json:"sessionId,omitempty"  yaml:"sessionId,omitempty"`
+
+	// Content and its companions are populated only when log content is requested.
+	Content              string `json:"content,omitempty"              yaml:"content,omitempty"`
+	ContentTruncated     bool   `json:"contentTruncated,omitempty"     yaml:"contentTruncated,omitempty"`
+	ContentTotalLines    int    `json:"contentTotalLines,omitempty"    yaml:"contentTotalLines,omitempty"`
+	ContentReturnedLines int    `json:"contentReturnedLines,omitempty" yaml:"contentReturnedLines,omitempty"`
 }
 
 type recordsResponse struct {
 	History []recordOutput `json:"history" yaml:"history"`
 }
 
-func toRecordOutput(r UnifiedRecord) recordOutput {
+func toRecordOutput(r UnifiedRecord, content ContentOptions, includeContent bool) recordOutput {
 	out := recordOutput{
 		Ref:        r.Ref,
 		StartedAt:  r.StartedAt.Format(time.RFC3339),
@@ -47,15 +54,36 @@ func toRecordOutput(r UnifiedRecord) recordOutput {
 	}
 	if r.LogEntry != nil {
 		out.LogFile = r.LogEntry.Path
+		if includeContent {
+			applyContent(&out, *r.LogEntry, content)
+		}
 	}
 	return out
 }
 
+// applyContent reads the archive entry's output, slices it per opts, and populates the
+// content fields on out. Read/filter errors are non-fatal — the metadata still stands.
+func applyContent(out *recordOutput, entry tuikitIO.ArchiveEntry, opts ContentOptions) {
+	raw, err := entry.Read()
+	if err != nil {
+		return
+	}
+	res, err := ExtractContent(raw, opts)
+	if err != nil {
+		return
+	}
+	out.Content = res.Content
+	out.ContentTruncated = res.Truncated
+	out.ContentTotalLines = res.TotalLines
+	out.ContentReturnedLines = res.ReturnedLines
+}
+
 // PrintRecords outputs unified records in the specified format (json, yaml, or plain text).
-func PrintRecords(format string, records []UnifiedRecord) {
+// When includeContent is set, each record's log output is read and sliced per content.
+func PrintRecords(format string, records []UnifiedRecord, content ContentOptions, includeContent bool) {
 	out := make([]recordOutput, len(records))
 	for i, r := range records {
-		out[i] = toRecordOutput(r)
+		out[i] = toRecordOutput(r, content, includeContent)
 	}
 
 	switch common.NormalizeFormat(format) {
@@ -93,9 +121,13 @@ func printRecordsText(records []UnifiedRecord) {
 	}
 }
 
-// PrintLastRecord outputs metadata and log content for a single record.
-func PrintLastRecord(format string, record UnifiedRecord, stdout io.Writer) {
-	out := toRecordOutput(record)
+// PrintLastRecord outputs metadata and log content for a single record. In text mode the
+// full log is printed (sliced per content when any content option is set); in json/yaml the
+// content fields are populated only when includeContent is set.
+func PrintLastRecord(
+	format string, record UnifiedRecord, stdout io.Writer, content ContentOptions, includeContent bool,
+) {
+	out := toRecordOutput(record, content, includeContent)
 
 	switch common.NormalizeFormat(format) {
 	case common.JSONFormat:
@@ -136,11 +168,24 @@ func PrintLastRecord(format string, record UnifiedRecord, stdout io.Writer) {
 		_, _ = fmt.Fprintln(stdout)
 
 		if record.LogEntry != nil {
-			content, err := record.LogEntry.Read()
-			if err != nil {
+			raw, err := record.LogEntry.Read()
+			switch {
+			case err != nil:
 				_, _ = fmt.Fprintf(stdout, "error reading log: %v\n", err)
-			} else if content != "" {
-				_, _ = fmt.Fprint(stdout, content)
+			case raw != "":
+				res, extractErr := ExtractContent(raw, content)
+				if extractErr != nil {
+					_, _ = fmt.Fprintf(stdout, "error filtering log: %v\n", extractErr)
+					break
+				}
+				_, _ = fmt.Fprint(stdout, res.Content)
+				if res.Truncated {
+					_, _ = fmt.Fprintf(
+						stdout,
+						"\n... (showing %d of %d lines)\n",
+						res.ReturnedLines, res.TotalLines,
+					)
+				}
 			}
 		}
 	}
