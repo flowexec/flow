@@ -396,6 +396,20 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
 			})
+
+			It("should forward source/session/status filters to the CLI", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json", "--source", "mcp", "--session", "sess-1", "--status", "running").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{
+					"source":  "mcp",
+					"session": "sess-1",
+					"status":  "running",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 
 		Context("sync_executables tool", func() {

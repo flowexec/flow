@@ -17,6 +17,16 @@ func rec(ref string, exit int, at time.Time) logs.UnifiedRecord {
 	return logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{Ref: ref, ExitCode: exit, StartedAt: at}}
 }
 
+func provRec(ref, source, client, session string) logs.UnifiedRecord {
+	return logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{
+		Ref:        ref,
+		StartedAt:  time.Now(),
+		Source:     source,
+		ClientName: client,
+		SessionID:  session,
+	}}
+}
+
 func TestFilterRecords_EmptyFilterReturnsAll(t *testing.T) {
 	now := time.Now()
 	records := []logs.UnifiedRecord{
@@ -59,6 +69,67 @@ func TestFilterRecords_Status(t *testing.T) {
 	failures := logs.FilterRecords(records, logs.RecordFilter{Status: "failure"})
 	if len(failures) != 1 {
 		t.Fatalf("expected 1 failure record, got %d", len(failures))
+	}
+}
+
+func TestFilterRecords_StatusLifecycle(t *testing.T) {
+	now := time.Now()
+	running := logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{
+		Ref: "exec a/ns:live", Status: store.RunRunning, StartedAt: now,
+	}}
+	completed := rec("exec a/ns:done", 0, now) // canonical "completed"
+	failed := rec("exec a/ns:bad", 1, now)     // canonical "failed"
+	records := []logs.UnifiedRecord{running, completed, failed}
+
+	cases := map[string]string{
+		"running":   "exec a/ns:live",
+		"completed": "exec a/ns:done",
+		"success":   "exec a/ns:done", // alias
+		"failed":    "exec a/ns:bad",
+		"failure":   "exec a/ns:bad", // alias
+	}
+	for status, wantRef := range cases {
+		got := logs.FilterRecords(records, logs.RecordFilter{Status: status})
+		if len(got) != 1 {
+			t.Fatalf("status %q: expected 1 record, got %d", status, len(got))
+		}
+		if got[0].Ref != wantRef {
+			t.Fatalf("status %q: expected %q, got %q", status, wantRef, got[0].Ref)
+		}
+	}
+
+	// A running record must NOT be counted as a success (exit code is still zero).
+	if got := logs.FilterRecords(records, logs.RecordFilter{Status: "success"}); len(got) != 1 {
+		t.Fatalf("expected 'success' to exclude the running record, got %d", len(got))
+	}
+}
+
+func TestFilterRecords_Provenance(t *testing.T) {
+	records := []logs.UnifiedRecord{
+		provRec("exec a/ns:1", "mcp", "claude", "sess-1"),
+		provRec("exec a/ns:2", "mcp", "cursor", "sess-2"),
+		provRec("exec a/ns:3", "cli", "", ""),
+	}
+
+	if got := logs.FilterRecords(records, logs.RecordFilter{Source: "mcp"}); len(got) != 2 {
+		t.Fatalf("expected 2 mcp records, got %d", len(got))
+	}
+	// Source matching is case-insensitive.
+	if got := logs.FilterRecords(records, logs.RecordFilter{Source: "MCP"}); len(got) != 2 {
+		t.Fatalf("expected case-insensitive source match, got %d", len(got))
+	}
+	if got := logs.FilterRecords(records, logs.RecordFilter{Session: "sess-2"}); len(got) != 1 {
+		t.Fatalf("expected 1 record for session sess-2, got %d", len(got))
+	} else if got[0].Ref != "exec a/ns:2" {
+		t.Fatalf("unexpected record for session filter: %q", got[0].Ref)
+	}
+	if got := logs.FilterRecords(records, logs.RecordFilter{Client: "claude"}); len(got) != 1 {
+		t.Fatalf("expected 1 claude record, got %d", len(got))
+	}
+	// Session + source combine (AND).
+	got := logs.FilterRecords(records, logs.RecordFilter{Source: "mcp", Session: "sess-1"})
+	if len(got) != 1 || got[0].Ref != "exec a/ns:1" {
+		t.Fatalf("expected the mcp/sess-1 record only, got %+v", got)
 	}
 }
 

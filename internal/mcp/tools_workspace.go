@@ -38,7 +38,6 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	switchWorkspace := mcp.NewTool("switch_workspace",
 		mcp.WithString("workspace_name", mcp.Required(), mcp.Description("Registered workspace name")),
 		mcp.WithDescription("Change the current workspace"),
-		mcp.WithOutputSchema[SwitchWorkspaceOutput](),
 	)
 	switchWorkspace.Annotations = mcp.ToolAnnotation{
 		Title:           "Change the current workspace",

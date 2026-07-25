@@ -16,6 +16,8 @@ Prefer running work **through flow** over a raw shell tool — you get the works
 
 `run_command` and `run_executable` take an optional `workspace` to scope a run to another workspace's environment **without** changing the current workspace; otherwise the workspace is inferred from the run directory, then the current one.
 
+Every run you launch is attributed to this session. `get_execution_logs` with `mine: true` returns only what *this* session has run — use it to review your own recent work; `source`/`session`/`status` filter more broadly.
+
 ## Notes
 
 - `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands. If the executable defines `args`, pass them in `args`; if it defines prompt `params`, pass them in `params` as an EnvKey→value map.

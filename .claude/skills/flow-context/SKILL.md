@@ -22,3 +22,4 @@ Common refs: `test unit`, `test e2e`, `lint`, `validate`, `generate`, `build bin
 - Call `mcp__flow__get_info` at the start of a session, or when you need schema URLs to author `.flow` files.
 - Author or edit flow files with `mcp__flow__write_flowfile` (validates against the schema server-side) rather than writing YAML by hand.
 - Runs are scoped to the current workspace by default; `run_command`/`run_executable` accept an optional `workspace` to target another without switching the global current workspace.
+- To review what you've run this session, call `mcp__flow__get_execution_logs` with `mine: true`; `source`/`session`/`status` filter history more broadly (also `flow logs --source mcp --session <id>`).

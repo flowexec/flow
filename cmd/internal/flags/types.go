@@ -208,7 +208,28 @@ var LogFilterWorkspaceFlag = &Metadata{
 
 var LogFilterStatusFlag = &Metadata{
 	Name:     "status",
-	Usage:    "Filter history by status (success or failure).",
+	Usage:    "Filter history by status (running, completed, or failed; success/failure accepted as aliases).",
+	Default:  "",
+	Required: false,
+}
+
+var LogFilterSourceFlag = &Metadata{
+	Name:     "source",
+	Usage:    "Filter history by run origin: 'cli' or 'mcp'.",
+	Default:  "",
+	Required: false,
+}
+
+var LogFilterSessionFlag = &Metadata{
+	Name:     "session",
+	Usage:    "Filter history to a single provenance session ID (e.g. an AI agent session).",
+	Default:  "",
+	Required: false,
+}
+
+var LogFilterClientFlag = &Metadata{
+	Name:     "client",
+	Usage:    "Filter history by the client that launched the run (e.g. 'claude', 'cursor').",
 	Default:  "",
 	Required: false,
 }

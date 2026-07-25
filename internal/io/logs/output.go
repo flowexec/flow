@@ -83,11 +83,12 @@ func PrintRecords(format string, records []UnifiedRecord) {
 func printRecordsText(records []UnifiedRecord) {
 	for _, r := range records {
 		logger.Log().Println(fmt.Sprintf(
-			"%s  %-40s  %6s  %s",
+			"%s  %-40s  %6s  %-10s  %s",
 			r.StartedAt.Format(time.RFC3339),
 			r.Ref,
 			r.Duration.Round(time.Millisecond),
 			StatusText(r),
+			OriginText(r),
 		))
 	}
 }

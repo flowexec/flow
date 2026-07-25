@@ -33,10 +33,11 @@ func NewUnifiedLogView(
 
 func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds store.DataStore) tuikit.View {
 	columns := []views.TableColumn{
-		{Title: fmt.Sprintf("History (%d)", len(records)), Percentage: 35},
-		{Title: "Time", Percentage: 25},
-		{Title: "Duration", Percentage: 20},
-		{Title: "Status", Percentage: 20},
+		{Title: fmt.Sprintf("History (%d)", len(records)), Percentage: 30},
+		{Title: "Time", Percentage: 22},
+		{Title: "Duration", Percentage: 16},
+		{Title: "Status", Percentage: 16},
+		{Title: "Origin", Percentage: 16},
 	}
 	rows := make([]views.TableRow, 0, len(records))
 	for i, r := range records {
@@ -46,6 +47,7 @@ func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds st
 				r.StartedAt.Format(time.RFC3339),
 				r.Duration.Round(time.Millisecond).String(),
 				StatusText(r),
+				OriginText(r),
 				fmt.Sprintf("%d", i),
 			},
 		})
@@ -54,11 +56,11 @@ func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds st
 	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
 	table.SetOnSelect(func(_ int) error {
 		row := table.GetSelectedRow()
-		if row == nil || len(row.Data()) < 5 {
+		if row == nil || len(row.Data()) < 6 {
 			return fmt.Errorf("no record selected")
 		}
 		var idx int
-		if _, err := fmt.Sscanf(row.Data()[4], "%d", &idx); err != nil || idx >= len(records) {
+		if _, err := fmt.Sscanf(row.Data()[5], "%d", &idx); err != nil || idx >= len(records) {
 			return fmt.Errorf("invalid record")
 		}
 		return container.SetView(unifiedDetailView(container, records[idx], ds))
