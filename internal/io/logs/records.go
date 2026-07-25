@@ -1,12 +1,14 @@
 package logs
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
+	"github.com/flowexec/flow/v2/internal/utils/process"
 	"github.com/flowexec/flow/v2/pkg/store"
 )
 
@@ -71,6 +73,53 @@ type UnifiedRecord struct {
 	LogEntry *tuikitIO.ArchiveEntry
 }
 
+// CanonicalStatus returns the lifecycle status of a record (running/completed/failed), deriving it
+// from the exit code for legacy records that predate the Status field.
+func CanonicalStatus(r UnifiedRecord) store.RunStatus {
+	if r.Status != "" {
+		return r.Status
+	}
+	if r.ExitCode == 0 {
+		return store.RunCompleted
+	}
+	return store.RunFailed
+}
+
+// StatusText returns a human-readable status for display: "running" for in-progress runs,
+// otherwise "ok" or "exit(N)" derived from the exit code.
+func StatusText(r UnifiedRecord) string {
+	if CanonicalStatus(r) == store.RunRunning {
+		return "running"
+	}
+	if r.ExitCode == 0 {
+		return "ok"
+	}
+	return fmt.Sprintf("exit(%d)", r.ExitCode)
+}
+
+// reconcileStale marks any "running" record whose process is no longer alive as failed, persisting
+// the correction back to the store. This prevents an abnormally-terminated run from lingering as
+// active, mirroring the stale-detection done for background runs in `flow logs --running`.
+func reconcileStale(ds store.DataStore, records []store.ExecutionRecord) []store.ExecutionRecord {
+	for i := range records {
+		r := &records[i]
+		if r.Status != store.RunRunning || r.PID == 0 || process.Alive(r.PID) {
+			continue
+		}
+		now := time.Now()
+		r.Status = store.RunFailed
+		r.ExitCode = 1
+		r.CompletedAt = &now
+		if r.Error == "" {
+			r.Error = "process exited unexpectedly"
+		}
+		if ds != nil && r.ID != "" {
+			_ = ds.RecordExecution(*r)
+		}
+	}
+	return records
+}
+
 // LoadRecords retrieves all execution history from the data store, joined with any matching log archive entries.
 // If ds is nil, returns empty (log-only fallback is not supported without metadata).
 func LoadRecords(ds store.DataStore, logsDir string) ([]UnifiedRecord, error) {
@@ -82,6 +131,7 @@ func LoadRecords(ds store.DataStore, logsDir string) ([]UnifiedRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	records = reconcileStale(ds, records)
 
 	archiveIndex := buildArchiveIndex(logsDir)
 	return joinRecords(records, archiveIndex), nil
@@ -97,6 +147,7 @@ func LoadRecordsForRef(ds store.DataStore, logsDir string, ref string, limit int
 	if err != nil {
 		return nil, err
 	}
+	records = reconcileStale(ds, records)
 
 	archiveIndex := buildArchiveIndex(logsDir)
 	return joinRecords(records, archiveIndex), nil

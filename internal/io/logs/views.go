@@ -31,13 +31,6 @@ func NewUnifiedLogView(
 	return unifiedListView(container, records, ds)
 }
 
-func statusText(exitCode int) string {
-	if exitCode == 0 {
-		return "ok"
-	}
-	return fmt.Sprintf("exit(%d)", exitCode)
-}
-
 func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds store.DataStore) tuikit.View {
 	columns := []views.TableColumn{
 		{Title: fmt.Sprintf("History (%d)", len(records)), Percentage: 35},
@@ -52,7 +45,7 @@ func unifiedListView(container *tuikit.Container, records []UnifiedRecord, ds st
 				r.Ref,
 				r.StartedAt.Format(time.RFC3339),
 				r.Duration.Round(time.Millisecond).String(),
-				statusText(r.ExitCode),
+				StatusText(r),
 				fmt.Sprintf("%d", i),
 			},
 		})
@@ -112,9 +105,26 @@ func unifiedDetailView(container *tuikit.Container, record UnifiedRecord, ds sto
 
 	metadata := []views.DetailField{
 		{Key: "Executable", Value: record.Ref},
-		{Key: "Time", Value: record.StartedAt.Format(time.RFC3339)},
-		{Key: "Duration", Value: record.Duration.Round(time.Millisecond).String()},
-		{Key: "Status", Value: statusText(record.ExitCode)},
+	}
+	if record.Label != "" {
+		metadata = append(metadata, views.DetailField{Key: "Label", Value: record.Label})
+	}
+	if record.Command != "" {
+		metadata = append(metadata, views.DetailField{Key: "Command", Value: record.Command})
+	}
+	metadata = append(metadata,
+		views.DetailField{Key: "Time", Value: record.StartedAt.Format(time.RFC3339)},
+		views.DetailField{Key: "Duration", Value: record.Duration.Round(time.Millisecond).String()},
+		views.DetailField{Key: "Status", Value: StatusText(record)},
+	)
+	if record.Source != "" {
+		metadata = append(metadata, views.DetailField{Key: "Source", Value: record.Source})
+	}
+	if record.ClientName != "" {
+		metadata = append(metadata, views.DetailField{Key: "Client", Value: record.ClientName})
+	}
+	if record.SessionID != "" {
+		metadata = append(metadata, views.DetailField{Key: "Session", Value: record.SessionID})
 	}
 	if record.Error != "" {
 		metadata = append(metadata, views.DetailField{Key: "Error", Value: record.Error})

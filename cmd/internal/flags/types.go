@@ -286,6 +286,54 @@ var RunningFlag = &Metadata{
 	Required: false,
 }
 
+var CmdFlag = &Metadata{
+	Name: "cmd",
+	Usage: "Run an ad-hoc shell command through flow instead of a named executable. " +
+		"The command runs with the current workspace's environment and is recorded in `flow logs`. " +
+		"Repeat --cmd to run multiple commands in one invocation (see --mode).",
+	Default:  []string{},
+	Required: false,
+}
+
+var CmdModeFlag = &Metadata{
+	Name:     "mode",
+	Usage:    "How to run multiple --cmd commands: 'serial' (default) or 'parallel'.",
+	Default:  "serial",
+	Required: false,
+}
+
+var RunWorkspaceFlag = &Metadata{
+	Name: "workspace",
+	Usage: "Workspace whose environment the ad-hoc/transient run should use (only with --cmd or --spec). " +
+		"Defaults to the workspace containing the run directory, then the current workspace. " +
+		"Does not change the global current workspace.",
+	Default:  "",
+	Required: false,
+}
+
+var LabelFlag = &Metadata{
+	Name:     "label",
+	Usage:    "A short, human-readable label for an ad-hoc command (used in history). Only valid with --cmd.",
+	Default:  "",
+	Required: false,
+}
+
+var CmdDirFlag = &Metadata{
+	Name:     "dir",
+	Usage:    "Working directory for an ad-hoc command (defaults to the current directory). Only valid with --cmd.",
+	Default:  "",
+	Required: false,
+}
+
+var SpecFlag = &Metadata{
+	Name: "spec",
+	Usage: "Run a transient executable from an inline definition (any type: exec, serial, parallel, request, " +
+		"render, launch). Accepts inline YAML/JSON, '@path' to read a file, or '-' to read stdin. " +
+		"The executable is not saved to disk but is recorded in `flow logs`.",
+	Default:  "",
+	Required: false,
+}
+
 var ParameterValueFlag = &Metadata{
 	Name:      "param",
 	Shorthand: "p",

@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	stdio "io"
 	"os"
 	osExec "os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/views"
@@ -81,6 +83,12 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.ParameterValueFlag)
 	RegisterFlag(ctx, subCmd, *flags.LogModeFlag)
 	RegisterFlag(ctx, subCmd, *flags.BackgroundFlag)
+	RegisterFlag(ctx, subCmd, *flags.CmdFlag)
+	RegisterFlag(ctx, subCmd, *flags.CmdModeFlag)
+	RegisterFlag(ctx, subCmd, *flags.LabelFlag)
+	RegisterFlag(ctx, subCmd, *flags.CmdDirFlag)
+	RegisterFlag(ctx, subCmd, *flags.SpecFlag)
+	RegisterFlag(ctx, subCmd, *flags.RunWorkspaceFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -103,38 +111,22 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	var ref executable.Ref
-	if len(args) == 0 {
-		ref = context.ExpandRef(ctx, executable.NewRef("", verb))
-	} else {
-		idArg := args[0]
-		ref = context.ExpandRef(ctx, executable.NewRef(idArg, verb))
+	// Ad-hoc / transient modes: run something not resolved from the executable cache.
+	adhocCmds := flags.ValueFor[[]string](cmd, *flags.CmdFlag, false)
+	spec := flags.ValueFor[string](cmd, *flags.SpecFlag, false)
+	switch {
+	case len(adhocCmds) > 0 && spec != "":
+		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
+		return
+	case len(adhocCmds) > 0:
+		execAdHoc(ctx, cmd, verb, adhocCmds)
+		return
+	case spec != "":
+		execTransientSpec(ctx, cmd, verb, spec)
+		return
 	}
 
-	e, err := ctx.ExecutableCache.GetExecutableByRef(ref)
-	if err != nil && errors.Is(err, flowErrors.NewExecutableNotFoundError(ref.String())) {
-		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
-		if err := ctx.ExecutableCache.Update(); err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		e, err = ctx.ExecutableCache.GetExecutableByRef(ref)
-	}
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-
-	if err := e.Validate(); err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-
-	if ctx.CurrentWorkspace != nil && !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
-		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
-			"executable '%s' belongs to workspace '%s' and cannot be run from the current workspace '%s'",
-			ref,
-			e.Workspace(),
-			ctx.Config.CurrentWorkspace,
-		))
-	}
+	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
 
 	// Handle --background: spawn a detached child process and return immediately.
 	background := flags.ValueFor[bool](cmd, *flags.BackgroundFlag, false)
@@ -165,12 +157,15 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	startTime := time.Now()
+	prov := runProvenanceFromEnv()
+	recordRunStart(ctx, ref, startTime, prov, "", "")
+
 	eng := engine.NewExecEngine()
 	runErr := runner.Exec(ctx, e, eng, envMap, execArgs)
 	dur := time.Since(startTime)
 
 	cleanupProcessStore(ctx)
-	recordExecution(ctx, ref, startTime, dur, runErr)
+	recordExecution(ctx, ref, startTime, dur, runErr, prov, "", "")
 
 	// Update background run record if this is a child process.
 	if bgRunID != "" {
@@ -182,6 +177,299 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
+// cache on a miss and validating workspace membership. Fatal on any resolution/validation failure.
+func resolveExecutableForRun(
+	ctx *context.Context, cmd *cobra.Command, verb executable.Verb, args []string,
+) (*executable.Executable, executable.Ref) {
+	var ref executable.Ref
+	if len(args) == 0 {
+		ref = context.ExpandRef(ctx, executable.NewRef("", verb))
+	} else {
+		ref = context.ExpandRef(ctx, executable.NewRef(args[0], verb))
+	}
+
+	e, err := ctx.ExecutableCache.GetExecutableByRef(ref)
+	if err != nil && errors.Is(err, flowErrors.NewExecutableNotFoundError(ref.String())) {
+		logger.Log().Debugf("Executable %s not found in cache, syncing cache", ref)
+		if err := ctx.ExecutableCache.Update(); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		e, err = ctx.ExecutableCache.GetExecutableByRef(ref)
+	}
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+
+	if err := e.Validate(); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+
+	if ctx.CurrentWorkspace != nil && !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
+			"executable '%s' belongs to workspace '%s' and cannot be run from the current workspace '%s'",
+			ref,
+			e.Workspace(),
+			ctx.Config.CurrentWorkspace,
+		))
+	}
+	return e, ref
+}
+
+// execAdHoc runs one or more arbitrary shell commands through flow as a transient, in-memory
+// executable. Nothing is written to disk as a flowfile; the run flows through the normal engine
+// (workspace env, vault secrets, logging) and is recorded in history with the command text and an
+// optional label so it shows up in `flow logs` like a named executable. A single command becomes an
+// `exec` executable; multiple commands become a `serial` or `parallel` executable (per --mode).
+func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, commands []string) {
+	label := flags.ValueFor[string](cmd, *flags.LabelFlag, false)
+	dir := flags.ValueFor[string](cmd, *flags.CmdDirFlag, false)
+	if dir == "" {
+		if wd, err := os.Getwd(); err == nil {
+			dir = wd
+		}
+	}
+
+	// Default ad-hoc output to raw command output (Text mode routes stdout/stderr straight through
+	// without flow's timestamp/level/color decoration), so callers — especially agents via the MCP
+	// run_command tool — get the command's actual output. An explicit --log-mode still wins.
+	logMode := tuikitIO.Text
+	if lm := flags.ValueFor[string](cmd, *flags.LogModeFlag, false); lm != "" {
+		logMode = tuikitIO.LogMode(lm)
+	}
+
+	joined := strings.Join(commands, "\n")
+	e := &executable.Executable{
+		Verb:        verb,
+		Name:        adHocName(label, joined),
+		Description: label,
+	}
+	if len(commands) == 1 {
+		e.Exec = &executable.ExecExecutableType{
+			Cmd:     commands[0],
+			Dir:     executable.Directory(dir),
+			LogMode: logMode,
+		}
+	} else {
+		steps := make(executable.SerialRefConfigList, len(commands))
+		for i, c := range commands {
+			steps[i] = executable.SerialRefConfig{Cmd: c}
+		}
+		mode := flags.ValueFor[string](cmd, *flags.CmdModeFlag, false)
+		if mode == "parallel" {
+			pSteps := make(executable.ParallelRefConfigList, len(commands))
+			for i, c := range commands {
+				pSteps[i] = executable.ParallelRefConfig{Cmd: c}
+			}
+			e.Parallel = &executable.ParallelExecutableType{Execs: pSteps}
+		} else {
+			e.Serial = &executable.SerialExecutableType{Execs: steps}
+		}
+	}
+	setTransientContext(ctx, cmd, e, dir)
+	runTransientExecutable(ctx, cmd, e, joined, label)
+}
+
+// execTransientSpec runs a transient executable parsed from an inline definition (--spec). Unlike
+// --cmd, the spec can be any executable type (exec, serial, parallel, request, render, launch); it
+// is never written to disk but runs through the normal engine and is recorded in history.
+func execTransientSpec(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, spec string) {
+	content, err := resolveSpecContent(spec)
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+
+	e := &executable.Executable{}
+	if err := yaml.Unmarshal([]byte(content), e); err != nil {
+		errhandler.HandleUsage(ctx, cmd, "invalid executable spec: %v", err)
+		return
+	}
+	runDir, _ := os.Getwd()
+	setTransientContext(ctx, cmd, e, runDir)
+	e.SetDefaults()
+	if e.Verb == "" {
+		e.Verb = verb
+	}
+	if err := e.Validate(); err != nil {
+		errhandler.HandleUsage(ctx, cmd, "invalid executable spec: %v", err)
+		return
+	}
+
+	label := flags.ValueFor[string](cmd, *flags.LabelFlag, false)
+	if label == "" {
+		label = e.Name
+	}
+	runTransientExecutable(ctx, cmd, e, "", label)
+}
+
+// resolveSpecContent resolves a --spec value into raw definition content: '-' reads stdin,
+// a leading '@' reads the named file, and anything else is treated as inline content.
+func resolveSpecContent(spec string) (string, error) {
+	switch {
+	case spec == "-":
+		data, err := stdio.ReadAll(os.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("unable to read spec from stdin: %w", err)
+		}
+		return string(data), nil
+	case strings.HasPrefix(spec, "@"):
+		data, err := os.ReadFile(filepath.Clean(spec[1:]))
+		if err != nil {
+			return "", fmt.Errorf("unable to read spec file: %w", err)
+		}
+		return string(data), nil
+	default:
+		return spec, nil
+	}
+}
+
+// setTransientContext anchors a transient executable to a resolved workspace so it runs with that
+// workspace's environment (and secrets), even though it is not backed by a flowfile. The workspace
+// is resolved per-run (explicit --workspace, then the workspace containing runDir, then the global
+// current) WITHOUT ever mutating the global current workspace. When the resolved workspace differs
+// from the global current, a notice is emitted so the run's context is visible/auditable.
+func setTransientContext(ctx *context.Context, cmd *cobra.Command, e *executable.Executable, runDir string) {
+	wsName, wsPath := resolveRunWorkspace(ctx, cmd, runDir)
+
+	currentName := ""
+	if ctx.CurrentWorkspace != nil {
+		currentName = ctx.CurrentWorkspace.AssignedName()
+	}
+	if wsName != "" && wsName != currentName {
+		logger.Log().Infof("Running in workspace '%s' (current workspace is '%s')", wsName, currentName)
+	}
+
+	var flowFilePath string
+	if wsPath != "" {
+		flowFilePath = filepath.Join(wsPath, "flow.yaml")
+	}
+	e.SetContext(wsName, wsPath, ctx.Config.CurrentNamespace, flowFilePath)
+}
+
+// resolveRunWorkspace picks the workspace a transient run should use, in priority order:
+// an explicit --workspace flag, then the workspace whose location contains runDir (longest match),
+// then the global current workspace. It never changes the global current workspace.
+func resolveRunWorkspace(ctx *context.Context, cmd *cobra.Command, runDir string) (name, path string) {
+	wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
+	if err != nil {
+		logger.Log().Debugf("unable to load workspaces for transient run resolution: %v", err)
+	}
+
+	if explicit := flags.ValueFor[string](cmd, *flags.RunWorkspaceFlag, false); explicit != "" {
+		if ws := wsList.FindByName(explicit); ws != nil {
+			return ws.AssignedName(), ws.Location()
+		}
+		errhandler.HandleUsage(ctx, cmd, "unknown workspace %q", explicit)
+	}
+
+	if ws := workspaceForPath(wsList, runDir); ws != nil {
+		return ws.AssignedName(), ws.Location()
+	}
+
+	if ctx.CurrentWorkspace != nil {
+		return ctx.CurrentWorkspace.AssignedName(), ctx.CurrentWorkspace.Location()
+	}
+	return "", ""
+}
+
+// workspaceForPath returns the workspace whose location is the longest prefix of dir, or nil.
+func workspaceForPath(wsList workspace.WorkspaceList, dir string) *workspace.Workspace {
+	if dir == "" {
+		return nil
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		abs = dir
+	}
+	var best *workspace.Workspace
+	for _, ws := range wsList {
+		loc := ws.Location()
+		if loc == "" {
+			continue
+		}
+		if abs == loc || strings.HasPrefix(abs, loc+string(filepath.Separator)) {
+			if best == nil || len(loc) > len(best.Location()) {
+				best = ws
+			}
+		}
+	}
+	return best
+}
+
+// runTransientExecutable runs an already-constructed, in-memory executable through the normal engine
+// and records it in history with the given command/label provenance. Shared by --cmd and --spec.
+func runTransientExecutable(
+	ctx *context.Context, cmd *cobra.Command, e *executable.Executable, command, label string,
+) {
+	ref := e.Ref()
+
+	if ctx.DataStore != nil {
+		if err := ctx.DataStore.CreateProcessBucket(ref.String()); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		_ = os.Setenv(store.BucketEnv, ref.String())
+	}
+
+	envMap := buildExecEnv(ctx, cmd, e)
+
+	startTime := time.Now()
+	prov := runProvenanceFromEnv()
+	recordRunStart(ctx, ref, startTime, prov, command, label)
+
+	eng := engine.NewExecEngine()
+	runErr := runner.Exec(ctx, e, eng, envMap, nil)
+	dur := time.Since(startTime)
+
+	cleanupProcessStore(ctx)
+	recordExecution(ctx, ref, startTime, dur, runErr, prov, command, label)
+
+	if runErr != nil {
+		errhandler.HandleFatal(ctx, cmd, runErr)
+	}
+	logger.Log().Debug(fmt.Sprintf("transient executable completed: %s", ref), "Elapsed", dur.Round(time.Millisecond))
+	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// adHocName derives a short, ref-safe name for a transient command run, preferring the label and
+// falling back to the command's first token.
+func adHocName(label, command string) string {
+	base := label
+	if base == "" {
+		if fields := strings.Fields(command); len(fields) > 0 {
+			base = fields[0]
+		}
+	}
+	slug := slugify(base)
+	if slug == "" {
+		slug = "command"
+	}
+	return "adhoc-" + slug
+}
+
+// slugify reduces a string to lowercase alphanumerics separated by single dashes, capped at 40 chars.
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	var b strings.Builder
+	prevDash := false
+	for _, r := range s {
+		switch {
+		case (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'):
+			b.WriteRune(r)
+			prevDash = false
+		default:
+			if !prevDash && b.Len() > 0 {
+				b.WriteByte('-')
+				prevDash = true
+			}
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if len(out) > 40 {
+		out = strings.Trim(out[:40], "-")
+	}
+	return out
 }
 
 // launchBackground spawns a detached flow process for the given executable and returns immediately.
@@ -335,15 +623,76 @@ func cleanupProcessStore(ctx *context.Context) {
 	}
 }
 
-func recordExecution(ctx *context.Context, ref executable.Ref, startTime time.Time, dur time.Duration, runErr error) {
+// provenance bundles who/what launched a run, recorded on its execution record.
+type provenance struct {
+	source, client, session string
+}
+
+// runProvenanceFromEnv resolves run provenance from environment variables set by the caller
+// (e.g. the MCP server). Source defaults to "cli".
+func runProvenanceFromEnv() provenance {
+	source := os.Getenv(store.RunSourceEnv)
+	if source == "" {
+		source = store.RunSourceCLI
+	}
+	return provenance{
+		source:  source,
+		client:  os.Getenv(store.RunClientEnv),
+		session: os.Getenv(store.RunSessionEnv),
+	}
+}
+
+// recordRunStart writes an in-progress ("running") execution record before the run begins, so that
+// `flow logs` (from any process, via the shared store) can show the run as active. It is keyed by
+// the run's log archive ID so recordExecution can upsert it into its terminal state on completion.
+// No-op when there is no stable ID (legacy fallback: only the terminal record is written).
+// command/label are set for ad-hoc runs and empty for named executables.
+func recordRunStart(
+	ctx *context.Context, ref executable.Ref, startTime time.Time, prov provenance, command, label string,
+) {
+	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
+		return
+	}
 	record := store.ExecutionRecord{
-		Ref:       ref.String(),
-		StartedAt: startTime,
-		Duration:  dur,
+		ID:         ctx.LogArchiveID,
+		Ref:        ref.String(),
+		StartedAt:  startTime,
+		Status:     store.RunRunning,
+		PID:        os.Getpid(),
+		Source:     prov.source,
+		ClientName: prov.client,
+		SessionID:  prov.session,
+		Command:    command,
+		Label:      label,
+	}
+	if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
+		logger.Log().Debug("failed to record run start", "err", recErr)
+	}
+}
+
+func recordExecution(
+	ctx *context.Context, ref executable.Ref, startTime time.Time, dur time.Duration, runErr error,
+	prov provenance, command, label string,
+) {
+	now := time.Now()
+	record := store.ExecutionRecord{
+		ID:          ctx.LogArchiveID,
+		Ref:         ref.String(),
+		StartedAt:   startTime,
+		CompletedAt: &now,
+		Duration:    dur,
+		Status:      store.RunCompleted,
+		PID:         os.Getpid(),
+		Source:      prov.source,
+		ClientName:  prov.client,
+		SessionID:   prov.session,
+		Command:     command,
+		Label:       label,
 	}
 	if runErr != nil {
 		record.ExitCode = 1
 		record.Error = runErr.Error()
+		record.Status = store.RunFailed
 	}
 	if archivePath := findArchiveByID(ctx.LogArchiveID); archivePath != "" {
 		record.LogArchiveID = archivePath

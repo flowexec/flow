@@ -201,6 +201,50 @@ func TestLoadRecords_SkipsRefsThatErrorDuringHistoryLookup(t *testing.T) {
 	}
 }
 
+func TestStatusText(t *testing.T) {
+	running := logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{Status: store.RunRunning}}
+	if got := logs.StatusText(running); got != "running" {
+		t.Fatalf("expected 'running', got %q", got)
+	}
+	// Legacy records (no Status) derive from exit code.
+	if got := logs.StatusText(rec("x", 0, time.Now())); got != "ok" {
+		t.Fatalf("expected 'ok', got %q", got)
+	}
+	if got := logs.StatusText(rec("x", 2, time.Now())); got != "exit(2)" {
+		t.Fatalf("expected 'exit(2)', got %q", got)
+	}
+}
+
+func TestLoadRecords_ReconcilesStaleRunningRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ds := storeMocks.NewMockDataStore(ctrl)
+	now := time.Now()
+
+	// A "running" record whose process is no longer alive (an implausibly high PID).
+	ds.EXPECT().ListExecutionRefs().Return([]string{"one"}, nil)
+	ds.EXPECT().GetExecutionHistory("one", 10).Return([]store.ExecutionRecord{
+		{ID: "run-1", Ref: "one", StartedAt: now, Status: store.RunRunning, PID: 2_000_000_000},
+	}, nil)
+	// The stale record is persisted back as failed.
+	ds.EXPECT().RecordExecution(gomock.Any()).DoAndReturn(func(r store.ExecutionRecord) error {
+		if r.Status != store.RunFailed {
+			t.Fatalf("expected stale record persisted as failed, got %q", r.Status)
+		}
+		return nil
+	})
+
+	got, err := logs.LoadRecords(ds, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(got))
+	}
+	if logs.StatusText(got[0]) == "running" {
+		t.Fatalf("expected stale record to no longer render as running")
+	}
+}
+
 func TestLoadRecordsForRef_UsesGivenRefAndLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ds := storeMocks.NewMockDataStore(ctrl)

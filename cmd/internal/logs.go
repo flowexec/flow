@@ -15,6 +15,7 @@ import (
 
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
 	"github.com/flowexec/flow/v2/internal/io/logs"
+	"github.com/flowexec/flow/v2/internal/utils/process"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
@@ -241,7 +242,7 @@ func logsRunningFunc(ctx *context.Context, cmd *cobra.Command) {
 		if run.Status != store.BackgroundRunning {
 			continue
 		}
-		if !isProcessAlive(run.PID) {
+		if !process.Alive(run.PID) {
 			now := time.Now()
 			run.Status = store.BackgroundFailed
 			run.Error = "process exited unexpectedly"
@@ -343,7 +344,7 @@ func logsAttachFunc(ctx *context.Context, runID string) {
 		}
 
 		// No new data — check if the process is still alive.
-		if !isProcessAlive(run.PID) {
+		if !process.Alive(run.PID) {
 			// Final drain.
 			for {
 				n, _ = f.ReadAt(buf, pos)

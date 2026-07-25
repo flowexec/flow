@@ -13,12 +13,18 @@ import (
 )
 
 type recordOutput struct {
-	Ref       string `json:"ref"               yaml:"ref"`
-	StartedAt string `json:"startedAt"         yaml:"startedAt"`
-	Duration  string `json:"duration"          yaml:"duration"`
-	ExitCode  int    `json:"exitCode"          yaml:"exitCode"`
-	Error     string `json:"error,omitempty"   yaml:"error,omitempty"`
-	LogFile   string `json:"logFile,omitempty" yaml:"logFile,omitempty"`
+	Ref        string `json:"ref"                  yaml:"ref"`
+	StartedAt  string `json:"startedAt"            yaml:"startedAt"`
+	Duration   string `json:"duration"             yaml:"duration"`
+	Status     string `json:"status"               yaml:"status"`
+	ExitCode   int    `json:"exitCode"             yaml:"exitCode"`
+	Error      string `json:"error,omitempty"      yaml:"error,omitempty"`
+	LogFile    string `json:"logFile,omitempty"    yaml:"logFile,omitempty"`
+	Command    string `json:"command,omitempty"    yaml:"command,omitempty"`
+	Label      string `json:"label,omitempty"      yaml:"label,omitempty"`
+	Source     string `json:"source,omitempty"     yaml:"source,omitempty"`
+	ClientName string `json:"clientName,omitempty" yaml:"clientName,omitempty"`
+	SessionID  string `json:"sessionId,omitempty"  yaml:"sessionId,omitempty"`
 }
 
 type recordsResponse struct {
@@ -27,11 +33,17 @@ type recordsResponse struct {
 
 func toRecordOutput(r UnifiedRecord) recordOutput {
 	out := recordOutput{
-		Ref:       r.Ref,
-		StartedAt: r.StartedAt.Format(time.RFC3339),
-		Duration:  r.Duration.Round(time.Millisecond).String(),
-		ExitCode:  r.ExitCode,
-		Error:     r.Error,
+		Ref:        r.Ref,
+		StartedAt:  r.StartedAt.Format(time.RFC3339),
+		Duration:   r.Duration.Round(time.Millisecond).String(),
+		Status:     string(CanonicalStatus(r)),
+		ExitCode:   r.ExitCode,
+		Error:      r.Error,
+		Command:    r.Command,
+		Label:      r.Label,
+		Source:     r.Source,
+		ClientName: r.ClientName,
+		SessionID:  r.SessionID,
 	}
 	if r.LogEntry != nil {
 		out.LogFile = r.LogEntry.Path
@@ -70,16 +82,12 @@ func PrintRecords(format string, records []UnifiedRecord) {
 
 func printRecordsText(records []UnifiedRecord) {
 	for _, r := range records {
-		status := "ok"
-		if r.ExitCode != 0 {
-			status = fmt.Sprintf("exit(%d)", r.ExitCode)
-		}
 		logger.Log().Println(fmt.Sprintf(
 			"%s  %-40s  %6s  %s",
 			r.StartedAt.Format(time.RFC3339),
 			r.Ref,
 			r.Duration.Round(time.Millisecond),
-			status,
+			StatusText(r),
 		))
 	}
 }
@@ -102,15 +110,25 @@ func PrintLastRecord(format string, record UnifiedRecord, stdout io.Writer) {
 		}
 		_, _ = fmt.Fprint(stdout, string(data))
 	default:
-		status := "ok"
-		if record.ExitCode != 0 {
-			status = fmt.Sprintf("exit(%d)", record.ExitCode)
-		}
-
 		_, _ = fmt.Fprintf(stdout, "Executable: %s\n", record.Ref)
+		if record.Label != "" {
+			_, _ = fmt.Fprintf(stdout, "Label:      %s\n", record.Label)
+		}
+		if record.Command != "" {
+			_, _ = fmt.Fprintf(stdout, "Command:    %s\n", record.Command)
+		}
 		_, _ = fmt.Fprintf(stdout, "Time:       %s\n", record.StartedAt.Format(time.RFC3339))
 		_, _ = fmt.Fprintf(stdout, "Duration:   %s\n", record.Duration.Round(time.Millisecond))
-		_, _ = fmt.Fprintf(stdout, "Status:     %s\n", status)
+		_, _ = fmt.Fprintf(stdout, "Status:     %s\n", StatusText(record))
+		if record.Source != "" {
+			_, _ = fmt.Fprintf(stdout, "Source:     %s\n", record.Source)
+		}
+		if record.ClientName != "" {
+			_, _ = fmt.Fprintf(stdout, "Client:     %s\n", record.ClientName)
+		}
+		if record.SessionID != "" {
+			_, _ = fmt.Fprintf(stdout, "Session:    %s\n", record.SessionID)
+		}
 		if record.Error != "" {
 			_, _ = fmt.Fprintf(stdout, "Error:      %s\n", record.Error)
 		}

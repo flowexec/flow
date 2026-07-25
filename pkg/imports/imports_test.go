@@ -43,7 +43,7 @@ var _ = Describe("ExecutablesFromImports", func() {
 
 		result, err := imports.ExecutablesFromImports("ws", ff)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(len(result)).To(BeNumerically(">", 0))
+		Expect(result).ToNot(BeEmpty())
 		for _, e := range result {
 			Expect(e.Exec).ToNot(BeNil())
 		}
