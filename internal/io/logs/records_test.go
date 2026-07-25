@@ -198,11 +198,12 @@ func TestLoadRecords_SortsResultsByStartedAtDescending(t *testing.T) {
 	t2 := time.Now().Add(-1 * time.Hour)
 	t3 := time.Now()
 
-	ds.EXPECT().ListExecutionRefs().Return([]string{"one"}, nil)
-	ds.EXPECT().GetExecutionHistory("one", 10).Return([]store.ExecutionRecord{
-		{Ref: "a", StartedAt: t1},
-		{Ref: "b", StartedAt: t3},
-		{Ref: "c", StartedAt: t2},
+	ds.EXPECT().GetAllExecutionHistory(10).Return(map[string][]store.ExecutionRecord{
+		"one": {
+			{Ref: "a", StartedAt: t1},
+			{Ref: "b", StartedAt: t3},
+			{Ref: "c", StartedAt: t2},
+		},
 	}, nil)
 
 	got, err := logs.LoadRecords(ds, "")
@@ -240,11 +241,11 @@ func TestLoadRecordsForRef_NilDataStoreReturnsEmpty(t *testing.T) {
 	}
 }
 
-func TestLoadRecords_PropagatesListRefsError(t *testing.T) {
+func TestLoadRecords_PropagatesHistoryError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ds := storeMocks.NewMockDataStore(ctrl)
 	wantErr := errors.New("boom")
-	ds.EXPECT().ListExecutionRefs().Return(nil, wantErr)
+	ds.EXPECT().GetAllExecutionHistory(10).Return(nil, wantErr)
 
 	_, err := logs.LoadRecords(ds, "")
 	if !errors.Is(err, wantErr) {
@@ -252,23 +253,26 @@ func TestLoadRecords_PropagatesListRefsError(t *testing.T) {
 	}
 }
 
-func TestLoadRecords_SkipsRefsThatErrorDuringHistoryLookup(t *testing.T) {
+func TestLoadRecords_AggregatesAcrossRefs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ds := storeMocks.NewMockDataStore(ctrl)
 	now := time.Now()
 
-	ds.EXPECT().ListExecutionRefs().Return([]string{"good", "bad"}, nil)
-	ds.EXPECT().GetExecutionHistory("good", 10).Return([]store.ExecutionRecord{
-		{Ref: "good", StartedAt: now},
+	ds.EXPECT().GetAllExecutionHistory(10).Return(map[string][]store.ExecutionRecord{
+		"a": {{Ref: "a", StartedAt: now.Add(-time.Hour)}},
+		"b": {{Ref: "b", StartedAt: now}},
 	}, nil)
-	ds.EXPECT().GetExecutionHistory("bad", 10).Return(nil, errors.New("history error"))
 
 	got, err := logs.LoadRecords(ds, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != 1 || got[0].Ref != "good" {
-		t.Fatalf("expected only the 'good' record to survive; got %+v", got)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 aggregated records, got %d", len(got))
+	}
+	// Sorted by StartedAt descending, so the most recent ('b') comes first.
+	if got[0].Ref != "b" || got[1].Ref != "a" {
+		t.Fatalf("expected descending order b,a; got %s,%s", got[0].Ref, got[1].Ref)
 	}
 }
 
@@ -292,9 +296,8 @@ func TestLoadRecords_ReconcilesStaleRunningRecord(t *testing.T) {
 	now := time.Now()
 
 	// A "running" record whose process is no longer alive (an implausibly high PID).
-	ds.EXPECT().ListExecutionRefs().Return([]string{"one"}, nil)
-	ds.EXPECT().GetExecutionHistory("one", 10).Return([]store.ExecutionRecord{
-		{ID: "run-1", Ref: "one", StartedAt: now, Status: store.RunRunning, PID: 2_000_000_000},
+	ds.EXPECT().GetAllExecutionHistory(10).Return(map[string][]store.ExecutionRecord{
+		"one": {{ID: "run-1", Ref: "one", StartedAt: now, Status: store.RunRunning, PID: 2_000_000_000}},
 	}, nil)
 	// The stale record is persisted back as failed.
 	ds.EXPECT().RecordExecution(gomock.Any()).DoAndReturn(func(r store.ExecutionRecord) error {

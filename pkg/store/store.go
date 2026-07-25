@@ -62,6 +62,14 @@ type DataStore interface { //nolint:interfacebloat // single backing store with 
 	ListBackgroundRuns() ([]BackgroundRun, error)
 	DeleteBackgroundRun(id string) error
 
+	// Bulk reads fetch many entries in a single transaction (one file-lock acquisition),
+	// keyed by their identifier with missing entries omitted. Prefer these over looping the
+	// single-key readers when several entries are needed at once. limit applies per key.
+	GetCacheEntries(keys []string) (map[string][]byte, error)
+	GetExecutionHistories(refs []string, limit int) (map[string][]ExecutionRecord, error)
+	GetAllExecutionHistory(limitPerRef int) (map[string][]ExecutionRecord, error)
+	GetBackgroundRuns(ids []string) (map[string]BackgroundRun, error)
+
 	// Process env var management (per-execution scoped key-value storage).
 	// bucketID identifies the execution scope; use EnvironmentBucket() to get the current scope.
 	CreateProcessBucket(id string) error
@@ -237,6 +245,29 @@ func (s *BoltDataStore) GetCacheEntry(key string) ([]byte, error) {
 	return value, err
 }
 
+func (s *BoltDataStore) GetCacheEntries(keys []string) (map[string][]byte, error) {
+	out := make(map[string][]byte, len(keys))
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(cacheBucket))
+			if b == nil {
+				return nil
+			}
+			for _, key := range keys {
+				v := b.Get([]byte(key))
+				if v == nil {
+					continue
+				}
+				buf := make([]byte, len(v))
+				copy(buf, v)
+				out[key] = buf
+			}
+			return nil
+		})
+	})
+	return out, err
+}
+
 func (s *BoltDataStore) DeleteCacheEntry(key string) error {
 	return s.open(func(db *bolt.DB) error {
 		return db.Update(func(tx *bolt.Tx) error {
@@ -283,6 +314,30 @@ func (s *BoltDataStore) RecordExecution(record ExecutionRecord) error {
 	})
 }
 
+// collectRecords reads every record from a ref sub-bucket, sorts by start time (keys may be run
+// IDs rather than chronological sequence numbers), and returns at most `limit` most-recent
+// entries (limit <= 0 returns all). The sort is stable so same-timestamp records keep insertion order.
+func collectRecords(refBucket *bolt.Bucket, limit int) ([]ExecutionRecord, error) {
+	var all []ExecutionRecord
+	if err := refBucket.ForEach(func(_, v []byte) error {
+		var rec ExecutionRecord
+		if err := json.Unmarshal(v, &rec); err != nil {
+			return fmt.Errorf("failed to unmarshal execution record: %w", err)
+		}
+		all = append(all, rec)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	sort.SliceStable(all, func(i, j int) bool {
+		return all[i].StartedAt.Before(all[j].StartedAt)
+	})
+	if limit > 0 && len(all) > limit {
+		all = all[len(all)-limit:]
+	}
+	return all, nil
+}
+
 func (s *BoltDataStore) GetExecutionHistory(ref string, limit int) ([]ExecutionRecord, error) {
 	var records []ExecutionRecord
 	err := s.open(func(db *bolt.DB) error {
@@ -295,32 +350,72 @@ func (s *BoltDataStore) GetExecutionHistory(ref string, limit int) ([]ExecutionR
 			if refBucket == nil {
 				return nil
 			}
-			var all []ExecutionRecord
-			if err := refBucket.ForEach(func(_, v []byte) error {
-				var rec ExecutionRecord
-				if err := json.Unmarshal(v, &rec); err != nil {
-					return fmt.Errorf("failed to unmarshal execution record: %w", err)
-				}
-				all = append(all, rec)
-				return nil
-			}); err != nil {
+			recs, err := collectRecords(refBucket, limit)
+			if err != nil {
 				return err
 			}
-			// Keys are no longer strictly chronological (records may be keyed by run ID), so sort
-			// by start time and keep the most recent `limit` entries. Stable sort preserves
-			// insertion order for records that share a timestamp (e.g. legacy seq-keyed records).
-			sort.SliceStable(all, func(i, j int) bool {
-				return all[i].StartedAt.Before(all[j].StartedAt)
-			})
-			start := 0
-			if limit > 0 && len(all) > limit {
-				start = len(all) - limit
-			}
-			records = append(records, all[start:]...)
+			records = recs
 			return nil
 		})
 	})
 	return records, err
+}
+
+func (s *BoltDataStore) GetExecutionHistories(refs []string, limit int) (map[string][]ExecutionRecord, error) {
+	out := make(map[string][]ExecutionRecord, len(refs))
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(historyBucket))
+			if parent == nil {
+				return nil
+			}
+			for _, ref := range refs {
+				refBucket := parent.Bucket([]byte(ref))
+				if refBucket == nil {
+					continue
+				}
+				recs, err := collectRecords(refBucket, limit)
+				if err != nil {
+					return err
+				}
+				if len(recs) > 0 {
+					out[ref] = recs
+				}
+			}
+			return nil
+		})
+	})
+	return out, err
+}
+
+func (s *BoltDataStore) GetAllExecutionHistory(limitPerRef int) (map[string][]ExecutionRecord, error) {
+	out := make(map[string][]ExecutionRecord)
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			parent := tx.Bucket([]byte(historyBucket))
+			if parent == nil {
+				return nil
+			}
+			return parent.ForEach(func(k, v []byte) error {
+				if v != nil { // key-value pair, not a ref sub-bucket
+					return nil
+				}
+				refBucket := parent.Bucket(k)
+				if refBucket == nil {
+					return nil
+				}
+				recs, err := collectRecords(refBucket, limitPerRef)
+				if err != nil {
+					return err
+				}
+				if len(recs) > 0 {
+					out[string(k)] = recs
+				}
+				return nil
+			})
+		})
+	})
+	return out, err
 }
 
 func (s *BoltDataStore) ListExecutionRefs() ([]string, error) {
@@ -553,6 +648,31 @@ func (s *BoltDataStore) GetBackgroundRun(id string) (BackgroundRun, error) {
 		})
 	})
 	return run, err
+}
+
+func (s *BoltDataStore) GetBackgroundRuns(ids []string) (map[string]BackgroundRun, error) {
+	out := make(map[string]BackgroundRun, len(ids))
+	err := s.open(func(db *bolt.DB) error {
+		return db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(backgroundBucketName))
+			if b == nil {
+				return nil
+			}
+			for _, id := range ids {
+				v := b.Get([]byte(id))
+				if v == nil {
+					continue
+				}
+				var run BackgroundRun
+				if err := json.Unmarshal(v, &run); err != nil {
+					return fmt.Errorf("failed to unmarshal background run %s: %w", id, err)
+				}
+				out[id] = run
+			}
+			return nil
+		})
+	})
+	return out, err
 }
 
 func (s *BoltDataStore) ListBackgroundRuns() ([]BackgroundRun, error) {

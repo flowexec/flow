@@ -185,18 +185,15 @@ func LoadRecordsForRef(ds store.DataStore, logsDir string, ref string, limit int
 	return joinRecords(records, archiveIndex), nil
 }
 
-// getAllExecutionHistory retrieves recent history across all refs, up to 10 records per ref.
+// getAllExecutionHistory retrieves recent history across all refs, up to 10 records per ref,
+// in a single read transaction (one file-lock acquisition) rather than a per-ref N+1 sweep.
 func getAllExecutionHistory(ds store.DataStore) ([]store.ExecutionRecord, error) {
-	refs, err := ds.ListExecutionRefs()
+	byRef, err := ds.GetAllExecutionHistory(10)
 	if err != nil {
 		return nil, err
 	}
 	var all []store.ExecutionRecord
-	for _, ref := range refs {
-		records, err := ds.GetExecutionHistory(ref, 10)
-		if err != nil {
-			continue
-		}
+	for _, records := range byRef {
 		all = append(all, records...)
 	}
 	return all, nil
