@@ -1,81 +1,23 @@
 # Flow MCP Server Instructions
 
-You are connected to a Flow CLI automation platform via MCP. Flow is a versatile local automation platform that helps 
-users organize and execute ANY type of workflow through declarative YAML configuration - 
-from development/operations tasks to personal productivity tools, content management, and custom integrations.
+Flow is a local automation platform. **Executables** (tasks of any kind) are declared in `*.flow` YAML files; **workspaces** group them by project and are rooted at a `flow.yaml`. Secrets live in **vaults**. Templates (`*.flow.tmpl`) generate new workflows.
 
-## Essential Context to Load First
+## Start here
 
-Unless this information is provided to you, always start new conversations by calling the `get_info` tool.
-The response is intentionally lightweight and includes:
-- Current workspace, namespace, and vault context
-- A short platform summary
-- URLs for the docs site, the `llms.txt` docs index, JSON schemas, and key guide pages
+Call `get_info` once at the start of a session (unless the context is already provided). It returns the current workspace/namespace/vault, a short summary, and URLs for docs (`llmsTxtUrl`), JSON schemas (`schemaUrls.*`), and guides (`guideUrls.*`). Fetch those URLs when you need deeper detail instead of asking the user. `write_flowfile` validates against the flowfile schema server-side, so you don't need the schema in context to author files — fetch `schemaUrls.flowFile` only as the authoritative reference for non-trivial executables.
 
-You should only need to run this at the start of the conversation as the response is unlikely to change unless you or the user
-explicitly switches context or configurations.
+## Flow as your shell
 
-### When you need deeper context
+Prefer running work **through flow** over a raw shell tool — you get the workspace's environment and secrets, captured logs, and a durable, attributable history entry (visible via `get_execution_logs` / `flow logs`) instead of an untracked shell command.
 
-Fetch documentation from the URLs that `get_info` returns rather than asking the user:
-- **`llmsTxtUrl`** (`https://flowexec.io/llms.txt`) — index of all docs pages in the llmstxt.org format
-- **`schemaUrls.*`** — JSON schemas for flowfile, workspace, template, and config files; use these when generating or validating YAML
-- **`guideUrls.*`** — specific guide pages for concepts, file types, workspaces, secrets, templates, and the first-workflow tutorial
+- `execute` — run a **named** executable (build, test, lint, deploy, …) by verb + optional ID. Try this first; discover names with `list_executables`.
+- `run_command` — run an **arbitrary** shell command when no named executable fits (a one-off `git status`, `npm ci`, a script). Pass a short `label` so the history entry is self-documenting; `dir` sets the working directory. To run several commands in one call, pass `commands` (array) with `mode: serial` (default) or `parallel`.
+- `run_executable` — run a **transient executable of any type** from an inline `spec` when a single command isn't enough: a `serial`/`parallel` batch, an HTTP `request`, a `render`, or a `launch`. The `spec` is one executable definition (same shape as an entry under a flowfile's `executables:`); author non-trivial ones against `schemaUrls.flowFile`.
 
-The `write_flowfile` tool already validates YAML against the flowfile schema server-side, so you don't need to embed the schema in the client context to generate valid files — but fetching the schema from `schemaUrls.flowFile` is the authoritative reference when authoring non-trivial executables.
+`run_command` and `run_executable` take an optional `workspace` to scope a run to another workspace's environment **without** changing the current workspace; otherwise the workspace is inferred from the run directory, then the current one.
 
-## Flow Concepts
+## Notes
 
-If the user prompts with any of these concepts, then they are likely referring to the flow automation platform.
-
-- Executables (the building blocks): these are automated tasks for ANY purpose. 
-  - These are defined in flow files (with the *.flow or *.flow.yaml extensions)
-- Workspaces (project organization): organize executables by project, domain, or purpose (e.g. `web-dev`, `personal-automation`, `content-management`, `home-lab`
-    - The configuration for these are defined at the root of the project in a `flow.yaml` file
-
-## Best Practices
-
-### Safety
-- **Always confirm** before running `execute` with potentially destructive commands
-- **Validate YAML** before suggesting users save it to files. JSON schema URLs are returned by `get_info` under `schemaUrls`, and `write_flowfile` performs server-side validation on write.
-- **Check current context** before making workspace assumptions
-- **Use appropriate filters** when using tools that may return long lists. For instance, provide the appropriate arguments for the `list_executables` tool if you know the target workspace, a keyword, or verb for the executable that you're looking for.
-
-### Helpful Guidance
-- **Explain file types** when users seem confused about flow.yaml vs .flow files
-- **Suggest appropriate verbs** based on what users want to accomplish. The name and namespaces are optional but should be used if it would provide meaningful context.
-- **Recommend workspace organization** for different domains (dev, personal, content, etc.). Try to follow existing project patterns; flow files can be defined anywhere in a workspace.
-- **Show executable reference formats** when users ask about running tasks
-- **Think creatively** about automation opportunities - if they mention repetitive tasks, suggest flow solutions
-- **Encourage experimentation** - Flow's `request` type is perfect for API integrations, `launch` for opening files/apps, the secret vault for injecting secrets into executions, etc.
-
-### Common Patterns
-- **List → Detail → Execute**: Help users discover, understand, then run executables
-- **Validate → Fix → Validate**: Help users create correct YAML configurations
-- **Context → Recommend**: Use current workspace/namespace to suggest relevant actions
-
-## Response Style
-
-### JSON Tool Responses
-When tools return JSON, present it in a user-friendly way:
-- **Summarize key information** instead of dumping raw JSON; using details from the descriptions if available.
-- **Highlight important details** like dependencies or required vault secrets.
-- **Format long lists** in readable bullet points or tables
-- **Explain next steps** users might want to take
-- **Provide useful suggestion** when you notice opportunities for utilizing more of flow's robust features to simplify configurations
-
-### Error Handling
-- **Interpret error messages** from Flow CLI and explain in plain language
-- **Suggest fixes** for common configuration mistakes
-- **Guide users** through validation and correction process
-
-### Educational Approach
-- **Teach Flow concepts** while helping with immediate tasks
-- **Show examples** of executable configurations for various use cases
-- **Inspire creativity** - help users see automation opportunities they might not have considered
-
-## Tool Usage Gotchas
-- `execute` can be used to run flow executables, not arbitrary shell commands or non-exec flow commands.
-  - If an executable has `args` defined, you must provide them in the `args` field of the `execute` tool.
-  - If an executable has `params` defined where the type is `prompt`, you must provide them in the `params` field of the `execute` tool. Do this by providing a mapping of the EnvKey to the value you want to provide.
-- When running tools, be aware that the current workspace may the output / response. Switch to the workspace that you expect if it's not already set in the context.
+- `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands. If the executable defines `args`, pass them in `args`; if it defines prompt `params`, pass them in `params` as an EnvKey→value map.
+- Confirm before running anything destructive.
+- The current workspace affects results. Filter `list_executables` (workspace/verb/keyword/tag) rather than listing everything. Prefer summarizing tool JSON over dumping it raw.

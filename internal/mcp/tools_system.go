@@ -32,7 +32,6 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 				"schema URLs for authoring .flow files, and the docs index (llms.txt). "+
 				"Call this at the start of a session to understand the project's automation setup, "+
 				"or whenever you need schema URLs to author or validate flow configuration."),
-		mcp.WithOutputSchema[FlowInfoOutput](),
 	)
 	getFlowInfo.Annotations = mcp.ToolAnnotation{
 		Title:           "Get flow information and current context",
@@ -46,7 +45,6 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 			"Use when debugging a failed run or when the user asks about the results of a previous task."),
 		mcp.WithBoolean("last", mcp.Description("Get only the last execution logs")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
-		mcp.WithOutputSchema[LogListOutput](),
 	)
 	getExecutionLogs.Annotations = mcp.ToolAnnotation{
 		Title:           "Get execution logs",
@@ -116,7 +114,7 @@ func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResu
 		return toolError(ErrCodeInternal, fmt.Sprintf("failed to marshal response: %s", err)), nil
 	}
 
-	return mcp.NewToolResultText(string(jsonData)), nil
+	return mcp.NewToolResultStructured(output, string(jsonData)), nil
 }
 
 func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
@@ -146,7 +144,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 				TotalCount: 1,
 			}
 			jsonData, _ := json.Marshal(result)
-			return mcp.NewToolResultText(string(jsonData)), nil
+			return mcp.NewToolResultStructured(result, string(jsonData)), nil
 		}
 
 		// Parse the CLI list output and apply pagination.
@@ -168,7 +166,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			TotalCount: totalCount,
 		}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
 
@@ -195,6 +193,6 @@ func syncStateHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 
 		result := SyncOutput{Output: output}
 		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultText(string(jsonData)), nil
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
 }
