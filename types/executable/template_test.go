@@ -1,6 +1,8 @@
 package executable_test
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -74,6 +76,51 @@ tags: [test]
 			Expect(str).ToNot(BeEmpty())
 		})
 	})
+
+	Describe("Identity in serialized output", func() {
+		It("JSON should include the name and location", func() {
+			str, err := template.JSON()
+			Expect(err).NotTo(HaveOccurred())
+
+			var out map[string]interface{}
+			Expect(json.Unmarshal([]byte(str), &out)).To(Succeed())
+			Expect(out).To(HaveKeyWithValue("name", "flowfile"))
+			Expect(out).To(HaveKeyWithValue("assignedName", "flowfile"))
+			Expect(out).To(HaveKeyWithValue("location", "flowfile.flow.tmpl"))
+		})
+
+		It("YAML should include the name and location", func() {
+			str, err := template.YAML()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(str).To(ContainSubstring("name: flowfile"))
+			Expect(str).To(ContainSubstring("location: flowfile.flow.tmpl"))
+		})
+
+		It("should round-trip through JSON without losing its identity", func() {
+			str, err := template.JSON()
+			Expect(err).NotTo(HaveOccurred())
+
+			decoded := &executable.Template{}
+			Expect(json.Unmarshal([]byte(str), decoded)).To(Succeed())
+			Expect(decoded.Name()).To(Equal("flowfile"))
+			Expect(decoded.Location()).To(Equal("flowfile.flow.tmpl"))
+			Expect(decoded.Template).To(Equal(template.Template))
+		})
+
+		It("should not panic when the context was never set", func() {
+			bare := &executable.Template{Template: "namespace: test\n"}
+			Expect(bare.Name()).To(BeEmpty())
+			Expect(bare.Location()).To(BeEmpty())
+
+			str, err := bare.JSON()
+			Expect(err).NotTo(HaveOccurred())
+
+			var out map[string]interface{}
+			Expect(json.Unmarshal([]byte(str), &out)).To(Succeed())
+			Expect(out).To(HaveKeyWithValue("name", ""))
+			Expect(out).To(HaveKeyWithValue("location", ""))
+		})
+	})
 })
 
 var _ = Describe("TemplateList", func() {
@@ -125,6 +172,18 @@ tags: [test2]
 		It("Items should return the tuikit item representation of the templates", func() {
 			items := templates.Items()
 			Expect(items).To(HaveLen(2))
+		})
+		It("JSON should carry the identity of every element in the list", func() {
+			str, err := templates.JSON()
+			Expect(err).NotTo(HaveOccurred())
+
+			var out []map[string]interface{}
+			Expect(json.Unmarshal([]byte(str), &out)).To(Succeed())
+			Expect(out).To(HaveLen(2))
+			Expect(out[0]).To(HaveKeyWithValue("name", "flowfile"))
+			Expect(out[0]).To(HaveKeyWithValue("location", "flowfile.flow.tmpl"))
+			Expect(out[1]).To(HaveKeyWithValue("name", "flowfile2"))
+			Expect(out[1]).To(HaveKeyWithValue("location", "flowfile2.flow.tmpl"))
 		})
 	})
 
