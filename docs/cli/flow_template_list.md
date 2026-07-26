@@ -1,6 +1,6 @@
 ## flow template list
 
-List registered flowfile templates.
+List registered and workspace-discovered flowfile templates.
 
 ```
 flow template list [flags]

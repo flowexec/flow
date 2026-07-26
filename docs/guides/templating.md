@@ -38,13 +38,20 @@ template: |
         cmd: "npm run build"
 ```
 
-Register and use it:
+Use it. If the file lives inside a workspace, `flow sync` discovers it automatically — no registration needed:
 
 ```shell
-# Register the template
-flow template add webapp ./webapp.flow.tmpl
+# Discover templates in your workspaces
+flow sync
 
-# Generate from template
+# Generate from the template (named after the file: webapp.flow.tmpl -> "webapp")
+flow template generate my-app --template webapp
+```
+
+Or register it explicitly — handy when the file lives outside a workspace or you want it available everywhere:
+
+```shell
+flow template add webapp ./webapp.flow.tmpl
 flow template generate my-app --template webapp
 ```
 
@@ -194,26 +201,82 @@ template: |
 
 See the [template command reference](../cli/flow_template.md) for all detailed commands and options.
 
-### Register Templates
+There are two ways to make a template available by name:
+
+- **Auto-discovery** — drop a `.flow.tmpl` file anywhere in a workspace and it's found automatically. Zero configuration.
+- **Registration** — register a template by name in your global config. Useful for templates that live *outside* any workspace, or that you want available from *every* workspace.
+
+### Auto-discovery
+
+Any file ending in `.flow.tmpl` (also `.flow.tmpl.yaml` / `.flow.tmpl.yml`) inside a workspace is
+discovered during `flow sync`, the same way executables (`.flow` files) are. No `flow template add` required.
 
 ```shell
-# From file
+# Create a template inside a workspace
+touch ./my-workspace/webapp.flow.tmpl
+
+# Discover it (and any new executables) by refreshing the cache
+flow sync
+
+# It now shows up alongside registered templates
+flow template list
+
+# Generate from it by name — the name is derived from the filename (webapp.flow.tmpl -> "webapp")
+flow template generate my-app --template webapp
+```
+
+Discovery is safe by design: only files with the exact `.flow.tmpl` extension are picked up, so
+artifact/partial files such as `deployment.yaml.tmpl` are never mistaken for template generators.
+
+**Scoping discovery.** By default the whole workspace is scanned (minus common exclusions like
+`node_modules/`, `vendor/`, and `.git/`). To narrow it, add a `templates` filter to the workspace's
+`flow.yaml` — it uses the same `included`/`excluded` semantics as the `executables` filter:
+
+```yaml
+# flow.yaml
+templates:
+  included:
+    - templates/
+  excluded:
+    - templates/wip/
+```
+
+**Name collisions.** If the same template name is discovered in more than one workspace, `flow sync`
+logs a warning. Use a `workspace/name` reference to target a specific one:
+
+```shell
+flow template generate my-app --template my-workspace/webapp
+```
+
+### Register Templates
+
+Registration stores a name → path mapping in your global config. Reach for it when a template lives
+outside a workspace, or when you want it usable from any workspace.
+
+```shell
+# From file (the path is stored as an absolute path)
 flow template add webapp ./templates/webapp.flow.tmpl
 
-# List registered templates
+# List templates (registered + discovered)
 flow template list
 
 # View template details
 flow template get -t webapp
 ```
 
+> [!NOTE]
+> When a registered name and a discovered name collide, the **registered** template wins.
+
 ### Generate from Templates
 
 ```shell
-# Using registered template
+# Using a template by name (registered or discovered)
 flow template generate my-app --template webapp
 
-# Using file directly
+# Disambiguate a discovered template by workspace
+flow template generate my-app --template my-workspace/webapp
+
+# Using a file directly (no registration or discovery needed)
 flow template generate my-app --file ./webapp.flow.tmpl
 
 # Specify workspace and output directory

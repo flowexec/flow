@@ -158,6 +158,7 @@ type ContextWithMocks struct {
 	Ctx             *context.Context
 	Logger          *tuikitIOMocks.MockLogger
 	ExecutableCache *cacheMocks.MockExecutableCache
+	TemplateCache   *cacheMocks.MockTemplateCache
 	WorkspaceCache  *cacheMocks.MockWorkspaceCache
 	RunnerMock      *mocks.MockRunner
 }
@@ -187,11 +188,13 @@ func NewContextWithMocks(ctx stdCtx.Context, tb testing.TB) *ContextWithMocks {
 	logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: tb})
 	wsCache := cacheMocks.NewMockWorkspaceCache(gomock.NewController(tb))
 	execCache := cacheMocks.NewMockExecutableCache(gomock.NewController(tb))
+	tmplCache := cacheMocks.NewMockTemplateCache(gomock.NewController(tb))
 	ctxx := &context.Context{
 		Config:           testUserCfg,
 		CurrentWorkspace: testWsCfg,
 		WorkspacesCache:  wsCache,
 		ExecutableCache:  execCache,
+		TemplateCache:    tmplCache,
 	}
 	ctxx.SetContext(ctx, cancel)
 	ctxx.SetIO(null, null)
@@ -199,6 +202,7 @@ func NewContextWithMocks(ctx stdCtx.Context, tb testing.TB) *ContextWithMocks {
 		Ctx:             ctxx,
 		Logger:          mockLogger,
 		ExecutableCache: execCache,
+		TemplateCache:   tmplCache,
 		WorkspaceCache:  wsCache,
 		RunnerMock:      mocks.NewMockRunner(gomock.NewController(tb)),
 	}
@@ -258,7 +262,7 @@ func newTestContext(
 		tb.Fatalf("unable to create user config: %v", err)
 	}
 
-	wsCache, execCache, ds := testCaches(tb)
+	wsCache, execCache, tmplCache, ds := testCaches(tb)
 
 	cancel := func() {
 		<-ctx.Done()
@@ -269,6 +273,7 @@ func newTestContext(
 		CurrentWorkspace: testWsCfg,
 		WorkspacesCache:  wsCache,
 		ExecutableCache:  execCache,
+		TemplateCache:    tmplCache,
 		DataStore:        ds,
 	}
 	ctxx.SetContext(ctx, cancel)
@@ -357,7 +362,7 @@ func testWsConfig(wsDir string) (*workspace.Workspace, error) {
 }
 
 // testCaches must be called after the user and workspace configs have been created.
-func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache, store.DataStore) {
+func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache, cache.TemplateCache, store.DataStore) {
 	dbPath := filepath.Join(tb.TempDir(), "test_store.db")
 	ds, err := store.NewDataStore(dbPath)
 	if err != nil {
@@ -367,6 +372,7 @@ func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache, sto
 
 	wsCache := cache.NewWorkspaceCache(ds)
 	execCache := cache.NewExecutableCache(wsCache, ds)
+	tmplCache := cache.NewTemplateCache(wsCache, ds)
 
 	if err := wsCache.Update(); err != nil {
 		tb.Fatalf("unable to update cache: %v", err)
@@ -374,7 +380,10 @@ func testCaches(tb testing.TB) (cache.WorkspaceCache, cache.ExecutableCache, sto
 	if err := execCache.Update(); err != nil {
 		tb.Fatalf("unable to update cache: %v", err)
 	}
-	return wsCache, execCache, ds
+	if err := tmplCache.Update(); err != nil {
+		tb.Fatalf("unable to update cache: %v", err)
+	}
+	return wsCache, execCache, tmplCache, ds
 }
 
 func setTestEnv(tb testing.TB, configDir, cacheDir string) {

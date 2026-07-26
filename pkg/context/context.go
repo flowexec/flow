@@ -38,6 +38,7 @@ type Context struct {
 	CurrentWorkspace *workspace.Workspace
 	WorkspacesCache  cache.WorkspaceCache
 	ExecutableCache  cache.ExecutableCache
+	TemplateCache    cache.TemplateCache
 	DataStore        store.DataStore
 
 	// RootExecutable is the executable that is being run in the current context.
@@ -102,6 +103,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 
 	workspaceCache := cache.NewWorkspaceCache(ds)
 	executableCache := cache.NewExecutableCache(workspaceCache, ds)
+	templateCache := cache.NewTemplateCache(workspaceCache, ds)
 
 	c := &Context{
 		appName:          "flow",
@@ -114,6 +116,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 		CurrentWorkspace: wsConfig,
 		WorkspacesCache:  workspaceCache,
 		ExecutableCache:  executableCache,
+		TemplateCache:    templateCache,
 		DataStore:        ds,
 	}
 	for _, opt := range opts {
@@ -139,6 +142,7 @@ func (ctx *Context) ShallowCopy() *Context {
 		CurrentWorkspace: ctx.CurrentWorkspace,
 		WorkspacesCache:  ctx.WorkspacesCache,
 		ExecutableCache:  ctx.ExecutableCache,
+		TemplateCache:    ctx.TemplateCache,
 		DataStore:        ctx.DataStore,
 		RootExecutable:   ctx.RootExecutable,
 		ProcessTmpDir:    ctx.ProcessTmpDir,

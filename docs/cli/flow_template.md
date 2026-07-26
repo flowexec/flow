@@ -10,6 +10,11 @@ executables, directory structures, and configuration files via 'template generat
 Templates are registered by name for easy reuse. Use 'template add' to register a
 template, 'template generate' to scaffold from one, and 'template list' to see what's available.
 
+Templates (*.flow.tmpl files) are also auto-discovered within your workspaces during
+'flow sync' — dropping one into a workspace makes it available without registering it.
+Registered templates take precedence over discovered ones when names collide; use a
+'workspace/name' reference to target a specific discovered template.
+
 ### Options
 
 ```
@@ -29,6 +34,6 @@ template, 'template generate' to scaffold from one, and 'template list' to see w
 * [flow template add](flow_template_add.md)	 - Register a flowfile template by name.
 * [flow template generate](flow_template_generate.md)	 - Generate workspace executables and scaffolding from a flowfile template.
 * [flow template get](flow_template_get.md)	 - Get a flowfile template's details. Either it's registered name or file path can be used.
-* [flow template list](flow_template_list.md)	 - List registered flowfile templates.
+* [flow template list](flow_template_list.md)	 - List registered and workspace-discovered flowfile templates.
 * [flow template remove](flow_template_remove.md)	 - Unregister a flowfile template by name.
 

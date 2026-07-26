@@ -56,6 +56,13 @@ properties:
     default: {}
   executables:
     $ref: '#/definitions/ExecutableFilter'
+  templates:
+    $ref: '#/definitions/ExecutableFilter'
+    description: |
+      Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered
+      within the workspace during `flow sync`. Uses the same include/exclude semantics as
+      the executables filter. When unset, the entire workspace is scanned (minus the default
+      exclusions like node_modules/, vendor/, and .git/).
   displayName:
     type: string
     description: The display name of the workspace. This is used in the interactive UI.

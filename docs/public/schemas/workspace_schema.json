@@ -106,6 +106,10 @@
       "$ref": "#/definitions/CommonTags",
       "default": []
     },
+    "templates": {
+      "$ref": "#/definitions/ExecutableFilter",
+      "description": "Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered\nwithin the workspace during `flow sync`. Uses the same include/exclude semantics as\nthe executables filter. When unset, the entire workspace is scanned (minus the default\nexclusions like node_modules/, vendor/, and .git/).\n"
+    },
     "verbAliases": {
       "$ref": "#/definitions/VerbAliases"
     }
