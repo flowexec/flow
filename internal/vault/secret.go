@@ -325,10 +325,7 @@ func ValidateIdentifier(reference string) error {
 		return errors.New("reference cannot be empty")
 	}
 	// Must stay a strict subset of the vault library's own ValidateVaultID, which
-	// requires an alphanumeric first character. Allowing a leading dash or
-	// underscore here would let flow accept a name the library then rejects --
-	// failing at creation with a less specific message, and making any existing
-	// vault so named unreachable after an upgrade.
+	// requires an alphanumeric first character.
 	re := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-_]*$`)
 	if !re.MatchString(reference) {
 		return fmt.Errorf(
