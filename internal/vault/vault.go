@@ -25,6 +25,29 @@ const (
 type Vault = vault.Provider
 type VaultConfig = vault.Config
 
+// ReferenceVault is implemented by vaults that link a key to a secret kept in
+// another system rather than storing the secret themselves -- currently the
+// external provider. Callers type-assert a Vault to reach it.
+type ReferenceVault = vault.ReferenceVault
+
+// Re-exported so command code can recognise these without importing the
+// library alongside this package.
+var (
+	ErrReadOnly         = vault.ErrReadOnly
+	ErrSecretNotFound   = vault.ErrSecretNotFound
+	ErrInvalidReference = vault.ErrInvalidReference
+)
+
+// AsReferenceVault reports whether a vault holds links rather than secrets.
+//
+// Read-through vaults answer "remove" by forgetting where something is, not by
+// destroying it, so callers phrase their prompts and messages differently. This
+// is the one check that difference hangs on.
+func AsReferenceVault(v Vault) (ReferenceVault, bool) {
+	ref, ok := v.(ReferenceVault)
+	return ref, ok
+}
+
 // CreateResult contains metadata about a newly created vault.
 type CreateResult struct {
 	Name         string `json:"name"`
@@ -185,6 +208,14 @@ func NewExternalVault(providerConfigFile string) (*CreateResult, error) {
 	// so validate it before it reaches the filesystem.
 	if err := ValidateIdentifier(cfg.ID); err != nil {
 		return nil, fmt.Errorf("invalid vault name %q in config: %w", cfg.ID, err)
+	}
+
+	// An external vault keeps a registry of the links it holds. A config authored
+	// elsewhere -- rendered from a preset, or written by hand -- has no business
+	// knowing where flow keeps vault state, so it arrives without a storage path
+	// and flow supplies the same location every other provider uses.
+	if cfg.External != nil && cfg.External.StoragePath == "" {
+		cfg.External.StoragePath = CacheDirectory(cfg.ID)
 	}
 
 	v, _, err := vault.New(cfg.ID, vault.WithExternalConfig(cfg.External))

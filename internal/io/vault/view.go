@@ -248,6 +248,19 @@ func vaultFromName(vaultName string) (*vaultEntity, error) {
 		v.Path = cfg.Age.StoragePath
 		data["sources"] = cfg.Age.IdentitySources
 		data["recipients"] = cfg.Age.Recipients
+	case extVault.ProviderTypeExternal:
+		v.Path = cfg.External.StoragePath
+		// An external vault reads through to another tool, so what is worth
+		// showing is how many links it holds and that it stores nothing itself.
+		data["readOnly"] = true
+		if links, ok := vault.AsReferenceVault(vlt); ok {
+			if all, linkErr := links.Links(); linkErr == nil {
+				data["links"] = len(all)
+			}
+		}
+		if inert := cfg.External.LegacyWriteCommands(); len(inert) > 0 {
+			data["inertCommands"] = inert
+		}
 	}
 
 	return v, nil

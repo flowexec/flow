@@ -39,6 +39,9 @@ type Secret interface {
 	AsObfuscatedText() Secret
 	// IsPlaintext reports whether the secret is currently in plaintext (unobfuscated) mode.
 	IsPlaintext() bool
+	// Reference returns where this secret lives when it is a link into another
+	// system, and the empty string when the vault stores the value itself.
+	Reference() string
 }
 
 type SecretValue = vault.SecretValue
@@ -46,6 +49,7 @@ type SecretValue = vault.SecretValue
 type secret struct {
 	vault     string
 	key       string
+	reference string
 	plaintext bool
 	value     vault.Secret
 }
@@ -55,6 +59,10 @@ type enrichedSecret struct {
 	Vault string `json:"vault" yaml:"vault"`
 	Key   string `json:"key"   yaml:"key"`
 	Value string `json:"value" yaml:"value"`
+	// Reference is present only for secrets linked from another system. It is
+	// the path, not the secret, so it is safe to print unmasked -- and it is the
+	// only useful thing to show when the value has not been resolved.
+	Reference string `json:"reference,omitempty" yaml:"reference,omitempty"`
 }
 
 func NewSecret(vaultName, key string, value vault.Secret) (Secret, error) {
@@ -72,6 +80,19 @@ func NewSecret(vaultName, key string, value vault.Secret) (Secret, error) {
 		key:   key,
 		value: value,
 	}, nil
+}
+
+// NewLinkedSecret builds a secret that points at another system.
+//
+// value may be nil: listing a read-through vault deliberately does not resolve
+// every link, because that would run one provider command per entry.
+func NewLinkedSecret(vaultName, key, reference string, value vault.Secret) (Secret, error) {
+	s, err := NewSecret(vaultName, key, value)
+	if err != nil {
+		return nil, err
+	}
+	s.(*secret).reference = reference
+	return s, nil
 }
 
 func NewSecretValue(value []byte) *SecretValue {
@@ -169,27 +190,57 @@ func toEnrichedSecretWithMode(s Secret, plaintext bool) enrichedSecret {
 	}
 
 	return enrichedSecret{
-		Vault: s.Ref().Vault(),
-		Key:   s.Ref().Key(),
-		Value: valueStr,
+		Vault:     s.Ref().Vault(),
+		Key:       s.Ref().Key(),
+		Value:     valueStr,
+		Reference: s.Reference(),
 	}
 }
 
 type SecretList []Secret
 
-func NewSecretList(vaultName string, v Vault) (SecretList, error) {
-	secrets, err := v.ListSecrets()
+// NewSecretList builds the list of secrets in a vault.
+//
+// resolve controls whether each secret's value is actually read. For a vault
+// that stores its own secrets that is nearly free, but a read-through vault runs
+// one provider command per key -- and for 1Password, potentially one biometric
+// prompt per key -- so callers that are only going to print masks must pass
+// false. The reference is still shown, which is the part worth seeing anyway.
+func NewSecretList(vaultName string, v Vault, resolve bool) (SecretList, error) {
+	keys, err := v.ListSecrets()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(SecretList, 0, len(secrets))
-	for _, key := range secrets {
-		s, _ := v.GetSecret(key)
-		if s == nil {
-			continue
+	links, linked := AsReferenceVault(v)
+
+	result := make(SecretList, 0, len(keys))
+	for _, key := range keys {
+		var reference string
+		if linked {
+			// An unreadable reference is reported in place rather than dropping
+			// the entry: a key that exists is a key the user should see.
+			if reference, err = links.Reference(key); err != nil {
+				reference = fmt.Sprintf("<unresolved: %v>", err)
+			}
 		}
-		scrt, err := NewSecret(vaultName, key, s)
+
+		var value vault.Secret
+		if resolve || !linked {
+			// Errors are deliberately not fatal here. A broken link -- the
+			// secret was removed in the provider -- used to make the whole
+			// entry vanish from the listing, which reads as "it was never
+			// there" rather than "this needs re-linking".
+			value, _ = v.GetSecret(key)
+		}
+		if value == nil {
+			if !linked {
+				continue
+			}
+			value = NewSecretValue(nil)
+		}
+
+		scrt, err := NewLinkedSecret(vaultName, key, reference, value)
 		if err != nil {
 			return nil, err
 		}
@@ -335,4 +386,10 @@ func ValidateIdentifier(reference string) error {
 		)
 	}
 	return nil
+}
+
+// Reference returns where a linked secret lives, or "" when the vault stores
+// the value itself.
+func (s *secret) Reference() string {
+	return s.reference
 }
