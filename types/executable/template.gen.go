@@ -101,6 +101,12 @@ type Template struct {
 	// assignedName corresponds to the JSON schema field "assignedName".
 	assignedName *string `json:"assignedName,omitempty" yaml:"assignedName,omitempty" mapstructure:"assignedName,omitempty"`
 
+	// A description of the template. This is used to describe what the template
+	// generates and when to
+	// reach for it, and is shown when browsing templates.
+	//
+	Description string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+
 	// Form fields to be displayed to the user when generating a flow file from a
 	// template.
 	// The form will be rendered first, and the user's input can be used to render the

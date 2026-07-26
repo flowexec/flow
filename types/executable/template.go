@@ -98,7 +98,78 @@ func (t *Template) Location() string {
 }
 
 func (t *Template) Name() string {
+	if t.assignedName == nil {
+		return ""
+	}
 	return *t.assignedName
+}
+
+// MarshalJSON is used to handle the custom marshaling of the Template type.
+// The name and location are set at runtime by SetContext rather than being
+// authored in the template file, so they are unexported and would otherwise be
+// dropped from the output entirely - leaving consumers with no way to identify
+// a template. This mirrors Executable.MarshalJSON.
+func (t *Template) MarshalJSON() ([]byte, error) {
+	output := make(map[string]interface{})
+
+	type BaseTemplate Template
+	baseData, err := json.Marshal((*BaseTemplate)(t))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(baseData, &output); err != nil {
+		return nil, err
+	}
+
+	// These are required in order to enrich the output with additional fields when
+	// marshalling a TemplateList
+	output["name"] = t.Name()
+	output["assignedName"] = t.Name()
+	output["location"] = t.Location()
+
+	return json.Marshal(output)
+}
+
+// MarshalYAML mirrors MarshalJSON so that `--output yaml` also carries the
+// template's identity.
+func (t *Template) MarshalYAML() (interface{}, error) {
+	type BaseTemplate Template
+	return struct {
+		Name         string `yaml:"name"`
+		Location     string `yaml:"location"`
+		BaseTemplate `yaml:",inline"`
+	}{
+		Name:         t.Name(),
+		Location:     t.Location(),
+		BaseTemplate: BaseTemplate(*t),
+	}, nil
+}
+
+// UnmarshalJSON restores the runtime context that MarshalJSON writes out, so
+// that a marshalled template round-trips without losing its identity.
+func (t *Template) UnmarshalJSON(data []byte) error {
+	type BaseTemplate Template
+	aux := &struct {
+		*BaseTemplate
+		Name         string `json:"name,omitempty"`
+		AssignedName string `json:"assignedName,omitempty"`
+		Location     string `json:"location,omitempty"`
+	}{
+		BaseTemplate: (*BaseTemplate)(t),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	name := aux.Name
+	if name == "" {
+		name = aux.AssignedName
+	}
+	if name != "" || aux.Location != "" {
+		t.SetContext(name, aux.Location)
+	}
+	return nil
 }
 
 func (t *Template) Validate() error {
@@ -155,6 +226,7 @@ func (t TemplateList) Items() []*types.EntityInfo {
 		items[i] = &types.EntityInfo{
 			ID:     template.Name(),
 			Header: template.Name(),
+			Desc:   template.Description,
 		}
 	}
 	return items

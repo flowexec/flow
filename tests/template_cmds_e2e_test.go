@@ -126,15 +126,22 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 	})
 
 	When("getting a template by path (flow template get)", func() {
-		It("should return the template", func() {
+		It("should return the template, named after the file", func() {
 			stdOut := ctx.StdOut()
 			err := run.Run(ctx.Context, "template", "get", "-f", template.Location(), "-o", "yaml")
 			Expect(err).ToNot(HaveOccurred())
 			out, err := readFileContent(stdOut)
 			Expect(err).NotTo(HaveOccurred())
-			str, err := template.YAML()
+
+			// A template loaded by path has no registered name, so its name is
+			// derived from the filename ("flowfile") rather than the name it was
+			// registered under ("e2e"). Compare against a copy carrying that context.
+			byPath := *template
+			byPath.SetContext("", template.Location())
+			str, err := byPath.YAML()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring(str))
+			Expect(byPath.Name()).To(Equal("flowfile"))
 		})
 	})
 
