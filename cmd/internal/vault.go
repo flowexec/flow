@@ -8,7 +8,6 @@ import (
 	"github.com/flowexec/tuikit/views"
 	extvault "github.com/flowexec/vault"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 
 	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
@@ -19,7 +18,6 @@ import (
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
-	"github.com/flowexec/flow/v2/types/config"
 )
 
 func RegisterVaultCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -55,7 +53,7 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 				errhandler.HandleUsage(ctx, cmd, "invalid vault name '%s': %v", vaultName, err)
 			}
 
-			if _, found := ctx.Config.Vaults[vaultName]; found {
+			if vault.VaultExists(vaultName) {
 				errhandler.HandleUsage(ctx, cmd, "vault %s already exists", vaultName)
 			}
 		},
@@ -176,7 +174,7 @@ func registerGetVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		Short:   "Get the details of a vault.",
 		Args:    cobra.MaximumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
+			return vaultNames(), cobra.ShellCompDirectiveNoFileComp
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			var vaultName string
@@ -236,12 +234,15 @@ func registerListVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 func listVaultsFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 
-	cfg := ctx.Config
+	names, err := vault.ListVaultNames()
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
 	if TUIEnabled(ctx, cmd) {
-		view := vaultIO.NewVaultListView(ctx.TUIContainer(), maps.Keys(cfg.Vaults))
+		view := vaultIO.NewVaultListView(ctx.TUIContainer(), names)
 		SetView(ctx, cmd, view)
 	} else {
-		vaultIO.PrintVaultList(outputFormat, maps.Keys(cfg.Vaults))
+		vaultIO.PrintVaultList(outputFormat, names)
 	}
 }
 
@@ -250,14 +251,14 @@ func registerRemoveVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		Use:     "remove NAME",
 		Aliases: []string{"rm", "delete"},
 		Short:   "Remove an existing vault.",
-		Long: "Remove an existing vault by its name. The vault data will remain in it's original location, " +
-			"but the vault will be unlinked from the global configuration.\nNote: You cannot remove the current vault.",
+		Long: "Remove an existing vault by its name. The vault's encrypted secret data remains on disk " +
+			"at its storage path, but its configuration is deleted so flow no longer tracks it.\n" +
+			"Note: You cannot remove the current vault.",
 		Args: cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
+			return vaultNames(), cobra.ShellCompDirectiveNoFileComp
 		},
-		PreRun: func(cmd *cobra.Command, args []string) { validateVaults(ctx, cmd) },
-		Run:    func(cmd *cobra.Command, args []string) { removeVaultFunc(ctx, cmd, args) },
+		Run: func(cmd *cobra.Command, args []string) { removeVaultFunc(ctx, cmd, args) },
 	}
 	RegisterFlag(ctx, removeCmd, *flags.OutputFormatFlag)
 	RegisterFlag(ctx, removeCmd, *flags.YesFlag)
@@ -299,10 +300,16 @@ func removeVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if userConfig.CurrentVault != nil && vaultName == *userConfig.CurrentVault {
 		errhandler.HandleUsage(ctx, cmd, "cannot remove the current vault")
 	}
-	if _, found := userConfig.Vaults[vaultName]; !found {
+	if !vault.VaultExists(vaultName) {
 		errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s was not found", vaultName))
 	}
 
+	// Delete the vault's config file (the source of truth). Encrypted secret data at the
+	// vault's storage path is intentionally preserved.
+	if err := vault.RemoveVaultConfig(vaultName); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	// Also drop the legacy config-map entry if present, keeping the two in sync.
 	delete(userConfig.Vaults, vaultName)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
@@ -320,16 +327,14 @@ func registerSwitchVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 		Short:   "Switch the active vault.",
 		Args:    cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
+			return vaultNames(), cobra.ShellCompDirectiveNoFileComp
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			vaultName := args[0]
-			reservedName := vaultName == vault.DemoVaultReservedName
-			if reservedName {
+			if vaultName == vault.DemoVaultReservedName {
 				return
 			}
-			validateVaults(ctx, cmd)
-			if _, found := ctx.Config.Vaults[vaultName]; !found {
+			if !vault.VaultExists(vaultName) {
 				errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s not found", vaultName))
 			}
 		},
@@ -361,10 +366,9 @@ func registerEditVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 			"Note: You cannot change the vault type after creation.",
 		Args: cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return vaultNames(ctx.Config), cobra.ShellCompDirectiveNoFileComp
+			return vaultNames(), cobra.ShellCompDirectiveNoFileComp
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			validateVaults(ctx, cmd)
 			vaultName := args[0]
 			if vaultName == vault.DemoVaultReservedName {
 				errhandler.HandleUsage(ctx, cmd, "edit is unsupported for the reserved vault")
@@ -372,8 +376,7 @@ func registerEditVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 				errhandler.HandleUsage(ctx, cmd, "invalid vault name '%s': %v", vaultName, err)
 			}
 
-			userConfig := ctx.Config
-			if _, found := userConfig.Vaults[vaultName]; !found {
+			if !vault.VaultExists(vaultName) {
 				errhandler.HandleFatal(ctx, cmd, fmt.Errorf("vault %s not found", vaultName))
 			}
 		},
@@ -464,21 +467,13 @@ func editVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	)
 }
 
-func vaultNames(cfg *config.Config) []string {
+func vaultNames() []string {
 	names := []string{vault.DemoVaultReservedName}
-	if cfg == nil || cfg.Vaults == nil {
-		return nil
+	discovered, err := vault.ListVaultNames()
+	if err != nil {
+		return names
 	}
-	for name := range cfg.Vaults {
-		names = append(names, name)
-	}
-	return names
-}
-
-func validateVaults(ctx *context.Context, cmd *cobra.Command) {
-	if ctx.Config == nil || ctx.Config.Vaults == nil {
-		errhandler.HandleUsage(ctx, cmd, "no vaults configured")
-	}
+	return append(names, discovered...)
 }
 
 const (

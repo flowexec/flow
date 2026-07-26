@@ -90,7 +90,7 @@
       "default": ""
     },
     "currentVault": {
-      "description": "The name of the current vault. This should match a key in the `vaults` map.",
+      "description": "The name of the currently active vault.",
       "type": "string"
     },
     "currentWorkspace": {
@@ -138,7 +138,7 @@
       "default": false
     },
     "vaults": {
-      "description": "A map of vault names to their paths. The path should be a valid absolute path to the vault file created by flow.",
+      "description": "A legacy map of vault names to their storage paths, retained for backwards compatibility.\nThe authoritative list of vaults is discovered from the vault configuration directory managed\nby flow; this map is no longer required to reference or switch vaults.\n",
       "type": "object",
       "additionalProperties": {
         "type": "string"

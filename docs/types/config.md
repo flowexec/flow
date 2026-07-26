@@ -29,7 +29,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | ----- | ----------- | ---- | ------- | :--------: |
 | `colorOverride` | Override the default color palette for the interactive UI. This can be used to customize the colors of the UI.  | [ColorPalette](#colorpalette) |  |  |
 | `currentNamespace` | The name of the current namespace.  Namespaces are used to reference executables in the CLI using the format `workspace:namespace/name`. If the namespace is not set, only executables defined without a namespace will be discovered.  | `string` |  |  |
-| `currentVault` | The name of the current vault. This should match a key in the `vaults` map. | `string` |  |  |
+| `currentVault` | The name of the currently active vault. | `string` |  |  |
 | `currentWorkspace` | The name of the current workspace. This should match a key in the `workspaces` or `remoteWorkspaces` map. | `string` |  |  |
 | `defaultLogMode` | The default log mode to use when running executables. This can either be `hidden`, `json`, `logfmt` or `text`  `hidden` will not display any logs. `json` will display logs in JSON format. `logfmt` will display logs with a log level, timestamp, and message. `text` will just display the log message.  | `string` | logfmt |  |
 | `defaultTimeout` | The default timeout to use when running executables. This should be a valid duration string.  | `string` | 30m |  |
@@ -37,7 +37,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | `templates` | A map of flowfile template names to their paths. | `map` (`string` -> `string`) | map[] |  |
 | `theme` | The theme of the interactive UI. | `string` | default |  |
 | `updateCheck` | Whether to check for CLI updates in the background. When enabled, flow will periodically check GitHub for a newer version and display a notice if one is available after each command. Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.  | `boolean` | false |  |
-| `vaults` | A map of vault names to their paths. The path should be a valid absolute path to the vault file created by flow. | `map` (`string` -> `string`) |  |  |
+| `vaults` | A legacy map of vault names to their storage paths, retained for backwards compatibility. The authoritative list of vaults is discovered from the vault configuration directory managed by flow; this map is no longer required to reference or switch vaults.  | `map` (`string` -> `string`) |  |  |
 | `workspaceMode` | The mode of the workspace. This can be either `fixed` or `dynamic`. In `fixed` mode, the current workspace used at runtime is always the one set in the currentWorkspace config field. In `dynamic` mode, the current workspace used at runtime is determined by the current directory. If the current directory is within a workspace, that workspace is used.  | `string` | dynamic |  |
 | `workspaces` | Map of workspace names to their paths. The path should be a valid absolute path to the workspace directory.  | `map` (`string` -> `string`) |  |  |
 

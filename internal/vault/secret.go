@@ -37,6 +37,8 @@ type Secret interface {
 	Ref() SecretRef
 	AsPlaintext() Secret
 	AsObfuscatedText() Secret
+	// IsPlaintext reports whether the secret is currently in plaintext (unobfuscated) mode.
+	IsPlaintext() bool
 }
 
 type SecretValue = vault.SecretValue
@@ -88,6 +90,10 @@ func (s *secret) AsPlaintext() Secret {
 func (s *secret) AsObfuscatedText() Secret {
 	s.plaintext = false
 	return s
+}
+
+func (s *secret) IsPlaintext() bool {
+	return s.plaintext
 }
 
 func (s *secret) YAML() (string, error) {
@@ -152,16 +158,7 @@ func RefToParts(ref SecretRef) (vaultName, key string, err error) {
 }
 
 func toEnrichedSecret(s Secret) enrichedSecret {
-	valueStr := s.String() // Default to obfuscated
-	if s.AsPlaintext() != nil {
-		valueStr = s.PlainTextString()
-	}
-
-	return enrichedSecret{
-		Vault: s.Ref().Vault(),
-		Key:   s.Ref().Key(),
-		Value: valueStr,
-	}
+	return toEnrichedSecretWithMode(s, s.IsPlaintext())
 }
 
 // toEnrichedSecretWithMode allows explicit control over plaintext vs obfuscated
@@ -208,22 +205,22 @@ type enrichedSecretList struct {
 
 func (l SecretList) AsPlaintext() SecretList {
 	result := make(SecretList, 0, len(l))
-	for i, s := range l {
+	for _, s := range l {
 		if s == nil {
 			continue
 		}
-		result[i] = s.AsPlaintext()
+		result = append(result, s.AsPlaintext())
 	}
 	return result
 }
 
 func (l SecretList) AsObfuscatedText() SecretList {
-	result := make(SecretList, len(l))
-	for i, s := range l {
+	result := make(SecretList, 0, len(l))
+	for _, s := range l {
 		if s == nil {
 			continue
 		}
-		result[i] = s.AsObfuscatedText()
+		result = append(result, s.AsObfuscatedText())
 	}
 	return result
 }
