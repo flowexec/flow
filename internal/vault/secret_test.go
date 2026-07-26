@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	extVault "github.com/flowexec/vault"
+
 	"github.com/flowexec/flow/v2/internal/vault"
 )
 
@@ -97,10 +99,36 @@ func TestValidateIdentifier(t *testing.T) {
 		}
 	}
 
-	invalid := []string{"", "../etc", "a/b", "a.b", "a b", "..", "vault/../x", "name.json"}
+	invalid := []string{
+		"", "../etc", "a/b", "a.b", "a b", "..", "vault/../x", "name.json",
+		"-myvault", "_myvault", "-", "_",
+	}
 	for _, name := range invalid {
 		if err := vault.ValidateIdentifier(name); err == nil {
 			t.Errorf("ValidateIdentifier(%q) = nil, want error", name)
+		}
+	}
+}
+
+// Any vault name flow accepts must also be acceptable to the vault library,
+// which derives filesystem paths and keyring entry names from it. If flow were
+// the laxer of the two, a name would pass flow's check and then be refused
+// downstream -- and any vault already created under such a name would become
+// unreachable. Asserted rather than assumed, because the two rules live in
+// different repositories and will drift.
+func TestValidateIdentifierIsStricterThanTheVaultLibrary(t *testing.T) {
+	candidates := []string{
+		"myvault", "my_vault", "my-vault", "abc123", "A1_b-2", "v1",
+		"-myvault", "_myvault", "-", "_", "a.b", "..", "a/b", "a b", "",
+		"name.json", "../etc", "vault/../x",
+	}
+
+	for _, name := range candidates {
+		if vault.ValidateIdentifier(name) != nil {
+			continue // flow rejects it; the library's opinion does not matter
+		}
+		if err := extVault.ValidateVaultID(name); err != nil {
+			t.Errorf("flow accepts vault name %q but the vault library rejects it: %v", name, err)
 		}
 	}
 }

@@ -324,10 +324,13 @@ func ValidateIdentifier(reference string) error {
 	if reference == "" {
 		return errors.New("reference cannot be empty")
 	}
-	re := regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
+	// Must stay a strict subset of the vault library's own ValidateVaultID, which
+	// requires an alphanumeric first character.
+	re := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-_]*$`)
 	if !re.MatchString(reference) {
 		return fmt.Errorf(
-			"reference (%s) must only contain alphanumeric characters, dashes and/or underscores",
+			"reference (%s) must start with a letter or digit and contain only "+
+				"alphanumeric characters, dashes and/or underscores",
 			reference,
 		)
 	}

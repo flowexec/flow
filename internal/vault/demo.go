@@ -49,11 +49,11 @@ func (d demoVaultProvider) ID() string {
 	return "demo"
 }
 
-func (d demoVaultProvider) Metadata() vault.Metadata {
+func (d demoVaultProvider) Metadata() (vault.Metadata, error) {
 	return vault.Metadata{
 		Created:      time.Now().Local().Add(-24 * time.Hour),
 		LastModified: time.Now().Local(),
-	}
+	}, nil
 }
 
 func (d demoVaultProvider) Close() error {
