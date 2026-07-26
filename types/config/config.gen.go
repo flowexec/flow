@@ -82,7 +82,7 @@ type Config struct {
 	//
 	CurrentNamespace string `json:"currentNamespace,omitempty" yaml:"currentNamespace,omitempty" mapstructure:"currentNamespace,omitempty"`
 
-	// The name of the current vault. This should match a key in the `vaults` map.
+	// The name of the currently active vault.
 	CurrentVault *string `json:"currentVault,omitempty" yaml:"currentVault,omitempty" mapstructure:"currentVault,omitempty"`
 
 	// The name of the current workspace. This should match a key in the `workspaces`
@@ -120,8 +120,12 @@ type Config struct {
 	//
 	UpdateCheck bool `json:"updateCheck,omitempty" yaml:"updateCheck,omitempty" mapstructure:"updateCheck,omitempty"`
 
-	// A map of vault names to their paths. The path should be a valid absolute path
-	// to the vault file created by flow.
+	// A legacy map of vault names to their storage paths, retained for backwards
+	// compatibility.
+	// The authoritative list of vaults is discovered from the vault configuration
+	// directory managed
+	// by flow; this map is no longer required to reference or switch vaults.
+	//
 	Vaults ConfigVaults `json:"vaults,omitempty" yaml:"vaults,omitempty" mapstructure:"vaults,omitempty"`
 
 	// The mode of the workspace. This can be either `fixed` or `dynamic`.
@@ -151,8 +155,11 @@ const ConfigThemeEverforest ConfigTheme = "everforest"
 const ConfigThemeLight ConfigTheme = "light"
 const ConfigThemeTokyoNight ConfigTheme = "tokyo-night"
 
-// A map of vault names to their paths. The path should be a valid absolute path to
-// the vault file created by flow.
+// A legacy map of vault names to their storage paths, retained for backwards
+// compatibility.
+// The authoritative list of vaults is discovered from the vault configuration
+// directory managed
+// by flow; this map is no longer required to reference or switch vaults.
 type ConfigVaults map[string]string
 
 type ConfigWorkspaceMode string

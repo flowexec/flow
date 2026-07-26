@@ -4,7 +4,7 @@ Remove an existing vault.
 
 ### Synopsis
 
-Remove an existing vault by its name. The vault data will remain in it's original location, but the vault will be unlinked from the global configuration.
+Remove an existing vault by its name. The vault's encrypted secret data remains on disk at its storage path, but its configuration is deleted so flow no longer tracks it.
 Note: You cannot remove the current vault.
 
 ```

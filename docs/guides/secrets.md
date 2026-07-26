@@ -313,7 +313,8 @@ flow vault get my-vault
 # Edit vault settings
 flow vault edit my-vault --key-env NEW_KEY_VAR
 
-# Remove vault (data remains, just unlinks)
+# Remove a vault's configuration. The encrypted secret data remains on disk at its
+# storage path; only the vault config flow tracks is deleted.
 flow vault remove old-vault
 ```
 

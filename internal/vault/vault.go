@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/flowexec/vault"
@@ -180,6 +181,12 @@ func NewExternalVault(providerConfigFile string) (*CreateResult, error) {
 		return nil, fmt.Errorf("failed to load vault config: %w", err)
 	}
 
+	// The ID comes from an external file and is used to derive the stored config path,
+	// so validate it before it reaches the filesystem.
+	if err := ValidateIdentifier(cfg.ID); err != nil {
+		return nil, fmt.Errorf("invalid vault name %q in config: %w", cfg.ID, err)
+	}
+
 	v, _, err := vault.New(cfg.ID, vault.WithExternalConfig(cfg.External))
 	if err != nil {
 		return nil, err
@@ -198,6 +205,12 @@ func VaultFromName(name string) (*VaultConfig, Vault, error) {
 		return nil, nil, fmt.Errorf("vault name cannot be empty")
 	} else if strings.ToLower(name) == DemoVaultReservedName {
 		return newDemoVaultConfig(), newDemoVault(), nil
+	}
+
+	// Validate before deriving a filesystem path so a crafted name (e.g. containing
+	// path separators or "..") cannot be used to read arbitrary files as vault configs.
+	if err := ValidateIdentifier(name); err != nil {
+		return nil, nil, fmt.Errorf("invalid vault name: %w", err)
 	}
 
 	cfgPath := ConfigFilePath(name)
@@ -232,12 +245,64 @@ func CacheDirectory(subPath string) string {
 	return filepath.Join(filesystem.CachedDataDirPath(), v2CacheDataDir, subPath)
 }
 
+// configsDir is the directory holding per-vault configuration files. It is the source
+// of truth for which vaults exist: a vault is usable iff its <name>.json lives here.
+func configsDir() string {
+	return CacheDirectory("configs")
+}
+
 func ConfigFilePath(vaultName string) string {
-	return filepath.Join(
-		filesystem.CachedDataDirPath(),
-		v2CacheDataDir,
-		fmt.Sprintf("configs/%s.json", vaultName),
-	)
+	return filepath.Join(configsDir(), fmt.Sprintf("%s.json", vaultName))
+}
+
+// ListVaultNames returns the names of all configured vaults by reading the vault config
+// directory — the same source VaultFromName loads from — so listings never drift from
+// what is actually openable. The reserved demo vault is not included (it has no config
+// file); callers that want it should add it explicitly. Names are sorted.
+func ListVaultNames() ([]string, error) {
+	entries, err := os.ReadDir(configsDir())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("unable to read vault config directory: %w", err)
+	}
+
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		names = append(names, strings.TrimSuffix(e.Name(), ".json"))
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// VaultExists reports whether a vault with the given name is available — either the
+// reserved demo vault or a vault whose config file exists on disk.
+func VaultExists(name string) bool {
+	if strings.EqualFold(name, DemoVaultReservedName) {
+		return true
+	}
+	if ValidateIdentifier(name) != nil {
+		return false
+	}
+	_, err := os.Stat(ConfigFilePath(name))
+	return err == nil
+}
+
+// RemoveVaultConfig deletes a vault's configuration file. The vault's encrypted secret
+// data, stored separately at the vault's storage path, is left untouched. Removing a
+// non-existent config is not an error.
+func RemoveVaultConfig(name string) error {
+	if err := ValidateIdentifier(name); err != nil {
+		return fmt.Errorf("invalid vault name: %w", err)
+	}
+	if err := os.Remove(ConfigFilePath(name)); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("unable to remove vault config: %w", err)
+	}
+	return nil
 }
 
 func writeKeyToFile(key, filePath string) error {
