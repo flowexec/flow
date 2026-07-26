@@ -261,6 +261,12 @@ func vaultFromName(vaultName string) (*vaultEntity, error) {
 		if inert := cfg.External.LegacyWriteCommands(); len(inert) > 0 {
 			data["inertCommands"] = inert
 		}
+		// Which generator produced this config, and with what values. A UI needs
+		// both to browse the provider again later without asking the user to
+		// restate its region or 1Password vault name.
+		if src := cfg.External.Source; src != nil {
+			data["source"] = src
+		}
 	}
 
 	return v, nil
