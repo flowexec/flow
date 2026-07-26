@@ -276,7 +276,12 @@ func getSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		response.HandleSuccess(ctx, cmd, fmt.Sprintf("Secret '%s' retrieved", reference), data)
 	default:
 		if asPlainText {
-			logger.Log().PlainTextInfo(s.PlainTextString())
+			// Straight to stdout rather than through the styled logger. The whole
+			// point of --plaintext is that the value can be captured --
+			// `TOKEN=$(flow secret get token --plaintext)` -- and the logger wraps
+			// its argument in ANSI colour codes (even when stdout is a pipe) and
+			// expands tabs to spaces. Both silently corrupt the secret.
+			_, _ = fmt.Fprintln(ctx.StdOut(), s.PlainTextString())
 		} else {
 			logger.Log().PlainTextInfo(s.String())
 		}
