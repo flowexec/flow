@@ -226,6 +226,7 @@ func (t TemplateList) Items() []*types.EntityInfo {
 		items[i] = &types.EntityInfo{
 			ID:     template.Name(),
 			Header: template.Name(),
+			Desc:   template.Description,
 		}
 	}
 	return items

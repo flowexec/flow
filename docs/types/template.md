@@ -19,6 +19,7 @@ Configuration for a flowfile template; templates can be used to generate flow fi
 | ----- | ----------- | ---- | ------- | :--------: |
 | `annotations` |  | [CommonAnnotations](#commonannotations) | map[] |  |
 | `artifacts` | A list of artifacts to be copied after generating the flow file. | `array` ([Artifact](#artifact)) |  |  |
+| `description` | A description of the template. This is used to describe what the template generates and when to reach for it, and is shown when browsing templates.  | `string` |  |  |
 | `form` | Form fields to be displayed to the user when generating a flow file from a template.  The form will be rendered first, and the user's input can be used to render the template.  | `array` ([Field](#field)) | [] |  |
 | `postRun` | A list of exec executables to run after generating the flow file. | `array` ([TemplateRefConfig](#templaterefconfig)) |  |  |
 | `preRun` | A list of exec executables to run before generating the flow file. | `array` ([TemplateRefConfig](#templaterefconfig)) |  |  |

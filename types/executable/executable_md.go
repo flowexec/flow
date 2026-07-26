@@ -304,6 +304,9 @@ func execEnvTable(env *ExecutableEnvironment) string {
 
 func templateMarkdown(t *Template) string {
 	mkdwn := fmt.Sprintf("# [Template] %s\n", t.Name())
+	if t.Description != "" {
+		mkdwn += fmt.Sprintf("%s\n", t.Description)
+	}
 	mkdwn += templateFormMarkdown(t)
 	mkdwn += templateArtifactsMarkdown(t)
 	if len(t.PreRun) > 0 {

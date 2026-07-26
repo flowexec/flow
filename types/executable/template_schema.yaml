@@ -139,6 +139,12 @@ type: object
 required:
   - template
 properties:
+  description:
+    type: string
+    default: ""
+    description: |
+      A description of the template. This is used to describe what the template generates and when to
+      reach for it, and is shown when browsing templates.
   artifacts:
     type: array
     description: A list of artifacts to be copied after generating the flow file.
