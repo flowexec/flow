@@ -99,9 +99,6 @@ func TestValidateIdentifier(t *testing.T) {
 		}
 	}
 
-	// A leading dash or underscore is rejected so this stays a strict subset of
-	// the vault library's ValidateVaultID; otherwise flow would accept a name
-	// the library refuses.
 	invalid := []string{
 		"", "../etc", "a/b", "a.b", "a b", "..", "vault/../x", "name.json",
 		"-myvault", "_myvault", "-", "_",
