@@ -107,8 +107,8 @@ tags: [test2]
 `,
 			},
 		}
-		templates[0].SetContext("flowfile", "flowfile.tmpl.flow")
-		templates[1].SetContext("flowfile2", "flowfile2.tmpl.flow")
+		templates[0].SetContext("flowfile", "flowfile.flow.tmpl")
+		templates[1].SetContext("flowfile2", "flowfile2.flow.tmpl")
 	})
 
 	Describe("Format Methods", func() {

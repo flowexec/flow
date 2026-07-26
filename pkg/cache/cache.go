@@ -17,5 +17,10 @@ func UpdateAll(ds store.DataStore) error {
 		return err
 	}
 
+	tmplCache := NewTemplateCache(wsCache, ds)
+	if err := tmplCache.Update(); err != nil {
+		return err
+	}
+
 	return nil
 }

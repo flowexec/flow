@@ -112,14 +112,30 @@ var defaultExcutablePaths = []string{
 }
 
 func findFlowFiles(workspaceCfg *workspace.Workspace) ([]string, error) {
+	return findFiles(workspaceCfg, workspaceCfg.Executables, executable.HasFlowFileExt)
+}
+
+func findFlowFileTemplates(workspaceCfg *workspace.Workspace) ([]string, error) {
+	return findFiles(workspaceCfg, workspaceCfg.Templates, executable.HasFlowFileTemplateExt)
+}
+
+// findFiles walks the workspace tree and returns every file whose name satisfies match.
+// The filter (when non-nil) supplies include/exclude patterns; the default exclusions in
+// defaultExcutablePaths are always applied on top. This is shared by executable and template
+// discovery — only the filter and the name matcher differ between them.
+func findFiles(
+	workspaceCfg *workspace.Workspace,
+	filter *workspace.ExecutableFilter,
+	match func(name string) bool,
+) ([]string, error) {
 	var includePaths, excludedPaths []string
-	if workspaceCfg.Executables != nil {
-		includePaths = workspaceCfg.Executables.Included
+	if filter != nil {
+		includePaths = filter.Included
 		if len(includePaths) == 0 {
 			includePaths = []string{workspaceCfg.Location()}
 		}
 
-		excludedPaths = workspaceCfg.Executables.Excluded
+		excludedPaths = filter.Excluded
 	} else {
 		includePaths = []string{workspaceCfg.Location()}
 	}
@@ -142,7 +158,7 @@ func findFlowFiles(workspaceCfg *workspace.Workspace) ([]string, error) {
 				return nil
 			}
 
-			if executable.HasFlowFileExt(entry.Name()) {
+			if match(entry.Name()) {
 				cfgPaths = append(cfgPaths, path)
 			}
 		}

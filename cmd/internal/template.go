@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -11,13 +12,14 @@ import (
 	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
 	"github.com/flowexec/flow/v2/cmd/internal/response"
-	"github.com/flowexec/flow/v2/internal/io/executable"
+	iolib "github.com/flowexec/flow/v2/internal/io/executable"
 	"github.com/flowexec/flow/v2/internal/runner"
 	"github.com/flowexec/flow/v2/internal/runner/exec"
 	"github.com/flowexec/flow/v2/internal/templates"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func RegisterTemplateCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -116,6 +118,11 @@ func registerAddTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 func addTemplateFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 	flowFilePath := args[1]
+	// Normalize to an absolute path so the template resolves regardless of the cwd it was
+	// registered from.
+	if abs, err := filepath.Abs(flowFilePath); err == nil {
+		flowFilePath = abs
+	}
 	loadedTemplates, err := filesystem.LoadFlowFileTemplate(name, flowFilePath)
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
@@ -176,7 +183,7 @@ func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 	listCmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List registered flowfile templates.",
+		Short:   "List registered and workspace-discovered flowfile templates.",
 		Args:    cobra.NoArgs,
 		PreRun:  func(cmd *cobra.Command, args []string) { StartTUI(ctx, cmd) },
 		PostRun: func(cmd *cobra.Command, args []string) { WaitForTUI(ctx, cmd) },
@@ -187,16 +194,20 @@ func registerListTemplateCmd(ctx *context.Context, templateCmd *cobra.Command) {
 }
 
 func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	// TODO: include unregistered templates within the current ws;
-	// add --annotation filter flags (mirroring browse / workspace list)
-	tmpls, err := filesystem.LoadFlowFileTemplates(ctx.Config.Templates)
+	// TODO: add --annotation filter flags (mirroring browse / workspace list)
+	registered, err := filesystem.LoadFlowFileTemplates(ctx.Config.Templates)
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
+	discovered, err := ctx.TemplateCache.GetTemplateList()
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	tmpls := mergeTemplates(registered, discovered)
 
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
-		view := executable.NewTemplateListView(
+		view := iolib.NewTemplateListView(
 			ctx, tmpls,
 			func(name string) error {
 				tmpl := tmpls.Find(name)
@@ -214,8 +225,29 @@ func listTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		)
 		SetView(ctx, cmd, view)
 	} else {
-		executable.PrintTemplateList(outputFormat, tmpls)
+		iolib.PrintTemplateList(outputFormat, tmpls)
 	}
+}
+
+// mergeTemplates combines registered (global config) and discovered (workspace) templates
+// into a single list keyed by name. Registered templates take precedence on name collisions.
+func mergeTemplates(registered, discovered executable.TemplateList) executable.TemplateList {
+	byName := make(map[string]*executable.Template, len(registered)+len(discovered))
+	for _, tmpl := range discovered {
+		byName[tmpl.Name()] = tmpl
+	}
+	for _, tmpl := range registered {
+		byName[tmpl.Name()] = tmpl
+	}
+
+	merged := make(executable.TemplateList, 0, len(byName))
+	for _, tmpl := range byName {
+		merged = append(merged, tmpl)
+	}
+	slices.SortFunc(merged, func(a, b *executable.Template) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+	return merged
 }
 
 func registerGetTemplateCmd(ctx *context.Context, getCmd *cobra.Command) {
@@ -246,10 +278,10 @@ func getTemplateFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 	if TUIEnabled(ctx, cmd) {
 		runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }
-		view := executable.NewTemplateView(ctx, tmpl, runFunc)
+		view := iolib.NewTemplateView(ctx, tmpl, runFunc)
 		SetView(ctx, cmd, view)
 	} else {
-		executable.PrintTemplate(outputFormat, tmpl)
+		iolib.PrintTemplate(outputFormat, tmpl)
 	}
 }
 
@@ -257,7 +289,12 @@ const templateParentLong = `Manage flowfile templates. A template is a reusable 
 executables, directory structures, and configuration files via 'template generate'.
 
 Templates are registered by name for easy reuse. Use 'template add' to register a
-template, 'template generate' to scaffold from one, and 'template list' to see what's available.`
+template, 'template generate' to scaffold from one, and 'template list' to see what's available.
+
+Templates (*.flow.tmpl files) are also auto-discovered within your workspaces during
+'flow sync' — dropping one into a workspace makes it available without registering it.
+Registered templates take precedence over discovered ones when names collide; use a
+'workspace/name' reference to target a specific discovered template.`
 
 var templateLong = `Add rendered executables from a flowfile template to a workspace.
 

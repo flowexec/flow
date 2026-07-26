@@ -28,6 +28,7 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `gitRefType` | The type of git ref specified when the workspace was added. Either "branch" or "tag". Empty if no ref was specified.  | `string` |  |  |
 | `gitRemote` | The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL. Used by `flow workspace update` to pull the latest changes.  | `string` |  |  |
 | `tags` |  | [CommonTags](#commontags) | [] |  |
+| `templates` | Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered within the workspace during `flow sync`. Uses the same include/exclude semantics as the executables filter. When unset, the entire workspace is scanned (minus the default exclusions like node_modules/, vendor/, and .git/).  | [ExecutableFilter](#executablefilter) |  |  |
 | `verbAliases` |  | [VerbAliases](#verbaliases) |  |  |
 
 

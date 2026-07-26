@@ -126,22 +126,29 @@ func workspaceOrCurrent(ctx *context.Context, workspaceName string) *workspace.W
 }
 
 func loadFlowfileTemplate(ctx *context.Context, name, path string) *executable.Template {
-	if name != "" {
-		if ctx.Config.Templates == nil {
-			logger.Log().Errorf("template %s not found", name)
-			return nil
-		}
-		var found bool
-		if path, found = ctx.Config.Templates[name]; !found {
-			logger.Log().Errorf("template %s not found", name)
-			return nil
-		}
-	} else {
+	if name == "" {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			logger.Log().Errorf("flowfile template at %s not found", path)
 			return nil
 		}
+		return loadTemplateFromPath(name, path)
 	}
+
+	// Registered templates take precedence over discovered ones for backward compatibility.
+	if registeredPath, found := ctx.Config.Templates[name]; found {
+		return loadTemplateFromPath(name, registeredPath)
+	}
+
+	// Fall back to a workspace-discovered template resolved via the cache.
+	tmpl, err := ctx.TemplateCache.GetTemplate(name)
+	if err != nil {
+		logger.Log().Errorf("template %s not found", name)
+		return nil
+	}
+	return tmpl
+}
+
+func loadTemplateFromPath(name, path string) *executable.Template {
 	tmpl, err := filesystem.LoadFlowFileTemplate(name, path)
 	if err != nil {
 		logger.Log().WrapError(err, "unable to load flowfile template")

@@ -81,6 +81,16 @@ type Workspace struct {
 	// Tags corresponds to the JSON schema field "tags".
 	Tags WorkspaceTags `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags,omitempty"`
 
+	// Filters controlling which flowfile template files (*.flow.tmpl) are
+	// auto-discovered
+	// within the workspace during `flow sync`. Uses the same include/exclude
+	// semantics as
+	// the executables filter. When unset, the entire workspace is scanned (minus the
+	// default
+	// exclusions like node_modules/, vendor/, and .git/).
+	//
+	Templates *ExecutableFilter `json:"templates,omitempty" yaml:"templates,omitempty" mapstructure:"templates,omitempty"`
+
 	// VerbAliases corresponds to the JSON schema field "verbAliases".
 	VerbAliases *WorkspaceVerbAliases `json:"verbAliases,omitempty" yaml:"verbAliases,omitempty" mapstructure:"verbAliases,omitempty"`
 }

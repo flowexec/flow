@@ -5,12 +5,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/flowexec/tuikit/io/mocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
 	"github.com/flowexec/flow/v2/types/executable"
 	"github.com/flowexec/flow/v2/types/workspace"
 )
@@ -84,6 +87,60 @@ var _ = Describe("Templates", func() {
 			Expect(readTemplate).To(Equal(template))
 			Expect(readTemplate.Location()).To(Equal(templatePath))
 			Expect(readTemplate.Name()).To(Equal("test"))
+		})
+	})
+
+	Describe("LoadWorkspaceFlowFileTemplates", func() {
+		BeforeEach(func() {
+			mockLogger := mocks.NewMockLogger(gomock.NewController(GinkgoT()))
+			logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
+			mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			mockLogger.EXPECT().Error(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		})
+
+		write := func(name, content string) {
+			Expect(os.WriteFile(filepath.Join(tmpDir, name), []byte(content), 0600)).To(Succeed())
+		}
+
+		It("discovers only *.flow.tmpl files, naming them from their filename", func() {
+			write("webapp.flow.tmpl", "template: |\n  namespace: test\n")
+			write("api.flow.tmpl.yaml", "template: |\n  namespace: test\n")
+			write("regular.flow", "namespace: test\n")          // executable, not a template
+			write("deployment.yaml.tmpl", "kind: Deployment\n") // artifact partial, not a template
+			write("notes.txt", "hi\n")                          // unrelated
+
+			workspaceCfg := &workspace.Workspace{}
+			workspaceCfg.SetContext("test", tmpDir)
+
+			templates, err := filesystem.LoadWorkspaceFlowFileTemplates(workspaceCfg)
+			Expect(err).NotTo(HaveOccurred())
+			names := make([]string, 0, len(templates))
+			for _, t := range templates {
+				names = append(names, t.Name())
+			}
+			Expect(names).To(ConsistOf("webapp", "api"))
+		})
+
+		It("respects excluded paths", func() {
+			excludedDir, err := os.MkdirTemp(tmpDir, "excluded")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.WriteFile(
+				filepath.Join(excludedDir, "hidden.flow.tmpl"), []byte("template: |\n  namespace: test\n"), 0600,
+			)).To(Succeed())
+			write("visible.flow.tmpl", "template: |\n  namespace: test\n")
+
+			workspaceCfg := &workspace.Workspace{
+				Templates: &workspace.ExecutableFilter{
+					Included: []string{tmpDir},
+					Excluded: []string{excludedDir},
+				},
+			}
+			workspaceCfg.SetContext("test", tmpDir)
+
+			templates, err := filesystem.LoadWorkspaceFlowFileTemplates(workspaceCfg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(templates).To(HaveLen(1))
+			Expect(templates[0].Name()).To(Equal("visible"))
 		})
 	})
 })

@@ -68,10 +68,10 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 				},
 			},
 		}
-		template.SetContext("e2e", filepath.Join(workDir, "flowfile.tmpl.flow"))
+		template.SetContext("e2e", filepath.Join(workDir, "flowfile.flow.tmpl"))
 		data, err := template.YAML()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.WriteFile(filepath.Join(workDir, "flowfile.tmpl.flow"), []byte(data), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(workDir, "flowfile.flow.tmpl"), []byte(data), 0644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(workDir, "artifact1"), []byte("artifact1"), 0644)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(workDir, "artifact2"), []byte("artifact2"), 0644)).To(Succeed())
 
@@ -181,6 +181,56 @@ var _ = Describe("flowfile template commands e2e", Ordered, func() {
 			out, err := readFileContent(ctx.StdOut())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring(fmt.Sprintf("Template '%s' rendered successfully", name)))
+		})
+	})
+
+	When("an unregistered template exists in the workspace (auto-discovery)", func() {
+		const discoveredTmpl = `form:
+  - key: greeting
+    prompt: "Greeting?"
+    default: "hello"
+template: |
+  namespace: discovered
+  executables:
+    - verb: run
+      name: "{{ form["greeting"] }}"
+      exec:
+        cmd: echo hi
+`
+
+		BeforeAll(func() {
+			// The e2e harness closes the shared IO after each command, so the file is written
+			// here (no command) and sync runs as its own spec below. The DataStore persists
+			// across specs, so the synced cache is visible to the later list/generate specs.
+			tmplPath := filepath.Join(ctx.CurrentWorkspace.Location(), "discovered.flow.tmpl")
+			Expect(os.WriteFile(tmplPath, []byte(discoveredTmpl), 0600)).To(Succeed())
+		})
+
+		It("discovers the template on sync", func() {
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
+		})
+
+		It("lists the discovered template without registration", func() {
+			Expect(run.Run(ctx.Context, "template", "list", "-o", "yaml")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("discovered"))
+		})
+
+		It("renders the discovered template by name", func() {
+			outputDir := filepath.Join(ctx.CurrentWorkspace.Location(), "discovered-output")
+			Expect(run.Run(
+				ctx.Context,
+				"template",
+				"generate",
+				"discovered",
+				"-t", "discovered",
+				"-o", outputDir,
+				"-s", "greeting=hi",
+			)).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("rendered successfully"))
 		})
 	})
 })
