@@ -223,8 +223,16 @@ func vaultFromName(vaultName string) (*vaultEntity, error) {
 		return nil, err
 	}
 	data := make(map[string]interface{})
-	data["created"] = vlt.Metadata().Created
-	data["lastModified"] = vlt.Metadata().LastModified
+	// A metadata failure must not make the vault unviewable. For an external
+	// vault it means the backend CLI is missing or the session has expired,
+	// which is exactly when a user wants to look at the vault's configuration.
+	// Report it as a field instead of failing the whole view.
+	if metadata, mdErr := vlt.Metadata(); mdErr != nil {
+		data["metadataError"] = mdErr.Error()
+	} else {
+		data["created"] = metadata.Created
+		data["lastModified"] = metadata.LastModified
+	}
 
 	v := &vaultEntity{
 		Name: vlt.ID(),
