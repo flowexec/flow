@@ -146,6 +146,45 @@ var _ = Describe("ExecutableCacheImpl", func() {
 		})
 	})
 
+	Describe("GetExecutableList ordering", func() {
+		It("should return a stable order across calls when multiple flowfiles are cached", func() {
+			// Several flowfiles are needed: the list is assembled by iterating the config-path
+			// map, and a single key cannot expose randomized map iteration.
+			for _, name := range []string{"alpha", "bravo", "charlie", "delta", "echo"} {
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: name, Exec: &executable.ExecExecutableType{}},
+					},
+				}
+				execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, name+executable.FlowFileExt))
+				Expect(filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)).To(Succeed())
+			}
+
+			mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+			mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			Expect(execCache.Update()).To(Succeed())
+
+			refsFor := func() []string {
+				list, err := execCache.GetExecutableList()
+				Expect(err).ToNot(HaveOccurred())
+				refs := make([]string, 0, len(list))
+				for _, e := range list {
+					refs = append(refs, e.Ref().String())
+				}
+				return refs
+			}
+
+			first := refsFor()
+			Expect(len(first)).To(BeNumerically(">=", 5))
+			for range 20 {
+				Expect(refsFor()).To(Equal(first))
+			}
+		})
+	})
+
 	Describe("Verb aliases behavior", func() {
 		BeforeEach(func() {
 			v := executable.FlowFileVisibility(common.VisibilityPrivate)

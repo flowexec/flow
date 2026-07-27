@@ -3,8 +3,10 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -230,8 +232,9 @@ func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, er
 		return nil, errors.New("no cached executables found")
 	}
 
+	// Sorted: callers paginate this list across separate calls, so map order would drop entries.
 	list := make(executable.ExecutableList, 0)
-	for cfgPath := range c.Data.ConfigMap {
+	for _, cfgPath := range slices.Sorted(maps.Keys(c.Data.ConfigMap)) {
 		cfg, err := filesystem.LoadFlowFile(cfgPath)
 		if err != nil {
 			logger.Log().Error("unable to load executable config", "cfgPath", cfgPath, "err", err)

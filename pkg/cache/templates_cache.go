@@ -3,6 +3,8 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -176,7 +178,8 @@ func (c *TemplateCacheImpl) GetTemplateList() (executable.TemplateList, error) {
 	}
 
 	list := make(executable.TemplateList, 0, len(c.Data.TemplateMap))
-	for name, path := range c.Data.TemplateMap {
+	for _, name := range slices.Sorted(maps.Keys(c.Data.TemplateMap)) {
+		path := c.Data.TemplateMap[name]
 		tmpl, err := filesystem.LoadFlowFileTemplate(name, path)
 		if err != nil {
 			logger.Log().Error("unable to load template", "path", path, "err", err)

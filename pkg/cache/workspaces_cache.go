@@ -2,8 +2,10 @@ package cache
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -126,7 +128,8 @@ func (c *WorkspaceCacheImpl) GetWorkspaceConfigList() (workspace.WorkspaceList, 
 	}
 
 	wsCfgs := make(workspace.WorkspaceList, 0, len(c.Data.Workspaces))
-	for wsName, wsCfg := range cache.Workspaces {
+	for _, wsName := range slices.Sorted(maps.Keys(cache.Workspaces)) {
+		wsCfg := cache.Workspaces[wsName]
 		wsCfg.SetContext(wsName, cache.WorkspaceLocations[wsName])
 		wsCfgs = append(wsCfgs, wsCfg)
 	}
