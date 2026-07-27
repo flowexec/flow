@@ -1,22 +1,29 @@
 # flow repo — Claude Code Context
 
-## Project Overview
-
-**flow** is a workflow automation hub for organizing automation across multiple projects (workspaces) with built-in secrets, templates, and cross-workspace composition. Users define workflows in YAML flow files, discover them visually, and run them anywhere.
-
-This repo contains the flow CLI (Go). flow itself is used for all dev automation — build, test, generate, lint, release — via `.execs/*.flow` files.
+**flow** is a workflow automation hub: automation organized across projects (workspaces), with
+built-in secrets, templates, and cross-workspace composition. Users define workflows in YAML flow
+files and run them anywhere. This repo is the flow CLI (Go), and flow runs its own dev automation
+via `.execs/*.flow`.
 
 ---
 
 ## Critical Rules
 
-Read these before touching any code:
-
-1. **NEVER edit generated files** — `types/**/*.go`, `docs/cli/*.md`, `docs/types/*.md` are all auto-generated. Edit the schema source, not the output.
-2. **Run `flow generate` after any schema change** in `types/*/schema.yaml` — CI will reject uncommitted generated diffs.
-3. **Remove test focus markers before committing** — `FDescribe`, `FIt`, `FEntry` are temporary debugging tools, never ship them.
-4. **Never use `logger.Log().FatalErr()` in `cmd/`** — use `errhandler.HandleFatal(ctx, cmd, err)` instead.
-5. **`pkg/` is the stable API surface; `internal/` is unexported** — packages in `pkg/` may be imported outside the binary; `internal/` may not.
+1. **Only `*.gen.go` is generated — the rest of `types/` is hand-written.** Never edit
+   `types/**/*.gen.go`, `docs/cli/`, `docs/types/`, or `docs/public/schemas/`; edit the source
+   schema and run the `generate` executable. Sources are `types/executable/*_schema.yaml` and
+   `types/{config,workspace,common}/schema.yaml`. CI's `validate generated` fails on uncommitted
+   diffs. (Permission rules block these writes, so a failed edit here is expected, not a bug.)
+2. **Remove `FDescribe`/`FIt`/`FEntry` before committing** — they silently exclude every other
+   spec in the suite.
+3. **In `cmd/`, never `log.Fatal`, `os.Exit`, or `logger.Log().FatalErr()`** — use
+   `errhandler.HandleFatal(ctx, cmd, err)`, or `HandleUsage` for flag/arg misuse.
+4. **`pkg/` is importable API surface; `internal/` is not.**
+5. **Run work through flow's MCP tools, not raw Bash** — see Development Workflow.
+6. **`go test ./...` without build tags silently skips most tests.** Use the `test` refs.
+7. **Never commit directly on `main`.** Before the first commit of any change, create a branch
+   (`git switch -c <type>/<slug>`) so the work lands as a PR. If you're already on `main` with
+   commits, move them onto a branch and reset `main` back to `origin/main`.
 
 ---
 
@@ -24,162 +31,122 @@ Read these before touching any code:
 
 ```
 flow/
-├── cmd/                 # Cobra CLI entry points and command handlers
-├── pkg/                 # Shared, importable packages
-│   ├── cache/           # Workspace and executable cache management
-│   ├── cli/             # Shared CLI helpers and flag definitions
-│   ├── context/         # Global app context (workspace, config, vault)
-│   ├── errors/          # Typed errors with machine-readable codes
-│   ├── filesystem/      # Path helpers and workspace file I/O
-│   ├── logger/          # Structured logging
-│   └── store/           # Persistence layer interfaces and implementations
-├── internal/            # App logic NOT exported outside the binary
-│   ├── fileparser/      # Flow file YAML parsing and validation
-│   ├── io/              # Terminal UI and output rendering (tuikit)
-│   ├── mcp/             # MCP server implementation (tools, resources)
-│   ├── runner/          # Executable execution engine
-│   ├── services/        # Business logic orchestration layer
+├── cmd/                 # Cobra CLI. Only root.go here; handlers in cmd/internal/
+├── pkg/                 # Importable: cache, cli, context, errors, filesystem,
+│                        #   imports, logger, store
+├── internal/            # Not importable outside the binary
+│   ├── io/              # Terminal UI and output rendering (wraps tuikit)
+│   ├── mcp/             # MCP server (tools, resources)
+│   ├── runner/          # Execution engine; one subpackage per executable type
+│   ├── services/        # Business logic orchestration
 │   ├── templates/       # Workflow template expansion
-│   ├── updater/         # Auto-update logic
-│   ├── utils/           # Internal utilities
-│   ├── validation/      # Schema and config validation
-│   ├── vault/           # Secret management
-│   └── version/         # Build version info
-├── types/               # Generated Go types from YAML schemas — DO NOT EDIT
-├── tests/               # E2E test suite (Ginkgo, -tags=e2e)
-├── docs/                # Documentation source (flowexec.io) — CLI/type docs are generated
-├── tools/               # Code generation and build tooling
-└── .execs/              # flow dev automation executables (build, test, lint, release)
+│   ├── vault/           # Thin wrapper over the vault module
+│   └── ...              # fileparser, updater, utils, validation, version
+├── types/               # Schemas + generated types (*.gen.go) + hand-written helpers
+├── tests/               # E2E suite (Ginkgo, -tags=e2e)
+├── docs/                # flowexec.io source; docs/cli and docs/types are generated
+└── .execs/              # flow's own dev automation
 ```
 
 ---
 
 ## Architecture
 
-**CLI execution path:**
 ```
-cmd/ (Cobra command) → pkg/context (workspace + config resolution)
-  → internal/services (business logic) → internal/runner (execution engine)
-  → type-specific handler in internal/runner/
+cmd/internal (Cobra) → pkg/context (workspace + config) → internal/services
+  → internal/runner → type-specific subpackage
 ```
 
-**Type generation pipeline:**
-```
-types/*/schema.yaml → go-jsonschema → types/*/generated.go (DO NOT EDIT)
-  → internal/fileparser (YAML parsing and validation)
-```
+`internal/mcp` exposes that same pipeline over the Model Context Protocol; `flow mcp` starts the
+server.
 
-**MCP server:**
-`internal/mcp` exposes the same execution pipeline to AI tools over the Model Context Protocol. The `flow mcp` command starts the server. Claude Code, Cursor, and other MCP clients can call `mcp__flow__*` tools to run executables directly.
+**Scope boundary — flow is an AI *tool provider*, not an AI *consumer*.** The core exposes
+deterministic capabilities (MCP server, published JSON schemas, `llms.txt`). Do not add LLM calls,
+natural-language command parsing, or AI generation *into* the CLI — that puts vendor keys,
+per-call cost, and non-determinism in a task runner's critical path. Anything applying a model to
+flow does so from outside, via the MCP surface. Treat "add AI features to the CLI" as out of scope.
 
 ---
 
-## Key Technologies
+## Sibling Repositories
 
-### Go CLI
-- **Language**: Go 1.25+ (`go.mod:3`)
-- **CLI Framework**: Cobra (`github.com/spf13/cobra`)
-- **TUI**: Custom tuikit (`github.com/flowexec/tuikit`) built on Bubble Tea
-- **Testing**: Ginkgo v2 BDD framework (`github.com/onsi/ginkgo/v2`)
+Two first-party modules carry much of this repo's behavior, and their seam is where most breakage
+happens:
+
+- **`flowexec/tuikit`** — all TUI rendering (`flow browse`, logs view, prompts). Apparent
+  rendering or input bugs usually live here, not in `internal/io`.
+- **`flowexec/vault`** — secret storage providers (AES-256, age, keyring, env). `internal/vault`
+  is a thin type-alias wrapper.
+
+**Read the pinned version, not a local checkout.** There are no `replace` directives, so builds
+use the `go.mod` versions from `$(go env GOMODCACHE)/github.com/flowexec/<mod>@<version>`. A
+sibling working copy is often on a feature branch at a *different* version than what compiles, so
+answering an integration question from it yields confidently wrong results. Use a checkout only
+when deliberately co-developing upstream. Upgrades here are usually breaking-change adaptations,
+not version bumps — check release notes before assuming an API is unchanged.
+
+Same org, not imported: `action` (GitHub Action), `examples`, `homebrew-tap`.
 
 ---
 
 ## Development Workflow
 
-The project uses flow itself for dev automation:
+flow's MCP server is wired up in `.mcp.json`. **Prefer `mcp__flow__*` over raw Bash** so runs get
+workspace env/secrets and land in flow's history. The `flow-context` skill has the full guidance.
 
-```bash
-flow build binary ./bin/flow   # Build the CLI binary
-flow test                      # Run all tests (unit + e2e) in parallel
-flow lint                      # Run golangci-lint
-flow generate                  # Run all code generation
-flow validate                  # Full check: generate → lint → test → diff validation
-flow install tools             # Install/update Go tools
-flow mcp                       # Start the MCP server
-flow browse                    # TUI explorer for discovering executables
-```
+`mcp__flow__execute` runs a named executable, `run_command` a one-off shell command,
+`run_executable` an inline multi-step spec. Discover names with `mcp__flow__list_executables` —
+don't assume them.
 
-### Using flow's MCP Tools in Sessions
+| Ref | What it does |
+|-----|--------------|
+| `build binary` | Build the CLI (pass `./bin/flow` as the output arg) |
+| `test` | All tests (unit + e2e), parallel |
+| `test unit` / `test e2e` | One suite |
+| `lint` | golangci-lint |
+| `generate` | All code generation |
+| `validate` | generate → lint → test → generated-diff check |
+| `install tools` | Install/update Go tools |
 
-During a Claude Code session, prefer MCP tools over raw shell when possible — they respect workspace config and handle environment setup:
+`flow browse` and `flow mcp` are interactive — they belong in a real terminal, not a tool call.
 
-```
-mcp__flow__list_executables    # Browse all available executables
-mcp__flow__execute             # Run an executable (e.g., ref: "test unit", ref: "lint")
-mcp__flow__get_executable      # Inspect a specific executable's definition
-mcp__flow__get_info            # Get current workspace context
-mcp__flow__get_workspace       # Get workspace details
-```
-
----
-
-## Testing
-
-- **Unit tests** (`-tags=unit`): Fast, no binary needed. `go test -race -tags=unit ./...`
-- **E2E tests** (`-tags=e2e`): Require the `flow` binary on PATH. Build first: `flow build binary ./bin/flow`, then `go test -race -tags=e2e ./tests/...`
-- **Focusing tests**: Use `FDescribe`/`FIt`/`FEntry` temporarily to filter — **always remove before committing**
-- **Golden file updates**: Set `UPDATE_GOLDEN_FILES=true` when output changes are intentional
-
-Run both together: `flow test` (parallel, handles tags and env automatically)
-
----
-
-## Code Generation
-
-The project generates code from YAML schemas. **Always edit schemas, never generated output.**
-
-| Source | Generated output |
-|--------|-----------------|
-| `types/*/schema.yaml` | `types/**/*.go` |
-| Go definitions | `docs/cli/*.md`, `docs/types/*.md` |
-
-After any schema change: `flow generate` — CI runs `validate generated` which fails on uncommitted diffs.
+**Testing notes:** e2e needs the binary on PATH (the `test e2e` ref builds it first). Set
+`UPDATE_GOLDEN_FILES=true` when output changes are intentional.
 
 ---
 
 ## Error Handling
 
-The CLI surfaces a structured JSON/YAML error envelope (`{"error":{"code","message","details"}}`) on stderr when the user passes `--output json` or `--output yaml`, and plain-text otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
+The CLI emits a structured error envelope (`{"error":{"code","message","details"}}`) on stderr for
+`--output json|yaml`, plain text otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
 
-**In `cmd/` handlers:**
-- Use `errhandler.HandleFatal(ctx, cmd, err)` — not `logger.Log().FatalErr(err)`
-- Use `errhandler.HandleUsage(ctx, cmd, "...", args...)` for flag/arg misuse → callers see `INVALID_INPUT` + exit 2
-
-**Typed errors in `pkg/errors/errors.go`** implement `Code() string`. Extend that set rather than returning bare `fmt.Errorf` when a stable machine-readable code matters.
-
-Available codes: `INVALID_INPUT`, `NOT_FOUND`, `EXECUTION_FAILED`, `TIMEOUT`, `CANCELLED`, `VALIDATION_FAILED`, `INTERNAL_ERROR`, `PERMISSION_DENIED`
-
----
-
-## Common Pitfalls
-
-- **Editing `types/*.go` directly** → CI fails on `validate generated`. Edit `types/*/schema.yaml` instead.
-- **`go test ./...` without build tags** → most tests silently skip. Always use `-tags=unit` or `-tags=e2e`.
-- **Running e2e tests without a built binary** → tests panic. Run `flow build binary ./bin/flow` first.
-- **Leaving `FDescribe`/`FIt` in committed code** → all other tests in that suite are silently excluded.
-- **Adding a Cobra command with bare `log.Fatal`** → breaks structured error output. Use `errhandler`.
+Typed errors in `pkg/errors/errors.go` implement `Code() string`. Extend that set rather than
+returning bare `fmt.Errorf` when a stable machine-readable code matters. Codes: `INVALID_INPUT`,
+`NOT_FOUND`, `EXECUTION_FAILED`, `TIMEOUT`, `CANCELLED`, `VALIDATION_FAILED`, `INTERNAL_ERROR`,
+`PERMISSION_DENIED`.
 
 ---
 
 ## PR & Code Quality
 
-Before marking a PR ready, run `flow validate` — it runs generate, lint, test, and checks for uncommitted generated diffs in one shot.
-
-- Commit messages: imperative mood, lowercase, ≤72 chars (`fix: ...`, `feat: ...`, `refactor: ...`)
-- No WIP code in PRs: remove all `FDescribe`/`FIt` focus markers, debug prints, and open TODOs
+Run the `validate` executable before marking a PR ready. Commit messages: imperative, lowercase,
+≤72 chars (`fix:`, `feat:`, `refactor:`). No focus markers, debug prints, or open TODOs.
 
 ---
 
 ## Configuration Files
 
-- **`flow.yaml`**: Workspace configuration for the flow repo itself
-- **`go.mod`**: Go dependencies and version (Go 1.25+)
-- **`.execs/`**: flow dev workflow definitions (build, test, lint, release, etc.)
-- **`.claude/settings.local.json`**: Claude Code permission allowlist for this project
+- **`flow.yaml`** — this repo's workspace config
+- **`.execs/`** — flow's dev automation definitions
+- **`.mcp.json`** — registers the flow MCP server; committed so every clone gets it
+- **`.claude/settings.json`** — committed permissions. `deny` blocks generated-file writes and
+  secret reads; `ask` gates pushes and releases. Keep absolute paths out — it ships to everyone.
+- **`.claude/settings.local.json`** — gitignored, per-user. Where absolute paths belong, e.g.
+  `permissions.additionalDirectories` for the module cache and sibling checkouts.
 
 ## Development Setup
 
-1. Prerequisites: Go 1.25+, flow CLI installed
+1. Go 1.25+, flow CLI installed
 2. `flow workspace add flow . --set`
 3. `flow install tools`
 4. `flow validate`

@@ -2,7 +2,7 @@
 name: pr-ready
 description: Run a pre-PR readiness check and report READY or NOT READY.
 disable-model-invocation: true
-allowed-tools: Bash(git *) Bash(flow validate:*) Bash(flow generate:*) Bash(go test:*) Read
+allowed-tools: mcp__flow__execute, mcp__flow__run_command, mcp__flow__list_executables, Bash(git:*), Bash(flow validate:*), Bash(flow generate:*), Bash(go test:*), Read
 ---
 
 Check whether the current branch is ready to open a PR. Work through each item and report PASS or FAIL:
@@ -10,7 +10,9 @@ Check whether the current branch is ready to open a PR. Work through each item a
 1. **No focus markers** — `grep -rn "FDescribe\|FIt\|FEntry\|FContext\|FWhen" --include="*.go" .`
    Any match is a FAIL — these silently exclude all other tests in the suite.
 
-2. **Validation passes** — run `flow validate`. All steps must pass.
+2. **Validation passes** — run the `validate` executable via `mcp__flow__execute` (ref: `validate`).
+   All steps must pass. Use `mcp__flow__run_command` for the `git`/`grep` checks below so they land
+   in flow's history alongside it.
 
 3. **No debug artifacts** — grep for `fmt.Println`, `spew.Dump` in `cmd/`, `internal/`, `pkg/`.
    Flag anything that looks like leftover debug output (not legitimate logging).
