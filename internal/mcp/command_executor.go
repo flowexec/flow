@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 
+	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/pkg/errors"
 
@@ -34,6 +36,17 @@ func provenanceFromContext(ctx context.Context) (runProvenance, bool) {
 	return p, ok
 }
 
+// stdioSessionID is what mcp-go reports as the session ID for every stdio connection — a
+// package constant, not a per-connection value (see mcp-go server/stdio.go). Taken at face
+// value it collapses every run from every client into one "session".
+const stdioSessionID = "stdio"
+
+// processSessionID identifies this server process as a single client session. flow's MCP server
+// is stdio-only and each client spawns its own `flow mcp` process, so one process is exactly one
+// client connection — the session boundary mcp-go's constant fails to draw. It is resolved once
+// and never changes, which is what makes it a usable grouping key in execution history.
+var processSessionID = sync.OnceValue(uuid.NewString)
+
 // mcpProvenance builds run provenance for an MCP-originated command, capturing the calling client's
 // name and session ID from the MCP session (when the transport exposes them).
 func mcpProvenance(ctx context.Context) runProvenance {
@@ -43,6 +56,11 @@ func mcpProvenance(ctx context.Context) runProvenance {
 		if withInfo, ok := sess.(server.SessionWithClientInfo); ok {
 			prov.Client = withInfo.GetClientInfo().Name
 		}
+	}
+	// Only substitute when the transport gave us nothing usable, so a transport that does issue
+	// genuine per-connection IDs keeps them.
+	if prov.Session == "" || prov.Session == stdioSessionID {
+		prov.Session = processSessionID()
 	}
 	return prov
 }
