@@ -127,9 +127,13 @@ type ExecutionRecord struct {
 	Label string `json:"label,omitempty"`
 
 	// Provenance: who/what launched the run.
-	Source     string `json:"source,omitempty"`     // "cli" | "mcp"
+	Source     string `json:"source,omitempty"`     // "cli" | "desktop" | "mcp"
 	ClientName string `json:"clientName,omitempty"` // e.g. "claude", "cursor"
 	SessionID  string `json:"sessionId,omitempty"`
+	// WorkingDir is where the run actually executed. The workspace is already recoverable from
+	// Ref, but the path is not, and it is the only thing separating two checkouts of the same
+	// repo — sibling git worktrees produce identical refs from different directories.
+	WorkingDir string `json:"workingDir,omitempty"`
 }
 
 // BackgroundRunStatus represents the state of a background run.

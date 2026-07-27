@@ -31,6 +31,7 @@ type recordOutput struct {
 	Source      string `json:"source,omitempty"      yaml:"source,omitempty"`
 	ClientName  string `json:"clientName,omitempty"  yaml:"clientName,omitempty"`
 	SessionID   string `json:"sessionId,omitempty"   yaml:"sessionId,omitempty"`
+	WorkingDir  string `json:"workingDir,omitempty"  yaml:"workingDir,omitempty"`
 
 	// Content and its companions are populated only when log content is requested.
 	Content              string `json:"content,omitempty"              yaml:"content,omitempty"`
@@ -58,6 +59,7 @@ func toRecordOutput(r UnifiedRecord, content ContentOptions, includeContent bool
 		Source:     r.Source,
 		ClientName: r.ClientName,
 		SessionID:  r.SessionID,
+		WorkingDir: r.WorkingDir,
 	}
 	if r.CompletedAt != nil {
 		out.CompletedAt = r.CompletedAt.Format(time.RFC3339)
@@ -200,6 +202,7 @@ func printRecordMetadata(record UnifiedRecord, stdout io.Writer) {
 		{"Source", record.Source},
 		{"Client", record.ClientName},
 		{"Session", record.SessionID},
+		{"Directory", record.WorkingDir},
 		{"Error", record.Error},
 	} {
 		if f.value != "" {

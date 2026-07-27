@@ -35,6 +35,20 @@ func TestToRecordOutput_RunIdentity(t *testing.T) {
 		}
 	})
 
+	t.Run("carries the working directory", func(t *testing.T) {
+		// The ref names the workspace, but not which checkout of it — sibling worktrees
+		// produce identical refs, so the path is the only thing telling them apart.
+		out := toRecordOutput(UnifiedRecord{ExecutionRecord: store.ExecutionRecord{
+			Ref:        "run mochi/build",
+			StartedAt:  started,
+			WorkingDir: "/Users/x/worktrees/feature-a",
+		}}, ContentOptions{}, false)
+
+		if out.WorkingDir != "/Users/x/worktrees/feature-a" {
+			t.Errorf("expected the working directory to survive; got %q", out.WorkingDir)
+		}
+	})
+
 	t.Run("omits completedAt for a run still in progress", func(t *testing.T) {
 		out := toRecordOutput(UnifiedRecord{ExecutionRecord: store.ExecutionRecord{
 			Ref:       "run flow/build",

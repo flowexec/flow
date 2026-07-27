@@ -270,7 +270,7 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
 		return
 	}
-	runTransientExecutable(ctx, cmd, e, transientMeta{command: joined, label: label})
+	runTransientExecutable(ctx, cmd, e, transientMeta{command: joined, label: label, dir: dir})
 }
 
 // execTransientSpec runs a transient executable parsed from an inline definition (--spec). Unlike
@@ -316,7 +316,7 @@ func execTransientSpec(ctx *context.Context, cmd *cobra.Command, verb executable
 	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
 		return
 	}
-	runTransientExecutable(ctx, cmd, e, transientMeta{spec: content, label: label})
+	runTransientExecutable(ctx, cmd, e, transientMeta{spec: content, label: label, dir: runDir})
 }
 
 // transientSpecName derives a ref-safe name for a --spec run that omitted `name`, preferring the
@@ -440,6 +440,9 @@ func runTransientExecutable(
 
 	startTime := time.Now()
 	prov := runProvenanceFromEnv()
+	if meta.dir != "" {
+		prov.dir = meta.dir
+	}
 	recordRunStart(ctx, ref, startTime, prov, meta)
 
 	eng := engine.NewExecEngine()
@@ -688,9 +691,12 @@ func cleanupProcessStore(ctx *context.Context) {
 	}
 }
 
-// provenance bundles who/what launched a run, recorded on its execution record.
+// provenance bundles who/what launched a run, and from where, recorded on its execution record.
 type provenance struct {
 	source, client, session string
+	// dir is where the run executed. Defaults to the process working directory, which is the
+	// caller's cwd; ad-hoc runs override it with their resolved --dir.
+	dir string
 }
 
 // runProvenanceFromEnv resolves run provenance from environment variables set by the caller
@@ -700,10 +706,12 @@ func runProvenanceFromEnv() provenance {
 	if source == "" {
 		source = store.RunSourceCLI
 	}
+	wd, _ := os.Getwd()
 	return provenance{
 		source:  source,
 		client:  os.Getenv(store.RunClientEnv),
 		session: os.Getenv(store.RunSessionEnv),
+		dir:     wd,
 	}
 }
 
@@ -712,6 +720,9 @@ func runProvenanceFromEnv() provenance {
 // executable, which can be looked up in its flowfile instead.
 type transientMeta struct {
 	command, spec, label string
+	// dir is the run's resolved working directory, which for --cmd may differ from the
+	// process's own cwd.
+	dir string
 }
 
 // recordRunStart writes an in-progress ("running") execution record before the run begins, so that
@@ -733,6 +744,7 @@ func recordRunStart(
 		Source:     prov.source,
 		ClientName: prov.client,
 		SessionID:  prov.session,
+		WorkingDir: prov.dir,
 		Command:    meta.command,
 		Spec:       meta.spec,
 		Label:      meta.label,
@@ -758,6 +770,7 @@ func recordExecution(
 		Source:      prov.source,
 		ClientName:  prov.client,
 		SessionID:   prov.session,
+		WorkingDir:  prov.dir,
 		Command:     meta.command,
 		Spec:        meta.spec,
 		Label:       meta.label,
