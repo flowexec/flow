@@ -215,7 +215,7 @@ var LogFilterStatusFlag = &Metadata{
 
 var LogFilterSourceFlag = &Metadata{
 	Name:     "source",
-	Usage:    "Filter history by run origin: 'cli' or 'mcp'.",
+	Usage:    "Filter history by run origin, e.g. 'cli', 'desktop' or 'mcp'.",
 	Default:  "",
 	Required: false,
 }

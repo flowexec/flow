@@ -35,9 +35,13 @@ const (
 	RunClientEnv  = "FLOW_RUN_CLIENT"
 	RunSessionEnv = "FLOW_RUN_SESSION"
 
-	// RunSourceCLI and RunSourceMCP are the recognized values for RunSourceEnv / ExecutionRecord.Source.
-	RunSourceCLI = "cli"
-	RunSourceMCP = "mcp"
+	// Known values for RunSourceEnv / ExecutionRecord.Source, naming who drove the run: a human
+	// at a terminal, a human in a GUI, or an agent over MCP. The set is open — Source is compared
+	// as a plain string everywhere, so an embedder may record its own origin without a change
+	// here. These are the ones flow itself produces.
+	RunSourceCLI     = "cli"
+	RunSourceDesktop = "desktop"
+	RunSourceMCP     = "mcp"
 
 	openTimeout = 3 * time.Second
 )
