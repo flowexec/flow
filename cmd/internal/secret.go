@@ -31,10 +31,102 @@ func RegisterSecretCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Long:    secretLong,
 	}
 	registerSetSecretCmd(ctx, secretCmd)
+	registerLinkSecretCmd(ctx, secretCmd)
+	registerUnlinkSecretCmd(ctx, secretCmd)
 	registerListSecretCmd(ctx, secretCmd)
 	registerGetSecretCmd(ctx, secretCmd)
 	registerRemoveSecretCmd(ctx, secretCmd)
 	rootCmd.AddCommand(secretCmd)
+}
+
+func registerLinkSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
+	linkCmd := &cobra.Command{
+		Use:     "link NAME REFERENCE",
+		Aliases: []string{"ln"},
+		Short:   "Link a name in the current vault to a secret in an external provider.",
+		Long: "Point NAME at REFERENCE, a path the vault's provider understands -- an\n" +
+			"op:// URI, a pass entry path, an SSM parameter name. Reading NAME reads\n" +
+			"through to that secret; nothing is copied and nothing is written back.\n\n" +
+			"Only external vaults hold links.",
+		Example: secretLinkExamples,
+		Args:    cobra.ExactArgs(2),
+		Run:     func(cmd *cobra.Command, args []string) { linkSecretFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, linkCmd, *flags.VaultNameFlag)
+	RegisterFlag(ctx, linkCmd, *flags.OutputFormatFlag)
+	secretCmd.AddCommand(linkCmd)
+}
+
+func linkSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	name, reference := args[0], args[1]
+
+	vaultName := effectiveVault(cmd, ctx.Config)
+	_, v, err := vault.VaultFromName(vaultName)
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	defer v.Close()
+
+	links, ok := vault.AsReferenceVault(v)
+	if !ok {
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
+			"vault '%s' stores secrets itself, so there is nothing to link to. "+
+				"Use `flow secret set` instead", vaultName))
+		return
+	}
+
+	if err := links.Link(name, reference); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+
+	response.HandleSuccess(ctx, cmd,
+		fmt.Sprintf("Secret '%s' linked to %s", name, reference),
+		map[string]any{"name": name, "reference": reference})
+}
+
+func registerUnlinkSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
+	unlinkCmd := &cobra.Command{
+		Use:   "unlink NAME",
+		Short: "Remove a link from the current vault, leaving the secret itself untouched.",
+		Args:  cobra.ExactArgs(1),
+		Run:   func(cmd *cobra.Command, args []string) { unlinkSecretFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, unlinkCmd, *flags.VaultNameFlag)
+	RegisterFlag(ctx, unlinkCmd, *flags.OutputFormatFlag)
+	secretCmd.AddCommand(unlinkCmd)
+}
+
+func unlinkSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	name := args[0]
+
+	vaultName := effectiveVault(cmd, ctx.Config)
+	_, v, err := vault.VaultFromName(vaultName)
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	defer v.Close()
+
+	links, ok := vault.AsReferenceVault(v)
+	if !ok {
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
+			"vault '%s' holds no links. Use `flow secret remove` to delete a secret from it",
+			vaultName))
+		return
+	}
+
+	// No confirmation prompt: unlinking destroys nothing, and the secret can be
+	// linked again in one command.
+	if err := links.Unlink(name); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+
+	response.HandleSuccess(ctx, cmd,
+		fmt.Sprintf("Secret '%s' unlinked (the secret itself was not deleted)", name),
+		map[string]any{"name": name})
 }
 
 func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
@@ -54,6 +146,27 @@ func registerRemoveSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	reference := args[0]
 
+	// The vault is opened before the prompt, not after, because what removal
+	// actually does depends on the vault: on a read-through vault it forgets a
+	// link, and asking "are you sure you want to remove this secret?" would
+	// describe something far more destructive than what is about to happen.
+	_, v, err := vault.VaultFromName(effectiveVault(cmd, ctx.Config))
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	defer v.Close()
+
+	_, linked := vault.AsReferenceVault(v)
+
+	prompt := fmt.Sprintf("Are you sure you want to remove the secret '%s'?", reference)
+	success := fmt.Sprintf("Secret '%s' deleted from vault", reference)
+	if linked {
+		prompt = fmt.Sprintf(
+			"Remove the link '%s'? The secret itself will not be deleted.", reference)
+		success = fmt.Sprintf("Secret '%s' unlinked (the secret itself was not deleted)", reference)
+	}
+
 	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
 	if !skipConfirm {
 		form, err := views.NewForm(
@@ -63,7 +176,7 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 			&views.FormField{
 				Key:   "confirm",
 				Type:  views.PromptTypeConfirm,
-				Title: fmt.Sprintf("Are you sure you want to remove the secret '%s'?", reference),
+				Title: prompt,
 			})
 		if err != nil {
 			errhandler.HandleFatal(ctx, cmd, err)
@@ -78,18 +191,11 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		}
 	}
 
-	_, v, err := vault.VaultFromName(effectiveVault(cmd, ctx.Config))
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-		return
-	}
-	defer v.Close()
-
 	if err = v.DeleteSecret(reference); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	response.HandleSuccess(ctx, cmd, fmt.Sprintf("Secret '%s' deleted from vault", reference), map[string]any{
+	response.HandleSuccess(ctx, cmd, success, map[string]any{
 		"name": reference,
 	})
 }
@@ -112,6 +218,27 @@ func registerSetSecretCmd(ctx *context.Context, secretCmd *cobra.Command) {
 func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	reference := args[0]
 	filename := flags.ValueFor[string](cmd, *flags.SecretFromFile, false)
+
+	vaultName := effectiveVault(cmd, ctx.Config)
+	_, v, err := vault.VaultFromName(vaultName)
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	defer v.Close()
+
+	// Checked before a value is collected. A read-through vault will refuse this
+	// whatever the value is, and prompting someone to type a secret only to
+	// reject it -- or worse, taking one that has already been typed -- is a poor
+	// way to deliver the news.
+	if _, linked := vault.AsReferenceVault(v); linked {
+		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
+			"vault '%s' reads through to an external provider and cannot store a value. "+
+				"Create the secret in that provider, then run:\n"+
+				"  flow secret link %s <reference>",
+			vaultName, reference))
+		return
+	}
 
 	var value string
 	switch {
@@ -151,14 +278,6 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		logger.Log().Warn("merging multiple arguments into a single value", "count", len(args))
 		value = strings.Join(args[1:], " ")
 	}
-
-	vaultName := effectiveVault(cmd, ctx.Config)
-	_, v, err := vault.VaultFromName(vaultName)
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-		return
-	}
-	defer v.Close()
 
 	if err = v.SetSecret(reference, vault.NewSecretValue([]byte(value))); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
@@ -302,6 +421,13 @@ The active vault is used by default; pass --vault to target a different one. Use
   flow secret set MY_TOKEN              # prompted securely
   flow secret set MY_TOKEN s3cr3t       # inline value
   flow secret set MY_TOKEN --from-file ./token.txt
+`
+
+	//nolint:gosec // example strings, not real credentials
+	secretLinkExamples = `
+  flow secret link aws-access-key 'op://Team/AWS/access_key_id'
+  flow secret link db-password 'team/db/password'
+  flow secret link api-token '/prod/service-a/api-token'
 `
 
 	//nolint:gosec // example strings, not real credentials

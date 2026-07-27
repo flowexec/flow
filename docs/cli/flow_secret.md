@@ -27,7 +27,9 @@ The active vault is used by default; pass --vault to target a different one. Use
 
 * [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
 * [flow secret get](flow_secret_get.md)	 - Get the value of a secret in the current vault.
+* [flow secret link](flow_secret_link.md)	 - Link a name in the current vault to a secret in an external provider.
 * [flow secret list](flow_secret_list.md)	 - List secrets stored in the current vault.
 * [flow secret remove](flow_secret_remove.md)	 - Remove a secret from the vault.
 * [flow secret set](flow_secret_set.md)	 - Set a secret in the current vault. If no value is provided, you will be prompted to enter one.
+* [flow secret unlink](flow_secret_unlink.md)	 - Remove a link from the current vault, leaving the secret itself untouched.
 

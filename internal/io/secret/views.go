@@ -1,4 +1,4 @@
-//nolint:cyclop,funlen
+//nolint:funlen
 package secret
 
 import (
@@ -33,10 +33,18 @@ func NewSecretView(
 		return nil
 	}
 
+	links, linked := vault.AsReferenceVault(vlt)
+
 	s, err := vlt.GetSecret(ref.Key())
 	if err != nil {
-		container.HandleError(fmt.Errorf("failure while initializing the secret view secret: %w", err))
-		return nil
+		// A linked secret lives somewhere else, so it can be deleted there without
+		// this vault knowing. That leaves a link that points at nothing, which is
+		// a state worth showing and unlinking -- not a reason to refuse the view.
+		if !linked {
+			container.HandleError(fmt.Errorf("failure while initializing the secret view secret: %w", err))
+			return nil
+		}
+		s = vault.NewSecretValue([]byte(brokenLinkBody(err)))
 	}
 
 	secret, err := vault.NewSecret(vlt.ID(), ref.Key(), s)
@@ -55,6 +63,19 @@ func NewSecretView(
 		if err := ctx.SetView(view); err != nil {
 			logger.Log().FatalErr(err)
 		}
+	}
+
+	// A read-through vault has no value to rename or edit -- both of those wrote
+	// secret material. What it has instead is the link itself, so the one thing
+	// worth changing is where the key points.
+	if linked {
+		body := secret.String()
+		if asPlainText {
+			body = secret.PlainTextString()
+		}
+		detail := views.NewDetailView(container.RenderState(), body, linkedMetadata(vlt, links, ref)...)
+		detail.SetKeyCallbacks(linkedSecretCallbacks(ctx, container, links, ref, secret, loadSecretList))
+		return detail
 	}
 
 	var secretKeyCallbacks = []types.KeyCallback{
@@ -170,6 +191,13 @@ func NewSecretListView(
 	}
 
 	sort.Strings(keys)
+
+	// A read-through vault is listed from its registry alone. Resolving each key
+	// to show the list would run one provider command per row -- for 1Password,
+	// one biometric prompt per row -- to render values that are masked anyway.
+	if links, linked := vault.AsReferenceVault(vlt); linked {
+		return linkedListView(ctx, vlt, links, keys, asPlainText)
+	}
 
 	secrets := make(vault.SecretList, 0, len(keys))
 	for _, key := range keys {

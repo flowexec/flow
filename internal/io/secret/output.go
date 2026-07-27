@@ -10,7 +10,9 @@ import (
 )
 
 func PrintSecrets(ctx *context.Context, vaultName string, vlt vault.Vault, format string, plaintext bool) {
-	secrets, err := vault.NewSecretList(vaultName, vlt)
+	// Only resolve when the values are actually going to be shown. On a
+	// read-through vault, resolving costs one provider command per secret.
+	secrets, err := vault.NewSecretList(vaultName, vlt, plaintext)
 	if err != nil {
 		logger.Log().FatalErr(err)
 	}

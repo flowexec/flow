@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20260406091427-a791e22d5143
 	github.com/flowexec/tuikit v0.4.1
-	github.com/flowexec/vault v0.3.0
+	github.com/flowexec/vault v0.4.0
 	github.com/gen2brain/beeep v0.11.2
 	github.com/google/uuid v1.6.0
 	github.com/jahvon/expression v0.1.4
@@ -32,7 +32,6 @@ require (
 )
 
 require (
-	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	charm.land/bubbles/v2 v2.1.0 // indirect
 	charm.land/glamour/v2 v2.0.0 // indirect
 	charm.land/huh/v2 v2.0.3 // indirect
