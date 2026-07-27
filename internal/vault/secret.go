@@ -66,6 +66,13 @@ type enrichedSecret struct {
 }
 
 func NewSecret(vaultName, key string, value vault.Secret) (Secret, error) {
+	return NewLinkedSecret(vaultName, key, "", value)
+}
+
+// NewLinkedSecret builds a secret that points at another system. An empty
+// reference means the vault stores the value itself. value may be nil, since
+// listing a read-through vault does not resolve every link.
+func NewLinkedSecret(vaultName, key, reference string, value vault.Secret) (Secret, error) {
 	if err := ValidateIdentifier(vaultName); err != nil {
 		return nil, err
 	}
@@ -76,23 +83,11 @@ func NewSecret(vaultName, key string, value vault.Secret) (Secret, error) {
 	}
 
 	return &secret{
-		vault: vaultName,
-		key:   key,
-		value: value,
+		vault:     vaultName,
+		key:       key,
+		reference: reference,
+		value:     value,
 	}, nil
-}
-
-// NewLinkedSecret builds a secret that points at another system.
-//
-// value may be nil: listing a read-through vault deliberately does not resolve
-// every link, because that would run one provider command per entry.
-func NewLinkedSecret(vaultName, key, reference string, value vault.Secret) (Secret, error) {
-	s, err := NewSecret(vaultName, key, value)
-	if err != nil {
-		return nil, err
-	}
-	s.(*secret).reference = reference
-	return s, nil
 }
 
 func NewSecretValue(value []byte) *SecretValue {

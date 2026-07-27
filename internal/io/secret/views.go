@@ -1,4 +1,4 @@
-//nolint:cyclop,funlen
+//nolint:funlen
 package secret
 
 import (

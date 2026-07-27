@@ -126,31 +126,48 @@ flow vault create dev --type keyring
 
 == External (other CLI tools)
 
-An external vault that uses executes an external CLI tool via shell commands to manage secrets. 
-This allows you to integrate with existing secret management systems.
+An external vault reads secrets that already live in another tool — 1Password, `pass`,
+AWS SSM — through that tool's CLI.
 
-First you have to define the external vault configuration in JSON format. Here is a sample one that uses the `pass` CLI tool:
+It holds **links**, not secrets. Each link pairs a name you choose with a *reference*
+the provider understands. Reading the name resolves the reference and reads through.
+Nothing is copied into flow, and nothing is ever written back, so pointing a vault at a
+store you already use cannot damage it.
+
+Because the name is a local alias, you never have to reorganise the store you are
+pointing at. And because a reference names a *field*, a single 1Password item holding
+both an access key and a secret key becomes two links:
+
+```shell
+flow secret link aws-access-key 'op://Team/AWS/access_key_id'
+flow secret link aws-secret-key 'op://Team/AWS/secret_access_key'
+
+flow secret get aws-access-key --plaintext
+```
+
+References use each provider's own syntax:
+
+| Provider | Reference looks like |
+|----------|----------------------|
+| 1Password | `op://Team/AWS/access_key_id` |
+| pass | `team/db/password` |
+| AWS SSM | `/prod/db/password` |
+
+The configuration only needs to say how to read one:
 
 ```json
 {
-  "id": "pass",
+  "id": "work",
   "type": "external",
   "external": {
     "get": {
-      "cmd": "pass show {{key}}",
-      "output": "{{output}}"
+      "cmd": "pass show '{{ref}}'"
     },
-    "set": {
-      "cmd": "pass insert -e {{key}}",
-      "input": "{{value}}"
+    "metadata": {
+      "cmd": "cat \"$PASSWORD_STORE_DIR/.gpg-id\""
     },
-    "delete": {
-      "cmd": "pass rm -f {{key}}"
-    },
-    "list": {
-      "cmd": "pass ls",
-      "output": "{{output}}"
-    },
+    "reference_pattern": "^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,255}$",
+    "not_found_pattern": "is not in the password store",
     "environment": {
       "PASSWORD_STORE_DIR": "$PASSWORD_STORE_DIR"
     },
@@ -159,26 +176,50 @@ First you have to define the external vault configuration in JSON format. Here i
 }
 ```
 
-> [!INFO]
-> See the [flowexec/vault examples](https://github.com/flowexec/vault/tree/v0.2.1/examples) for sample configurations for popular CLI tools like Bitwarden, 1Password, AWS SSM, and more.
+`reference_pattern` describes what a reference for this provider looks like, so a typo is
+caught when you link it rather than weeks later when you read it. `not_found_pattern`
+separates "this link is broken" from "the provider is unreachable" — without it, an
+expired session is indistinguishable from a deleted secret.
 
+> [!INFO]
+> See the [flowexec/vault examples](https://github.com/flowexec/vault/tree/main/examples)
+> for ready-to-use configurations for 1Password, pass, AWS SSM and Bitwarden.
 
 ```shell
 # Create an external vault
-flow vault create passwords --type external --config /path/to/config.json
+flow vault create work --type external --config /path/to/config.json
+
+# Point a name at a secret that already exists
+flow secret link db-password 'team/db/password'
+
+# Remove the link. The secret in the provider is untouched.
+flow secret unlink db-password
 ```
 
 **Template Variables**
 
 Available in `cmd` and `output` fields:
 
-
-- <span v-pre>`{{key}}`</span> - The secret key/name
-- <span v-pre>`{{value}}`</span> - The secret value (for set operations)
+- <span v-pre>`{{ref}}`</span> - The reference this name is linked to. **This is what a provider command should use.**
+- <span v-pre>`{{key}}`</span> - The local alias (also available as `id`, `name`)
 - <span v-pre>`{{env["VariableName"]}}`</span>- Environment variable value
 - <span v-pre>`{{output}}`</span> - Raw command output (for output templates)
 
 All [Expr language](https://expr-lang.org/docs/language-definition) operators and functions can be used in the command templates, allowing for powerful dynamic secret management.
+
+> [!WARNING]
+> **External vaults are read-only.** `flow secret set` fails on one, and `flow secret remove`
+> removes the *link* rather than the secret. Create secrets in the tool that owns them, then
+> link them.
+>
+> This is deliberate. Writing through meant handing the value to a provider CLI as a command
+> argument, where every process on the machine can read it, and a delete that destroyed real
+> data.
+
+> [!INFO]
+> Configurations written before flow v2.2 also defined `set`, `delete`, `list` and `exists`
+> commands. Those still load but are never executed. Run `flow vault get <name>` to see which
+> of a vault's commands are inert.
 
 :::
 
