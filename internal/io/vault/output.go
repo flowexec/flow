@@ -38,7 +38,8 @@ func PrintVaultList(format string, vaultNames []string) {
 	for _, name := range vaultNames {
 		vault, err := vaultFromName(name)
 		if err != nil {
-			logger.Log().Fatalf("Vault error %s - %v", name, err)
+			logger.Log().Warnf("vault %s could not be opened - %v", name, err)
+			vault = unopenableVault(name, err)
 		}
 		vaults.Vaults = append(vaults.Vaults, vault)
 	}
