@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "flow": {
+      "type": "stdio",
+      "command": "flow",
+      "args": ["mcp"]
+    }
+  }
+}

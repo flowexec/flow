@@ -27,6 +27,26 @@ Add this to your MCP client configuration (Claude Code, Cursor, Cline, or any MC
 
 The server runs over stdio. That's the entire setup.
 
+**Commit it to your repo.** Claude Code and Cursor both read a `.mcp.json` at the repository root,
+so checking that file in means every teammate — and every fresh clone — gets flow's tools without
+per-person setup. Put the snippet above in `.mcp.json` and commit it:
+
+```json title=".mcp.json"
+{
+  "mcpServers": {
+    "flow": {
+      "type": "stdio",
+      "command": "flow",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Each user still approves the server on first use, so committing it grants no access on its own —
+it just removes the setup step. Pair it with the skill in [Wiring It Up](#wiring-it-up-for-your-project)
+below: the `.mcp.json` supplies the tools, the skill tells the assistant to reach for them.
+
 ### What's available
 
 **Tools**
