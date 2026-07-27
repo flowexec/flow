@@ -115,6 +115,10 @@ type ExecutionRecord struct {
 
 	// Command is the shell command for an ad-hoc (transient) run; empty for named executables.
 	Command string `json:"command,omitempty"`
+	// Spec is the inline executable definition for a transient `--spec` run. A spec run has no
+	// flowfile to look up and no single Command to show, so without this the record names an
+	// executable that never existed on disk and nothing can say what it did.
+	Spec string `json:"spec,omitempty"`
 	// Label is a human-readable, self-documenting name for an ad-hoc run.
 	Label string `json:"label,omitempty"`
 
