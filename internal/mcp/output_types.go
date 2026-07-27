@@ -37,6 +37,10 @@ type CurrentContext struct {
 	Vault         string `json:"vault"`
 	WorkspaceMode string `json:"workspaceMode"`
 	WorkspacePath string `json:"workspacePath"`
+	// SessionID tags every run this connection launches, and is what `flow logs --session`
+	// filters on. A client reads it once here rather than inferring which records are its own:
+	// the value is knowable only to the server, since the stdio transport carries no identity.
+	SessionID string `json:"sessionId"`
 }
 
 // WorkspaceOutput is the output of the get_workspace tool.
