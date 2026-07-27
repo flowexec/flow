@@ -210,13 +210,7 @@ func NewExternalVault(providerConfigFile string) (*CreateResult, error) {
 		return nil, fmt.Errorf("invalid vault name %q in config: %w", cfg.ID, err)
 	}
 
-	// An external vault keeps a registry of the links it holds. A config authored
-	// elsewhere -- rendered from a preset, or written by hand -- has no business
-	// knowing where flow keeps vault state, so it arrives without a storage path
-	// and flow supplies the same location every other provider uses.
-	if cfg.External != nil && cfg.External.StoragePath == "" {
-		cfg.External.StoragePath = CacheDirectory(cfg.ID)
-	}
+	applyExternalDefaults(&cfg)
 
 	v, _, err := vault.New(cfg.ID, vault.WithExternalConfig(cfg.External))
 	if err != nil {
@@ -249,6 +243,8 @@ func VaultFromName(name string) (*VaultConfig, Vault, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to load vault config: %w", err)
 	}
+
+	applyExternalDefaults(&cfg)
 
 	switch cfg.Type {
 	case vault.ProviderTypeAge:
@@ -359,4 +355,13 @@ func writeKeyToFile(key, filePath string) error {
 	logger.Log().Infof("Key written to file: %s", filePath)
 
 	return nil
+}
+
+// applyExternalDefaults fills in settings a config authored elsewhere cannot
+// know. External vaults created before the link registry existed have no
+// storage path, so this has to run when opening a vault as well as creating one.
+func applyExternalDefaults(cfg *VaultConfig) {
+	if cfg.External != nil && cfg.External.StoragePath == "" {
+		cfg.External.StoragePath = CacheDirectory(cfg.ID)
+	}
 }

@@ -21,8 +21,18 @@ type vaultEntity struct {
 	Name string `json:"name" yaml:"name"`
 	Path string `json:"path" yaml:"path"`
 	Type string `json:"type" yaml:"type"`
+	// Error is set when the vault could not be opened. It is listed anyway, so
+	// one unusable vault does not hide every other one.
+	Error string `json:"error,omitempty" yaml:"error,omitempty"`
 
 	Data map[string]interface{} `json:"data" yaml:"data"`
+}
+
+// unopenableVault is the placeholder for a vault whose config loads but whose
+// provider will not open -- a missing key, a revoked identity, a config written
+// by an older version.
+func unopenableVault(name string, err error) *vaultEntity {
+	return &vaultEntity{Name: name, Type: "unknown", Error: err.Error(), Data: map[string]interface{}{}}
 }
 
 func (v *vaultEntity) YAML() (string, error) {
@@ -115,10 +125,7 @@ func NewVaultListView(
 	for _, name := range vaultNames {
 		v, err := vaultFromName(name)
 		if err != nil || v == nil {
-			return views.NewErrorView(
-				fmt.Errorf("vault '%s' error: %w", name, err),
-				container.RenderState().Theme,
-			)
+			v = unopenableVault(name, err)
 		}
 		vaults = append(vaults, v)
 	}
