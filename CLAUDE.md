@@ -66,12 +66,20 @@ cmd/ (Cobra command) → pkg/context (workspace + config resolution)
 
 **Type generation pipeline:**
 ```
-types/*/schema.yaml → go-jsonschema → types/*/generated.go (DO NOT EDIT)
+types/*/*schema.yaml → go-jsonschema → types/*/*.gen.go (DO NOT EDIT)
   → internal/fileparser (YAML parsing and validation)
 ```
 
 **MCP server:**
 `internal/mcp` exposes the same execution pipeline to AI tools over the Model Context Protocol. The `flow mcp` command starts the server. Claude Code, Cursor, and other MCP clients can call `mcp__flow__*` tools to run executables directly.
+
+**Scope boundary — flow is an AI *tool provider*, not an AI *consumer*.**
+The core's job is to expose deterministic, well-described capabilities: the MCP server, the
+published JSON schemas, and `llms.txt`. Do not add LLM calls, natural-language command parsing,
+or AI-driven generation *into* the CLI — that would put vendor API keys, per-call cost, and
+non-deterministic output in the critical path of a task runner. Anything that wants to apply a
+model to flow does so from the outside, by consuming the MCP surface. Treat proposals to add
+"AI features" to the CLI itself as out of scope for this repo.
 
 ---
 
@@ -82,6 +90,32 @@ types/*/schema.yaml → go-jsonschema → types/*/generated.go (DO NOT EDIT)
 - **CLI Framework**: Cobra (`github.com/spf13/cobra`)
 - **TUI**: Custom tuikit (`github.com/flowexec/tuikit`) built on Bubble Tea
 - **Testing**: Ginkgo v2 BDD framework (`github.com/onsi/ginkgo/v2`)
+
+---
+
+## Sibling Repositories
+
+Two first-party Go modules carry a large share of this repo's behavior, and the seam between
+them is where most breakage happens:
+
+| Module | Owns |
+|--------|------|
+| `github.com/flowexec/tuikit` | All TUI rendering — `flow browse`, the logs view, interactive prompts. Bugs that look like rendering or input glitches usually live here, not in `internal/io`. |
+| `github.com/flowexec/vault` | Secret storage providers (AES-256, age, keyring, env passthrough). `internal/vault` is a thin type-alias wrapper over it. |
+
+Related repos in the same org, not imported here: `action` (GitHub Action), `examples`
+(workspaces users can `flow workspace add`), `homebrew-tap` (distribution).
+
+**Read the pinned version, not a local checkout.** There are no `replace` directives — builds
+use the versions pinned in `go.mod`, which resolve to the module cache
+(`$(go env GOMODCACHE)/github.com/flowexec/<mod>@<version>`). A sibling working copy is often on
+a feature branch at a *different* version than what compiles, so answering an integration
+question from it produces confidently wrong results. Use the module cache for "what does the
+code I build against actually do", and a local checkout only when deliberately co-developing an
+upstream change. `go doc` and `go list -m` are the quickest way to check what's actually pinned.
+
+Upgrading either dependency tends to be a breaking-change adaptation rather than a version bump;
+check that module's release notes before assuming an API is unchanged.
 
 ---
 
@@ -182,8 +216,12 @@ Before marking a PR ready, run the `validate` executable — it runs generate, l
 - **`go.mod`**: Go dependencies and version (Go 1.25+)
 - **`.execs/`**: flow dev workflow definitions (build, test, lint, release, etc.)
 - **`.mcp.json`**: registers the flow MCP server (`flow mcp`) — committed so every clone gets it
-- **`.claude/settings.json`**: Claude Code permission allowlist for this project (committed).
-  `.claude/settings.local.json` is gitignored and holds per-user overrides only.
+- **`.claude/settings.json`**: Claude Code permissions for this project (committed). `deny` blocks
+  edits to generated output and reads of secret material; `ask` gates pushes, releases, and other
+  outward-facing actions. Keep it free of machine-specific absolute paths — it ships to everyone.
+- **`.claude/settings.local.json`**: gitignored, per-user. The right home for absolute paths, such
+  as `permissions.additionalDirectories` pointing at the module cache and any sibling checkouts
+  (see [Sibling Repositories](#sibling-repositories)).
 - **`.claude/skills/`**: project skills. `flow-context` loads every session; `validate`,
   `pr-ready`, `new-command`, and `new-exec-type` are user-invoked via `/`.
 

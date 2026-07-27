@@ -15,8 +15,12 @@
       "Bash(flow browse:*)",
       "Bash(flow mcp:*)",
       "Bash(flow exec:*)",
-      "Bash(node:*)",
-      "Bash(npm view:*)",
+      "mcp__flow__run_command",
+      "mcp__flow__run_executable",
+      "mcp__flow__get_execution_logs",
+      "mcp__flow__sync_executables",
+      "mcp__flow__write_flowfile",
+      "mcp__flow__get_workspace_config",
       "mcp__flow__list_executables",
       "mcp__flow__get_info",
       "mcp__flow__get_executable",
@@ -24,6 +28,31 @@
       "mcp__flow__list_workspaces",
       "mcp__flow__execute"
     ],
-    "deny": []
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh release:*)",
+      "Bash(flow publish:*)",
+      "Bash(docker push:*)"
+    ],
+    "deny": [
+      "Edit(types/**/*.gen.go)",
+      "Write(types/**/*.gen.go)",
+      "Edit(docs/cli/**)",
+      "Write(docs/cli/**)",
+      "Edit(docs/types/**)",
+      "Write(docs/types/**)",
+      "Edit(docs/public/schemas/**)",
+      "Write(docs/public/schemas/**)",
+      "Bash(flow secret get:*)",
+      "Bash(flow secret list:*)",
+      "Bash(env)",
+      "Bash(printenv:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
   }
 }
