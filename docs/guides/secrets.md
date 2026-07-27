@@ -4,7 +4,7 @@ title: Working with Secrets
 
 # Working with Secrets
 
-flow's built-in vault keeps your sensitive data secure while making it easy to use in your workflows. 
+flow's built-in vault keeps your sensitive data secure while making it easy to use in your workflows.
 Whether you're managing API keys, database passwords, or deployment tokens, the vault has you covered.
 
 ## Quick Start
@@ -51,7 +51,7 @@ flow vault create myapp
 flow vault create myapp --type aes256
 ```
 
-This creates an AES256-encrypted vault with a randomly generated key that will be displayed in the output. 
+This creates an AES256-encrypted vault with a randomly generated key that will be displayed in the output.
 Store this key securely - if you lose it, you won't be able to access your secrets.
 
 **Key Management Options:**
@@ -116,7 +116,7 @@ flow vault create dev --type unencrypted
 
 == Keyring
 
-A vault that uses your operating system's keyring for managing secrets. 
+A vault that uses your operating system's keyring for managing secrets.
 This is a good option for personal use where you want seamless integration with your OS security.
 
 ```shell
@@ -133,10 +133,6 @@ It holds **links**, not secrets. Each link pairs a name you choose with a *refer
 the provider understands. Reading the name resolves the reference and reads through.
 Nothing is copied into flow, and nothing is ever written back, so pointing a vault at a
 store you already use cannot damage it.
-
-Because the name is a local alias, you never have to reorganise the store you are
-pointing at. And because a reference names a *field*, a single 1Password item holding
-both an access key and a secret key becomes two links:
 
 ```shell
 flow secret link aws-access-key 'op://Team/AWS/access_key_id'
@@ -211,15 +207,6 @@ All [Expr language](https://expr-lang.org/docs/language-definition) operators an
 > **External vaults are read-only.** `flow secret set` fails on one, and `flow secret remove`
 > removes the *link* rather than the secret. Create secrets in the tool that owns them, then
 > link them.
->
-> This is deliberate. Writing through meant handing the value to a provider CLI as a command
-> argument, where every process on the machine can read it, and a delete that destroyed real
-> data.
-
-> [!INFO]
-> Configurations written before flow v2.2 also defined `set`, `delete`, `list` and `exists`
-> commands. Those still load but are never executed. Run `flow vault get <name>` to see which
-> of a vault's commands are inert.
 
 :::
 
@@ -327,7 +314,7 @@ flow secret set existing-secret
 flow secret remove old-secret
 ```
 
-### Working with Multiple Vaults 
+### Working with Multiple Vaults
 
 When working with multiple vaults, secrets are isolated per vault but the vault's name can be used to reference secrets across vaults.
 You can retrieve secrets from a specific vault without switching to it by using the vault name as a prefix:
