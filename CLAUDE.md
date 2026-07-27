@@ -21,6 +21,9 @@ via `.execs/*.flow`.
 4. **`pkg/` is importable API surface; `internal/` is not.**
 5. **Run work through flow's MCP tools, not raw Bash** — see Development Workflow.
 6. **`go test ./...` without build tags silently skips most tests.** Use the `test` refs.
+7. **Never commit directly on `main`.** Before the first commit of any change, create a branch
+   (`git switch -c <type>/<slug>`) so the work lands as a PR. If you're already on `main` with
+   commits, move them onto a branch and reset `main` back to `origin/main`.
 
 ---
 
