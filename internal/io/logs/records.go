@@ -16,7 +16,7 @@ import (
 type RecordFilter struct {
 	Workspace string
 	Status    string // lifecycle status: running/completed/failed (success/failure accepted as aliases)
-	Source    string // provenance origin: "cli" or "mcp"
+	Source    string // provenance origin, e.g. "cli", "desktop", "mcp"
 	Session   string // provenance session ID
 	Client    string // provenance client name (e.g. "claude", "cursor")
 	Since     time.Time

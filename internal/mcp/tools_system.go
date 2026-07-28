@@ -29,10 +29,12 @@ const (
 func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	getFlowInfo := mcp.NewTool("get_info",
 		mcp.WithDescription(
-			"Bootstrap context about the flow environment. Returns the current workspace, "+
-				"schema URLs for authoring .flow files, and the docs index (llms.txt). "+
-				"Call this at the start of a session to understand the project's automation setup, "+
-				"or whenever you need schema URLs to author or validate flow configuration."),
+			"Bootstrap context about the flow environment. Returns the current workspace, this "+
+				"connection's session ID, schema URLs for authoring .flow files, and the docs index "+
+				"(llms.txt). Call this at the start of a session to understand the project's automation "+
+				"setup, or whenever you need schema URLs to author or validate flow configuration. "+
+				"The session ID tags every run this connection launches — keep it to group them later "+
+				"via `flow logs --session`."),
 	)
 	getFlowInfo.Annotations = mcp.ToolAnnotation{
 		Title:           "Get flow information and current context",
@@ -84,7 +86,7 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(sync, syncStateHandler(srv, executor))
 }
 
-func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	cfg, err := filesystem.LoadConfig()
 	if err != nil {
 		return toolError(ErrCodeInternal, fmt.Sprintf("failed to load user config: %s", err)), nil
@@ -107,6 +109,7 @@ func getInfoHandler(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResu
 			Vault:         cfg.CurrentVaultName(),
 			WorkspaceMode: string(cfg.WorkspaceMode),
 			WorkspacePath: wsPath,
+			SessionID:     mcpProvenance(ctx).Session,
 		},
 		Summary:    flowInfoSummary,
 		DocsURL:    docsBaseURL,

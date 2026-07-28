@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -14,18 +15,23 @@ import (
 )
 
 type recordOutput struct {
-	Ref        string `json:"ref"                  yaml:"ref"`
-	StartedAt  string `json:"startedAt"            yaml:"startedAt"`
-	Duration   string `json:"duration"             yaml:"duration"`
-	Status     string `json:"status"               yaml:"status"`
-	ExitCode   int    `json:"exitCode"             yaml:"exitCode"`
-	Error      string `json:"error,omitempty"      yaml:"error,omitempty"`
-	LogFile    string `json:"logFile,omitempty"    yaml:"logFile,omitempty"`
-	Command    string `json:"command,omitempty"    yaml:"command,omitempty"`
-	Label      string `json:"label,omitempty"      yaml:"label,omitempty"`
-	Source     string `json:"source,omitempty"     yaml:"source,omitempty"`
-	ClientName string `json:"clientName,omitempty" yaml:"clientName,omitempty"`
-	SessionID  string `json:"sessionId,omitempty"  yaml:"sessionId,omitempty"`
+	// ID is the run's stable identifier. Empty for legacy records, which predate it.
+	ID          string `json:"id,omitempty"          yaml:"id,omitempty"`
+	Ref         string `json:"ref"                   yaml:"ref"`
+	StartedAt   string `json:"startedAt"             yaml:"startedAt"`
+	CompletedAt string `json:"completedAt,omitempty" yaml:"completedAt,omitempty"`
+	Duration    string `json:"duration"              yaml:"duration"`
+	Status      string `json:"status"                yaml:"status"`
+	ExitCode    int    `json:"exitCode"              yaml:"exitCode"`
+	Error       string `json:"error,omitempty"       yaml:"error,omitempty"`
+	LogFile     string `json:"logFile,omitempty"     yaml:"logFile,omitempty"`
+	Command     string `json:"command,omitempty"     yaml:"command,omitempty"`
+	Spec        string `json:"spec,omitempty"        yaml:"spec,omitempty"`
+	Label       string `json:"label,omitempty"       yaml:"label,omitempty"`
+	Source      string `json:"source,omitempty"      yaml:"source,omitempty"`
+	ClientName  string `json:"clientName,omitempty"  yaml:"clientName,omitempty"`
+	SessionID   string `json:"sessionId,omitempty"   yaml:"sessionId,omitempty"`
+	WorkingDir  string `json:"workingDir,omitempty"  yaml:"workingDir,omitempty"`
 
 	// Content and its companions are populated only when log content is requested.
 	Content              string `json:"content,omitempty"              yaml:"content,omitempty"`
@@ -40,6 +46,7 @@ type recordsResponse struct {
 
 func toRecordOutput(r UnifiedRecord, content ContentOptions, includeContent bool) recordOutput {
 	out := recordOutput{
+		ID:         r.ID,
 		Ref:        r.Ref,
 		StartedAt:  r.StartedAt.Format(time.RFC3339),
 		Duration:   r.Duration.Round(time.Millisecond).String(),
@@ -47,10 +54,15 @@ func toRecordOutput(r UnifiedRecord, content ContentOptions, includeContent bool
 		ExitCode:   r.ExitCode,
 		Error:      r.Error,
 		Command:    r.Command,
+		Spec:       r.Spec,
 		Label:      r.Label,
 		Source:     r.Source,
 		ClientName: r.ClientName,
 		SessionID:  r.SessionID,
+		WorkingDir: r.WorkingDir,
+	}
+	if r.CompletedAt != nil {
+		out.CompletedAt = r.CompletedAt.Format(time.RFC3339)
 	}
 	if r.LogEntry != nil {
 		out.LogFile = r.LogEntry.Path
@@ -143,29 +155,7 @@ func PrintLastRecord(
 		}
 		_, _ = fmt.Fprint(stdout, string(data))
 	default:
-		_, _ = fmt.Fprintf(stdout, "Executable: %s\n", record.Ref)
-		if record.Label != "" {
-			_, _ = fmt.Fprintf(stdout, "Label:      %s\n", record.Label)
-		}
-		if record.Command != "" {
-			_, _ = fmt.Fprintf(stdout, "Command:    %s\n", record.Command)
-		}
-		_, _ = fmt.Fprintf(stdout, "Time:       %s\n", record.StartedAt.Format(time.RFC3339))
-		_, _ = fmt.Fprintf(stdout, "Duration:   %s\n", record.Duration.Round(time.Millisecond))
-		_, _ = fmt.Fprintf(stdout, "Status:     %s\n", StatusText(record))
-		if record.Source != "" {
-			_, _ = fmt.Fprintf(stdout, "Source:     %s\n", record.Source)
-		}
-		if record.ClientName != "" {
-			_, _ = fmt.Fprintf(stdout, "Client:     %s\n", record.ClientName)
-		}
-		if record.SessionID != "" {
-			_, _ = fmt.Fprintf(stdout, "Session:    %s\n", record.SessionID)
-		}
-		if record.Error != "" {
-			_, _ = fmt.Fprintf(stdout, "Error:      %s\n", record.Error)
-		}
-		_, _ = fmt.Fprintln(stdout)
+		printRecordMetadata(record, stdout)
 
 		if record.LogEntry != nil {
 			raw, err := record.LogEntry.Read()
@@ -189,4 +179,46 @@ func PrintLastRecord(
 			}
 		}
 	}
+}
+
+// printRecordMetadata writes a record's key/value header for text output. Optional fields are
+// omitted rather than shown empty, so a named executable's header stays as short as it is.
+func printRecordMetadata(record UnifiedRecord, stdout io.Writer) {
+	_, _ = fmt.Fprintf(stdout, "Executable: %s\n", record.Ref)
+	optional := []struct{ label, value string }{
+		{"Label", record.Label},
+		{"Command", record.Command},
+		{"Spec", indentBlock(record.Spec, metadataLabelWidth)},
+	}
+	for _, f := range optional {
+		if f.value != "" {
+			_, _ = fmt.Fprintf(stdout, "%-*s%s\n", metadataLabelWidth, f.label+":", f.value)
+		}
+	}
+	_, _ = fmt.Fprintf(stdout, "Time:       %s\n", record.StartedAt.Format(time.RFC3339))
+	_, _ = fmt.Fprintf(stdout, "Duration:   %s\n", record.Duration.Round(time.Millisecond))
+	_, _ = fmt.Fprintf(stdout, "Status:     %s\n", StatusText(record))
+	for _, f := range []struct{ label, value string }{
+		{"Source", record.Source},
+		{"Client", record.ClientName},
+		{"Session", record.SessionID},
+		{"Directory", record.WorkingDir},
+		{"Error", record.Error},
+	} {
+		if f.value != "" {
+			_, _ = fmt.Fprintf(stdout, "%-*s%s\n", metadataLabelWidth, f.label+":", f.value)
+		}
+	}
+	_, _ = fmt.Fprintln(stdout)
+}
+
+// metadataLabelWidth is the column the text-mode metadata values line up at.
+const metadataLabelWidth = 12
+
+// indentBlock aligns a multi-line value under the label column of the key/value metadata
+// block, so a spec's YAML keeps its shape instead of running back to column zero. Empty in,
+// empty out — the caller uses that to decide whether the field is worth printing at all.
+func indentBlock(s string, width int) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	return strings.Join(lines, "\n"+strings.Repeat(" ", width))
 }

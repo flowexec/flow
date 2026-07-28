@@ -156,14 +156,14 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	startTime := time.Now()
 	prov := runProvenanceFromEnv()
-	recordRunStart(ctx, ref, startTime, prov, "", "")
+	recordRunStart(ctx, ref, startTime, prov, transientMeta{})
 
 	eng := engine.NewExecEngine()
 	runErr := runner.Exec(ctx, e, eng, envMap, execArgs)
 	dur := time.Since(startTime)
 
 	cleanupProcessStore(ctx)
-	recordExecution(ctx, ref, startTime, dur, runErr, prov, "", "")
+	recordExecution(ctx, ref, startTime, dur, runErr, prov, transientMeta{})
 
 	// Update background run record if this is a child process.
 	if bgRunID != "" {
@@ -270,7 +270,7 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
 		return
 	}
-	runTransientExecutable(ctx, cmd, e, joined, label)
+	runTransientExecutable(ctx, cmd, e, transientMeta{command: joined, label: label, dir: dir})
 }
 
 // execTransientSpec runs a transient executable parsed from an inline definition (--spec). Unlike
@@ -316,7 +316,7 @@ func execTransientSpec(ctx *context.Context, cmd *cobra.Command, verb executable
 	if maybeLaunchBackground(ctx, cmd, e.Ref()) {
 		return
 	}
-	runTransientExecutable(ctx, cmd, e, "", label)
+	runTransientExecutable(ctx, cmd, e, transientMeta{spec: content, label: label, dir: runDir})
 }
 
 // transientSpecName derives a ref-safe name for a --spec run that omitted `name`, preferring the
@@ -423,9 +423,9 @@ func workspaceForPath(wsList workspace.WorkspaceList, dir string) *workspace.Wor
 }
 
 // runTransientExecutable runs an already-constructed, in-memory executable through the normal engine
-// and records it in history with the given command/label provenance. Shared by --cmd and --spec.
+// and records it in history along with what it ran. Shared by --cmd and --spec.
 func runTransientExecutable(
-	ctx *context.Context, cmd *cobra.Command, e *executable.Executable, command, label string,
+	ctx *context.Context, cmd *cobra.Command, e *executable.Executable, meta transientMeta,
 ) {
 	ref := e.Ref()
 
@@ -440,14 +440,17 @@ func runTransientExecutable(
 
 	startTime := time.Now()
 	prov := runProvenanceFromEnv()
-	recordRunStart(ctx, ref, startTime, prov, command, label)
+	if meta.dir != "" {
+		prov.dir = meta.dir
+	}
+	recordRunStart(ctx, ref, startTime, prov, meta)
 
 	eng := engine.NewExecEngine()
 	runErr := runner.Exec(ctx, e, eng, envMap, nil)
 	dur := time.Since(startTime)
 
 	cleanupProcessStore(ctx)
-	recordExecution(ctx, ref, startTime, dur, runErr, prov, command, label)
+	recordExecution(ctx, ref, startTime, dur, runErr, prov, meta)
 
 	if runErr != nil {
 		errhandler.HandleFatal(ctx, cmd, runErr)
@@ -688,9 +691,12 @@ func cleanupProcessStore(ctx *context.Context) {
 	}
 }
 
-// provenance bundles who/what launched a run, recorded on its execution record.
+// provenance bundles who/what launched a run, and from where, recorded on its execution record.
 type provenance struct {
 	source, client, session string
+	// dir is where the run executed. Defaults to the process working directory, which is the
+	// caller's cwd; ad-hoc runs override it with their resolved --dir.
+	dir string
 }
 
 // runProvenanceFromEnv resolves run provenance from environment variables set by the caller
@@ -700,20 +706,31 @@ func runProvenanceFromEnv() provenance {
 	if source == "" {
 		source = store.RunSourceCLI
 	}
+	wd, _ := os.Getwd()
 	return provenance{
 		source:  source,
 		client:  os.Getenv(store.RunClientEnv),
 		session: os.Getenv(store.RunSessionEnv),
+		dir:     wd,
 	}
+}
+
+// transientMeta describes what a transient run actually executed: the shell command for --cmd,
+// the inline definition for --spec, and the caller's label. All fields are empty for a named
+// executable, which can be looked up in its flowfile instead.
+type transientMeta struct {
+	command, spec, label string
+	// dir is the run's resolved working directory, which for --cmd may differ from the
+	// process's own cwd.
+	dir string
 }
 
 // recordRunStart writes an in-progress ("running") execution record before the run begins, so that
 // `flow logs` (from any process, via the shared store) can show the run as active. It is keyed by
 // the run's log archive ID so recordExecution can upsert it into its terminal state on completion.
 // No-op when there is no stable ID (legacy fallback: only the terminal record is written).
-// command/label are set for ad-hoc runs and empty for named executables.
 func recordRunStart(
-	ctx *context.Context, ref executable.Ref, startTime time.Time, prov provenance, command, label string,
+	ctx *context.Context, ref executable.Ref, startTime time.Time, prov provenance, meta transientMeta,
 ) {
 	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
 		return
@@ -727,8 +744,10 @@ func recordRunStart(
 		Source:     prov.source,
 		ClientName: prov.client,
 		SessionID:  prov.session,
-		Command:    command,
-		Label:      label,
+		WorkingDir: prov.dir,
+		Command:    meta.command,
+		Spec:       meta.spec,
+		Label:      meta.label,
 	}
 	if recErr := ctx.DataStore.RecordExecution(record); recErr != nil {
 		logger.Log().Debug("failed to record run start", "err", recErr)
@@ -737,7 +756,7 @@ func recordRunStart(
 
 func recordExecution(
 	ctx *context.Context, ref executable.Ref, startTime time.Time, dur time.Duration, runErr error,
-	prov provenance, command, label string,
+	prov provenance, meta transientMeta,
 ) {
 	now := time.Now()
 	record := store.ExecutionRecord{
@@ -751,8 +770,10 @@ func recordExecution(
 		Source:      prov.source,
 		ClientName:  prov.client,
 		SessionID:   prov.session,
-		Command:     command,
-		Label:       label,
+		WorkingDir:  prov.dir,
+		Command:     meta.command,
+		Spec:        meta.spec,
+		Label:       meta.label,
 	}
 	if runErr != nil {
 		record.ExitCode = 1

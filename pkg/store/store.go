@@ -35,9 +35,13 @@ const (
 	RunClientEnv  = "FLOW_RUN_CLIENT"
 	RunSessionEnv = "FLOW_RUN_SESSION"
 
-	// RunSourceCLI and RunSourceMCP are the recognized values for RunSourceEnv / ExecutionRecord.Source.
-	RunSourceCLI = "cli"
-	RunSourceMCP = "mcp"
+	// Known values for RunSourceEnv / ExecutionRecord.Source, naming who drove the run: a human
+	// at a terminal, a human in a GUI, or an agent over MCP. The set is open — Source is compared
+	// as a plain string everywhere, so an embedder may record its own origin without a change
+	// here. These are the ones flow itself produces.
+	RunSourceCLI     = "cli"
+	RunSourceDesktop = "desktop"
+	RunSourceMCP     = "mcp"
 
 	openTimeout = 3 * time.Second
 )
@@ -115,13 +119,21 @@ type ExecutionRecord struct {
 
 	// Command is the shell command for an ad-hoc (transient) run; empty for named executables.
 	Command string `json:"command,omitempty"`
+	// Spec is the inline executable definition for a transient `--spec` run. A spec run has no
+	// flowfile to look up and no single Command to show, so without this the record names an
+	// executable that never existed on disk and nothing can say what it did.
+	Spec string `json:"spec,omitempty"`
 	// Label is a human-readable, self-documenting name for an ad-hoc run.
 	Label string `json:"label,omitempty"`
 
 	// Provenance: who/what launched the run.
-	Source     string `json:"source,omitempty"`     // "cli" | "mcp"
+	Source     string `json:"source,omitempty"`     // "cli" | "desktop" | "mcp"
 	ClientName string `json:"clientName,omitempty"` // e.g. "claude", "cursor"
 	SessionID  string `json:"sessionId,omitempty"`
+	// WorkingDir is where the run actually executed. The workspace is already recoverable from
+	// Ref, but the path is not, and it is the only thing separating two checkouts of the same
+	// repo — sibling git worktrees produce identical refs from different directories.
+	WorkingDir string `json:"workingDir,omitempty"`
 }
 
 // BackgroundRunStatus represents the state of a background run.
