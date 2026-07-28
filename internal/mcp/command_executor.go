@@ -45,6 +45,9 @@ const stdioSessionID = "stdio"
 // is stdio-only and each client spawns its own `flow mcp` process, so one process is exactly one
 // client connection — the session boundary mcp-go's constant fails to draw. It is resolved once
 // and never changes, which is what makes it a usable grouping key in execution history.
+//
+// It is the last resort: a caller that supplies its own identifier knows better than we do what
+// belongs together.
 var processSessionID = sync.OnceValue(uuid.NewString)
 
 // mcpProvenance builds run provenance for an MCP-originated command, capturing the calling client's
@@ -57,10 +60,21 @@ func mcpProvenance(ctx context.Context) runProvenance {
 			prov.Client = withInfo.GetClientInfo().Name
 		}
 	}
-	// Only substitute when the transport gave us nothing usable, so a transport that does issue
-	// genuine per-connection IDs keeps them.
+	// A transport that issues genuine per-connection IDs keeps them; only substitute when it
+	// gave us nothing usable.
 	if prov.Session == "" || prov.Session == stdioSessionID {
-		prov.Session = processSessionID()
+		// An inherited session beats one we invent. A harness that tags its environment wants
+		// the runs it makes over MCP grouped with the ones it makes by shelling out to the CLI
+		// — minting our own here would split a single conversation across two IDs.
+		if inherited := store.RunEnvValue(store.RunSessionEnv); inherited != "" {
+			prov.Session = inherited
+		} else {
+			prov.Session = processSessionID()
+		}
+	}
+	// Same reasoning for the client, for a transport that does not report one.
+	if prov.Client == "" {
+		prov.Client = store.RunEnvValue(store.RunClientEnv)
 	}
 	return prov
 }

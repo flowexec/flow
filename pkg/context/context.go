@@ -30,7 +30,7 @@ type Context struct {
 	ctx                   context.Context
 	cancelFunc            context.CancelFunc
 	stdOut, stdIn, stdErr *os.File
-	callbacks             []func(*Context) error
+	callbacks             *callbackList
 	tuiOnce               sync.Once
 	tuiContainer          *tuikit.Container
 
@@ -107,6 +107,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 
 	c := &Context{
 		appName:          "flow",
+		callbacks:        &callbackList{},
 		ctx:              ctx,
 		cancelFunc:       cancelFunc,
 		stdOut:           os.Stdout,
@@ -131,7 +132,10 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 // fields (CurrentTask, ProcessTmpDir, etc.)
 func (ctx *Context) ShallowCopy() *Context {
 	cp := &Context{
-		appName:          ctx.appName,
+		appName: ctx.appName,
+		// Shared, not copied: cleanup registered by a parallel branch running on this copy
+		// must reach the root's Finalize. Copying the slice dropped it on the floor.
+		callbacks:        ctx.callbacks,
 		ctx:              ctx.ctx,
 		cancelFunc:       ctx.cancelFunc,
 		stdOut:           ctx.stdOut,
@@ -281,18 +285,50 @@ func (ctx *Context) SetView(view tuikit.View) error {
 	return ctx.TUIContainer().SetView(view)
 }
 
+// callbackList collects deferred cleanup registered on a context and on every shallow copy of
+// it. Copies share one list by pointer, because a copy is what gets handed to a parallel
+// branch: cleanup registered in there (temporary env files, for one) has to survive back to
+// whoever finalizes the root. Guarded, since those branches register concurrently.
+type callbackList struct {
+	mu    sync.Mutex
+	funcs []func(*Context) error
+}
+
+func (l *callbackList) add(callback func(*Context) error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.funcs = append(l.funcs, callback)
+}
+
+// drain returns the registered callbacks and empties the list, so finalizing more than once
+// cannot run the same cleanup twice.
+func (l *callbackList) drain() []func(*Context) error {
+	if l == nil {
+		return nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	funcs := l.funcs
+	l.funcs = nil
+	return funcs
+}
+
 func (ctx *Context) AddCallback(callback func(*Context) error) {
 	if callback == nil {
 		return
 	}
-	ctx.callbacks = append(ctx.callbacks, callback)
+	if ctx.callbacks == nil {
+		// Only reachable for a hand-built Context; NewContext and ShallowCopy both set it.
+		ctx.callbacks = &callbackList{}
+	}
+	ctx.callbacks.add(callback)
 }
 
 func (ctx *Context) Finalize() {
 	_ = ctx.stdIn.Close()
 	_ = ctx.stdOut.Close()
 
-	for _, cb := range ctx.callbacks {
+	for _, cb := range ctx.callbacks.drain() {
 		if err := cb(ctx); err != nil {
 			logger.Log().WrapError(err, "callback execution error")
 		}

@@ -54,5 +54,9 @@
       "Read(./.env)",
       "Read(./.env.*)"
     ]
+  },
+  "env": {
+    "FLOW_RUN_CLIENT": "claude-code",
+    "FLOW_RUN_SESSION": "${CLAUDE_CODE_SESSION_ID}"
   }
 }

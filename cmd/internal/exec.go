@@ -702,15 +702,15 @@ type provenance struct {
 // runProvenanceFromEnv resolves run provenance from environment variables set by the caller
 // (e.g. the MCP server). Source defaults to "cli".
 func runProvenanceFromEnv() provenance {
-	source := os.Getenv(store.RunSourceEnv)
+	source := store.RunEnvValue(store.RunSourceEnv)
 	if source == "" {
 		source = store.RunSourceCLI
 	}
 	wd, _ := os.Getwd()
 	return provenance{
 		source:  source,
-		client:  os.Getenv(store.RunClientEnv),
-		session: os.Getenv(store.RunSessionEnv),
+		client:  store.RunEnvValue(store.RunClientEnv),
+		session: store.RunEnvValue(store.RunSessionEnv),
 		dir:     wd,
 	}
 }

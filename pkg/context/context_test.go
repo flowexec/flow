@@ -4,6 +4,7 @@ package context
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"charm.land/lipgloss/v2"
@@ -101,4 +102,60 @@ var _ = ginkgo.Describe("Context", func() {
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func TestCallbacksSurviveShallowCopy(t *testing.T) {
+	t.Run("a copy's callbacks reach the original", func(t *testing.T) {
+		// A parallel branch runs on a shallow copy. Cleanup it registers — temporary env
+		// files, for one — used to land on the copy and never run, because only the root
+		// context is ever finalized.
+		root := &Context{callbacks: &callbackList{}}
+		var ran []string
+
+		root.AddCallback(func(*Context) error { ran = append(ran, "root"); return nil })
+		branch := root.ShallowCopy()
+		branch.AddCallback(func(*Context) error { ran = append(ran, "branch"); return nil })
+
+		for _, cb := range root.callbacks.drain() {
+			_ = cb(root)
+		}
+
+		if len(ran) != 2 {
+			t.Fatalf("expected both callbacks to run, got %v", ran)
+		}
+	})
+
+	t.Run("draining twice does not run cleanup twice", func(t *testing.T) {
+		root := &Context{callbacks: &callbackList{}}
+		count := 0
+		root.AddCallback(func(*Context) error { count++; return nil })
+
+		for range 2 {
+			for _, cb := range root.callbacks.drain() {
+				_ = cb(root)
+			}
+		}
+
+		if count != 1 {
+			t.Errorf("expected the callback to run once, ran %d times", count)
+		}
+	})
+
+	t.Run("concurrent branches can register at once", func(t *testing.T) {
+		// Run with -race: parallel branches register from their own goroutines.
+		root := &Context{callbacks: &callbackList{}}
+		var wg sync.WaitGroup
+		for range 32 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				root.ShallowCopy().AddCallback(func(*Context) error { return nil })
+			}()
+		}
+		wg.Wait()
+
+		if got := len(root.callbacks.drain()); got != 32 {
+			t.Errorf("expected 32 callbacks, got %d", got)
+		}
+	})
 }
