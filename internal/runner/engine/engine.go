@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
@@ -28,6 +29,18 @@ func (rs ResultSummary) HasErrors() bool {
 		}
 	}
 	return false
+}
+
+// Err returns the failures as one error, naming the executable behind each, or nil when
+// everything succeeded.
+func (rs ResultSummary) Err() error {
+	var errs []error
+	for _, r := range rs.Results {
+		if r.Error != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", r.ID, r.Error))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (rs ResultSummary) String() string {
