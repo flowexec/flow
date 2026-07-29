@@ -13,6 +13,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 func addServerResources(srv *server.MCPServer) {
@@ -119,11 +120,15 @@ func executableResourceHandler(_ context.Context, request mcp.ReadResourceReques
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
+	resolved, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve current workspace: %w", err)
+	}
 	if parts.workspace == "" {
-		if cfg.CurrentWorkspace == "" {
+		if resolved == nil {
 			return nil, fmt.Errorf("workspace is empty in URI and no current workspace is set")
 		}
-		parts.workspace = cfg.CurrentWorkspace
+		parts.workspace = resolved.Name
 	}
 	if parts.namespace == "" {
 		parts.namespace = cfg.CurrentNamespace
@@ -131,7 +136,12 @@ func executableResourceHandler(_ context.Context, request mcp.ReadResourceReques
 
 	wsPath, ok := cfg.Workspaces[parts.workspace]
 	if !ok {
-		return nil, fmt.Errorf("workspace %q not found", parts.workspace)
+		// The named workspace may be one discovered from the working directory, which is absent
+		// from the config but still perfectly runnable.
+		if resolved == nil || resolved.Name != parts.workspace {
+			return nil, fmt.Errorf("workspace %q not found", parts.workspace)
+		}
+		wsPath = resolved.Path
 	}
 
 	ws, err := filesystem.LoadWorkspaceConfig(parts.workspace, wsPath)
@@ -198,19 +208,19 @@ func flowfileResourceHandler(_ context.Context, request mcp.ReadResourceRequest)
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	absPath := path
-	if !filepath.IsAbs(path) {
-		// Try to resolve relative to current workspace
-		if cfg.CurrentWorkspace != "" {
-			if wsPath, ok := cfg.Workspaces[cfg.CurrentWorkspace]; ok {
-				absPath = filepath.Join(wsPath, path)
-			}
-		}
+	resolved, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve current workspace: %w", err)
 	}
 
-	// Security check: path must be within a registered workspace
-	if !isPathInWorkspace(absPath, cfg.Workspaces) {
-		return nil, fmt.Errorf("path %q is not within a registered workspace", path)
+	absPath := path
+	if !filepath.IsAbs(path) && resolved != nil {
+		absPath = filepath.Join(resolved.Path, path)
+	}
+
+	// Security check: path must be within a workspace flow can see from here
+	if !isPathInWorkspace(absPath, accessibleWorkspaceRoots(cfg, resolved)) {
+		return nil, fmt.Errorf("path %q is not within a known workspace", path)
 	}
 
 	data, err := os.ReadFile(filepath.Clean(absPath))
@@ -289,11 +299,27 @@ func extractExecutableURIParts(uri string) executableURIParts {
 }
 
 // isPathInWorkspace checks if an absolute path is within any registered workspace.
-func isPathInWorkspace(absPath string, workspaces map[string]string) bool {
-	for _, wsPath := range workspaces {
-		if strings.HasPrefix(absPath, wsPath) {
+// isPathInWorkspace reports whether absPath lies inside one of the given workspace roots. The
+// comparison is path-segment aware, so "/src/wsX" is not treated as being inside "/src/ws".
+func isPathInWorkspace(absPath string, roots []string) bool {
+	for _, root := range roots {
+		if filesystem.IsPathWithin(absPath, root) {
 			return true
 		}
 	}
 	return false
+}
+
+// accessibleWorkspaceRoots returns every directory a resource may be read from: the registered
+// workspaces plus the workspace resolved from the working directory, which may be a discovered
+// one that appears nowhere in the config.
+func accessibleWorkspaceRoots(cfg *config.Config, resolved *filesystem.ResolvedWorkspace) []string {
+	roots := make([]string, 0, len(cfg.Workspaces)+1)
+	for _, wsPath := range cfg.Workspaces {
+		roots = append(roots, wsPath)
+	}
+	if resolved != nil {
+		roots = append(roots, resolved.Path)
+	}
+	return roots
 }

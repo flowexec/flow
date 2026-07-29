@@ -12,7 +12,9 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 func TestContext(t *testing.T) {
@@ -21,18 +23,18 @@ func TestContext(t *testing.T) {
 }
 
 var _ = ginkgo.Describe("Context", func() {
-	ginkgo.Describe("currentWorkspace", func() {
+	ginkgo.Describe("workspace resolution", func() {
 		var (
 			cfg    *config.Config
 			tmpDir string
 		)
 
 		ginkgo.BeforeEach(func() {
-			tmpDir = ginkgo.GinkgoT().TempDir()
+			tmpDir = filesystem.NormalizePath(ginkgo.GinkgoT().TempDir())
 			cfg = &config.Config{
 				Workspaces: map[string]string{
-					"ws1": filepath.Clean(filepath.Join(tmpDir, "ws1")),
-					"ws2": filepath.Clean(filepath.Join(tmpDir, "ws2")),
+					"ws1": filepath.Join(tmpDir, "ws1"),
+					"ws2": filepath.Join(tmpDir, "ws2"),
 				},
 				CurrentWorkspace: "ws1",
 				WorkspaceMode:    config.ConfigWorkspaceModeFixed,
@@ -47,28 +49,67 @@ var _ = ginkgo.Describe("Context", func() {
 		})
 
 		ginkgo.It("should return the current workspace in fixed mode", func() {
-			ws, err := currentWorkspace(cfg)
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ws.AssignedName()).To(Equal("ws1"))
-			Expect(ws.Location()).To(Equal(filepath.Join(tmpDir, "ws1")))
+			Expect(res.Workspace.AssignedName()).To(Equal("ws1"))
+			Expect(res.Workspace.Location()).To(Equal(filepath.Join(tmpDir, "ws1")))
+			Expect(res.Registered).To(BeTrue())
 		})
 
 		ginkgo.It("should return the current workspace in dynamic mode", func() {
 			cfg.WorkspaceMode = config.ConfigWorkspaceModeDynamic
 			Expect(os.Mkdir(filepath.Join(tmpDir, "ws2"), 0750)).To(Succeed())
-			// os.Setenv("PWD", filepath.Join(tmpDir, "ws2"))
 			Expect(os.Chdir(filepath.Join(tmpDir, "ws2"))).To(Succeed())
 
-			ws, err := currentWorkspace(cfg)
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ws.AssignedName()).To(Equal("ws2"))
-			Expect(ws.Location()).To(Equal(filepath.Join(tmpDir, "ws2")))
+			Expect(res.Workspace.AssignedName()).To(Equal("ws2"))
+			Expect(res.Workspace.Location()).To(Equal(filepath.Join(tmpDir, "ws2")))
 		})
 
-		ginkgo.It("should return an error if the current workspace is not found", func() {
+		ginkgo.It("should resolve nothing if the current workspace is not found", func() {
 			cfg.CurrentWorkspace = "ws3"
-			_, err := currentWorkspace(cfg)
-			Expect(err).To(HaveOccurred())
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(BeNil())
+		})
+
+		ginkgo.It("should discover an unregistered workspace by walking up", func() {
+			cfg.WorkspaceMode = config.ConfigWorkspaceModeDynamic
+			clone := filepath.Join(tmpDir, "cloned-repo")
+			Expect(os.MkdirAll(filepath.Join(clone, "sub"), 0750)).To(Succeed())
+			Expect(os.WriteFile(
+				filepath.Join(clone, filesystem.WorkspaceConfigFileName), []byte("{}\n"), 0600,
+			)).To(Succeed())
+			Expect(os.Chdir(filepath.Join(clone, "sub"))).To(Succeed())
+
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Workspace.AssignedName()).To(Equal("cloned-repo"))
+			Expect(res.Registered).To(BeFalse())
+		})
+	})
+
+	ginkgo.Describe("workspace accessors", func() {
+		ginkgo.It("reports an unresolved workspace without panicking", func() {
+			ctx := &Context{}
+			Expect(ctx.CurrentWorkspaceName()).To(BeEmpty())
+			Expect(ctx.WorkspaceIsRegistered()).To(BeFalse())
+			Expect(ctx.String()).To(Equal("unk/*"))
+		})
+
+		ginkgo.It("reports a discovered workspace as unregistered", func() {
+			ws := &workspace.Workspace{}
+			ws.SetContext("discovered", "/src/discovered")
+			ctx := &Context{
+				CurrentWorkspace: ws,
+				WorkspaceResolution: &filesystem.ResolvedWorkspace{
+					Workspace: ws, Name: "discovered", Path: "/src/discovered",
+					Registered: false, Source: filesystem.SourceDiscovered,
+				},
+			}
+			Expect(ctx.CurrentWorkspaceName()).To(Equal("discovered"))
+			Expect(ctx.WorkspaceIsRegistered()).To(BeFalse())
 		})
 	})
 

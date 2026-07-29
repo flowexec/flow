@@ -153,5 +153,53 @@ var _ = Describe("Executables", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(definitions).To(BeEmpty())
 		})
+
+		Context("with a nested workspace", func() {
+			// nestedSetup writes one flow file at the workspace root and another inside a
+			// subdirectory that is itself a workspace root (a git worktree, say).
+			nestedSetup := func() string {
+				def := &executable.FlowFile{
+					Namespace:   "test",
+					Executables: executable.ExecutableList{{Verb: "exec", Name: "test-executable"}},
+				}
+				Expect(filesystem.WriteFlowFile(filepath.Join(tmpDir, "root"+executable.FlowFileExt), def)).To(Succeed())
+
+				nested := filepath.Join(tmpDir, "worktree")
+				Expect(os.MkdirAll(nested, 0750)).To(Succeed())
+				Expect(os.WriteFile(
+					filepath.Join(nested, filesystem.WorkspaceConfigFileName), []byte("{}\n"), 0600,
+				)).To(Succeed())
+				Expect(filesystem.WriteFlowFile(filepath.Join(nested, "nested"+executable.FlowFileExt), def)).To(Succeed())
+
+				ctrl := gomock.NewController(GinkgoT())
+				mockLogger := mocks.NewMockLogger(ctrl)
+				logger.Init(logger.InitOptions{Logger: mockLogger, TestingTB: GinkgoTB()})
+				mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any()).AnyTimes()
+				return nested
+			}
+
+			It("does not load executables from a subdirectory that is its own workspace", func() {
+				nestedSetup()
+				workspaceCfg := &workspace.Workspace{}
+				workspaceCfg.SetContext("test", tmpDir)
+
+				definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(definitions).To(HaveLen(1))
+				Expect(definitions[0].ConfigPath()).To(Equal(filepath.Join(tmpDir, "root"+executable.FlowFileExt)))
+			})
+
+			It("still loads them when the nested path is explicitly included", func() {
+				nested := nestedSetup()
+				workspaceCfg := &workspace.Workspace{
+					Executables: &workspace.ExecutableFilter{Included: []string{tmpDir, nested}},
+				}
+				workspaceCfg.SetContext("test", tmpDir)
+
+				definitions, err := filesystem.LoadWorkspaceFlowFiles(workspaceCfg)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(definitions).To(HaveLen(2))
+			})
+		})
 	})
 })

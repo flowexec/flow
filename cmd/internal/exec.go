@@ -92,7 +92,19 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	rootCmd.AddCommand(subCmd)
 }
 
-func execPreRun(_ *context.Context, _ *cobra.Command, _ []string) {
+func execPreRun(ctx *context.Context, cmd *cobra.Command, _ []string) {
+	// --workspace has to move the whole context, not just the transient run's: a named
+	// executable is looked up by a ref expanded from the current workspace, and running one from
+	// a different workspace is refused outright.
+	if explicit := flags.ValueFor[string](cmd, *flags.RunWorkspaceFlag, false); explicit != "" {
+		res, err := filesystem.ResolveWorkspace(ctx.Config, filesystem.ResolveOptions{Override: explicit})
+		if err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%v", err)
+			return
+		}
+		ctx.SetCurrentWorkspace(res)
+	}
+
 	runner.RegisterRunner(exec.NewRunner())
 	runner.RegisterRunner(launch.NewRunner())
 	runner.RegisterRunner(request.NewRunner())
@@ -210,7 +222,7 @@ func resolveExecutableForRun(
 			"executable '%s' belongs to workspace '%s' and cannot be run from the current workspace '%s'",
 			ref,
 			e.Workspace(),
-			ctx.Config.CurrentWorkspace,
+			ctx.CurrentWorkspaceName(),
 		))
 	}
 	return e, ref
@@ -357,37 +369,51 @@ func resolveSpecContent(spec string) (string, error) {
 func setTransientContext(ctx *context.Context, cmd *cobra.Command, e *executable.Executable, runDir string) {
 	wsName, wsPath := resolveRunWorkspace(ctx, cmd, runDir)
 
-	currentName := ""
-	if ctx.CurrentWorkspace != nil {
-		currentName = ctx.CurrentWorkspace.AssignedName()
-	}
+	currentName := ctx.CurrentWorkspaceName()
 	if wsName != "" && wsName != currentName {
 		logger.Log().Infof("Running in workspace '%s' (current workspace is '%s')", wsName, currentName)
+	} else if wsName != "" && !ctx.WorkspaceIsRegistered() {
+		logger.Log().Debugf("Running in unregistered workspace '%s' (%s)", wsName, wsPath)
 	}
 
 	var flowFilePath string
 	if wsPath != "" {
-		flowFilePath = filepath.Join(wsPath, "flow.yaml")
+		flowFilePath = filepath.Join(wsPath, filesystem.WorkspaceConfigFileName)
 	}
 	e.SetContext(wsName, wsPath, ctx.Config.CurrentNamespace, flowFilePath)
 }
 
-// resolveRunWorkspace picks the workspace a transient run should use, in priority order:
-// an explicit --workspace flag, then the workspace whose location contains runDir (longest match),
-// then the global current workspace. It never changes the global current workspace.
+// resolveRunWorkspace picks the workspace a transient run should use, in priority order: an
+// explicit --workspace flag (a registered name or a path), then the nearest workspace at or above
+// runDir, then a registered workspace containing runDir, then the global current workspace. It
+// never changes the global current workspace.
 func resolveRunWorkspace(ctx *context.Context, cmd *cobra.Command, runDir string) (name, path string) {
+	if explicit := flags.ValueFor[string](cmd, *flags.RunWorkspaceFlag, false); explicit != "" {
+		res, err := filesystem.ResolveWorkspace(ctx.Config, filesystem.ResolveOptions{
+			Dir: runDir, Override: explicit,
+		})
+		if err != nil || res == nil {
+			errhandler.HandleUsage(ctx, cmd, "unable to resolve workspace %q: %v", explicit, err)
+			return "", ""
+		}
+		return res.Name, res.Path
+	}
+
+	// Discovery covers a worktree or clone that is registered nowhere; the cache lookup below
+	// still handles a registered workspace whose own flow.yaml has gone missing.
+	if runDir != "" {
+		res, err := filesystem.ResolveWorkspace(ctx.Config, filesystem.ResolveOptions{Dir: runDir})
+		if err != nil {
+			logger.Log().Debugf("unable to resolve workspace for transient run: %v", err)
+		} else if res != nil && res.Source != filesystem.SourceCurrent {
+			return res.Name, res.Path
+		}
+	}
+
 	wsList, err := ctx.WorkspacesCache.GetWorkspaceConfigList()
 	if err != nil {
 		logger.Log().Debugf("unable to load workspaces for transient run resolution: %v", err)
 	}
-
-	if explicit := flags.ValueFor[string](cmd, *flags.RunWorkspaceFlag, false); explicit != "" {
-		if ws := wsList.FindByName(explicit); ws != nil {
-			return ws.AssignedName(), ws.Location()
-		}
-		errhandler.HandleUsage(ctx, cmd, "unknown workspace %q", explicit)
-	}
-
 	if ws := workspaceForPath(wsList, runDir); ws != nil {
 		return ws.AssignedName(), ws.Location()
 	}

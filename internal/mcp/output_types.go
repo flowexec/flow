@@ -37,6 +37,14 @@ type CurrentContext struct {
 	Vault         string `json:"vault"`
 	WorkspaceMode string `json:"workspaceMode"`
 	WorkspacePath string `json:"workspacePath"`
+	// WorkspaceRegistered is false when the workspace was found by walking up from the working
+	// directory rather than being registered in the user config — a git worktree or a fresh
+	// clone. Such a workspace runs normally but cannot be switched to, and other directories
+	// cannot reference its executables.
+	WorkspaceRegistered bool `json:"workspaceRegistered"`
+	// WorkspaceSource records how the workspace was chosen: "override", "registered",
+	// "discovered", "prefix", or "current".
+	WorkspaceSource string `json:"workspaceSource,omitempty"`
 	// SessionID tags every run this connection launches, and is what `flow logs --session`
 	// filters on. A client reads it once here rather than inferring which records are its own:
 	// the value is knowable only to the server, since the stdio transport carries no identity.

@@ -36,10 +36,15 @@ type Context struct {
 
 	Config           *config.Config
 	CurrentWorkspace *workspace.Workspace
-	WorkspacesCache  cache.WorkspaceCache
-	ExecutableCache  cache.ExecutableCache
-	TemplateCache    cache.TemplateCache
-	DataStore        store.DataStore
+
+	// WorkspaceResolution records how CurrentWorkspace was chosen, including whether it is
+	// registered in the user config at all. Nil when no workspace could be resolved.
+	WorkspaceResolution *filesystem.ResolvedWorkspace
+
+	WorkspacesCache cache.WorkspaceCache
+	ExecutableCache cache.ExecutableCache
+	TemplateCache   cache.TemplateCache
+	DataStore       store.DataStore
 
 	// RootExecutable is the executable that is being run in the current context.
 	// This will be nil if the context is not associated with an executable run.
@@ -86,14 +91,16 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 		// This is a temporary solution until the config handling is refactored a bit
 		_ = os.Setenv(executable.TimeoutOverrideEnv, cfg.DefaultTimeout.String())
 	}
+	// Resolution walks up from the working directory, so it succeeds in a workspace the user
+	// never registered — a worktree or a fresh clone. A nil result is ordinary (a fresh install
+	// has no workspaces at all) and must not be fatal; commands that need a workspace say so.
+	resolved, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+	if err != nil {
+		panic(errors.Wrap(err, "workspace config load error"))
+	}
 	var wsConfig *workspace.Workspace
-	if len(cfg.Workspaces) > 0 {
-		wsConfig, err = currentWorkspace(cfg)
-		if err != nil {
-			panic(errors.Wrap(err, "workspace config load error"))
-		} else if wsConfig == nil {
-			panic(fmt.Errorf("workspace config not found in current workspace (%s)", cfg.CurrentWorkspace))
-		}
+	if resolved != nil {
+		wsConfig = resolved.Workspace
 	}
 
 	ds, err := store.NewDataStore(store.Path())
@@ -102,23 +109,31 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 	}
 
 	workspaceCache := cache.NewWorkspaceCache(ds)
+	// The base workspace cache is what feeds the persisted executable and template caches. A
+	// discovered workspace is layered on afterwards so it stays out of the shared data store.
 	executableCache := cache.NewExecutableCache(workspaceCache, ds)
 	templateCache := cache.NewTemplateCache(workspaceCache, ds)
+	if resolved != nil && !resolved.Registered {
+		workspaceCache = cache.NewLocalWorkspaceCache(workspaceCache, wsConfig)
+		executableCache = cache.NewLocalExecutableCache(executableCache, wsConfig)
+		templateCache = cache.NewLocalTemplateCache(templateCache, wsConfig)
+	}
 
 	c := &Context{
-		appName:          "flow",
-		callbacks:        &callbackList{},
-		ctx:              ctx,
-		cancelFunc:       cancelFunc,
-		stdOut:           os.Stdout,
-		stdIn:            os.Stdin,
-		stdErr:           os.Stderr,
-		Config:           cfg,
-		CurrentWorkspace: wsConfig,
-		WorkspacesCache:  workspaceCache,
-		ExecutableCache:  executableCache,
-		TemplateCache:    templateCache,
-		DataStore:        ds,
+		appName:             "flow",
+		callbacks:           &callbackList{},
+		ctx:                 ctx,
+		cancelFunc:          cancelFunc,
+		stdOut:              os.Stdout,
+		stdIn:               os.Stdin,
+		stdErr:              os.Stderr,
+		Config:              cfg,
+		CurrentWorkspace:    wsConfig,
+		WorkspaceResolution: resolved,
+		WorkspacesCache:     workspaceCache,
+		ExecutableCache:     executableCache,
+		TemplateCache:       templateCache,
+		DataStore:           ds,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -135,22 +150,23 @@ func (ctx *Context) ShallowCopy() *Context {
 		appName: ctx.appName,
 		// Shared, not copied: cleanup registered by a parallel branch running on this copy
 		// must reach the root's Finalize. Copying the slice dropped it on the floor.
-		callbacks:        ctx.callbacks,
-		ctx:              ctx.ctx,
-		cancelFunc:       ctx.cancelFunc,
-		stdOut:           ctx.stdOut,
-		stdIn:            ctx.stdIn,
-		stdErr:           ctx.stdErr,
-		tuiContainer:     ctx.tuiContainer, // share already-initialized container (if any)
-		Config:           ctx.Config,
-		CurrentWorkspace: ctx.CurrentWorkspace,
-		WorkspacesCache:  ctx.WorkspacesCache,
-		ExecutableCache:  ctx.ExecutableCache,
-		TemplateCache:    ctx.TemplateCache,
-		DataStore:        ctx.DataStore,
-		RootExecutable:   ctx.RootExecutable,
-		ProcessTmpDir:    ctx.ProcessTmpDir,
-		LogArchiveID:     ctx.LogArchiveID,
+		callbacks:           ctx.callbacks,
+		ctx:                 ctx.ctx,
+		cancelFunc:          ctx.cancelFunc,
+		stdOut:              ctx.stdOut,
+		stdIn:               ctx.stdIn,
+		stdErr:              ctx.stdErr,
+		tuiContainer:        ctx.tuiContainer, // share already-initialized container (if any)
+		Config:              ctx.Config,
+		CurrentWorkspace:    ctx.CurrentWorkspace,
+		WorkspaceResolution: ctx.WorkspaceResolution,
+		WorkspacesCache:     ctx.WorkspacesCache,
+		ExecutableCache:     ctx.ExecutableCache,
+		TemplateCache:       ctx.TemplateCache,
+		DataStore:           ctx.DataStore,
+		RootExecutable:      ctx.RootExecutable,
+		ProcessTmpDir:       ctx.ProcessTmpDir,
+		LogArchiveID:        ctx.LogArchiveID,
 	}
 	// If the parent has already initialized the TUI container, mark the copy
 	// as initialized too so it won't re-create one.
@@ -187,11 +203,11 @@ func (ctx *Context) Value(key any) any {
 }
 
 func (ctx *Context) String() string {
-	var ws string
-	if ctx.CurrentWorkspace != nil {
-		ws = ctx.CurrentWorkspace.AssignedName()
+	ws := ctx.CurrentWorkspaceName()
+	var ns string
+	if ctx.Config != nil {
+		ns = ctx.Config.CurrentNamespace
 	}
-	ns := ctx.Config.CurrentNamespace
 	if ws == "" {
 		ws = "unk"
 	}
@@ -376,17 +392,70 @@ func ExpandRefFromParent(parent *executable.Executable, ref executable.Ref) exec
 	return executable.NewRef(executable.NewExecutableID(ws, ns, name), ref.Verb())
 }
 
-func currentWorkspace(cfg *config.Config) (*workspace.Workspace, error) {
-	ws, err := cfg.CurrentWorkspaceName()
-	if err != nil {
-		return nil, err
+// LogWorkspaceResolution records which workspace was chosen and why. It is separate from
+// NewContext because the global logger is not initialized yet at construction time — tools that
+// build a context outside the CLI (docs generation) never call Init at all.
+func (ctx *Context) LogWorkspaceResolution() {
+	if ctx.WorkspaceResolution == nil {
+		logger.Log().Debug("no workspace resolved")
+		return
 	}
-	wsPath := cfg.Workspaces[ws]
-	if ws == "" || wsPath == "" {
-		return nil, fmt.Errorf("current workspace not found")
-	}
+	logger.Log().Debug(
+		"resolved workspace",
+		"workspace", ctx.WorkspaceResolution.Name,
+		"path", ctx.WorkspaceResolution.Path,
+		"source", string(ctx.WorkspaceResolution.Source),
+		"registered", ctx.WorkspaceResolution.Registered,
+	)
+}
 
-	return filesystem.LoadWorkspaceConfig(ws, wsPath)
+// SetCurrentWorkspace re-points the context at another workspace for the rest of the process,
+// rebuilding the caches so an unregistered workspace's executables become resolvable (and a
+// registered one stops being shadowed). It does not touch the user config — a per-invocation
+// override should not change what the next command does.
+func (ctx *Context) SetCurrentWorkspace(resolved *filesystem.ResolvedWorkspace) {
+	if resolved == nil {
+		return
+	}
+	ctx.CurrentWorkspace = resolved.Workspace
+	ctx.WorkspaceResolution = resolved
+
+	wsCache := cache.NewWorkspaceCache(ctx.DataStore)
+	execCache := cache.NewExecutableCache(wsCache, ctx.DataStore)
+	tmplCache := cache.NewTemplateCache(wsCache, ctx.DataStore)
+	if !resolved.Registered {
+		wsCache = cache.NewLocalWorkspaceCache(wsCache, resolved.Workspace)
+		execCache = cache.NewLocalExecutableCache(execCache, resolved.Workspace)
+		tmplCache = cache.NewLocalTemplateCache(tmplCache, resolved.Workspace)
+	}
+	ctx.WorkspacesCache = wsCache
+	ctx.ExecutableCache = execCache
+	ctx.TemplateCache = tmplCache
+}
+
+// WorkspaceIsRegistered reports whether the current workspace exists in the user config. A
+// workspace discovered by walking up from the working directory does not, which changes what
+// commands that mutate the config (workspace switch, remove) can meaningfully do.
+func (ctx *Context) WorkspaceIsRegistered() bool {
+	if ctx.WorkspaceResolution != nil {
+		return ctx.WorkspaceResolution.Registered
+	}
+	// A context assembled without going through NewContext carries no resolution metadata.
+	// Absent metadata is not evidence of an unregistered workspace, so fall back to the config.
+	if ctx.Config == nil || ctx.CurrentWorkspace == nil {
+		return false
+	}
+	_, found := ctx.Config.Workspaces[ctx.CurrentWorkspace.AssignedName()]
+	return found
+}
+
+// CurrentWorkspaceName returns the resolved workspace name, or an empty string when no workspace
+// resolved.
+func (ctx *Context) CurrentWorkspaceName() string {
+	if ctx.CurrentWorkspace == nil {
+		return ""
+	}
+	return ctx.CurrentWorkspace.AssignedName()
 }
 
 func overrideThemeColor(theme themes.Theme, palette *config.ColorPalette) themes.Theme {

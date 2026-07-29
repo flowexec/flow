@@ -36,6 +36,27 @@ func provenanceFromContext(ctx context.Context) (runProvenance, bool) {
 	return p, ok
 }
 
+// runDirCtxKey keys the working directory the flow subprocess should run in.
+type runDirCtxKey struct{}
+
+// withRunDir returns a context carrying the directory to launch the flow subprocess from.
+//
+// This matters because flow resolves its workspace by walking up from the working directory. The
+// server process inherits whatever directory the MCP client was started in, which is routinely
+// not where the caller is working — an agent in a git worktree, say. Without this, every run
+// would silently execute against the server's directory instead of the caller's.
+func withRunDir(ctx context.Context, dir string) context.Context {
+	if dir == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, runDirCtxKey{}, dir)
+}
+
+func runDirFromContext(ctx context.Context) string {
+	dir, _ := ctx.Value(runDirCtxKey{}).(string)
+	return dir
+}
+
 // stdioSessionID is what mcp-go reports as the session ID for every stdio connection — a
 // package constant, not a per-connection value (see mcp-go server/stdio.go). Taken at face
 // value it collapses every run from every client into one "session".
@@ -103,6 +124,7 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		name = envName
 	}
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
+	cmd.Dir = runDirFromContext(ctx)
 	if p, ok := provenanceFromContext(ctx); ok {
 		cmd.Env = append(os.Environ(),
 			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),

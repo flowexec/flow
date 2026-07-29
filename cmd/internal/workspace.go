@@ -298,6 +298,15 @@ func switchWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 	ws := args[0]
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[ws]; !found {
+		// Switching persists a name into the config, so a workspace that exists only because
+		// flow found its flow.yaml from here cannot be switched to — say so rather than
+		// reporting it as missing when the user is standing in it.
+		if ctx.CurrentWorkspaceName() == ws && !ctx.WorkspaceIsRegistered() {
+			errhandler.HandleUsage(ctx, cmd,
+				"workspace '%s' was discovered at %s but is not registered - run 'flow workspace add %s %s' first",
+				ws, ctx.CurrentWorkspace.Location(), ws, ctx.CurrentWorkspace.Location())
+			return
+		}
 		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: ws})
 	}
 	userConfig.CurrentWorkspace = ws
@@ -367,9 +376,18 @@ func removeWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string
 		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: name})
 	}
 
+	wsPath := userConfig.Workspaces[name]
 	delete(userConfig.Workspaces, name)
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	if filesystem.WorkspaceConfigExists(wsPath) {
+		// The directory keeps its flow.yaml, so flow will still find it by walking up — just
+		// under its directory name rather than the name being removed here.
+		logger.Log().Infof(
+			"%s still has a %s, so running from %s resolves to the workspace '%s'",
+			wsPath, filesystem.WorkspaceConfigFileName, wsPath, filepath.Base(wsPath),
+		)
 	}
 
 	if err := cache.UpdateAll(ctx.DataStore); err != nil {
@@ -468,12 +486,20 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if len(args) == 1 {
 		workspaceName = args[0]
 		wsPath = ctx.Config.Workspaces[workspaceName]
+		if wsPath == "" && ctx.CurrentWorkspaceName() == workspaceName {
+			wsPath = ctx.CurrentWorkspace.Location()
+		}
 	} else {
 		if ctx.CurrentWorkspace == nil {
 			errhandler.HandleUsage(ctx, cmd, "no current workspace set — run 'flow workspace add' to get started")
+			return
 		}
 		workspaceName = ctx.CurrentWorkspace.AssignedName()
 		wsPath = ctx.CurrentWorkspace.Location()
+		if !ctx.WorkspaceIsRegistered() {
+			logger.Log().Infof(
+				"workspace '%s' was discovered at %s and is not registered", workspaceName, wsPath)
+		}
 	}
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)

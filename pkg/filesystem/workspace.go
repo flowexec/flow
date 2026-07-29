@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 
@@ -25,9 +26,15 @@ func InitWorkspaceConfig(name, path string) error {
 	return nil
 }
 
+// WorkspaceConfigExists reports whether workspacePath holds a flow.yaml file. Workspace
+// discovery walks up through arbitrary directories testing this, so a directory that merely
+// happens to be named flow.yaml must not count as a workspace root.
 func WorkspaceConfigExists(workspacePath string) bool {
-	_, err := os.Stat(filepath.Join(workspacePath, WorkspaceConfigFileName))
-	return !os.IsNotExist(err)
+	info, err := os.Stat(filepath.Join(workspacePath, WorkspaceConfigFileName))
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func EnsureWorkspaceDir(workspacePath string) error {
@@ -71,13 +78,22 @@ func WriteWorkspaceConfig(workspacePath string, config *workspace.Workspace) err
 	return nil
 }
 
+// LoadWorkspaceConfig reads a registered workspace's config, creating the directory and a
+// default flow.yaml if either is missing. Only use this for paths the user has explicitly
+// registered — see ReadWorkspaceConfig for the read-only variant discovery must use.
 func LoadWorkspaceConfig(workspaceName, workspacePath string) (*workspace.Workspace, error) {
 	if err := EnsureWorkspaceDir(workspacePath); err != nil {
 		return nil, errors.Wrap(err, "unable to ensure workspace directory")
 	} else if err := EnsureWorkspaceConfig(workspaceName, workspacePath); err != nil {
 		return nil, errors.Wrap(err, "unable to ensure workspace config file")
 	}
+	return ReadWorkspaceConfig(workspaceName, workspacePath)
+}
 
+// ReadWorkspaceConfig reads a workspace's flow.yaml without creating anything. Workspace
+// discovery resolves roots the user never registered, so it must never write into them the way
+// LoadWorkspaceConfig does.
+func ReadWorkspaceConfig(workspaceName, workspacePath string) (*workspace.Workspace, error) {
 	wsCfg := &workspace.Workspace{}
 	wsFile := filepath.Join(workspacePath, WorkspaceConfigFileName)
 	file, err := os.Open(filepath.Clean(wsFile))
@@ -87,7 +103,8 @@ func LoadWorkspaceConfig(workspaceName, workspacePath string) (*workspace.Worksp
 	defer file.Close()
 
 	err = yaml.NewDecoder(file).Decode(wsCfg)
-	if err != nil {
+	if err != nil && !errors.Is(err, io.EOF) {
+		// An empty flow.yaml is a valid workspace marker with all-default settings.
 		return nil, errors.Wrap(err, "unable to decode workspace config file")
 	}
 

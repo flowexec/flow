@@ -141,6 +141,7 @@ func findFiles(
 	}
 	excludedPaths = append(excludedPaths, defaultExcutablePaths...)
 
+	root := workspaceCfg.Location()
 	var cfgPaths []string
 	walkDirFunc := func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -149,6 +150,14 @@ func findFiles(
 				return nil
 			}
 			return err
+		}
+		if isNestedWorkspaceRoot(path, root, entry, filter) {
+			logger.Log().Debug(
+				"skipping nested workspace root",
+				"path", path,
+				"workspace", workspaceCfg.AssignedName(),
+			)
+			return filepath.SkipDir
 		}
 		if isPathIncluded(path, workspaceCfg.Location(), includePaths) {
 			if isPathExcluded(path, workspaceCfg.Location(), excludedPaths) {
@@ -169,6 +178,27 @@ func findFiles(
 		return nil, err
 	}
 	return cfgPaths, nil
+}
+
+// isNestedWorkspaceRoot reports whether path is a subdirectory that holds its own flow.yaml.
+// Such a directory is a workspace in its own right — a git worktree, a submodule, an embedded
+// example project — and its executables belong to it, not to the tree being scanned. Without
+// this, a worktree checked out inside a workspace gets indexed twice and every one of its
+// executables collides with the original.
+//
+// A directory named explicitly in the workspace's `executables.included` is scanned anyway: that
+// is a deliberate instruction to pull those executables in, and it should outrank the default.
+func isNestedWorkspaceRoot(path, root string, entry fs.DirEntry, filter *workspace.ExecutableFilter) bool {
+	if !entry.IsDir() || filepath.Clean(path) == filepath.Clean(root) {
+		return false
+	}
+	if !WorkspaceConfigExists(path) {
+		return false
+	}
+	if filter != nil && len(filter.Included) > 0 && pathMatches(path, root, filter.Included) {
+		return false
+	}
+	return true
 }
 
 func pathMatches(path, basePath string, patterns []string) bool {

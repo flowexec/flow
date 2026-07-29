@@ -57,9 +57,9 @@ below: the `.mcp.json` supplies the tools, the skill tells the assistant to reac
 | `list_workspaces` | All registered workspaces |
 | `get_workspace` | Details and config for a specific workspace |
 | `switch_workspace` | Change the active workspace |
-| `list_executables` | Browse executables — filterable by tag, verb, workspace |
+| `list_executables` | Browse executables — filterable by tag, verb, workspace, and resolvable from a `dir` |
 | `get_executable` | Full definition and metadata for a specific executable |
-| `execute` | Run a **named** executable by ref |
+| `execute` | Run a **named** executable by ref, in a given `dir` or `workspace` |
 | `run_command` | Run one or more **arbitrary** shell commands through flow (with a `label`, working `dir`, and optional `workspace`) — captured in history like any executable |
 | `run_executable` | Run a **transient executable of any type** from an inline `spec` — a serial/parallel batch, an HTTP `request`, a `render`, or a `launch` — without saving a file |
 | `get_execution_logs` | Output from recent runs, filterable by `source`/`session`/`status`, or `mine` for this session's own runs |
@@ -67,6 +67,17 @@ below: the `.mcp.json` supplies the tools, the skill tells the assistant to reac
 | `write_flowfile` | Create or update a `.flow` file, validated before writing |
 
 The three run tools form a ladder, closest-fit first: **`execute`** for a task you've already named, **`run_command`** for a one-off shell command, **`run_executable`** for something richer than a single command. Reaching for flow before a raw shell tool means every run inherits the workspace's environment and secrets and is recorded — see [Observability](#observability) below.
+
+**Working in a worktree or a fresh clone**
+
+The MCP server inherits whatever directory it was started in, which is often not where you are
+working. Pass `dir` on `execute`, `run_command`, `run_executable`, or `list_executables` and flow
+resolves the workspace by walking up from *that* directory to the nearest `flow.yaml` — so a git
+worktree or a just-cloned repo works without being registered first. `get_info` reports
+`workspaceRegistered` and `workspaceSource` so you can tell which case you are in; an
+unregistered workspace runs normally but cannot be switched to. Exporting `FLOW_WORKSPACE` in the
+server's environment pins it for every call instead. See
+[Unregistered workspaces](workspaces.md#unregistered-workspaces).
 
 **Prompts**
 

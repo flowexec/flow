@@ -13,6 +13,7 @@ import (
 	"github.com/flowexec/flow/v2/pkg/logger"
 	"github.com/flowexec/flow/v2/pkg/store"
 	"github.com/flowexec/flow/v2/types/executable"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 const tmplCacheKey = "templates"
@@ -43,12 +44,56 @@ type TemplateCacheImpl struct {
 
 func NewTemplateCache(wsCache WorkspaceCache, s store.DataStore) TemplateCache {
 	return &TemplateCacheImpl{
-		Store: s,
-		Data: &TemplateCacheData{
-			TemplateMap: make(map[string]string),
-			LocationMap: make(map[string]WorkspaceInfo),
-		},
+		Store:          s,
+		Data:           newTemplateCacheData(),
 		WorkspaceCache: wsCache,
+	}
+}
+
+// newTemplateCacheData returns an empty, ready-to-populate index.
+func newTemplateCacheData() *TemplateCacheData {
+	return &TemplateCacheData{
+		TemplateMap: make(map[string]string),
+		LocationMap: make(map[string]WorkspaceInfo),
+	}
+}
+
+// indexWorkspaceTemplates records one workspace's valid templates in data. Shared by the
+// persisted cache and the in-memory overlay built for a discovered workspace.
+func indexWorkspaceTemplates(data *TemplateCacheData, wsCfg *workspace.Workspace) {
+	templates, err := filesystem.LoadWorkspaceFlowFileTemplates(wsCfg)
+	if err != nil {
+		logger.Log().Error("failed to load workspace templates", "workspace", wsCfg.AssignedName(), "err", err)
+		return
+	}
+	for _, tmpl := range templates {
+		if vErr := tmpl.Validate(); vErr != nil {
+			logger.Log().Warn(
+				"invalid template found during cache update",
+				"template", tmpl.Name(),
+				"path", tmpl.Location(),
+				"workspace", wsCfg.AssignedName(),
+				"err", vErr,
+			)
+			continue
+		}
+
+		if existingPath, exists := data.TemplateMap[tmpl.Name()]; exists && existingPath != tmpl.Location() {
+			logger.Log().Warn(
+				"duplicate template name found during cache update; "+
+					"use a workspace/name qualified reference to disambiguate",
+				"template", tmpl.Name(),
+				"conflictPath", existingPath,
+				"newPath", tmpl.Location(),
+				"workspace", wsCfg.AssignedName(),
+			)
+		}
+
+		data.TemplateMap[tmpl.Name()] = tmpl.Location()
+		data.LocationMap[tmpl.Location()] = WorkspaceInfo{
+			WorkspaceName: wsCfg.AssignedName(),
+			WorkspacePath: wsCfg.Location(),
+		}
 	}
 }
 
@@ -62,40 +107,7 @@ func (c *TemplateCacheImpl) Update() error {
 	cacheData := c.Data
 	for name, wsCfg := range wsCacheData.Workspaces {
 		wsCfg.SetContext(name, wsCacheData.WorkspaceLocations[name])
-		templates, err := filesystem.LoadWorkspaceFlowFileTemplates(wsCfg)
-		if err != nil {
-			logger.Log().Error("failed to load workspace templates", "workspace", wsCfg.AssignedName(), "err", err)
-			continue
-		}
-		for _, tmpl := range templates {
-			if vErr := tmpl.Validate(); vErr != nil {
-				logger.Log().Warn(
-					"invalid template found during cache update",
-					"template", tmpl.Name(),
-					"path", tmpl.Location(),
-					"workspace", wsCfg.AssignedName(),
-					"err", vErr,
-				)
-				continue
-			}
-
-			if existingPath, exists := cacheData.TemplateMap[tmpl.Name()]; exists && existingPath != tmpl.Location() {
-				logger.Log().Warn(
-					"duplicate template name found during cache update; "+
-						"use a workspace/name qualified reference to disambiguate",
-					"template", tmpl.Name(),
-					"conflictPath", existingPath,
-					"newPath", tmpl.Location(),
-					"workspace", wsCfg.AssignedName(),
-				)
-			}
-
-			cacheData.TemplateMap[tmpl.Name()] = tmpl.Location()
-			cacheData.LocationMap[tmpl.Location()] = WorkspaceInfo{
-				WorkspaceName: wsCfg.AssignedName(),
-				WorkspacePath: wsCfg.Location(),
-			}
-		}
+		indexWorkspaceTemplates(cacheData, wsCfg)
 	}
 
 	data, err := json.Marshal(cacheData)
@@ -118,13 +130,18 @@ func (c *TemplateCacheImpl) GetTemplate(name string) (*executable.Template, erro
 		return nil, errors.New("no cached templates found")
 	}
 
-	if c.Data.loadedTemplates == nil {
-		c.Data.loadedTemplates = make(map[string]*executable.Template)
-	} else if tmpl, found := c.Data.loadedTemplates[name]; found {
+	return lookupTemplate(c.Data, name)
+}
+
+// lookupTemplate resolves a template reference against an index and loads it.
+func lookupTemplate(data *TemplateCacheData, name string) (*executable.Template, error) {
+	if data.loadedTemplates == nil {
+		data.loadedTemplates = make(map[string]*executable.Template)
+	} else if tmpl, found := data.loadedTemplates[name]; found {
 		return tmpl, nil
 	}
 
-	path, err := c.resolvePath(name)
+	path, err := resolveTemplatePath(data, name)
 	if err != nil {
 		return nil, err
 	}
@@ -139,17 +156,17 @@ func (c *TemplateCacheImpl) GetTemplate(name string) (*executable.Template, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to load template")
 	}
-	c.Data.loadedTemplates[name] = tmpl
+	data.loadedTemplates[name] = tmpl
 	return tmpl, nil
 }
 
-// resolvePath maps a template reference to a discovered file path. A bare name is looked up
-// directly; a "workspace/name" reference is matched against the owning workspace so callers
+// resolveTemplatePath maps a template reference to a discovered file path. A bare name is looked
+// up directly; a "workspace/name" reference is matched against the owning workspace so callers
 // can disambiguate the same template name discovered in multiple workspaces.
-func (c *TemplateCacheImpl) resolvePath(name string) (string, error) {
+func resolveTemplatePath(data *TemplateCacheData, name string) (string, error) {
 	if idx := strings.LastIndex(name, "/"); idx >= 0 {
 		wsName, tmplName := name[:idx], name[idx+1:]
-		for path, wsInfo := range c.Data.LocationMap {
+		for path, wsInfo := range data.LocationMap {
 			if wsInfo.WorkspaceName != wsName {
 				continue
 			}
@@ -163,7 +180,7 @@ func (c *TemplateCacheImpl) resolvePath(name string) (string, error) {
 		return "", fmt.Errorf("template %s not found", name)
 	}
 
-	path, found := c.Data.TemplateMap[name]
+	path, found := data.TemplateMap[name]
 	if !found {
 		return "", fmt.Errorf("template %s not found", name)
 	}
@@ -177,9 +194,14 @@ func (c *TemplateCacheImpl) GetTemplateList() (executable.TemplateList, error) {
 		return nil, errors.New("no cached templates found")
 	}
 
-	list := make(executable.TemplateList, 0, len(c.Data.TemplateMap))
-	for _, name := range slices.Sorted(maps.Keys(c.Data.TemplateMap)) {
-		path := c.Data.TemplateMap[name]
+	return listTemplates(c.Data), nil
+}
+
+// listTemplates returns every template in an index, ordered by name.
+func listTemplates(data *TemplateCacheData) executable.TemplateList {
+	list := make(executable.TemplateList, 0, len(data.TemplateMap))
+	for _, name := range slices.Sorted(maps.Keys(data.TemplateMap)) {
+		path := data.TemplateMap[name]
 		tmpl, err := filesystem.LoadFlowFileTemplate(name, path)
 		if err != nil {
 			logger.Log().Error("unable to load template", "path", path, "err", err)
@@ -187,7 +209,7 @@ func (c *TemplateCacheImpl) GetTemplateList() (executable.TemplateList, error) {
 		}
 		list = append(list, tmpl)
 	}
-	return list, nil
+	return list
 }
 
 func (c *TemplateCacheImpl) initTemplateCacheData() error {
