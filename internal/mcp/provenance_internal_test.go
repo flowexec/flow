@@ -39,6 +39,14 @@ func (f fakeSessionWithInfo) SetClientCapabilities(mcp.ClientCapabilities) {}
 func TestMCPProvenance(t *testing.T) {
 	srv := server.NewMCPServer("test", "1.0.0")
 
+	// Start from an environment that inherits nothing. mcpProvenance deliberately prefers an
+	// inherited session over one it mints, so a developer running these tests from inside a
+	// harness that exports FLOW_RUN_SESSION — an agent session, or CI — would otherwise see the
+	// fallback cases fail on their machine and pass on everyone else's. Subtests that want an
+	// inherited value set it themselves.
+	t.Setenv(store.RunSessionEnv, "")
+	t.Setenv(store.RunClientEnv, "")
+
 	t.Run("replaces mcp-go's stdio constant with the process session ID", func(t *testing.T) {
 		ctx := srv.WithContext(context.Background(), fakeSession{id: stdioSessionID})
 		prov := mcpProvenance(ctx)
