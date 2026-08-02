@@ -121,9 +121,7 @@ The CLI emits a structured error envelope (`{"error":{"code","message","details"
 `--output json|yaml`, plain text otherwise. Both paths go through `cmd/internal/errors.HandleFatal`.
 
 Typed errors in `pkg/errors/errors.go` implement `Code() string`. Extend that set rather than
-returning bare `fmt.Errorf` when a stable machine-readable code matters. Codes: `INVALID_INPUT`,
-`NOT_FOUND`, `EXECUTION_FAILED`, `TIMEOUT`, `CANCELLED`, `VALIDATION_FAILED`, `INTERNAL_ERROR`,
-`PERMISSION_DENIED`.
+returning bare `fmt.Errorf` when a stable machine-readable code matters.
 
 ---
 
@@ -144,9 +142,3 @@ Run the `validate` executable before marking a PR ready. Commit messages: impera
 - **`.claude/settings.local.json`** — gitignored, per-user. Where absolute paths belong, e.g.
   `permissions.additionalDirectories` for the module cache and sibling checkouts.
 
-## Development Setup
-
-1. Go 1.25+, flow CLI installed
-2. `flow workspace add flow . --set`
-3. `flow install tools`
-4. `flow validate`

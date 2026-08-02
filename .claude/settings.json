@@ -40,13 +40,9 @@
     ],
     "deny": [
       "Edit(types/**/*.gen.go)",
-      "Write(types/**/*.gen.go)",
       "Edit(docs/cli/**)",
-      "Write(docs/cli/**)",
       "Edit(docs/types/**)",
-      "Write(docs/types/**)",
       "Edit(docs/public/schemas/**)",
-      "Write(docs/public/schemas/**)",
       "Bash(flow secret get:*)",
       "Bash(flow secret list:*)",
       "Bash(env)",
