@@ -288,7 +288,7 @@ func handleExec(
 		}
 	}
 	if results.HasErrors() {
-		return fmt.Errorf("parallel execution failed")
+		return errors.Wrap(results.Err(), "parallel execution failed")
 	}
 	return nil
 }

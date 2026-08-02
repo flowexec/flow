@@ -281,6 +281,95 @@ func newTestContext(
 	return ctxx, configDir, cacheDir, wsDir
 }
 
+// DiscoveryContext is a test context built the way the real CLI builds one — through
+// context.NewContext, from a working directory — rather than assembled field by field. That is
+// the only way to exercise workspace discovery, which resolves by walking up from the working
+// directory and is bypassed entirely by the hand-built contexts above.
+//
+// Because it changes the process working directory, suites using it must run Serial.
+type DiscoveryContext struct {
+	*context.Context
+	Dir string
+}
+
+// NewDiscoveryContext points flow's config and cache at fresh temp directories, registers the
+// given workspaces (name -> path, may be empty), chdirs to dir, and builds a real context from
+// there.
+func NewDiscoveryContext(
+	ctx stdCtx.Context, tb testing.TB, dir string, registered map[string]string, mode config.ConfigWorkspaceMode,
+) *DiscoveryContext {
+	tb.Helper()
+	root := tb.TempDir()
+	configDir := filepath.Join(root, userConfigSubdir)
+	cacheDir := filepath.Join(root, cacheSubdir)
+	setTestEnv(tb, configDir, cacheDir)
+
+	if err := filesystem.InitConfig(); err != nil {
+		tb.Fatalf("unable to init config: %v", err)
+	}
+	userCfg, err := filesystem.LoadConfig()
+	if err != nil {
+		tb.Fatalf("unable to load config: %v", err)
+	}
+	userCfg.DefaultLogMode = tuikitIO.Text
+	userCfg.Interactive = &config.Interactive{Enabled: false}
+	userCfg.WorkspaceMode = mode
+	userCfg.Workspaces = map[string]string{}
+	userCfg.CurrentWorkspace = ""
+	for name, path := range registered {
+		userCfg.Workspaces[name] = path
+		if userCfg.CurrentWorkspace == "" {
+			userCfg.CurrentWorkspace = name
+		}
+	}
+	if err := filesystem.WriteConfig(userCfg); err != nil {
+		tb.Fatalf("unable to write config: %v", err)
+	}
+
+	stdOut, stdIn := createTempIOFiles(tb)
+	logger.Init(logger.InitOptions{
+		Logger: tuikitIO.NewLogger(
+			tuikitIO.WithOutput(stdOut),
+			tuikitIO.WithTheme(logger.Theme("")),
+			tuikitIO.WithMode(tuikitIO.Text),
+		),
+		TestingTB: tb,
+	})
+
+	tb.Chdir(dir)
+	cancel := func() { <-ctx.Done() }
+	ctxx := context.NewContext(ctx, cancel, context.WithStdIn(stdIn), context.WithStdOut(stdOut))
+	tb.Cleanup(func() {
+		if ctxx.DataStore != nil {
+			_ = ctxx.DataStore.Close()
+		}
+	})
+	return &DiscoveryContext{Context: ctxx, Dir: dir}
+}
+
+// WriteWorkspace marks dir as a workspace root and gives it one `run`-verb executable that
+// echoes its own name, so a test can prove which workspace an executable resolved from.
+func WriteWorkspace(tb testing.TB, dir, execName string) string {
+	tb.Helper()
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		tb.Fatalf("unable to create workspace dir: %v", err)
+	}
+	wsFile := filepath.Join(dir, filesystem.WorkspaceConfigFileName)
+	if err := os.WriteFile(wsFile, []byte("displayName: "+filepath.Base(dir)+"\n"), 0600); err != nil {
+		tb.Fatalf("unable to write workspace config: %v", err)
+	}
+	if execName != "" {
+		flowFile := fmt.Sprintf(
+			"namespace: ns\nexecutables:\n  - verb: run\n    name: %s\n    exec:\n      cmd: echo %s\n",
+			execName, execName,
+		)
+		if err := os.WriteFile(filepath.Join(dir, "test.flow"), []byte(flowFile), 0600); err != nil {
+			tb.Fatalf("unable to write flow file: %v", err)
+		}
+	}
+	return filesystem.NormalizePath(dir)
+}
+
 func initTestDirectories(tb testing.TB) (string, string, string) {
 	replacer := strings.NewReplacer("-", "", "'", "-", "/", "-", " ", "_")
 	suiteName := getSuiteName()

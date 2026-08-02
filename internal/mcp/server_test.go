@@ -281,7 +281,7 @@ var _ = Describe("MCP Server", func() {
 			It("should call executor with correct arguments", func() {
 				expectedOutput := "list execs execution results"
 				mockExecutor.EXPECT().
-					Execute("browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					ExecuteContext(gomock.Any(), "browse", "--output", "json", "--workspace", "*", "--namespace", "*").
 					Return(expectedOutput, nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))
@@ -598,7 +598,7 @@ executables:
 				cliJSON, _ := json.Marshal(cliResp)
 
 				mockExecutor.EXPECT().
-					Execute("browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					ExecuteContext(gomock.Any(), "browse", "--output", "json", "--workspace", "*", "--namespace", "*").
 					Return(string(cliJSON), nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))

@@ -93,23 +93,30 @@ func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 	cfg.SetDefaults()
 
-	var wsName, wsPath string
-	if len(cfg.Workspaces) > 0 {
-		wsName, err = cfg.CurrentWorkspaceName()
-		if err != nil {
-			return toolError(ErrCodeInternal, fmt.Sprintf("failed to get current workspace name: %s", err)), nil
-		}
-		wsPath = cfg.Workspaces[wsName]
+	// Resolution walks up from this process's directory, so a workspace found there but absent
+	// from the config still reports correctly. Callers need to know which case they are in:
+	// an unregistered workspace cannot be switched to, and its executables live only here.
+	var wsName, wsPath, wsSource string
+	var wsRegistered bool
+	res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+	if err != nil {
+		return toolError(ErrCodeInternal, fmt.Sprintf("failed to resolve current workspace: %s", err)), nil
+	}
+	if res != nil {
+		wsName, wsPath = res.Name, res.Path
+		wsSource, wsRegistered = string(res.Source), res.Registered
 	}
 
 	output := FlowInfoOutput{
 		CurrentContext: CurrentContext{
-			Workspace:     wsName,
-			Namespace:     cfg.CurrentNamespace,
-			Vault:         cfg.CurrentVaultName(),
-			WorkspaceMode: string(cfg.WorkspaceMode),
-			WorkspacePath: wsPath,
-			SessionID:     mcpProvenance(ctx).Session,
+			Workspace:           wsName,
+			Namespace:           cfg.CurrentNamespace,
+			Vault:               cfg.CurrentVaultName(),
+			WorkspaceMode:       string(cfg.WorkspaceMode),
+			WorkspacePath:       wsPath,
+			WorkspaceRegistered: wsRegistered,
+			WorkspaceSource:     wsSource,
+			SessionID:           mcpProvenance(ctx).Session,
 		},
 		Summary:    flowInfoSummary,
 		DocsURL:    docsBaseURL,

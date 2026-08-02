@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,7 +11,6 @@ import (
 	"strings"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
-	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,7 +39,9 @@ func (c *Config) SetDefaults() {
 		c.Workspaces = make(map[string]string)
 	}
 	if c.CurrentWorkspace == "" && len(c.Workspaces) > 0 {
-		c.CurrentWorkspace = maps.Keys(c.Workspaces)[0]
+		// Sorted, not arbitrary map order: an unset current workspace would otherwise land on a
+		// different workspace each run.
+		c.CurrentWorkspace = slices.Sorted(maps.Keys(c.Workspaces))[0]
 	}
 	if c.WorkspaceMode == "" {
 		c.WorkspaceMode = ConfigWorkspaceModeDynamic
@@ -60,40 +62,79 @@ func (c *Config) CurrentVaultName() string {
 	return *c.CurrentVault
 }
 
+// normalizePath cleans a path and, on macOS, strips the "/private" prefix. Paths under /tmp and
+// friends are symlinks into /private there and the OS hands back either form, so both sides of
+// a comparison have to be normalized or the same directory compares unequal to itself.
+//
+// pkg/filesystem.NormalizePath is the same function; it cannot be reused here because
+// pkg/filesystem imports this package.
+func normalizePath(p string) string {
+	if p == "" {
+		return ""
+	}
+	p = filepath.Clean(p)
+	if runtime.GOOS == "darwin" {
+		if p == "/private" {
+			return "/"
+		}
+		p = strings.TrimPrefix(p, "/private/")
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+	}
+	return p
+}
+
+// NameForWorkspacePath returns the registered workspace whose path is exactly path.
+func (c *Config) NameForWorkspacePath(path string) (string, bool) {
+	target := normalizePath(path)
+	if target == "" {
+		return "", false
+	}
+	for _, name := range slices.Sorted(maps.Keys(c.Workspaces)) {
+		if normalizePath(c.Workspaces[name]) == target {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+// WorkspaceForPath returns the registered workspace containing dir, preferring the longest
+// matching path so a workspace nested inside another wins. Iteration is over sorted names
+// because Go map order would otherwise make ties nondeterministic between runs.
+func (c *Config) WorkspaceForPath(dir string) (string, bool) {
+	target := normalizePath(dir)
+	if target == "" {
+		return "", false
+	}
+
+	var bestName, bestPath string
+	for _, name := range slices.Sorted(maps.Keys(c.Workspaces)) {
+		path := normalizePath(c.Workspaces[name])
+		if path == "" {
+			continue
+		}
+		rel, err := filepath.Rel(path, target)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		if bestName == "" || len(path) > len(bestPath) {
+			bestName, bestPath = name, path
+		}
+	}
+	return bestName, bestName != ""
+}
+
 func (c *Config) CurrentWorkspaceName() (string, error) {
 	var ws string
-	mode := c.WorkspaceMode
-
-	switch mode {
-	case ConfigWorkspaceModeDynamic:
+	if c.WorkspaceMode == ConfigWorkspaceModeDynamic {
 		wd, err := os.Getwd()
 		if err != nil {
 			return "", err
 		}
-		if runtime.GOOS == "darwin" {
-			// On macOS, paths that start with /tmp (and some other system directories)
-			// are actually symbolic links to paths under /private. The OS may return
-			// either form of the path - e.g., both "/tmp/file" and "/private/tmp/file"
-			// refer to the same location. We strip the "/private" prefix for consistent
-			// path comparison, while preserving the original paths for filesystem operations.
-			wd = strings.TrimPrefix(wd, "/private")
-		}
-
-		for wsName, path := range c.Workspaces {
-			rel, err := filepath.Rel(filepath.Clean(path), filepath.Clean(wd))
-			if err != nil {
-				return "", err
-			}
-			if !strings.HasPrefix(rel, "..") {
-				ws = wsName
-				break
-			}
-		}
-		fallthrough
-	case ConfigWorkspaceModeFixed:
-		if ws != "" {
-			break
-		}
+		ws, _ = c.WorkspaceForPath(wd)
+	}
+	if ws == "" {
 		ws = c.CurrentWorkspace
 	}
 	if ws == "" {

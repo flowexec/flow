@@ -76,6 +76,25 @@ func registerCreateVaultCmd(ctx *context.Context, vaultCmd *cobra.Command) {
 	vaultCmd.AddCommand(createCmd)
 }
 
+// vaultWorkspacePath returns the directory a workspace-relative vault path resolves against. A
+// vault outlives the command that created it, so anchoring one in a directory flow only found by
+// walking up from here is almost never what the user meant — warn before doing it.
+func vaultWorkspacePath(ctx *context.Context, cmd *cobra.Command) string {
+	if ctx.CurrentWorkspace == nil {
+		return ""
+	}
+	path := ctx.CurrentWorkspace.Location()
+	// Machine-readable output is parsed by the caller, so a loose warning line would corrupt it.
+	outputFormat := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
+	if !ctx.WorkspaceIsRegistered() && outputFormat == "" {
+		logger.Log().Warnf(
+			"workspace '%s' is not registered; run 'flow workspace add %s %s' to keep this vault reachable",
+			ctx.CurrentWorkspaceName(), ctx.CurrentWorkspaceName(), path,
+		)
+	}
+	return path
+}
+
 func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	vaultName := args[0]
 	vaultType := flags.ValueFor[string](cmd, *flags.VaultTypeFlag, false)
@@ -120,9 +139,8 @@ func createVaultFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		ctx.Config.Vaults = make(map[string]string)
 	}
 
-	curWs := ctx.Config.CurrentWorkspace
 	vaultPath = utils.ExpandDirectory(
-		vaultPath, ctx.Config.Workspaces[curWs], vault.CacheDirectory(vaultName), nil,
+		vaultPath, vaultWorkspacePath(ctx, cmd), vault.CacheDirectory(vaultName), nil,
 	)
 
 	ctx.Config.Vaults[vaultName] = vaultPath

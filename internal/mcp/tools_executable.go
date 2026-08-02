@@ -47,6 +47,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithString("keyword", mcp.Description("Keyword filter (optional)")),
 		mcp.WithString("tag", mcp.Description("Tag filter (optional)")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
+		mcp.WithString("dir", mcp.Description(
+			"Directory to resolve the workspace from. Set this to the directory you are working in to see the "+
+				"executables of the nearest workspace at or above it, even one that is not registered.")),
 	)
 	listExecutables.Annotations = mcp.ToolAnnotation{
 		Title:           "List executables",
@@ -69,6 +72,13 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
 					"both (`ws/ns:`) or neither if the current workspace/namespace should be used.")),
 		mcp.WithString("args", mcp.Description("Arguments to pass")),
+		mcp.WithString("dir", mcp.Description(
+			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
+				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
+				"registered or not. Defaults to the server's own directory, which is often not yours.")),
+		mcp.WithString("workspace", mcp.Description(
+			"Workspace to run in, by registered name or by path. Overrides `dir` resolution. Does not change "+
+				"the global current workspace.")),
 		mcp.WithBoolean("sync", mcp.Description("Sync executable changes before execution")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
@@ -125,7 +135,7 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 }
 
 func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
-	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		wsFilter := request.GetString("workspace", executable.WildcardWorkspace)
 		nsFilter := request.GetString("namespace", executable.WildcardNamespace)
 		verbFilter := request.GetString("verb", "")
@@ -144,7 +154,7 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			cmdArgs = append(cmdArgs, "--tag", tagFilter)
 		}
 
-		output, err := executor.Execute(cmdArgs...)
+		output, err := executor.ExecuteContext(withRunDir(ctx, request.GetString("dir", "")), cmdArgs...)
 		if err != nil {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to list executables: %s", output)), nil
 		}
@@ -193,12 +203,18 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		if args != "" {
 			cmdArgs = append(cmdArgs, strings.Fields(args)...)
 		}
+		if ws := request.GetString("workspace", ""); ws != "" {
+			cmdArgs = append(cmdArgs, "--workspace", ws)
+		}
 		if syncFlag {
 			cmdArgs = append(cmdArgs, "--sync")
 		}
 
 		// Capture the MCP caller's identity so the resulting execution record records who ran it.
 		ctx = withProvenance(ctx, mcpProvenance(ctx))
+		// The subprocess resolves its workspace from its working directory, so the caller's
+		// directory has to reach it — the server's own is rarely the right one.
+		ctx = withRunDir(ctx, request.GetString("dir", ""))
 
 		sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
 		output, err := executor.ExecuteContext(ctx, cmdArgs...)
@@ -301,6 +317,9 @@ func addRunExecutableTool(srv *server.MCPServer, executor CommandExecutor) {
 				"{\"execs\":[{\"cmd\":\"...\"},{\"cmd\":\"...\"}]}}).")),
 		mcp.WithString("label",
 			mcp.Description("Short human-readable label recorded in history (defaults to the executable's name).")),
+		mcp.WithString("dir",
+			mcp.Description("Directory to resolve the workspace from and run in (defaults to the server's directory). "+
+				"Set this to the directory you are working in — flow uses the nearest workspace at or above it.")),
 		mcp.WithString("workspace",
 			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
 				"the working directory, then the current workspace. Does not change the global current workspace.")),
@@ -348,6 +367,9 @@ func runTransientTool(
 
 	// Tag the run as MCP-originated with the caller's identity.
 	ctx = withProvenance(ctx, mcpProvenance(ctx))
+	// `dir` is forwarded as --dir for the command itself; it also has to be the subprocess's
+	// working directory so workspace resolution starts from where the caller is working.
+	ctx = withRunDir(ctx, request.GetString("dir", ""))
 
 	sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
 	output, err := executor.ExecuteContext(ctx, cmdArgs...)
@@ -434,10 +456,14 @@ func resolveFlowfilePath(path string) (string, *mcp.CallToolResult) {
 	if err != nil {
 		return "", toolError(ErrCodeInternal, fmt.Sprintf("failed to load config: %s", err))
 	}
-	if cfg.CurrentWorkspace != "" {
-		if wsPath, ok := cfg.Workspaces[cfg.CurrentWorkspace]; ok {
-			return filepath.Join(wsPath, path), nil
-		}
+	// Resolve against the workspace flow would actually run in, which may be one discovered from
+	// the working directory rather than the one persisted in the config.
+	res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
+	if err != nil {
+		return "", toolError(ErrCodeInvalidInput, err.Error())
+	}
+	if res != nil {
+		return filepath.Join(res.Path, path), nil
 	}
 	return path, nil
 }

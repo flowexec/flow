@@ -105,22 +105,27 @@ func printContext(ctx *context.Context, cmd *cobra.Command) {
 }
 
 func workspaceOrCurrent(ctx *context.Context, workspaceName string) *workspace.Workspace {
-	var ws *workspace.Workspace
-	if workspaceName == "" {
-		ws = ctx.CurrentWorkspace
-		workspaceName = ws.AssignedName()
-	} else {
-		wsPath, wsFound := ctx.Config.Workspaces[workspaceName]
-		if !wsFound {
+	// An empty name, or the name of the workspace already resolved for this command, is answered
+	// from the context — which is the only place a workspace discovered from the working
+	// directory exists, since it is in no config.
+	if workspaceName == "" || ctx.CurrentWorkspaceName() == workspaceName {
+		if ctx.CurrentWorkspace == nil {
 			return nil
 		}
-		var err error
-		ws, err = filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
-		if err != nil {
-			logger.Log().WrapError(err, "unable to load workspace config")
-		}
-		ws.SetContext(workspaceName, wsPath)
+		logger.Log().Debugf("'%s' workspace set", ctx.CurrentWorkspaceName())
+		return ctx.CurrentWorkspace
 	}
+
+	wsPath, wsFound := ctx.Config.Workspaces[workspaceName]
+	if !wsFound {
+		return nil
+	}
+	ws, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)
+	if err != nil {
+		logger.Log().WrapError(err, "unable to load workspace config")
+		return nil
+	}
+	ws.SetContext(workspaceName, wsPath)
 	logger.Log().Debugf("'%s' workspace set", workspaceName)
 	return ws
 }

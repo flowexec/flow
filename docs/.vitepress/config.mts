@@ -73,6 +73,7 @@ export default defineConfig({
               items: [
                 { text: 'Interactive UI', link: '/guides/interactive' },
                 { text: 'AI Tools', link: '/guides/ai-tools' },
+                { text: 'Run Provenance', link: '/guides/run-provenance' },
                 { text: 'Integrations', link: '/guides/integrations' },
               ]
             },

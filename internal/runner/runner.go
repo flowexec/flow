@@ -96,7 +96,7 @@ func ExpressionEnv(
 		envMap,
 		"store", dataMap,
 		"ctx", &CtxData{
-			Workspace:     ctx.CurrentWorkspace.AssignedName(),
+			Workspace:     ctx.CurrentWorkspaceName(),
 			Namespace:     ctx.Config.CurrentNamespace,
 			WorkspacePath: executable.WorkspacePath(),
 			FlowFileName:  fn,

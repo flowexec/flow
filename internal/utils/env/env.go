@@ -253,7 +253,7 @@ func EnvListToEnvMap(envList []string) map[string]string {
 func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[string]string {
 	envMap := make(map[string]string)
 	envMap["FLOW_RUNNER"] = "true"
-	envMap["FLOW_CURRENT_WORKSPACE"] = ctx.CurrentWorkspace.AssignedName()
+	envMap["FLOW_CURRENT_WORKSPACE"] = ctx.CurrentWorkspaceName()
 	envMap["FLOW_CURRENT_NAMESPACE"] = ctx.Config.CurrentNamespace
 	if ctx.ProcessTmpDir != "" {
 		envMap["FLOW_TMP_DIRECTORY"] = ctx.ProcessTmpDir

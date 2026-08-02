@@ -40,13 +40,9 @@
     ],
     "deny": [
       "Edit(types/**/*.gen.go)",
-      "Write(types/**/*.gen.go)",
       "Edit(docs/cli/**)",
-      "Write(docs/cli/**)",
       "Edit(docs/types/**)",
-      "Write(docs/types/**)",
       "Edit(docs/public/schemas/**)",
-      "Write(docs/public/schemas/**)",
       "Bash(flow secret get:*)",
       "Bash(flow secret list:*)",
       "Bash(env)",
@@ -54,5 +50,9 @@
       "Read(./.env)",
       "Read(./.env.*)"
     ]
+  },
+  "env": {
+    "FLOW_RUN_CLIENT": "claude-code",
+    "FLOW_RUN_SESSION": "${CLAUDE_CODE_SESSION_ID}"
   }
 }

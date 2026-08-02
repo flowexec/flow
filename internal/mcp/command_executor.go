@@ -36,6 +36,27 @@ func provenanceFromContext(ctx context.Context) (runProvenance, bool) {
 	return p, ok
 }
 
+// runDirCtxKey keys the working directory the flow subprocess should run in.
+type runDirCtxKey struct{}
+
+// withRunDir returns a context carrying the directory to launch the flow subprocess from.
+//
+// This matters because flow resolves its workspace by walking up from the working directory. The
+// server process inherits whatever directory the MCP client was started in, which is routinely
+// not where the caller is working — an agent in a git worktree, say. Without this, every run
+// would silently execute against the server's directory instead of the caller's.
+func withRunDir(ctx context.Context, dir string) context.Context {
+	if dir == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, runDirCtxKey{}, dir)
+}
+
+func runDirFromContext(ctx context.Context) string {
+	dir, _ := ctx.Value(runDirCtxKey{}).(string)
+	return dir
+}
+
 // stdioSessionID is what mcp-go reports as the session ID for every stdio connection — a
 // package constant, not a per-connection value (see mcp-go server/stdio.go). Taken at face
 // value it collapses every run from every client into one "session".
@@ -45,6 +66,9 @@ const stdioSessionID = "stdio"
 // is stdio-only and each client spawns its own `flow mcp` process, so one process is exactly one
 // client connection — the session boundary mcp-go's constant fails to draw. It is resolved once
 // and never changes, which is what makes it a usable grouping key in execution history.
+//
+// It is the last resort: a caller that supplies its own identifier knows better than we do what
+// belongs together.
 var processSessionID = sync.OnceValue(uuid.NewString)
 
 // mcpProvenance builds run provenance for an MCP-originated command, capturing the calling client's
@@ -57,10 +81,21 @@ func mcpProvenance(ctx context.Context) runProvenance {
 			prov.Client = withInfo.GetClientInfo().Name
 		}
 	}
-	// Only substitute when the transport gave us nothing usable, so a transport that does issue
-	// genuine per-connection IDs keeps them.
+	// A transport that issues genuine per-connection IDs keeps them; only substitute when it
+	// gave us nothing usable.
 	if prov.Session == "" || prov.Session == stdioSessionID {
-		prov.Session = processSessionID()
+		// An inherited session beats one we invent. A harness that tags its environment wants
+		// the runs it makes over MCP grouped with the ones it makes by shelling out to the CLI
+		// — minting our own here would split a single conversation across two IDs.
+		if inherited := store.RunEnvValue(store.RunSessionEnv); inherited != "" {
+			prov.Session = inherited
+		} else {
+			prov.Session = processSessionID()
+		}
+	}
+	// Same reasoning for the client, for a transport that does not report one.
+	if prov.Client == "" {
+		prov.Client = store.RunEnvValue(store.RunClientEnv)
 	}
 	return prov
 }
@@ -89,6 +124,7 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		name = envName
 	}
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
+	cmd.Dir = runDirFromContext(ctx)
 	if p, ok := provenanceFromContext(ctx); ok {
 		cmd.Env = append(os.Environ(),
 			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),

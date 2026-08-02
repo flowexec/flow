@@ -6,6 +6,7 @@ import (
 	stdCtx "context"
 	"os/exec"
 	"runtime"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,19 +15,32 @@ import (
 )
 
 // canRunLinuxContainers reports whether a runtime capable of running the Linux
-// test image is available. Windows hosts are excluded: docker.exe may be on PATH
-// there (e.g. Windows CI), but it cannot run a Linux image, so the test would
-// fail rather than exercise the feature.
+// test image is available and actually reachable. Windows hosts are excluded:
+// docker.exe may be on PATH there (e.g. Windows CI), but it cannot run a Linux
+// image, so the test would fail rather than exercise the feature.
+//
+// Mirrors the runner's own "auto" precedence (docker before podman, see
+// internal/services/run/container.go ResolveRuntime): a binary on PATH isn't
+// enough (Docker Desktop can be installed but not running), so the runtime
+// that "auto" would actually pick also has to respond before we call it
+// available — otherwise the test fails instead of skipping.
 func canRunLinuxContainers() bool {
 	if runtime.GOOS == "windows" {
 		return false
 	}
 	for _, rt := range []string{"docker", "podman"} {
-		if _, err := exec.LookPath(rt); err == nil {
-			return true
+		if _, err := exec.LookPath(rt); err != nil {
+			continue
 		}
+		return runtimeIsLive(rt)
 	}
 	return false
+}
+
+func runtimeIsLive(rt string) bool {
+	ctx, cancel := stdCtx.WithTimeout(stdCtx.Background(), 3*time.Second)
+	defer cancel()
+	return exec.CommandContext(ctx, rt, "info").Run() == nil
 }
 
 var _ = Describe("container exec e2e", func() {

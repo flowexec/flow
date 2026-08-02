@@ -203,6 +203,66 @@ flow workspace switch my-project
 # Now flow always uses my-project, regardless of directory
 ```
 
+## Unregistered Workspaces
+
+Registration is an optimization, not a prerequisite. In dynamic mode flow finds its workspace by
+walking up from your current directory to the nearest `flow.yaml` — the same way `make` and
+`bazel` find their root. Clone a repo and its executables work immediately:
+
+```shell
+git clone https://github.com/acme/service && cd service
+flow test          # works — no `flow workspace add` needed
+```
+
+The same rule is what makes git worktrees work, whether the worktree sits inside a registered
+workspace or somewhere else entirely:
+
+```shell
+git worktree add .worktrees/feature
+cd .worktrees/feature
+flow build         # runs against the worktree's flow files, not the main checkout's
+```
+
+An unregistered workspace is named after its directory, runs normally, and is never written
+anywhere — not to your config, not to the shared executable cache. What you give up by not
+registering it: you can't `flow workspace switch` to it, and other workspaces can't reference its
+executables by name.
+
+Register it when you want those:
+
+```shell
+flow workspace add service /path/to/service
+```
+
+### Resolution order
+
+1. `--workspace` or `$FLOW_WORKSPACE` — a registered name **or** a path. Honored in both modes.
+2. The nearest `flow.yaml` at or above the current directory (dynamic mode only). If that
+   directory is registered, its registered name is used.
+3. A registered workspace whose directory contains the current one.
+4. The workspace set by `flow workspace switch`.
+
+`$FLOW_WORKSPACE` is the escape hatch in fixed mode, and the convenient one for agents and CI —
+export it once rather than remembering a flag on every command:
+
+```shell
+export FLOW_WORKSPACE=/path/to/checkout
+```
+
+### Nested workspaces
+
+A directory containing its own `flow.yaml` is a workspace boundary. The closest one wins, and a
+parent workspace does not scan into it — so a worktree checked out inside a repo doesn't
+duplicate every executable of its parent. Override this for a specific directory by naming it in
+the parent's `executables.included`.
+
+Two directories flow deliberately walks *past* when they sit inside a registered workspace:
+vendored dependencies (`vendor/`, `node_modules/`, `third_party/`, `external/`) and repo copies
+(`.git/`, `.claude/`). A `flow.yaml` in there belongs to that copy, not to your project.
+
+> **Note**: there is no stopping point above your home directory. A `flow.yaml` in `~` makes your
+> entire home directory a workspace, exactly as registering `~` would.
+
 ## Multi-Workspace Workflows
 
 ### Cross-Workspace References

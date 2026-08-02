@@ -268,7 +268,7 @@ func handleExec(
 		}
 	}
 	if results.HasErrors() {
-		return fmt.Errorf("serial execution failed")
+		return errors.Wrap(results.Err(), "serial execution failed")
 	}
 	return nil
 }

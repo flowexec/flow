@@ -17,7 +17,27 @@ var (
 	once             sync.Once
 	loggerMutex      sync.RWMutex
 	testLoggerEnvKey = "FLOW_TEST_LOGGER"
+
+	discardOnce sync.Once
+	discardFile *os.File
 )
+
+// discardOutput returns a writer that throws log output away, for tests that have not
+// registered a logger of their own.
+//
+// Falls back to stdout if the device cannot be opened: a noisy test logger is a smaller
+// problem than one writing to an arbitrary descriptor.
+func discardOutput() *os.File {
+	discardOnce.Do(func() {
+		f, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+		if err != nil {
+			discardFile = os.Stdout
+			return
+		}
+		discardFile = f
+	})
+	return discardFile
+}
 
 type InitOptions struct {
 	StdOut           *os.File
@@ -79,7 +99,7 @@ func Log() io.Logger {
 				return logger.(io.Logger) //nolint:errcheck
 			}
 		}
-		return io.NewLogger(io.WithOutput(os.NewFile(0, os.DevNull)))
+		return io.NewLogger(io.WithOutput(discardOutput()))
 	}
 
 	if globalLogger == nil {

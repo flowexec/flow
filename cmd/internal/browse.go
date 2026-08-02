@@ -80,7 +80,7 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	wsFilter := flags.ValueFor[string](cmd, *flags.FilterWorkspaceFlag, false)
 	switch wsFilter {
 	case ".":
-		wsFilter = ctx.Config.CurrentWorkspace
+		wsFilter = ctx.CurrentWorkspaceName()
 	case executable.WildcardWorkspace:
 		wsFilter = ""
 	}
@@ -140,7 +140,7 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	wsFilter := flags.ValueFor[string](cmd, *flags.FilterWorkspaceFlag, false)
 	if wsFilter == "." {
-		wsFilter = ctx.Config.CurrentWorkspace
+		wsFilter = ctx.CurrentWorkspaceName()
 	}
 
 	nsFilter := flags.ValueFor[string](cmd, *flags.FilterNamespaceFlag, false)

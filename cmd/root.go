@@ -39,6 +39,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			case "fatal":
 				logger.Log().SetLevel(-1)
 			}
+			ctx.LogWorkspaceResolution()
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
 				if err := cache.UpdateAll(ctx.DataStore); err != nil {

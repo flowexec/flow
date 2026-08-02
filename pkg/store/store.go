@@ -87,6 +87,35 @@ type DataStore interface { //nolint:interfacebloat // single backing store with 
 	Close() error
 }
 
+// RunEnvValue reads a provenance environment variable, resolving a `${NAME}` value by looking
+// NAME up in the environment.
+//
+// Agent harnesses commonly let you set a static environment value but not interpolate one —
+// their settings file stores what you write verbatim. Without this, mapping a harness's own
+// session variable onto RunSessionEnv would record the literal `${...}` on every run: a
+// constant masquerading as an identity, silently grouping unrelated runs together. That is a
+// worse failure than having no session at all, because the grouping looks like it worked.
+//
+// Resolving here rather than recognizing specific variables keeps flow neutral: the name of
+// the harness's variable lives in that harness's config, where it can be corrected when the
+// vendor renames it. An unresolvable reference yields empty, since no identity beats a false one.
+func RunEnvValue(key string) string {
+	value := os.Getenv(key)
+	if name, ok := envReference(value); ok {
+		return os.Getenv(name)
+	}
+	return value
+}
+
+// envReference reports whether a value is a `${NAME}` reference and the name it points at.
+func envReference(value string) (string, bool) {
+	if !strings.HasPrefix(value, "${") || !strings.HasSuffix(value, "}") {
+		return "", false
+	}
+	name := strings.TrimSuffix(strings.TrimPrefix(value, "${"), "}")
+	return name, name != ""
+}
+
 // RunStatus represents the lifecycle state of an execution record.
 type RunStatus string
 
