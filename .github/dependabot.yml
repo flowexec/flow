@@ -19,8 +19,9 @@ updates:
           - "github.com/onsi/ginkgo/v2"
           - "github.com/onsi/gomega"
       charmbracelet-deps:
-          patterns:
-              - "github.com/charmbracelet/*"
+        patterns:
+          - "github.com/charmbracelet/*"
+          - "charm.land/*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -31,6 +32,10 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore: "
+    groups:
+      github-actions-deps:
+        patterns:
+          - "*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
