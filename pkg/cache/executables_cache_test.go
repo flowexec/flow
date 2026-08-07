@@ -1,9 +1,11 @@
 package cache_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"github.com/flowexec/tuikit/io/mocks"
 	. "github.com/onsi/ginkgo/v2"
@@ -509,6 +511,63 @@ var _ = Describe("ExecutableCacheImpl", func() {
 				err = execCache.Update()
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
+	})
+
+	Describe("Concurrent access", func() {
+		It("resolves refs correctly under concurrent lookups", func() {
+			// Mirrors nested parallel/serial executables, whose sub-refs are resolved from
+			// separate goroutines that share one ExecutableCacheImpl (via Context.ShallowCopy).
+			for _, name := range []string{"alpha", "bravo", "charlie", "delta", "echo"} {
+				v := executable.FlowFileVisibility(common.VisibilityPrivate)
+				execCfg := &executable.FlowFile{
+					Namespace:  "testdata",
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: name, Exec: &executable.ExecExecutableType{}},
+					},
+				}
+				execCfg.SetContext(wsName, wsPath, filepath.Join(wsPath, name+executable.FlowFileExt))
+				Expect(filesystem.WriteFlowFile(execCfg.ConfigPath(), execCfg)).To(Succeed())
+			}
+
+			mockLogger.EXPECT().Debugf(gomock.Any()).AnyTimes()
+			mockLogger.EXPECT().Debug(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			Expect(execCache.Update()).To(Succeed())
+
+			refs := []executable.Ref{
+				"run test/testdata:exec",
+				"run test/testdata:alpha",
+				"run test/testdata:bravo",
+				"run test/testdata:charlie",
+				"run test/testdata:delta",
+				"run test/testdata:echo",
+			}
+
+			const iterations = 6
+			var wg sync.WaitGroup
+			errs := make(chan error, len(refs)*iterations)
+			for range iterations {
+				for _, ref := range refs {
+					wg.Add(1)
+					go func(ref executable.Ref) {
+						defer wg.Done()
+						exec, err := execCache.GetExecutableByRef(ref)
+						if err != nil {
+							errs <- err
+							return
+						}
+						if exec.Ref() != ref {
+							errs <- fmt.Errorf("expected ref %q, got %q", ref, exec.Ref())
+						}
+					}(ref)
+				}
+			}
+			wg.Wait()
+			close(errs)
+			for err := range errs {
+				Expect(err).NotTo(HaveOccurred())
+			}
 		})
 	})
 })

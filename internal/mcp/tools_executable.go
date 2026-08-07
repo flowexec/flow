@@ -95,7 +95,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	writeFlowfile := mcp.NewTool("write_flowfile",
 		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
 			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
-			"writing. Prefer this over writing YAML files directly."),
+			"writing, then refreshes flow's executable cache so the change is immediately visible to "+
+			"list_executables/get_executable. Prefer this over writing YAML files directly."),
 		mcp.WithString("path", mcp.Required(),
 			mcp.Description("Absolute or workspace-relative path for the flowfile (must end in .flow or .flow.yaml)")),
 		mcp.WithString("content", mcp.Required(),
@@ -108,7 +109,7 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		DestructiveHint: boolPtr(true), ReadOnlyHint: boolPtr(false),
 		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false),
 	}
-	srv.AddTool(writeFlowfile, writeFlowfileHandler(srv))
+	srv.AddTool(writeFlowfile, writeFlowfileHandler(srv, executor))
 }
 
 func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
@@ -227,12 +228,14 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		if err != nil {
 			ref := strings.Join([]string{executableVerb, executableID}, " ")
-			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s execution failed: %s", ref, output)), nil
+			capped, _ := capOutput(output)
+			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s execution failed: %s", ref, capped)), nil
 		}
 
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
-		result := ExecutionOutput{Output: output}
+		capped, truncated := capOutput(output)
+		result := ExecutionOutput{Output: capped, Truncated: truncated}
 		jsonData, _ := json.Marshal(result)
 		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
@@ -381,18 +384,20 @@ func runTransientTool(
 	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
 
 	if err != nil {
-		return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s: %s", failMsg, output)), nil
+		capped, _ := capOutput(output)
+		return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s: %s", failMsg, capped)), nil
 	}
 
 	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
-	result := ExecutionOutput{Output: output}
+	capped, truncated := capOutput(output)
+	result := ExecutionOutput{Output: capped, Truncated: truncated}
 	jsonData, _ := json.Marshal(result)
 	return mcp.NewToolResultStructured(result, string(jsonData)), nil
 }
 
-func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
-	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func writeFlowfileHandler(srv *server.MCPServer, executor CommandExecutor) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		path, err := request.RequireString("path")
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, "path is required"), nil
@@ -436,12 +441,23 @@ func writeFlowfileHandler(srv *server.MCPServer) server.ToolHandlerFunc {
 			execNames = append(execNames, exec.Name)
 		}
 
+		// write_flowfile is the one executable-mutating tool that writes directly rather than
+		// shelling to the CLI, so nothing else refreshes the persisted executable cache — without
+		// this, a list_executables/get_executable call right after would still see stale state.
+		// Best-effort: the file is already written and valid, so a sync failure here doesn't
+		// invalidate the write itself.
+		syncFailed := false
+		if _, err := executor.ExecuteContext(ctx, "sync"); err != nil {
+			syncFailed = true
+		}
+
 		srv.SendNotificationToAllClients("notifications/resources/list_changed", nil)
 
 		output := WriteFlowFileOutput{
 			Path:        absPath,
 			Executables: execNames,
 			Overwritten: overwrite,
+			SyncFailed:  syncFailed,
 		}
 		jsonData, _ := json.Marshal(output)
 		return mcp.NewToolResultStructured(output, string(jsonData)), nil

@@ -16,7 +16,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	execIO "github.com/flowexec/flow/v2/internal/io/executable"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/tests/utils"
+	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -172,6 +174,34 @@ var _ = Describe("browse e2e", Ordered, func() {
 			err := run.Run(ctx.Context, "browse", "exec", "examples:doesnotexist")
 			Expect(err).To(HaveOccurred())
 			Expect(ctx.ExitCalls()).NotTo(BeEmpty())
+		})
+	})
+
+	When("a namespace is added after the executable cache was already warmed", func() {
+		It("picks up the new namespace without an explicit sync", func() {
+			// Warm the persisted cache before the new namespace's flow file exists.
+			Expect(run.Run(ctx.Context, "browse", "--list")).To(Succeed())
+
+			v := executable.FlowFileVisibility(common.VisibilityPrivate)
+			freshFile := &executable.FlowFile{
+				Namespace:  "freshns",
+				Visibility: &v,
+				Executables: executable.ExecutableList{
+					{Verb: "run", Name: "fresh-exec", Exec: &executable.ExecExecutableType{Cmd: "echo fresh"}},
+				},
+			}
+			path := filepath.Join(ctx.WorkspaceDir(), "fresh.flow")
+			freshFile.SetContext(utils.TestWorkspaceName, ctx.WorkspaceDir(), path)
+			Expect(filesystem.WriteFlowFile(path, freshFile)).To(Succeed())
+
+			// Only resets stdio/logger, not the persisted cache — cmd.Execute closes stdout at
+			// the end of a run, so a fresh handle is needed before the next one.
+			utils.ResetTestContext(ctx, GinkgoTB())
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "browse", "--list", "--namespace", "freshns")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("fresh-exec"))
 		})
 	})
 })

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -42,10 +43,12 @@ type ExecutableCacheData struct {
 	// Map of config paths to their workspace / workspace path
 	ConfigMap map[string]WorkspaceInfo `json:"configMap" yaml:"configMap"`
 
+	loadedMu          sync.Mutex
 	loadedExecutables map[string]*executable.Executable
 }
 
 type ExecutableCacheImpl struct {
+	mu             sync.RWMutex
 	Data           *ExecutableCacheData `json:",inline" yaml:",inline"`
 	WorkspaceCache WorkspaceCache       `json:"-"       yaml:"-"`
 	Store          store.DataStore
@@ -154,7 +157,7 @@ func (c *ExecutableCacheImpl) Update() error {
 		return fmt.Errorf("failed to get workspace cache data\n%w", err)
 	}
 
-	cacheData := c.Data
+	cacheData := newExecutableCacheData()
 	for name, wsCfg := range wsCacheData.Workspaces {
 		wsCfg.SetContext(name, wsCacheData.WorkspaceLocations[name])
 		indexWorkspaceExecutables(cacheData, wsCfg)
@@ -169,6 +172,10 @@ func (c *ExecutableCacheImpl) Update() error {
 		return errors.Wrap(err, "unable to write cache data")
 	}
 
+	c.mu.Lock()
+	c.Data = cacheData
+	c.mu.Unlock()
+
 	logger.Log().Debug("Successfully updated executable cache data", "count", len(cacheData.ExecutableMap))
 	return nil
 }
@@ -176,11 +183,14 @@ func (c *ExecutableCacheImpl) Update() error {
 // lookupExecutable resolves ref against an index, following the alias map when the ref is not a
 // primary one, and loading the owning flow file to return the executable itself.
 func lookupExecutable(data *ExecutableCacheData, ref executable.Ref) (*executable.Executable, error) {
+	data.loadedMu.Lock()
 	if data.loadedExecutables == nil {
 		data.loadedExecutables = make(map[string]*executable.Executable)
 	} else if exec, found := data.loadedExecutables[ref.String()]; found {
+		data.loadedMu.Unlock()
 		return exec, nil
 	}
+	data.loadedMu.Unlock()
 
 	primaryRef := ref
 	cfgPath, found := data.ExecutableMap[ref]
@@ -212,7 +222,9 @@ func lookupExecutable(data *ExecutableCacheData, ref executable.Ref) (*executabl
 		return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 	}
 
+	data.loadedMu.Lock()
 	data.loadedExecutables[ref.String()] = exec
+	data.loadedMu.Unlock()
 
 	return exec, nil
 }
@@ -251,23 +263,31 @@ func loadFlowFileWithImports(cfgPath string, wsInfo WorkspaceInfo) (*executable.
 }
 
 func (c *ExecutableCacheImpl) GetExecutableByRef(ref executable.Ref) (*executable.Executable, error) {
-	err := c.initExecutableCacheData()
-	if err != nil {
+	if err := c.initExecutableCacheData(); err != nil {
 		return nil, err
-	} else if c.Data == nil {
+	}
+	data := c.currentData()
+	if data == nil {
 		return nil, errors.New("no cached executables found")
 	}
-	return lookupExecutable(c.Data, ref)
+	return lookupExecutable(data, ref)
 }
 
 func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, error) {
-	err := c.initExecutableCacheData()
-	if err != nil {
+	if err := c.initExecutableCacheData(); err != nil {
 		return nil, err
-	} else if c.Data == nil {
+	}
+	data := c.currentData()
+	if data == nil {
 		return nil, errors.New("no cached executables found")
 	}
-	return listExecutables(c.Data), nil
+	return listExecutables(data), nil
+}
+
+func (c *ExecutableCacheImpl) currentData() *ExecutableCacheData {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Data
 }
 
 func (c *ExecutableCacheImpl) initExecutableCacheData() error {
@@ -293,10 +313,14 @@ func (c *ExecutableCacheImpl) initExecutableCacheData() error {
 		return nil
 	}
 
-	c.Data = &ExecutableCacheData{}
-	if err := json.Unmarshal(cacheData, c.Data); err != nil {
+	newData := &ExecutableCacheData{}
+	if err := json.Unmarshal(cacheData, newData); err != nil {
 		return errors.Wrap(err, "unable to decode executable cache data")
 	}
+
+	c.mu.Lock()
+	c.Data = newData
+	c.mu.Unlock()
 	return nil
 }
 

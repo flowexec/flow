@@ -170,18 +170,37 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		}
 	}
 
+	applyFilters := func(execs executable.ExecutableList) executable.ExecutableList {
+		return execs.
+			FilterByWorkspaceWithVisibility(wsFilter, visibilityFilter).
+			FilterByNamespace(nsFilter).
+			FilterByVerb(executable.Verb(verbFilter)).
+			FilterByTags(tagsFilter).
+			FilterByAnnotations(annotationFilter).
+			FilterBySubstring(substr)
+	}
+
 	allExecs, err := ctx.ExecutableCache.GetExecutableList()
 	if err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
-	filteredExec := allExecs
-	filteredExec = filteredExec.
-		FilterByWorkspaceWithVisibility(wsFilter, visibilityFilter).
-		FilterByNamespace(nsFilter).
-		FilterByVerb(executable.Verb(verbFilter)).
-		FilterByTags(tagsFilter).
-		FilterByAnnotations(annotationFilter).
-		FilterBySubstring(substr)
+	filteredExec := applyFilters(allExecs)
+
+	// The persisted cache has no TTL or file-watcher (see viewExecutable's identical retry for a
+	// single ref), so it can predate executables added since it was last synced. An empty
+	// filtered result is the only signal available here; force one rescan and retry before
+	// concluding the filter is genuinely empty.
+	if len(filteredExec) == 0 {
+		logger.Log().Debugf("no executables matched filters, syncing cache and retrying")
+		if err := ctx.ExecutableCache.Update(); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		allExecs, err = ctx.ExecutableCache.GetExecutableList()
+		if err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		filteredExec = applyFilters(allExecs)
+	}
 
 	if TUIEnabled(ctx, cmd) {
 		runFunc := func(ref string) error { return runByRef(ctx, cmd, ref) }

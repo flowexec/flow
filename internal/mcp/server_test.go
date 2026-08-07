@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/client"
@@ -320,6 +321,26 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(ContainSubstring("execution result with no args"))
 			})
+
+			It("should cap oversized output and report truncation", func() {
+				huge := strings.Repeat("x", 300_000)
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", "test:test-flow").
+					Return(huge, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+
+				var out flowMcp.ExecutionOutput
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+				Expect(out.Truncated).To(BeTrue())
+				Expect(len(out.Output)).To(BeNumerically("<=", 200_000))
+				// The tail is kept, since errors typically surface at the end of a run's output.
+				Expect(out.Output).To(HaveSuffix(strings.Repeat("x", 100)))
+			})
 		})
 
 		Context("run_command tool", func() {
@@ -356,6 +377,23 @@ var _ = Describe("MCP Server", func() {
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{}))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.IsError).To(BeTrue())
+			})
+
+			It("should cap oversized output and report truncation", func() {
+				huge := strings.Repeat("y", 300_000)
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi").
+					Return(huge, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+					"command": "echo hi",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+
+				var out flowMcp.ExecutionOutput
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+				Expect(out.Truncated).To(BeTrue())
+				Expect(len(out.Output)).To(BeNumerically("<=", 200_000))
 			})
 		})
 
@@ -511,6 +549,8 @@ executables:
     exec:
       cmd: echo greet
 `
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("synced", nil)
+
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
 					"path":    flowPath,
 					"content": validYAML,
@@ -523,8 +563,31 @@ executables:
 				Expect(json.Unmarshal([]byte(text), &out)).To(Succeed())
 				Expect(out.Path).To(Equal(flowPath))
 				Expect(out.Executables).To(ContainElements("hello", "greet"))
+				Expect(out.SyncFailed).To(BeFalse())
 
 				// Verify file was actually written
+				_, statErr := os.Stat(flowPath)
+				Expect(statErr).ToNot(HaveOccurred())
+			})
+
+			It("should report SyncFailed when the post-write cache refresh fails, without failing the write", func() {
+				tmpDir := GinkgoTB().TempDir()
+				flowPath := filepath.Join(tmpDir, "sync-fail.flow")
+
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("", errors.New("sync exploded"))
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
+					"path":    flowPath,
+					"content": "executables: []",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+
+				var out flowMcp.WriteFlowFileOutput
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+				Expect(out.SyncFailed).To(BeTrue())
+
+				// The write itself still succeeded despite the sync failure.
 				_, statErr := os.Stat(flowPath)
 				Expect(statErr).ToNot(HaveOccurred())
 			})
@@ -570,6 +633,8 @@ executables:
 				tmpDir := GinkgoTB().TempDir()
 				flowPath := filepath.Join(tmpDir, "existing.flow")
 				Expect(os.WriteFile(flowPath, []byte("executables: []\n"), 0600)).To(Succeed())
+
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("synced", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
 					"path":      flowPath,
