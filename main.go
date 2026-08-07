@@ -27,7 +27,7 @@ func main() {
 
 	archiveDir, archiveID := initLogArchive()
 	loggerOpts := logger.InitOptions{
-		StdOut:           io.Stdout,
+		StdOut:           loggerStdOut(),
 		LogMode:          cfg.DefaultLogMode,
 		Theme:            logger.Theme(cfg.Theme.String()),
 		ArchiveDirectory: archiveDir,
@@ -58,6 +58,16 @@ func main() {
 	if err := cmd.Execute(ctx, rootCmd); err != nil {
 		logger.Log().FatalErr(err)
 	}
+}
+
+// loggerStdOut returns stderr for `flow mcp`: that command's stdout carries JSON-RPC framing for
+// the whole session, and any log line interleaved into it would corrupt the stream and sever the
+// client's connection. stderr is safe — MCP hosts capture it separately as server diagnostics.
+func loggerStdOut() *os.File {
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		return os.Stderr
+	}
+	return io.Stdout
 }
 
 func initLogArchive() (dir, id string) {

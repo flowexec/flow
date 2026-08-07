@@ -106,6 +106,9 @@ type ExecutableListOutput struct {
 // ExecutionOutput is the output of the execute tool.
 type ExecutionOutput struct {
 	Output string `json:"output"`
+	// Truncated is true when Output was cut to protect the context window. The run itself
+	// completed in full; the untruncated output remains available via get_execution_logs.
+	Truncated bool `json:"truncated,omitempty"`
 }
 
 // LogEntry represents a single execution log record.
@@ -154,6 +157,10 @@ type WriteFlowFileOutput struct {
 	Path        string   `json:"path"`
 	Executables []string `json:"executables"`
 	Overwritten bool     `json:"overwritten"`
+	// SyncFailed is true when the file was written successfully but the follow-up executable
+	// cache refresh failed. The write itself is unaffected; a subsequent list_executables/
+	// get_executable call may still show stale results until sync_executables is run manually.
+	SyncFailed bool `json:"syncFailed,omitempty"`
 }
 
 // WorkspaceConfigOutput is the output of the get_workspace_config tool.

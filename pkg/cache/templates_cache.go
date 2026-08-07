@@ -6,6 +6,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -33,10 +34,12 @@ type TemplateCacheData struct {
 	// Map of template file path to its owning workspace / workspace path
 	LocationMap map[string]WorkspaceInfo `json:"locationMap" yaml:"locationMap"`
 
+	loadedMu        sync.Mutex
 	loadedTemplates map[string]*executable.Template
 }
 
 type TemplateCacheImpl struct {
+	mu             sync.RWMutex
 	Data           *TemplateCacheData `json:",inline" yaml:",inline"`
 	WorkspaceCache WorkspaceCache     `json:"-"       yaml:"-"`
 	Store          store.DataStore
@@ -104,7 +107,7 @@ func (c *TemplateCacheImpl) Update() error {
 		return fmt.Errorf("failed to get workspace cache data\n%w", err)
 	}
 
-	cacheData := c.Data
+	cacheData := newTemplateCacheData()
 	for name, wsCfg := range wsCacheData.Workspaces {
 		wsCfg.SetContext(name, wsCacheData.WorkspaceLocations[name])
 		indexWorkspaceTemplates(cacheData, wsCfg)
@@ -119,6 +122,10 @@ func (c *TemplateCacheImpl) Update() error {
 		return errors.Wrap(err, "unable to write template cache data")
 	}
 
+	c.mu.Lock()
+	c.Data = cacheData
+	c.mu.Unlock()
+
 	logger.Log().Debug("Successfully updated template cache data", "count", len(cacheData.TemplateMap))
 	return nil
 }
@@ -126,20 +133,25 @@ func (c *TemplateCacheImpl) Update() error {
 func (c *TemplateCacheImpl) GetTemplate(name string) (*executable.Template, error) {
 	if err := c.initTemplateCacheData(); err != nil {
 		return nil, err
-	} else if c.Data == nil {
+	}
+	data := c.currentData()
+	if data == nil {
 		return nil, errors.New("no cached templates found")
 	}
 
-	return lookupTemplate(c.Data, name)
+	return lookupTemplate(data, name)
 }
 
 // lookupTemplate resolves a template reference against an index and loads it.
 func lookupTemplate(data *TemplateCacheData, name string) (*executable.Template, error) {
+	data.loadedMu.Lock()
 	if data.loadedTemplates == nil {
 		data.loadedTemplates = make(map[string]*executable.Template)
 	} else if tmpl, found := data.loadedTemplates[name]; found {
+		data.loadedMu.Unlock()
 		return tmpl, nil
 	}
+	data.loadedMu.Unlock()
 
 	path, err := resolveTemplatePath(data, name)
 	if err != nil {
@@ -190,11 +202,21 @@ func resolveTemplatePath(data *TemplateCacheData, name string) (string, error) {
 func (c *TemplateCacheImpl) GetTemplateList() (executable.TemplateList, error) {
 	if err := c.initTemplateCacheData(); err != nil {
 		return nil, err
-	} else if c.Data == nil {
+	}
+	data := c.currentData()
+	if data == nil {
 		return nil, errors.New("no cached templates found")
 	}
 
-	return listTemplates(c.Data), nil
+	return listTemplates(data), nil
+}
+
+// currentData returns the TemplateCacheData snapshot that was current as of the call (see the
+// matching comment on ExecutableCacheImpl.currentData).
+func (c *TemplateCacheImpl) currentData() *TemplateCacheData {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.Data
 }
 
 // listTemplates returns every template in an index, ordered by name.
@@ -225,9 +247,13 @@ func (c *TemplateCacheImpl) initTemplateCacheData() error {
 		return nil
 	}
 
-	c.Data = &TemplateCacheData{}
-	if err := json.Unmarshal(cacheData, c.Data); err != nil {
+	newData := &TemplateCacheData{}
+	if err := json.Unmarshal(cacheData, newData); err != nil {
 		return errors.Wrap(err, "unable to decode template cache data")
 	}
+
+	c.mu.Lock()
+	c.Data = newData
+	c.mu.Unlock()
 	return nil
 }
