@@ -3,7 +3,8 @@
     "flow": {
       "type": "stdio",
       "command": "flow",
-      "args": ["mcp"]
+      "args": ["mcp"],
+      "timeout": 600000
     }
   }
 }
