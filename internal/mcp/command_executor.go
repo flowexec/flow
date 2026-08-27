@@ -134,8 +134,15 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Only return an error if it's not an exit error.
-		var exitErr exec.ExitError
+		// Only return an error if it's not an exit error: a non-zero exit is a
+		// normal outcome whose detail is already in the captured output.
+		//
+		// The target must be *exec.ExitError, not exec.ExitError. ExitError's
+		// Error method has a pointer receiver, so the value type does not
+		// implement error and errors.As panics on it - which killed the tool
+		// handler's goroutine before it could reply, leaving the MCP client
+		// waiting on a request that never got a response.
+		var exitErr *exec.ExitError
 		if !errors.As(err, &exitErr) {
 			return string(output), err
 		}
