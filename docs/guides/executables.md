@@ -324,9 +324,28 @@ exec:
     network: host
 ```
 
+`interpreter: python` works with `container` too — combine them to get a pinned Python toolchain
+without installing it locally:
+
+```yaml
+exec:
+  interpreter: python
+  cmd: |
+    import sys
+    print(sys.version)
+  container:
+    image: python:3.13-alpine
+```
+
 Notes and limitations:
 - By default flow overrides the image entrypoint with `sh` so `cmd` behaves as a shell command on
-  any image. Set `entrypoint: ""` to use the image's own `ENTRYPOINT`.
+  any image. With `interpreter: python` the default entrypoint becomes `python3` instead. Set
+  `entrypoint: ""` to use the image's own `ENTRYPOINT` — with Python that only works if the image's
+  `ENTRYPOINT` is itself an interpreter.
+- Host interpreter discovery does not apply inside a container: the image's own `python3` is used,
+  and `VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, and `FLOW_PYTHON_BIN` are dropped from the
+  container environment because those host paths mean nothing inside it. Install dependencies in
+  the image, or mount them with `volumes`.
 - On Linux, flow runs as your host user by default so mounted files are not root-owned. Set
   `user: root` to opt out.
 - `.bat`, `.cmd`, and `.ps1` files are not supported with `container`.

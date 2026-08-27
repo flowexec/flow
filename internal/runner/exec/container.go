@@ -27,25 +27,34 @@ const containerScriptMount = "/flow/script"
 // elsewhere); the directory is mounted here directly.
 const containerFallbackWorkdir = "/flow/workdir"
 
+// containerPythonBin is the interpreter used inside a container. It is a bare
+// name so it resolves on the image's PATH, which is what makes any python image
+// work without further configuration.
+const containerPythonBin = "python3"
+
 // buildContainerSpec translates a host-side exec into a container.RunContainer
 // spec: resolving the runtime, building mounts, translating the working
 // directory and environment, and choosing between cmd and file execution.
+// The returned cleanup func removes any temp script generated for the run and is
+// never nil; callers should register it on the context so an abandoned run does
+// not leak the file.
 func buildContainerSpec(
 	e *executable.Executable,
 	targetDir string,
 	envMap map[string]string,
-) (run.ContainerSpec, error) {
+) (spec run.ContainerSpec, cleanup func(), err error) {
+	cleanup = func() {}
 	c := e.Exec.Container
 
 	rt, err := resolveRuntimeFn(string(c.Runtime))
 	if err != nil {
-		return run.ContainerSpec{}, err
+		return run.ContainerSpec{}, cleanup, err
 	}
 
 	if e.Exec.File != "" {
 		switch strings.ToLower(filepath.Ext(e.Exec.File)) {
 		case ".bat", ".cmd", ".ps1":
-			return run.ContainerSpec{}, errors.Errorf(
+			return run.ContainerSpec{}, cleanup, errors.Errorf(
 				"container execution does not support %s files", filepath.Ext(e.Exec.File))
 		}
 	}
@@ -76,12 +85,12 @@ func buildContainerSpec(
 	for _, v := range c.Volumes {
 		m, err := parseVolume(string(v), wsRoot)
 		if err != nil {
-			return run.ContainerSpec{}, err
+			return run.ContainerSpec{}, cleanup, err
 		}
 		mounts = append(mounts, m)
 	}
 
-	spec := run.ContainerSpec{
+	spec = run.ContainerSpec{
 		Runtime: rt,
 		Image:   c.Image,
 		Name:    containerName(e),
@@ -93,7 +102,7 @@ func buildContainerSpec(
 		Mounts:  mounts,
 		Network: c.Network,
 	}
-	spec.Entrypoint, spec.OverrideEntry = c.ResolveEntrypoint()
+	spec.Entrypoint, spec.OverrideEntry = resolveContainerEntrypoint(e.Exec)
 	spec.User = resolveUser(c)
 
 	if c.EnvInherited() {
@@ -101,6 +110,22 @@ func buildContainerSpec(
 	}
 
 	switch {
+	case e.Exec.Cmd != "" && e.Exec.ResolveInterpreter() == executable.InterpreterPython:
+		// Mount the script rather than setting spec.Cmd: buildRunArgs would turn a
+		// Cmd into `python3 -c <code>`, putting the code in the process table and
+		// costing real traceback line numbers.
+		scriptHost, cleanupScript, err := run.WritePythonScript(e.Exec.Cmd)
+		if err != nil {
+			return run.ContainerSpec{}, nil, err
+		}
+		cleanup = cleanupScript
+		containerScript := path.Join(containerScriptMount, filepath.Base(scriptHost))
+		spec.Mounts = append(spec.Mounts, run.Mount{
+			HostPath:      scriptHost,
+			ContainerPath: containerScript,
+			ReadOnly:      true,
+		})
+		spec.Script = containerScript
 	case e.Exec.Cmd != "":
 		spec.Cmd = e.Exec.Cmd
 	case e.Exec.File != "":
@@ -119,7 +144,7 @@ func buildContainerSpec(
 		}
 	}
 
-	return spec, nil
+	return spec, cleanup, nil
 }
 
 // containerPathUnder returns the container-side path for hostPath if it resolves
@@ -182,11 +207,20 @@ func translateEnv(envMap map[string]string, mounts []run.Mount, wsRoot, mountPoi
 			// else drop: the host path is meaningless inside the container.
 		case "FLOW_CONFIG_PATH", "FLOW_CACHE_PATH":
 			// Drop: these directories are not mounted.
+		case "VIRTUAL_ENV", "PYTHONHOME", "PYTHONPATH", run.PythonBinEnv:
+			// Drop: these point at host interpreters and site-packages. Leaking
+			// them in would make the container's python search paths that either
+			// do not exist or, worse, resolve to an unrelated mounted directory.
+			// A containerized run uses the image's own python.
 		default:
 			out[k] = v
 		}
 	}
 	out["FLOW_IN_CONTAINER"] = "true"
+
+	if _, set := out["PYTHONUNBUFFERED"]; !set {
+		out["PYTHONUNBUFFERED"] = "1"
+	}
 
 	// Forward color preferences so containerized tools keep their coloring.
 	for _, k := range []string{"TERM", "FORCE_COLOR", "CLICOLOR_FORCE", "NO_COLOR"} {
@@ -287,4 +321,24 @@ func randomSuffix() string {
 		return "00000000"
 	}
 	return hex.EncodeToString(buf)
+}
+
+// resolveContainerEntrypoint picks the container entrypoint for an exec spec.
+//
+// It defers to an explicit container.entrypoint (including an empty one, which
+// means "use the image's own ENTRYPOINT"), and otherwise defaults to the binary
+// matching the interpreter: sh for a shell command, python3 for a python one.
+// Resolution lives here rather than on ExecContainer so the types package stays
+// unaware of how flow launches containers.
+//
+// Host interpreter discovery deliberately does not apply: a containerized run
+// uses the image's python, never a venv from the host.
+func resolveContainerEntrypoint(spec *executable.ExecExecutableType) (entrypoint string, override bool) {
+	if spec.Container != nil && spec.Container.Entrypoint != nil {
+		return spec.Container.ResolveEntrypoint()
+	}
+	if spec.InterpreterForFile() == executable.InterpreterPython {
+		return containerPythonBin, true
+	}
+	return spec.Container.ResolveEntrypoint()
 }

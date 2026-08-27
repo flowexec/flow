@@ -269,6 +269,85 @@ var _ = Describe("Exec Runner", func() {
 			DeferCleanup(restore)
 		})
 
+		newPythonContainerExec := func(c *executable.ExecContainer, dir executable.Directory) *executable.Executable {
+			interpreter := executable.InterpreterPython
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				Cmd: "print('hi')", Dir: dir, Container: c, Interpreter: &interpreter,
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), wsPath, "", "")
+			e.SetDefaults()
+			return e
+		}
+
+		It("mounts python code as a script instead of passing it as -c", func() {
+			// spec.Cmd would become `python3 -c <code>`, putting the code in the
+			// process table and losing traceback line numbers.
+			e := newPythonContainerExec(&executable.ExecContainer{Image: "python:3.13"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs).To(HaveLen(1))
+			Expect(containerSpecs[0].Cmd).To(BeEmpty())
+			Expect(containerSpecs[0].Script).To(HaveSuffix(".py"))
+
+			var scriptMount *run.Mount
+			for i := range containerSpecs[0].Mounts {
+				if containerSpecs[0].Mounts[i].ContainerPath == containerSpecs[0].Script {
+					scriptMount = &containerSpecs[0].Mounts[i]
+				}
+			}
+			Expect(scriptMount).ToNot(BeNil(), "the generated script should be bind-mounted")
+			Expect(scriptMount.ReadOnly).To(BeTrue())
+		})
+
+		It("defaults the entrypoint to python3 for a python interpreter", func() {
+			e := newPythonContainerExec(&executable.ExecContainer{Image: "python:3.13"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Entrypoint).To(Equal("python3"))
+			Expect(containerSpecs[0].OverrideEntry).To(BeTrue())
+		})
+
+		It("lets an explicit entrypoint override the python default", func() {
+			e := newPythonContainerExec(&executable.ExecContainer{
+				Image: "python:3.13", Entrypoint: strPtrFor("python3.13"),
+			}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Entrypoint).To(Equal("python3.13"))
+		})
+
+		It("uses the image ENTRYPOINT when entrypoint is explicitly empty", func() {
+			e := newPythonContainerExec(&executable.ExecContainer{
+				Image: "python:3.13", Entrypoint: strPtrFor(""),
+			}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].OverrideEntry).To(BeFalse())
+		})
+
+		It("keeps a shell command on the sh entrypoint", func() {
+			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(containerSpecs[0].Entrypoint).To(Equal("sh"))
+		})
+
+		It("drops host python paths from the container environment", func() {
+			// A host venv path names nothing inside the container, and could even
+			// resolve to an unrelated mounted directory.
+			e := newPythonContainerExec(&executable.ExecContainer{Image: "python:3.13"}, executable.Directory(wsPath))
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{
+				"VIRTUAL_ENV":     "/host/.venv",
+				"PYTHONPATH":      "/host/site-packages",
+				"PYTHONHOME":      "/host/python",
+				"FLOW_PYTHON_BIN": "/host/.venv/bin/python",
+				"KEEP_ME":         "yes",
+			}, nil)).To(Succeed())
+
+			env := containerSpecs[0].Env
+			Expect(env).ToNot(HaveKey("VIRTUAL_ENV"))
+			Expect(env).ToNot(HaveKey("PYTHONPATH"))
+			Expect(env).ToNot(HaveKey("PYTHONHOME"))
+			Expect(env).ToNot(HaveKey("FLOW_PYTHON_BIN"))
+			Expect(env).To(HaveKeyWithValue("KEEP_ME", "yes"))
+			Expect(env).To(HaveKeyWithValue("PYTHONUNBUFFERED", "1"))
+		})
+
 		It("routes to the container backend instead of runCmd", func() {
 			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
@@ -412,3 +491,6 @@ var _ = Describe("Exec Runner", func() {
 		})
 	})
 })
+
+// strPtrFor is a local helper for building optional container fields in tests.
+func strPtrFor(s string) *string { return &s }

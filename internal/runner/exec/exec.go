@@ -93,10 +93,16 @@ func (r *execRunner) Exec(
 	}
 
 	if execSpec.Container != nil {
-		spec, err := buildContainerSpec(e, targetDir, envMap)
+		spec, cleanupScript, err := buildContainerSpec(e, targetDir, envMap)
 		if err != nil {
 			return err
 		}
+		// Registered like the container cleanup below: a run abandoned by the
+		// timeout goroutine must not leave the generated script behind.
+		ctx.AddCallback(func(*context.Context) error {
+			cleanupScript()
+			return nil
+		})
 		// Register cleanup before launch so an orphaned container is removed even
 		// if the run is abandoned by the timeout goroutine in the runner.
 		ctx.AddCallback(func(*context.Context) error {
