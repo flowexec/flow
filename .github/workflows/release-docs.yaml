@@ -1,9 +1,19 @@
 name: Docs
 
 on:
+  # Kept for a tag pushed by a human. A release cut through release.yaml pushes
+  # its tag with GITHUB_TOKEN, and GitHub does not start workflows from events
+  # that token creates - so release.yaml calls this workflow directly instead.
   push:
     tags:
       - "*"
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'production'
+        type: string
   workflow_dispatch:
     inputs:
       environment:
@@ -31,7 +41,7 @@ jobs:
       - name: Deploy to Cloudflare Pages
         uses: flowexec/action@v1
         with:
-          executable: "deploy docs:cloudflare ${{ github.event.inputs.environment || 'production' }}"
+          executable: "deploy docs:cloudflare ${{ inputs.environment || 'production' }}"
           timeout: '5m'
           flow-version: 'main'
           secrets: |
