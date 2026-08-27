@@ -3,6 +3,7 @@ package run_test
 import (
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -132,7 +133,12 @@ var _ = Describe("Container backend", func() {
 
 			info, err := os.Stat(path)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0600)))
+			// Unix permission bits are not expressible on Windows: Go maps them
+			// onto ACLs and the file reads back as 0666. The env file still holds
+			// secrets, so the mode is asserted everywhere it means something.
+			if runtime.GOOS != "windows" {
+				Expect(info.Mode().Perm()).To(Equal(os.FileMode(0600)))
+			}
 
 			content, err := os.ReadFile(path)
 			Expect(err).NotTo(HaveOccurred())
