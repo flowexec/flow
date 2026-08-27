@@ -51,7 +51,7 @@ flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 | Flag | Type | Description |
 |------|------|-------------|
 | `-b, --background` |  | Run the executable in the background and return a run ID immediately. |
-| `--cmd` | `flow logs` | Run an ad-hoc shell command through flow instead of a named executable. The command runs with the current workspace's environment and is recorded in flow logs. Repeat --cmd to run multiple commands in one invocation (see --mode). |
+| `--cmd` | `stringArray` | Run an ad-hoc shell command through flow instead of a named executable. The command runs with the current workspace's environment and is recorded in flow logs. Repeat --cmd to run multiple commands in one invocation (see --mode). |
 | `--dir` | `string` | Working directory for an ad-hoc command (defaults to the current directory). Only valid with --cmd. |
 | `-h, --help` |  | help for exec |
 | `--interpreter` | `string` | The interpreter to run ad-hoc --cmd commands with: 'sh' (default) or 'python'. Applies to every --cmd in the invocation. |
@@ -59,7 +59,7 @@ flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 | `-m, --log-mode` | `string` | Log mode (text, logfmt, json, hidden) |
 | `--mode` | `string` | How to run multiple --cmd commands: 'serial' (default) or 'parallel'. (default "serial") |
 | `-p, --param` | `stringArray` | Set a parameter value by env key. (i.e. KEY=value) Use multiple times to set multiple parameters. This will override any existing parameter values defined for the executable. |
-| `--spec` | `flow logs` | Run a transient executable from an inline definition (any type: exec, serial, parallel, request, render, launch). Accepts inline YAML/JSON, '@path' to read a file, or '-' to read stdin. The executable is not saved to disk but is recorded in flow logs. |
+| `--spec` | `string` | Run a transient executable from an inline definition (any type: exec, serial, parallel, request, render, launch). Accepts inline YAML/JSON, '@path' to read a file, or '-' to read stdin. The executable is not saved to disk but is recorded in flow logs. |
 | `--workspace` | `string` | Workspace whose environment the ad-hoc/transient run should use (only with --cmd or --spec). Defaults to the workspace containing the run directory, then the current workspace. Does not change the global current workspace. |
 
 ## Options inherited from parent commands

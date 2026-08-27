@@ -31,7 +31,7 @@ flow template generate FLOWFILE_NAME [-w WORKSPACE ] [-d OUTPUT_DIR] [-f FILE | 
 | `-h, --help` |  | help for generate |
 | `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 | `-s, --set` | `stringArray` | Set a form field value by key (KEY=value). Repeat for multiple fields. Fields with a matching key will skip the interactive prompt. |
-| `-t, --template` | `flow set template` | Registered template name. Templates can be registered in the flow configuration file or with flow set template. |
+| `-t, --template` | `string` | Registered template name. Templates can be registered in the flow configuration file or with 'flow template add'. |
 | `-w, --workspace` | `string` | Workspace to create the flow file and its artifacts. Defaults to the current workspace. |
 
 ## Options inherited from parent commands
