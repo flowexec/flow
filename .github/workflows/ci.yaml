@@ -35,7 +35,7 @@ jobs:
           # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.4
         with:
           sarif_file: lint.sarif
           category: golangci-lint
@@ -201,6 +201,6 @@ jobs:
           # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload govuln SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.4
         with:
           sarif_file: govuln.sarif
