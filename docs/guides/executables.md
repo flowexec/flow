@@ -602,13 +602,14 @@ All imported executables are automatically tagged with `generated` and their fil
 
 #### **Script Files**
 
-Script files (`.sh`, `.bat`, `.cmd`, `.ps1`) are imported as single executables with the script's filename as the name and `exec` as the default verb. Each script type is executed with its native interpreter:
+Script files (`.sh`, `.bat`, `.cmd`, `.ps1`, `.py`) are imported as single executables with the script's filename as the name and `exec` as the default verb. Each script type is executed with its native interpreter:
 
 | Extension | Interpreter | Platforms |
 |-----------|------------|-----------|
 | `.sh` | Built-in POSIX shell | All (cross-platform) |
 | `.bat`, `.cmd` | `cmd.exe /C` | Windows |
 | `.ps1` | `pwsh` or `powershell` | All (requires PowerShell) |
+| `.py` | Resolved Python (see [Running Python](#running-python)) | All (requires Python) |
 
 You can use special comments to override executable metadata. The comment syntax depends on the script type:
 
@@ -643,6 +644,19 @@ kubectl apply -f k8s\
 
 Write-Host "Deploying to production..."
 kubectl apply -f k8s/
+```
+
+```python [Python (.py)]
+#!/usr/bin/env python3
+# f:name=production f:verb=deploy
+# f:description="Deploy to production environment"
+# f:tag=production f:tag=critical
+# f:timeout=10m
+
+import subprocess
+
+print("Deploying to production...")
+subprocess.run(["kubectl", "apply", "-f", "k8s/"], check=True)
 ```
 :::
 

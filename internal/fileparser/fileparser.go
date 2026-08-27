@@ -77,6 +77,8 @@ func parseScriptFile(wsPath, fn, expandedFile string) (executable.ExecutableList
 		exec, err = ExecutablesFromBatFile(wsPath, expandedFile)
 	case ".ps1":
 		exec, err = ExecutablesFromPs1File(wsPath, expandedFile)
+	case ".py":
+		exec, err = ExecutablesFromPyFile(wsPath, expandedFile)
 	default:
 		logger.Log().Warn("unable to import executables - unsupported file type", "file", fn)
 		return nil, nil

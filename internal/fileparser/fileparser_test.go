@@ -75,6 +75,14 @@ var _ = Describe("ExecutablesFromImports", func() {
 		Expect(result[0].Exec.File).To(Equal("simple.ps1"))
 	})
 
+	It("should return executables from py file imports", func() {
+		flowFile.Imports = append(flowFile.Imports, "simple.py")
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(HaveLen(1))
+		Expect(result[0].Exec.File).To(Equal("simple.py"))
+	})
+
 	It("should log a warning for invalid file type", func() {
 		mockLogger.EXPECT().Warn(gomock.Any(), "file", "invalidfile").AnyTimes()
 		flowFile.Imports = append(flowFile.Imports, "invalidfile")
