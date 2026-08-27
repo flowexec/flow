@@ -1,34 +1,38 @@
-## flow
+---
+title: flow
+description: "flow is a command line interface designed to make managing and running development workflows easier."
+---
+
+# flow
 
 flow is a command line interface designed to make managing and running development workflows easier.
 
-### Synopsis
+## Synopsis
 
 flow is a command line interface designed to make managing and running development workflows easier.It's driven by executables organized across workspaces and namespaces defined in a workspace.
 
 See https://flowexec.io for more information.
 
-### Options
+## Options
 
-```
-  -h, --help               help for flow
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for flow |
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow browse](flow_browse.md)	 - Discover and explore available executables.
-* [flow cache](flow_cache.md)	 - Manage temporary key-value data.
-* [flow cli](flow_cli.md)	 - Manage the flow CLI itself.
-* [flow config](flow_config.md)	 - View and update global flow configuration.
-* [flow exec](flow_exec.md)	 - Execute any executable by reference.
-* [flow logs](flow_logs.md)	 - View execution history and logs.
-* [flow mcp](flow_mcp.md)	 - Start Model Context Provider (MCP) server for AI assistant integration
-* [flow schema](flow_schema.md)	 - Validate flowfiles and workspace configs against their schemas.
-* [flow secret](flow_secret.md)	 - Manage secrets stored in a vault.
-* [flow sync](flow_sync.md)	 - Refresh workspace cache and discover new executables.
-* [flow template](flow_template.md)	 - Manage flowfile templates.
-* [flow vault](flow_vault.md)	 - Manage sensitive secret stores.
-* [flow workspace](flow_workspace.md)	 - Manage development workspaces.
-
+- [flow browse](flow_browse.md) — Discover and explore available executables.
+- [flow cache](flow_cache.md) — Manage temporary key-value data.
+- [flow cli](flow_cli.md) — Manage the flow CLI itself.
+- [flow config](flow_config.md) — View and update global flow configuration.
+- [flow exec](flow_exec.md) — Execute any executable by reference.
+- [flow logs](flow_logs.md) — View execution history and logs.
+- [flow mcp](flow_mcp.md) — Start Model Context Provider (MCP) server for AI assistant integration
+- [flow schema](flow_schema.md) — Validate flowfiles and workspace configs against their schemas.
+- [flow secret](flow_secret.md) — Manage secrets stored in a vault.
+- [flow sync](flow_sync.md) — Refresh workspace cache and discover new executables.
+- [flow template](flow_template.md) — Manage flowfile templates.
+- [flow vault](flow_vault.md) — Manage sensitive secret stores.
+- [flow workspace](flow_workspace.md) — Manage development workspaces.

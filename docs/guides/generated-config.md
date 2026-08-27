@@ -1,5 +1,6 @@
 ---
 title: Imported Executables Config Reference
+description: "Import existing Makefiles, npm scripts, and other automation into flow as generated executables."
 ---
 
 # Imported Executables Config Reference

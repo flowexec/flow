@@ -1,29 +1,33 @@
-## flow logs attach
+---
+title: flow logs attach
+description: "Stream log output from a running background process by run ID."
+---
+
+# flow logs attach
 
 Stream log output from a running background process by run ID.
 
-### Synopsis
+## Synopsis
 
 Stream the log output of a background process identified by its run ID.
 
-```
+```shell
 flow logs attach RUN_ID [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for attach
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for attach |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow logs](flow_logs.md)	 - View execution history and logs.
-
+- [flow logs](flow_logs.md) — View execution history and logs.

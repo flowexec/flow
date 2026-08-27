@@ -1,5 +1,6 @@
 ---
 title: Installation
+description: "Install the flow CLI on macOS, Linux, or Windows with a one-line script, Homebrew, go install, or a release binary."
 ---
 
 # Installation
@@ -116,4 +117,4 @@ Ready to start automating? → [Quick start guide](quickstart.md)
 
 ## CI/CD & Containers
 
-For GitHub Actions, Docker, and other integrations, see the [integrations guide](guides/integrations.md).
+To run flow in CI, see [GitHub Actions](guides/github-actions.md) or [Containers](guides/containers.md).

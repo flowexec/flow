@@ -1,5 +1,6 @@
 ---
 title: Expression Language
+description: "The Expr-based expression language flow uses for conditionals and dynamic values in flow files."
 ---
 
 # Expression Language

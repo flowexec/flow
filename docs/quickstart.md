@@ -1,5 +1,6 @@
 ---
 title: Quick Start
+description: "Write and run your first flow workflow in about five minutes: register a workspace, define an executable, and run it from anywhere."
 ---
 
 # Quick Start

@@ -1,27 +1,31 @@
-## flow secret unlink
+---
+title: flow secret unlink
+description: "Remove a link from the current vault, leaving the secret itself untouched."
+---
+
+# flow secret unlink
 
 Remove a link from the current vault, leaving the secret itself untouched.
 
-```
+```shell
 flow secret unlink NAME [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help            help for unlink
-  -o, --output string   Output format. One of: yaml, json, or tui.
-  -V, --vault string    Vault name to use instead of the current vault.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for unlink |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
+| `-V, --vault` | `string` | Vault name to use instead of the current vault. |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow secret](flow_secret.md)	 - Manage secrets stored in a vault.
-
+- [flow secret](flow_secret.md) — Manage secrets stored in a vault.

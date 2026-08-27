@@ -1,5 +1,6 @@
 ---
 title: User Guides
+description: "Guides for flow, from core concepts and your first workflow through secrets, templates, expressions, and integrations."
 ---
 
 # User Guides
@@ -26,10 +27,21 @@ Master the core features of flow:
 
 Take your automation to the next level:
 
-- **[Templates & Code Generation](templating.md)** - Generate workflows and project scaffolding
+- **[Expression Language](expressions.md)** - Conditionals and dynamic values in flow files
 - **[Advanced Workflows](advanced.md)** - Complex automation with conditionals, state, and composition
+- **[Imported Executables](generated-config.md)** - Pull in Makefiles, npm scripts, and other existing automation
+- **[Templates & Code Generation](templating.md)** - Generate workflows and project scaffolding
+
+## Interfaces
+
 - **[Interactive UI](interactive.md)** - Customize and use the terminal interface
-- **[Integrations](integrations.md)** - Run flow in MCP clients, GitHub Actions, and containerized environments
+- **[Run Provenance](run-provenance.md)** - Trace who or what launched every run
+
+## Integrations
+
+- **[AI Tools & MCP](ai-tools.md)** - Give a coding assistant your workflows over MCP
+- **[Containers](containers.md)** - Run a single step in an image, or the whole CLI in one
+- **[GitHub Actions](github-actions.md)** - Call your executables from a CI pipeline
 
 ## Other Resources
 

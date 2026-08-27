@@ -3,26 +3,95 @@ import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 import flowfileGrammar from './flowfile.tmLanguage.json'
 
 // https://vitepress.dev/reference/site-config
+const SITE = 'https://flowexec.io'
+const SITE_NAME = 'flow'
+const SITE_DESCRIPTION =
+  'Write your workflows down, then run them from any project on your machine — with the right secrets, the right environment, and a record of what happened.'
+const OG_IMAGE = `${SITE}/og-default.png`
+
 export default defineConfig({
-  title: "flow",
-  description: "Local developer automation platform that flows with you.",
+  title: SITE_NAME,
+  description: SITE_DESCRIPTION,
   base: '/',
   outDir: './dist',
+  lang: 'en-US',
+
+  // Cloudflare Pages redirects /foo.html to /foo, so without this the sitemap
+  // advertises URLs that immediately redirect and the site links to a different
+  // form than it declares canonical.
+  cleanUrls: true,
 
   sitemap: {
-    hostname: 'https://flowexec.io'
+    hostname: SITE
   },
 
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }],
-    ['link', { rel: 'alternate', type: 'text/plain', title: 'llms.txt', href: 'https://flowexec.io/llms.txt' }]
+    ['link', { rel: 'icon', href: '/favicon.ico', sizes: '48x48' }],
+    ['link', { rel: 'icon', type: 'image/png', href: '/icon.png' }],
+    ['link', { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }],
+    ['meta', { name: 'theme-color', content: '#2D353B' }],
+    ['meta', { name: 'author', content: 'Dockery Labs' }],
+    ['link', { rel: 'alternate', type: 'text/plain', title: 'llms.txt', href: `${SITE}/llms.txt` }],
+
+    // Per-page og:title / og:description / og:url and the canonical link are
+    // added in transformPageData below; these are the values that never vary.
+    ['meta', { property: 'og:site_name', content: SITE_NAME }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:locale', content: 'en_US' }],
+    ['meta', { property: 'og:image', content: OG_IMAGE }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { property: 'og:image:alt', content: 'flow' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:image', content: OG_IMAGE }],
+
+    ['script', { type: 'application/ld+json' }, JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      url: SITE,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'macOS, Linux, Windows',
+      license: 'https://github.com/flowexec/flow/blob/main/LICENSE',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      author: { '@type': 'Organization', name: 'Dockery Labs', url: 'https://jahvon.dev' },
+      sameAs: ['https://github.com/flowexec/flow', 'https://discord.gg/CtByNKNMxM']
+    })]
   ],
+
+  transformPageData(pageData) {
+    const path = pageData.relativePath
+      .replace(/(^|\/)index\.md$/, '$1')
+      .replace(/\.md$/, '')
+    const canonical = `${SITE}/${path}`
+    const title = pageData.frontmatter.title
+      ? `${pageData.frontmatter.title} | ${SITE_NAME}`
+      : SITE_NAME
+    const description = pageData.frontmatter.description || SITE_DESCRIPTION
+
+    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head.push(
+      ['link', { rel: 'canonical', href: canonical }],
+      ['meta', { property: 'og:url', content: canonical }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }]
+    )
+  },
 
   markdown: {
     config(md) {
       md.use(tabsMarkdownPlugin)
     },
     languages: [flowfileGrammar as never],
+    // Shiki bundles both, so code blocks land on the same palette as the rest
+    // of the site instead of GitHub's default blues.
+    theme: {
+      light: 'everforest-light',
+      dark: 'everforest-dark',
+    },
   },
 
   themeConfig: {
@@ -33,12 +102,22 @@ export default defineConfig({
 
     siteTitle: false,
 
+    // Three items, not five. The logo already goes home, and the two reference
+    // sections are destinations you arrive at from a guide rather than things
+    // you browse cold — so they collapse into one menu and give the search and
+    // Ask controls room to breathe.
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Guides', link: '/guides/', activeMatch: '/guides/'},
+      { text: 'Guides', link: '/guides/', activeMatch: '/guides/' },
       { text: 'Examples', link: '/examples', activeMatch: '/examples' },
-      { text: 'CLI Reference', link: '/cli/', activeMatch: '/cli/' },
-      { text: 'Config Reference', link: '/types/', activeMatch: '/types/' }
+      {
+        text: 'Reference',
+        activeMatch: '/(cli|types)/',
+        items: [
+          { text: 'CLI Reference', link: '/cli/' },
+          { text: 'Configuration Reference', link: '/types/' },
+          { text: 'Contributing', link: '/development' }
+        ]
+      }
     ],
 
     sidebar: {
@@ -69,12 +148,17 @@ export default defineConfig({
                 { text: 'Templates & Workflow Generation', link: '/guides/templating' },
               ]
             },
-            { text: 'Integrations & Tools',
+            { text: 'Interfaces',
               items: [
                 { text: 'Interactive UI', link: '/guides/interactive' },
-                { text: 'AI Tools', link: '/guides/ai-tools' },
                 { text: 'Run Provenance', link: '/guides/run-provenance' },
-                { text: 'Integrations', link: '/guides/integrations' },
+              ]
+            },
+            { text: 'Integrations',
+              items: [
+                { text: 'AI Tools & MCP', link: '/guides/ai-tools' },
+                { text: 'Containers', link: '/guides/containers' },
+                { text: 'GitHub Actions', link: '/guides/github-actions' },
               ]
             },
           ]
@@ -240,6 +324,15 @@ export default defineConfig({
 
     search: {
       provider: 'local'
+    },
+
+    footer: {
+      message: 'Released under the <a href="https://github.com/flowexec/flow/blob/main/LICENSE">Apache 2.0 License</a>.',
+      copyright: [
+        `&copy; ${new Date().getFullYear()} <a href="https://jahvon.dev">Dockery Labs</a>`,
+        '<a href="https://jahvon.dev/architecture/flow/">Architecture</a>',
+        '<a href="https://mochiexec.io">Mochi</a>',
+      ].join(' &middot; ')
     },
 
     outline: {

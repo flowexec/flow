@@ -1,26 +1,30 @@
-## flow template remove
+---
+title: flow template remove
+description: "Unregister a flowfile template by name."
+---
+
+# flow template remove
 
 Unregister a flowfile template by name.
 
-```
+```shell
 flow template remove NAME [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help            help for remove
-  -o, --output string   Output format. One of: yaml, json, or tui.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for remove |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow template](flow_template.md)	 - Manage flowfile templates.
-
+- [flow template](flow_template.md) — Manage flowfile templates.

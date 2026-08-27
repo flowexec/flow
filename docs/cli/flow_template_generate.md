@@ -1,8 +1,13 @@
-## flow template generate
+---
+title: flow template generate
+description: "Generate workspace executables and scaffolding from a flowfile template."
+---
+
+# flow template generate
 
 Generate workspace executables and scaffolding from a flowfile template.
 
-### Synopsis
+## Synopsis
 
 Add rendered executables from a flowfile template to a workspace.
 
@@ -13,30 +18,29 @@ One of -f or -t must be provided and must point to a valid flowfile template.
 The -d flag can be used to specify an output directory within the workspace to create
 the flowfile and its artifacts in.
 
-```
+```shell
 flow template generate FLOWFILE_NAME [-w WORKSPACE ] [-d OUTPUT_DIR] [-f FILE | -t TEMPLATE] [flags]
 ```
 
-### Options
+## Options
 
-```
-  -d, --dir string                   Output directory (within the workspace) to create the flow file and its artifacts. If the directory does not exist, it will be created.
-  -f, --file string                  Path to the template file. It must be a valid flow file template.
-  -h, --help                         help for generate
-  -o, --output string                Output format. One of: yaml, json, or tui.
-  -s, --set stringArray              Set a form field value by key (KEY=value). Repeat for multiple fields. Fields with a matching key will skip the interactive prompt.
-  -t, --template flow set template   Registered template name. Templates can be registered in the flow configuration file or with flow set template.
-  -w, --workspace string             Workspace to create the flow file and its artifacts. Defaults to the current workspace.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-d, --dir` | `string` | Output directory (within the workspace) to create the flow file and its artifacts. If the directory does not exist, it will be created. |
+| `-f, --file` | `string` | Path to the template file. It must be a valid flow file template. |
+| `-h, --help` |  | help for generate |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
+| `-s, --set` | `stringArray` | Set a form field value by key (KEY=value). Repeat for multiple fields. Fields with a matching key will skip the interactive prompt. |
+| `-t, --template` | `flow set template` | Registered template name. Templates can be registered in the flow configuration file or with flow set template. |
+| `-w, --workspace` | `string` | Workspace to create the flow file and its artifacts. Defaults to the current workspace. |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow template](flow_template.md)	 - Manage flowfile templates.
-
+- [flow template](flow_template.md) — Manage flowfile templates.

@@ -1,0 +1,296 @@
+/* ---------------------------------------------------------------------------
+   Default-theme chrome, retuned to the same language as the components.
+
+   VitePress ships these rules as scoped styles, so their selectors carry an
+   extra `[data-v-*]` attribute and outrank a plain class here. Where a rule
+   below is marked, `!important` is the only way to reach it without forking
+   the component.
+   --------------------------------------------------------------------------- */
+
+/* --- Nav ------------------------------------------------------------------ */
+
+.VPNavBar {
+  border-bottom: 1px solid transparent;
+}
+
+.VPNavBar.has-sidebar .curtain {
+  display: none;
+}
+
+.VPNavBarMenuLink,
+.VPNavBarMenuGroup .VPMenuLink {
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+
+/* --- Sidebar -------------------------------------------------------------- */
+
+.VPSidebarItem.level-0 > .item > .text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+.VPSidebarItem.is-link > .item > .link:hover .text {
+  color: var(--vp-c-brand-1);
+}
+
+.VPSidebarItem.level-1 .indicator,
+.VPSidebarItem.level-2 .indicator,
+.VPSidebarItem.level-3 .indicator {
+  border-radius: 1px;
+}
+
+/* --- Aside / outline ------------------------------------------------------ */
+
+.VPDocAsideOutline .outline-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+.VPDocAsideOutline .content {
+  border-left-color: var(--vp-c-divider);
+}
+
+/* --- Doc footer ----------------------------------------------------------- */
+
+.VPDocFooter .prev-next {
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.VPDocFooter .pager-link {
+  border-radius: var(--radius);
+  border-color: var(--vp-c-border);
+  transition: border-color 0.18s ease;
+}
+
+.VPDocFooter .pager-link:hover {
+  border-color: var(--vp-c-text-3);
+}
+
+.VPDocFooter .desc {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-3);
+}
+
+/* --- Local search --------------------------------------------------------
+   The Ask panel is styled as this modal's sibling, so the two have to agree on
+   radius, edge, and footer treatment.
+   ------------------------------------------------------------------------- */
+
+.VPLocalSearchBox .shell {
+  border-radius: var(--radius) !important; /* scoped rule sets 6px */
+  border: 1px solid var(--vp-c-border);
+}
+
+.VPLocalSearchBox .search-bar {
+  border-radius: 8px;
+  border-color: var(--vp-c-border);
+}
+
+.VPLocalSearchBox .result {
+  border-radius: 8px;
+}
+
+/* --- Nav search button ---------------------------------------------------- */
+
+.DocSearch-Button,
+.VPNavBarSearchButton {
+  border-radius: 8px;
+}
+
+/* --- Home hero -----------------------------------------------------------
+   Sizing is VitePress's own; the only thing this design removes is the glow
+   plate behind the mark (killed via --vp-home-hero-image-* in tokens.css).
+   ------------------------------------------------------------------------- */
+
+.VPHero .VPImage {
+  border-radius: 0;
+}
+
+.VPHero .tagline {
+  max-width: 46ch;
+  color: var(--vp-c-text-2);
+}
+
+.VPHome {
+  margin-bottom: 72px;
+}
+
+/* The custom home sections carry their own rhythm; VitePress's doc spacing
+   would double it up. */
+.VPHome .vp-doc > div > .home-section:first-child {
+  margin-top: 0;
+}
+
+/* --- Home backdrop -------------------------------------------------------
+   The ambient canvas is fixed at z-index 0 and the page ground paints behind
+   it, so the app shell has to establish a stacking context above it.
+   ------------------------------------------------------------------------- */
+
+.Layout {
+  position: relative;
+  z-index: 1;
+}
+
+.VPNav,
+.VPLocalNav {
+  background-color: var(--vp-c-bg);
+}
+
+/* --- Home hero eyebrow ---------------------------------------------------
+   `hero.name` is the only slot above the headline, and VitePress renders it at
+   headline size. Both rules below fight the component's own scoped styles,
+   which carry an extra [data-v-*] and cannot be outranked from here.
+   ------------------------------------------------------------------------- */
+
+.VPHero .name {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.VPHero .text {
+  max-width: 18ch;
+  font-size: 42px !important;
+  line-height: 1.16 !important;
+  letter-spacing: -0.03em;
+}
+
+.VPHero .tagline {
+  font-size: 15.5px !important;
+  line-height: 1.68 !important;
+}
+
+@media (max-width: 959px) {
+  .VPHero .text {
+    max-width: none;
+    font-size: 34px !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .VPHero .text {
+    font-size: 28px !important;
+  }
+}
+
+/* --- Home closer ---------------------------------------------------------- */
+
+.home-closer {
+  margin: calc(var(--gap) * 2) 0 0;
+  padding-top: calc(var(--gap) * 0.8);
+  border-top: 1px solid var(--vp-c-divider);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--vp-c-text-3);
+}
+
+/* --- Search + Ask, as one group ------------------------------------------
+   The slot renders before VPNavBarSearch, which flex-grows to fill the bar and
+   would strand the Ask button at the far left. Reordering the two and moving
+   the growth onto Ask keeps them adjacent and pushes the menu right.
+   ------------------------------------------------------------------------- */
+
+/* Search moves ahead of the slot; Ask keeps the default order so it lands
+   first among the remaining children by DOM position, and its auto margin
+   pushes the menu and icons to the right. */
+.VPNavBar .content-body > .search {
+  order: -1;
+  flex-grow: 0;
+}
+
+.VPNavBar .content-body > .ask-trigger {
+  margin-right: auto;
+}
+
+/* Below the hamburger breakpoint the nav screen carries its own Ask row. */
+@media (max-width: 767px) {
+  .VPNavBar .content-body > .ask-trigger {
+    display: none;
+  }
+}
+
+.VPNavScreen .ask-trigger {
+  margin: 0 0 16px;
+}
+
+/* --- Badge rows ----------------------------------------------------------
+   Markdown emits shield badges as adjacent inline links with no separator, so
+   they butt together; and the doc-wide image radius is sized for screenshots,
+   not for a 20px-tall badge.
+   ------------------------------------------------------------------------- */
+
+.vp-doc .badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 1.6em;
+}
+
+.vp-doc .badge-row a {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.vp-doc .badge-row img {
+  height: 20px;
+  width: auto;
+  border-radius: 4px;
+}
+
+/* --- Hero mark -----------------------------------------------------------
+   VitePress sizes the mark at 320px on desktop with a glow plate of exactly
+   the same size, so the halo sits *behind* the logo instead of around it and
+   the pair dominates the hero. This scales the mark back and lets the plate
+   run wider than it, which reads as a wash rather than a disc.
+
+   The three-class selectors are deliberate: the component's own rules are
+   `.image-src[data-v-*]` and `.image-bg[data-v-*]`, which tie with a
+   two-class override and would win on source order.
+   ------------------------------------------------------------------------- */
+
+.VPHero .image-container .image-src {
+  max-width: 124px;
+  max-height: 124px;
+}
+
+.VPHero .image-container .image-bg {
+  width: 168px;
+  height: 168px;
+}
+
+@media (min-width: 640px) {
+  .VPHero .image-container .image-src {
+    max-width: 152px;
+    max-height: 152px;
+  }
+  .VPHero .image-container .image-bg {
+    width: 208px;
+    height: 208px;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHero .image-container .image-src {
+    max-width: 188px;
+    max-height: 188px;
+  }
+  .VPHero .image-container .image-bg {
+    width: 252px;
+    height: 252px;
+  }
+}

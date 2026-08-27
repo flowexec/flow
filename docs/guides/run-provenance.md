@@ -1,5 +1,6 @@
 ---
 title: Run Provenance
+description: "Trace who or what launched every flow run — the CLI, an MCP client, or a specific agent session."
 ---
 
 # Run Provenance

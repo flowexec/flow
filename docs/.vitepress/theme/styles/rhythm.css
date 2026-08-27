@@ -1,0 +1,168 @@
+/* ---------------------------------------------------------------------------
+   Rhythm.
+
+   Generous measure, a comfortable ruled pitch, soft rules instead of hard
+   borders, and nothing that raises its voice. Loaded after tokens so it can
+   retune the default theme's type and spacing.
+   --------------------------------------------------------------------------- */
+
+body {
+  line-height: 1.72;
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.78;
+}
+
+/* Headings: present, not loud. Lighter weight, tighter tracking, more air. */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4 {
+  font-weight: 600;
+  letter-spacing: -0.011em;
+}
+
+.vp-doc h1 {
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  font-size: 2.1rem;
+  line-height: 1.25;
+}
+
+.vp-doc h2 {
+  margin: 2.4em 0 0.9em;
+  padding-bottom: 0.34em;
+  border-top: 0;
+  border-bottom: 1px solid var(--vp-c-border);
+  font-size: 1.45rem;
+  letter-spacing: -0.014em;
+}
+
+.vp-doc h3 {
+  margin: 2em 0 0.7em;
+  font-size: 1.15rem;
+}
+
+.vp-doc h4 {
+  margin: 1.6em 0 0.6em;
+}
+
+/* Links: an underline you can read through, not a colour-only cue. */
+.vp-doc a {
+  font-weight: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: color 0.18s ease;
+}
+
+/* Tables, code blocks, images: paper, not chrome. */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+}
+
+/* Hairline rules carry the row separation, so the default zebra striping is
+   redundant. Its selector is `.vp-doc tr:nth-child(2n)`, which outranks a plain
+   `tr` rule — it has to be matched, not just overridden. */
+.vp-doc tr,
+.vp-doc tr:nth-child(2n) {
+  background: transparent;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+/* Reference tables put the prose in the last column; without this the fixed
+   columns claim the width and the description wraps into a narrow gutter. */
+.vp-doc table td:last-child,
+.vp-doc table th:last-child {
+  width: 100%;
+}
+
+.vp-doc table code {
+  white-space: nowrap;
+}
+
+.vp-doc th,
+.vp-doc td {
+  border: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding: 11px 14px 11px 0;
+}
+
+.vp-doc th {
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc div[class*='language-'],
+.vp-doc .vp-code-group,
+.vp-doc img {
+  border-radius: var(--radius);
+}
+
+.vp-doc div[class*='language-'] {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc blockquote {
+  border-left: 2px solid var(--vp-c-border);
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .custom-block {
+  border-radius: var(--radius);
+  border-width: 1px;
+  border-left-width: 3px;
+}
+
+/* Anything numeric lines up in a column: versions, dates, counts. */
+time,
+.vp-doc kbd,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.vp-doc kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--vp-c-border);
+  border-radius: 5px;
+  background: var(--vp-c-bg-soft);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+/* Cards change their edge on hover, never their size. */
+.VPFeature,
+.VPTeamMembersItem {
+  border-radius: var(--radius);
+  border-color: var(--vp-c-border);
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.VPFeature:hover {
+  border-color: var(--vp-c-text-3);
+  transform: none;
+}
+
+.VPButton {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: border-color 0.18s ease, background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

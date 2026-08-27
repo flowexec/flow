@@ -1,26 +1,30 @@
-## flow config reset
+---
+title: flow config reset
+description: "Restore the default flow configuration values. This will overwrite the current configuration."
+---
+
+# flow config reset
 
 Restore the default flow configuration values. This will overwrite the current configuration.
 
-```
+```shell
 flow config reset [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for reset
-  -y, --yes    Skip confirmation prompts
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for reset |
+| `-y, --yes` |  | Skip confirmation prompts |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow config](flow_config.md)	 - View and update global flow configuration.
-
+- [flow config](flow_config.md) — View and update global flow configuration.

@@ -1,15 +1,24 @@
 ---
 title: Contributing to flow
+description: "How to contribute to flow: set up a development environment, understand the project layout, run the test suites, and work with generated code."
 ---
 
 # Contributing to flow
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/flowexec/flow)](https://goreportcard.com/report/github.com/flowexec/flow)
-[![Go Reference](https://pkg.go.dev/badge/github.com/flowexec/flow.svg)](https://pkg.go.dev/github.com/flowexec/flow)
-[![GitHub branch check runs](https://img.shields.io/github/check-runs/flowexec/flow/main)](https://github.com/flowexec/flow/actions?query=branch%3Amain)
-[![Codecov](https://img.shields.io/codecov/c/github/flowexec/flow)](https://app.codecov.io/gh/flowexec/flow)
+<p class="badge-row">
+  <a href="https://deepwiki.com/flowexec/flow"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://pkg.go.dev/github.com/flowexec/flow"><img src="https://pkg.go.dev/badge/github.com/flowexec/flow.svg" alt="Go Reference"></a>
+  <a href="https://github.com/flowexec/flow/actions?query=branch%3Amain"><img src="https://img.shields.io/github/check-runs/flowexec/flow/main" alt="GitHub branch check runs"></a>
+  <a href="https://app.codecov.io/gh/flowexec/flow"><img src="https://img.shields.io/codecov/c/github/flowexec/flow" alt="Codecov"></a>
+</p>
 
 This document provides an overview of how to contribute to the flow project, including setting up your development environment, understanding the project structure, and running tests.
+
+> [!TIP]
+> Getting oriented in an unfamiliar codebase is the slow part.
+> [DeepWiki](https://deepwiki.com/flowexec/flow) indexes this repository and answers questions
+> against the source — use the **Ask AI** button in the nav on any page of this site, or read the
+> generated wiki directly. It is a fast way to find the right file before you start reading.
 
 Before getting started, please read our [Code of Conduct](https://github.com/flowexec/flow/blob/main/.github/CODE_OF_CONDUCT.md) and [Contributing Guidelines](https://github.com/flowexec/flow/blob/main/.github/CONTRIBUTING.md).
 

@@ -1,5 +1,6 @@
 ---
 title: Interactive UI
+description: "Browse, search, filter, and run every workflow across every workspace from flow's terminal interface."
 ---
 
 # Interactive UI

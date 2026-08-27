@@ -1,29 +1,33 @@
-## flow logs clear
+---
+title: flow logs clear
+description: "Clear execution history and logs."
+---
+
+# flow logs clear
 
 Clear execution history and logs.
 
-### Synopsis
+## Synopsis
 
 Remove execution history records and associated log files. If a ref is provided, only that executable's data is cleared.
 
-```
+```shell
 flow logs clear [ref] [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for clear
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for clear |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow logs](flow_logs.md)	 - View execution history and logs.
-
+- [flow logs](flow_logs.md) — View execution history and logs.

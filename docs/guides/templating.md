@@ -1,5 +1,6 @@
 ---
 title: Templates & Workflow Generation
+description: "Generate flow files and project scaffolding from templates, with interactive forms, copied artifacts, and pre/post-run hooks."
 ---
 
 # Templates & Workflow Generation

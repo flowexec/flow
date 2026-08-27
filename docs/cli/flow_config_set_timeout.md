@@ -1,25 +1,29 @@
-## flow config set timeout
+---
+title: flow config set timeout
+description: "Set the default timeout for executables."
+---
+
+# flow config set timeout
 
 Set the default timeout for executables.
 
-```
+```shell
 flow config set timeout DURATION [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for timeout
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for timeout |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow config set](flow_config_set.md)	 - Set a global configuration value.
-
+- [flow config set](flow_config_set.md) — Set a global configuration value.

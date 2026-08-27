@@ -1,5 +1,6 @@
 ---
 title: Execution History & Logs
+description: "View, filter, and manage flow's execution history and logs, including runs launched by AI assistants."
 ---
 
 # Execution History & Logs
@@ -149,4 +150,4 @@ flow logs clear verb ws/ns:name
 ## What's Next?
 
 - **Customize your interface** → [Interactive UI](interactive.md)
-- **Integrate with external tools** → [Integrations](integrations.md)
+- **Run flow in CI** → [GitHub Actions](github-actions.md) or [Containers](containers.md)

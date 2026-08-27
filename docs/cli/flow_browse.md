@@ -1,8 +1,13 @@
-## flow browse
+---
+title: flow browse
+description: "Discover and explore available executables."
+---
+
+# flow browse
 
 Discover and explore available executables.
 
-### Synopsis
+## Synopsis
 
 Browse executables across workspaces.
 
@@ -13,45 +18,42 @@ Browse executables across workspaces.
 See https://flowexec.io/types/flowfile#executableverb for more information on executable verbs and
 https://flowexec.io/types/flowfile#executableref for more information on executable references.
 
-```
+```shell
 flow browse [EXECUTABLE-REFERENCE] [flags]
 ```
 
-### Examples
+## Examples
 
+```shell
+flow browse                              # interactive multi-pane browser
+flow browse --list                       # flat list of all executables
+flow browse --verb run                   # list only 'run' executables
+flow browse --namespace myproject        # filter by namespace
 ```
 
-  flow browse                              # interactive multi-pane browser
-  flow browse --list                       # flat list of all executables
-  flow browse --verb run                   # list only 'run' executables
-  flow browse --namespace myproject        # filter by namespace
+## Options
 
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-a, --all` |  | List from all namespaces. |
+| `--annotation` | `stringArray` | Filter by annotations. Format: 'key=value' for exact value match, or 'key' for presence regardless of value. Repeat the flag for multiple selectors; all selectors must match (AND). |
+| `-f, --filter` | `string` | Filter executable by reference substring. |
+| `-h, --help` |  | help for browse |
+| `-l, --list` |  | Show a simple list view of executables instead of interactive discovery. |
+| `-n, --namespace` | `string` | Filter executables by namespace. |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
+| `-t, --tag` | `stringArray` | Filter by tags. |
+| `-v, --verb` | `string` | Filter executables by verb. |
+| `--visibility` | `string` | Filter by visibility level (hierarchical). Valid: public, private, internal, hidden. Default: private |
+| `-w, --workspace` | `string` | Filter executables by workspace. |
 
-### Options
+## Options inherited from parent commands
 
-```
-  -a, --all                      List from all namespaces.
-      --annotation stringArray   Filter by annotations. Format: 'key=value' for exact value match, or 'key' for presence regardless of value. Repeat the flag for multiple selectors; all selectors must match (AND).
-  -f, --filter string            Filter executable by reference substring.
-  -h, --help                     help for browse
-  -l, --list                     Show a simple list view of executables instead of interactive discovery.
-  -n, --namespace string         Filter executables by namespace.
-  -o, --output string            Output format. One of: yaml, json, or tui.
-  -t, --tag stringArray          Filter by tags.
-  -v, --verb string              Filter executables by verb.
-      --visibility string        Filter by visibility level (hierarchical). Valid: public, private, internal, hidden. Default: private
-  -w, --workspace string         Filter executables by workspace.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### Options inherited from parent commands
+## See also
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
-
-### SEE ALSO
-
-* [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
-
+- [flow](flow.md) — flow is a command line interface designed to make managing and running development workflows easier.
