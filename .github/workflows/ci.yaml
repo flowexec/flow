@@ -22,14 +22,20 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        run: go build -o ./bin/flow .
       - uses: flowexec/action@v1
         with:
           executable: 'lint go'
           params: 'CI=true'
           timeout: '5m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.4
         with:
           sarif_file: lint.sarif
           category: golangci-lint
@@ -42,11 +48,17 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        run: go build -o ./bin/flow .
       - uses: flowexec/action@v1
         with:
           executable: 'test unit'
           params: 'CI=true'
           timeout: '5m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
         id: unit-tests
       - name: Upload unit test coverage
@@ -63,11 +75,17 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        run: go build -o ./bin/flow .
       - uses: flowexec/action@v1
         with:
           executable: 'test e2e'
           params: 'CI=true'
           timeout: '10m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
           secrets: |
             test-secret=test-value-from-action
@@ -111,16 +129,24 @@ jobs:
           go-version: "1.25.x"
       - name: Install mockgen
         run: go install go.uber.org/mock/mockgen@v0.4.0
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        run: go build -o ./bin/flow .
       - uses: flowexec/action@v1
         with:
           executable: 'generate'
           timeout: '10m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Check for uncommitted changes
         uses: flowexec/action@v1
         with:
           executable: 'validate generated'
           timeout: '2m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
 
   build-matrix:
@@ -134,14 +160,24 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI. The
+      # bootstrap binary lives in ./bin; `build binary` writes its own to .bin.
+      - name: Build flow
+        shell: bash
+        run: go build -o ./bin/${{ runner.os == 'Windows' && 'flow.exe' || 'flow' }} .
       - uses: flowexec/action@v1
         with:
           executable: 'build binary'
+          flow-binary: ./bin/${{ runner.os == 'Windows' && 'flow.exe' || 'flow' }}
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
           timeout: '10m'
       - uses: flowexec/action@v1
         with:
           executable: 'test binary'
+          flow-binary: ./bin/${{ runner.os == 'Windows' && 'flow.exe' || 'flow' }}
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
           timeout: '5m'
 
@@ -153,12 +189,18 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        run: go build -o ./bin/flow .
       - uses: flowexec/action@v1
         with:
           executable: 'scan security'
           timeout: '10m'
+          flow-binary: ./bin/flow
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload govuln SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.3
+        uses: github/codeql-action/upload-sarif@v4.37.4
         with:
           sarif_file: govuln.sarif
