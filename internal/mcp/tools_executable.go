@@ -90,6 +90,7 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
 
 	addRunCommandTool(srv, executor)
+	addRunPythonTool(srv, executor)
 	addRunExecutableTool(srv, executor)
 
 	writeFlowfile := mcp.NewTool("write_flowfile",
@@ -305,6 +306,61 @@ func runCommandHandler(srv *server.MCPServer, executor CommandExecutor) server.T
 		}
 
 		return runTransientTool(ctx, srv, request, executor, cmdArgs, "command failed")
+	}
+}
+
+func addRunPythonTool(srv *server.MCPServer, executor CommandExecutor) {
+	runPython := mcp.NewTool("run_python",
+		mcp.WithDescription("Run Python code through flow instead of a raw shell tool or a scratch file. "+
+			"The script runs with the current workspace's environment and secrets, output is captured to "+
+			"flow's logs, and the run is recorded in execution history with provenance (visible via "+
+			"get_execution_logs / `flow logs`). Prefer this over shelling out to `python -c` or writing a "+
+			"temporary .py file. flow picks the workspace's virtualenv when there is one, so imports resolve "+
+			"against the project's installed dependencies."),
+		mcp.WithString("code", mcp.Required(),
+			mcp.Description("The Python source to run. Multi-line scripts are fine — the code runs from a "+
+				"file, so tracebacks report real line numbers. Read parameters and secrets from os.environ.")),
+		mcp.WithString("label",
+			mcp.Description("Short human-readable label describing what the script does (recorded in history).")),
+		mcp.WithString("dir",
+			mcp.Description("Working directory for the script (defaults to the current directory). This also "+
+				"determines which workspace's environment and virtualenv are used.")),
+		mcp.WithString("workspace",
+			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
+				"the working directory, then the current workspace. Does not change the global current workspace.")),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+		mcp.WithOutputSchema[ExecutionOutput](),
+	)
+	runPython.Annotations = mcp.ToolAnnotation{
+		Title:        "Run Python through flow",
+		ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
+	}
+	srv.AddTool(runPython, runPythonHandler(srv, executor))
+}
+
+func runPythonHandler(srv *server.MCPServer, executor CommandExecutor) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		code, err := request.RequireString("code")
+		if err != nil || code == "" {
+			return toolError(ErrCodeInvalidInput, "code is required"), nil
+		}
+
+		cmdArgs := []string{"exec", "--interpreter", "python", "--cmd", code}
+		if label := request.GetString("label", ""); label != "" {
+			cmdArgs = append(cmdArgs, "--label", label)
+		}
+		if dir := request.GetString("dir", ""); dir != "" {
+			cmdArgs = append(cmdArgs, "--dir", dir)
+		}
+		if ws := request.GetString("workspace", ""); ws != "" {
+			cmdArgs = append(cmdArgs, "--workspace", ws)
+		}
+		if request.GetBool("sync", false) {
+			cmdArgs = append(cmdArgs, "--sync")
+		}
+
+		return runTransientTool(ctx, srv, request, executor, cmdArgs, "python script failed")
 	}
 }
 

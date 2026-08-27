@@ -344,6 +344,14 @@ var CmdFlag = &Metadata{
 	Required: false,
 }
 
+var InterpreterFlag = &Metadata{
+	Name: "interpreter",
+	Usage: "The interpreter to run an ad-hoc --cmd with: 'sh' (default) or 'python'. " +
+		"Only valid with a single --cmd.",
+	Default:  "",
+	Required: false,
+}
+
 var CmdModeFlag = &Metadata{
 	Name:     "mode",
 	Usage:    "How to run multiple --cmd commands: 'serial' (default) or 'parallel'.",
