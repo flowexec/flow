@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
@@ -25,6 +26,17 @@ type runCall struct {
 	dir     string
 	envList []string
 	mode    tuikitIO.LogMode
+}
+
+// absHostVolumePath is an absolute host path valid on the current platform.
+// expandVolumeHost gates on filepath.IsAbs, which rejects a Unix-style path on
+// Windows - there an absolute path needs a drive letter. The container side of a
+// volume stays Unix, since container paths are always Linux paths.
+func absHostVolumePath() string {
+	if runtime.GOOS == "windows" {
+		return `C:\opt\data`
+	}
+	return "/opt/data"
 }
 
 func TestExec(t *testing.T) {
@@ -253,8 +265,11 @@ var _ = Describe("Exec Runner", func() {
 
 		It("expands and mounts workspace-relative and absolute volumes", func() {
 			c := &executable.ExecContainer{
-				Image:   "alpine:3",
-				Volumes: []executable.ExecContainerVolume{"//cache:/cache", "/opt/data:/data:ro"},
+				Image: "alpine:3",
+				Volumes: []executable.ExecContainerVolume{
+					"//cache:/cache",
+					executable.ExecContainerVolume(absHostVolumePath() + ":/data:ro"),
+				},
 			}
 			e := newContainerExec(c, executable.Directory(wsPath))
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
@@ -263,7 +278,7 @@ var _ = Describe("Exec Runner", func() {
 			// mounts[0] is the workspace; the two user volumes follow in order.
 			Expect(mounts[len(mounts)-2].HostPath).To(Equal(filepath.Join(wsPath, "cache")))
 			Expect(mounts[len(mounts)-2].ContainerPath).To(Equal("/cache"))
-			Expect(mounts[len(mounts)-1].HostPath).To(Equal("/opt/data"))
+			Expect(mounts[len(mounts)-1].HostPath).To(Equal(absHostVolumePath()))
 			Expect(mounts[len(mounts)-1].ContainerPath).To(Equal("/data"))
 			Expect(mounts[len(mounts)-1].Options).To(Equal("ro"))
 		})
@@ -306,7 +321,7 @@ var _ = Describe("Exec Runner", func() {
 				Expect(got).To(HaveSuffix(wantSuffix))
 			},
 			Entry("workspace-relative", "//sub/dir", false, filepath.Join("/ws/root", "sub", "dir")),
-			Entry("absolute", "/opt/data", false, "/opt/data"),
+			Entry("absolute", absHostVolumePath(), false, absHostVolumePath()),
 			Entry("home-relative", "~/thing", false, "thing"),
 			Entry("cwd-relative", "./local", false, "local"),
 			Entry("bare relative is rejected", "relative/path", true, ""),

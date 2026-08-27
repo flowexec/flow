@@ -1,7 +1,6 @@
 package store_test
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -22,7 +21,10 @@ var _ = Describe("BoltDataStore", func() {
 	var err error
 
 	BeforeEach(func() {
-		path := filepath.Join(GinkgoT().TempDir(), fmt.Sprintf("test_%s.db", GinkgoT().Name()))
+		// TempDir is already unique per spec, so the file needs no disambiguating
+		// suffix - and deriving one from the spec name broke on Windows, where a
+		// name containing "->" yields an illegal filename (ERROR_INVALID_NAME).
+		path := filepath.Join(GinkgoT().TempDir(), "test.db")
 		ds, err = store.NewDataStore(path)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ds).NotTo(BeNil())
