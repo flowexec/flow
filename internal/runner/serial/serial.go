@@ -252,7 +252,13 @@ func handleExec(
 	}
 
 	parentTask := ctx.CurrentTask
-	if parentTask == nil {
+	// Group the run's output only when there is more than one task. GitHub log
+	// groups are always collapsed, so wrapping a single task's output hides the
+	// only thing worth reading behind a click, with no structure gained.
+	// EndGroup is guarded by the same condition rather than relying on the
+	// logger to ignore an unmatched call, so this is correct on older tuikit too.
+	groupOutput := parentTask == nil && len(execs) > 1
+	if groupOutput {
 		if tal, ok := logger.Log().(io.TaskAwareLogger); ok {
 			tal.BeginGroup(parent.Ref().String())
 		}
@@ -263,7 +269,9 @@ func handleExec(
 		parentTask.Children = append(parentTask.Children, tracker.Tasks()...)
 	} else {
 		if tal, ok := logger.Log().(io.TaskAwareLogger); ok {
-			tal.EndGroup()
+			if groupOutput {
+				tal.EndGroup()
+			}
 			tal.PrintTaskSummary(tracker.Tasks())
 		}
 	}
