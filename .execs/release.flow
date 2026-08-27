@@ -192,8 +192,8 @@ executables:
             echo ""
             echo "✓ Release ${VERSION} complete!"
             echo "  - Binaries published to GitHub Releases"
-            echo "  - Homebrew tap updated"
             echo "  - Docker images published to ghcr.io"
+            echo "  - Homebrew cask generated (published by the release workflow)"
 
   - verb: check
     name: release
