@@ -50,7 +50,7 @@ flow exec EXECUTABLE_ID [-- args...] [flags]
       --cmd flow logs        Run an ad-hoc shell command through flow instead of a named executable. The command runs with the current workspace's environment and is recorded in flow logs. Repeat --cmd to run multiple commands in one invocation (see --mode).
       --dir string           Working directory for an ad-hoc command (defaults to the current directory). Only valid with --cmd.
   -h, --help                 help for exec
-      --interpreter string   The interpreter to run an ad-hoc --cmd with: 'sh' (default) or 'python'. Only valid with a single --cmd.
+      --interpreter string   The interpreter to run ad-hoc --cmd commands with: 'sh' (default) or 'python'. Applies to every --cmd in the invocation.
       --label string         A short, human-readable label for an ad-hoc command (used in history). Only valid with --cmd.
   -m, --log-mode string      Log mode (text, logfmt, json, hidden)
       --mode string          How to run multiple --cmd commands: 'serial' (default) or 'parallel'. (default "serial")

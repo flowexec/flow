@@ -280,6 +280,7 @@ Configuration for a parallel executable.
 | `args` | Arguments to pass to the executable. | `array` (`string`) | [] |  |
 | `cmd` | The command to execute. One of `cmd` or `ref` must be set.  | `string` |  |  |
 | `if` | An expression that determines whether the executable should run, using the Expr language syntax. The expression is evaluated at runtime and must resolve to a boolean value.  The expression has access to OS/architecture information (os, arch), environment variables (env), stored data (store), and context information (ctx) like workspace and paths.  For example, `os == "darwin"` will only run on macOS, `len(store["feature"]) > 0` will run if a value exists in the store, and `env["CI"] == "true"` will run in CI environments. See the [Expr documentation](https://expr-lang.org/docs/language-definition) for more information.  | `string` |  |  |
+| `interpreter` | The interpreter used to run `cmd` for this step. Defaults to `sh`. Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.  | [ExecutableExecInterpreter](#executableexecinterpreter) |  |  |
 | `name` | A human-readable label for this step, used for display purposes. | `string` |  |  |
 | `ref` | A reference to another executable to run in serial. One of `cmd` or `ref` must be set.  | [ExecutableRef](#executableref) |  |  |
 | `retries` | The number of times to retry the executable if it fails. | `integer` | 0 |  |
@@ -431,6 +432,7 @@ Configuration for a serial executable.
 | `args` | Arguments to pass to the executable. | `array` (`string`) | [] |  |
 | `cmd` | The command to execute. One of `cmd` or `ref` must be set.  | `string` |  |  |
 | `if` | An expression that determines whether the executable should run, using the Expr language syntax. The expression is evaluated at runtime and must resolve to a boolean value.  The expression has access to OS/architecture information (os, arch), environment variables (env), stored data (store), and context information (ctx) like workspace and paths.  For example, `os == "darwin"` will only run on macOS, `len(store["feature"]) > 0` will run if a value exists in the store, and `env["CI"] == "true"` will run in CI environments. See the [Expr documentation](https://expr-lang.org/docs/language-definition) for more information.  | `string` |  |  |
+| `interpreter` | The interpreter used to run `cmd` for this step. Defaults to `sh`. Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.  | [ExecutableExecInterpreter](#executableexecinterpreter) |  |  |
 | `name` | A human-readable label for this step, used for display purposes. | `string` |  |  |
 | `ref` | A reference to another executable to run in serial. One of `cmd` or `ref` must be set.  | [ExecutableRef](#executableref) |  |  |
 | `retries` | The number of times to retry the executable if it fails. | `integer` | 0 |  |

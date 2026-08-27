@@ -252,18 +252,13 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 	}
 
 	interpreter := executable.ExecInterpreter(flags.ValueFor[string](cmd, *flags.InterpreterFlag, false))
+	var interpreterPtr *executable.ExecInterpreter
 	if interpreter != "" {
-		// Inline serial/parallel steps carry no interpreter of their own, so a
-		// multi-command batch could only run the first one as requested.
-		if len(commands) > 1 {
-			errhandler.HandleUsage(ctx, cmd, "--interpreter cannot be combined with multiple --cmd values")
-			return
-		}
-		probe := &executable.ExecExecutableType{Interpreter: &interpreter}
-		if err := probe.Validate(); err != nil {
+		if err := (&executable.ExecExecutableType{Interpreter: &interpreter}).Validate(); err != nil {
 			errhandler.HandleUsage(ctx, cmd, "%v", err)
 			return
 		}
+		interpreterPtr = &interpreter
 	}
 
 	joined := strings.Join(commands, "\n")
@@ -278,19 +273,17 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 			Dir:     executable.Directory(dir),
 			LogMode: logMode,
 		}
-		if interpreter != "" {
-			e.Exec.Interpreter = &interpreter
-		}
+		e.Exec.Interpreter = interpreterPtr
 	} else {
 		steps := make(executable.SerialRefConfigList, len(commands))
 		for i, c := range commands {
-			steps[i] = executable.SerialRefConfig{Cmd: c}
+			steps[i] = executable.SerialRefConfig{Cmd: c, Interpreter: interpreterPtr}
 		}
 		mode := flags.ValueFor[string](cmd, *flags.CmdModeFlag, false)
 		if mode == "parallel" {
 			pSteps := make(executable.ParallelRefConfigList, len(commands))
 			for i, c := range commands {
-				pSteps[i] = executable.ParallelRefConfig{Cmd: c}
+				pSteps[i] = executable.ParallelRefConfig{Cmd: c, Interpreter: interpreterPtr}
 			}
 			e.Parallel = &executable.ParallelExecutableType{Execs: pSteps}
 		} else {
