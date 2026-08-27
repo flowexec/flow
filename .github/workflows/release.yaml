@@ -74,8 +74,6 @@ jobs:
       - name: Install release tools
         run: go install github.com/goreleaser/goreleaser/v2@v2.12.5
 
-      # Binaries, GitHub release, and ghcr images. The Homebrew cask is generated
-      # into dist/ here but NOT pushed - see the publish-tap step below.
       - uses: flowexec/action@v1
         with:
           executable: 'publish release --param VERSION=${{ steps.version.outputs.version }}'
@@ -83,6 +81,7 @@ jobs:
           flow-version: 'main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_FLOW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_FLOW_GITHUB_TOKEN }}
 
       # Records whether the GitHub release exists, regardless of what happened
       # after it was cut. Runs even on failure so the docs gate is accurate.
@@ -99,56 +98,6 @@ jobs:
           else
             echo "published=false" >> $GITHUB_OUTPUT
             echo "Release ${{ steps.version.outputs.version }} was NOT published."
-          fi
-
-      # The tap is a distribution side-channel with its own credential. A 403 here
-      # must not cost us the ghcr images or the schema deploy, so it is explicitly
-      # non-fatal and reported in the job summary instead.
-      - name: Publish Homebrew cask
-        id: tap
-        if: ${{ always() && steps.released.outputs.published == 'true' }}
-        continue-on-error: true
-        env:
-          HOMEBREW_FLOW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_FLOW_GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          if [ -z "${HOMEBREW_FLOW_GITHUB_TOKEN:-}" ]; then
-            echo "HOMEBREW_FLOW_GITHUB_TOKEN is not set" >&2
-            exit 1
-          fi
-          CASK="dist/homebrew/Casks/flow.rb"
-          test -f "$CASK" || { echo "cask not generated at $CASK" >&2; exit 1; }
-
-          TMP="$(mktemp -d)"
-          git clone --depth 1 \
-            "https://x-access-token:${HOMEBREW_FLOW_GITHUB_TOKEN}@github.com/flowexec/homebrew-tap.git" \
-            "$TMP"
-          mkdir -p "$TMP/Casks"
-          cp "$CASK" "$TMP/Casks/flow.rb"
-          git -C "$TMP" add Casks/flow.rb
-          if git -C "$TMP" diff --cached --quiet; then
-            echo "Cask already up to date for ${VERSION}"
-            exit 0
-          fi
-          git -C "$TMP" -c user.name=goreleaserbot \
-                        -c user.email=bot@goreleaser.com \
-                        commit -m "Brew cask update for flow version ${VERSION}"
-          git -C "$TMP" push origin HEAD
-
-      - name: Report tap outcome
-        if: ${{ always() && steps.released.outputs.published == 'true' }}
-        run: |
-          if [ "${{ steps.tap.outcome }}" = "success" ]; then
-            echo "- Homebrew tap updated to ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          else
-            {
-              echo "### :warning: Homebrew tap NOT updated"
-              echo ""
-              echo "The release published, but pushing the cask to \`flowexec/homebrew-tap\` failed."
-              echo "\`brew upgrade\` will keep serving the previous version until this is resolved."
-              echo "Check \`HOMEBREW_FLOW_GITHUB_TOKEN\` (needs Contents: Read and write on the tap repo)."
-            } >> $GITHUB_STEP_SUMMARY
           fi
 
   # Publishing the docs is part of releasing: the site serves the JSON schemas

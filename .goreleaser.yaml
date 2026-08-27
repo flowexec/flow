@@ -49,13 +49,10 @@ homebrew_casks:
     binary: flow
     homepage: https://flowexec.io
     license: Apache-2.0
-    # The cask is generated into dist/ and pushed by the release workflow's
-    # "Publish Homebrew cask" step. Keeping the upload out of goreleaser means a
-    # tap credential failure cannot abort the GitHub release or the ghcr publish.
-    skip_upload: "true"
     repository:
       owner: flowexec
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_FLOW_GITHUB_TOKEN }}"
     completions:
       bash: scripts/completions/flow.bash
       zsh: scripts/completions/flow.zsh
