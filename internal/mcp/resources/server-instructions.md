@@ -12,9 +12,10 @@ Prefer running work **through flow** over a raw shell tool — you get the works
 
 - `execute` — run a **named** executable (build, test, lint, deploy, …) by verb + optional ID. Try this first; discover names with `list_executables`.
 - `run_command` — run an **arbitrary** shell command when no named executable fits (a one-off `git status`, `npm ci`, a script). Pass a short `label` so the history entry is self-documenting; `dir` sets the working directory. To run several commands in one call, pass `commands` (array) with `mode: serial` (default) or `parallel`.
+- `run_python` — run **Python** code through flow instead of `python -c` or a scratch file. Pass `code` (multi-line is fine — it runs from a file, so tracebacks report real line numbers) and a short `label`. flow picks the workspace's virtualenv when there is one, so imports resolve against the project's installed dependencies; read parameters and secrets from `os.environ`.
 - `run_executable` — run a **transient executable of any type** from an inline `spec` when a single command isn't enough: a `serial`/`parallel` batch, an HTTP `request`, a `render`, or a `launch`. The `spec` is one executable definition (same shape as an entry under a flowfile's `executables:`); author non-trivial ones against `schemaUrls.flowFile`.
 
-`run_command` and `run_executable` take an optional `workspace` to scope a run to another workspace's environment **without** changing the current workspace; otherwise the workspace is inferred from the run directory, then the current one.
+`run_command`, `run_python`, and `run_executable` take an optional `workspace` to scope a run to another workspace's environment **without** changing the current workspace; otherwise the workspace is inferred from the run directory, then the current one.
 
 Every run you launch is attributed to this session. `get_execution_logs` with `mine: true` returns only what *this* session has run — use it to review your own recent work; `source`/`session`/`status` filter more broadly.
 

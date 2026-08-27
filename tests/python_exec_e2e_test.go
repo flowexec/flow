@@ -98,6 +98,36 @@ var _ = Describe("python exec e2e", func() {
 		})
 	})
 
+	When("running an ad-hoc command with --interpreter", func() {
+		It("runs the command as python", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(ctx.Context, "exec",
+				"--interpreter", "python",
+				"--cmd", "import sys; print('adhoc py', sys.version_info[0])",
+			)).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("adhoc py 3"))
+		})
+
+		It("rejects an unknown interpreter instead of falling back to shell", func() {
+			runner := utils.NewE2ECommandRunner()
+			ctx.ExpectFailure()
+			err := runner.Run(ctx.Context, "exec", "--interpreter", "ruby", "--cmd", "puts 1")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("rejects --interpreter with multiple commands", func() {
+			// Serial/parallel steps carry no interpreter, so only the single-command
+			// form can honour the flag.
+			runner := utils.NewE2ECommandRunner()
+			ctx.ExpectFailure()
+			err := runner.Run(ctx.Context, "exec", "--interpreter", "python",
+				"--cmd", "print(1)", "--cmd", "print(2)")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	When("an executable runs a .py file", func() {
 		It("infers the python interpreter from the extension", func() {
 			dir := ctx.WorkspaceDir()

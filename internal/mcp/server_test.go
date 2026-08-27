@@ -91,6 +91,7 @@ var _ = Describe("MCP Server", func() {
 				"list_executables",
 				"execute",
 				"run_command",
+				"run_python",
 				"run_executable",
 				"get_execution_logs",
 				"sync_executables",
@@ -113,6 +114,7 @@ var _ = Describe("MCP Server", func() {
 			toolsWithSchema := map[string]bool{
 				"execute":        true,
 				"run_command":    true,
+				"run_python":     true,
 				"run_executable": true,
 			}
 
@@ -394,6 +396,70 @@ var _ = Describe("MCP Server", func() {
 				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
 				Expect(out.Truncated).To(BeTrue())
 				Expect(len(out.Output)).To(BeNumerically("<=", 200_000))
+			})
+		})
+
+		Context("run_python tool", func() {
+			It("should run python via flow exec --interpreter python --cmd", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", "print(1)",
+						"--label", "compute", "--dir", "/tmp").
+					Return("1", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
+					"code":  "print(1)",
+					"label": "compute",
+					"dir":   "/tmp",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("1"))
+			})
+
+			It("should forward workspace and sync", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", "print(2)",
+						"--workspace", "other", "--sync").
+					Return("2", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
+					"code":      "print(2)",
+					"workspace": "other",
+					"sync":      true,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("2"))
+			})
+
+			It("should preserve multi-line code as a single argument", func() {
+				// Line structure has to survive intact or tracebacks point at the
+				// wrong line.
+				code := "import sys\nif True:\n    print(sys.version)\n"
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", code).
+					Return("ok", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
+					"code": code,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("ok"))
+			})
+
+			It("should require code", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+			})
+
+			It("should reject empty code rather than running an empty script", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
+					"code": "",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
 			})
 		})
 

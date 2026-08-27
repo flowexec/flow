@@ -16,6 +16,7 @@
       "Bash(flow mcp:*)",
       "Bash(flow exec:*)",
       "mcp__flow__run_command",
+      "mcp__flow__run_python",
       "mcp__flow__run_executable",
       "mcp__flow__get_execution_logs",
       "mcp__flow__sync_executables",

@@ -61,17 +61,18 @@ below: the `.mcp.json` supplies the tools, the skill tells the assistant to reac
 | `get_executable` | Full definition and metadata for a specific executable |
 | `execute` | Run a **named** executable by ref, in a given `dir` or `workspace` |
 | `run_command` | Run one or more **arbitrary** shell commands through flow (with a `label`, working `dir`, and optional `workspace`) — captured in history like any executable |
+| `run_python` | Run **Python** code through flow (with `code`, a `label`, working `dir`, and optional `workspace`) — uses the workspace's virtualenv when there is one |
 | `run_executable` | Run a **transient executable of any type** from an inline `spec` — a serial/parallel batch, an HTTP `request`, a `render`, or a `launch` — without saving a file |
 | `get_execution_logs` | Output from recent runs, filterable by `source`/`session`/`status`, or `mine` for this session's own runs |
 | `sync_executables` | Refresh cached workspace and executable state |
 | `write_flowfile` | Create or update a `.flow` file, validated before writing |
 
-The three run tools form a ladder, closest-fit first: **`execute`** for a task you've already named, **`run_command`** for a one-off shell command, **`run_executable`** for something richer than a single command. Reaching for flow before a raw shell tool means every run inherits the workspace's environment and secrets and is recorded — see [Observability](#observability) below.
+The run tools form a ladder, closest-fit first: **`execute`** for a task you've already named, **`run_command`** for a one-off shell command, **`run_python`** when the one-off is Python rather than shell, **`run_executable`** for something richer than a single command. Reaching for flow before a raw shell tool means every run inherits the workspace's environment and secrets and is recorded — see [Observability](#observability) below.
 
 **Working in a worktree or a fresh clone**
 
 The MCP server inherits whatever directory it was started in, which is often not where you are
-working. Pass `dir` on `execute`, `run_command`, `run_executable`, or `list_executables` and flow
+working. Pass `dir` on `execute`, `run_command`, `run_python`, `run_executable`, or `list_executables` and flow
 resolves the workspace by walking up from *that* directory to the nearest `flow.yaml` — so a git
 worktree or a just-cloned repo works without being registered first. `get_info` reports
 `workspaceRegistered` and `workspaceSource` so you can tell which case you are in; an
@@ -117,9 +118,12 @@ prefer them over raw Bash for anything runnable.
 2. **Arbitrary one-off command?** (a `git ...`, a script) → `mcp__flow__run_command` with the
    command and a short `label`. Runs with workspace env/secrets and lands in `flow logs`.
    Pass `commands` (array) + `mode` (`serial`/`parallel`) to run several in one call.
-3. **Something richer than one command?** (a serial/parallel batch, an HTTP `request`) →
+3. **One-off is Python?** → `mcp__flow__run_python` with `code` and a short `label`, rather
+   than `python -c` or a scratch `.py` file. flow resolves the workspace's virtualenv, so
+   imports see the project's dependencies, and tracebacks report real line numbers.
+4. **Something richer than one command?** (a serial/parallel batch, an HTTP `request`) →
    `mcp__flow__run_executable` with an inline `spec`.
-4. Only fall back to Bash for things that genuinely shouldn't be recorded or that flow isn't
+5. Only fall back to Bash for things that genuinely shouldn't be recorded or that flow isn't
    suited to (e.g. interactive/TTY programs).
 
 Call `mcp__flow__get_info` at the start of a session, or when you need schema URLs to author
@@ -131,7 +135,7 @@ with `mine: true`.
 
 ## Observability
 
-Every run flow launches — whether a named `execute`, a `run_command`, or a `run_executable` — is recorded as one lifecycle-aware history entry: written as `running` when it starts and updated to `completed` or `failed` when it finishes. Runs launched over MCP also capture **provenance**: which tool called (`claude`, `cursor`, …) and its session ID. That turns flow's history into an audit trail of what your assistant did.
+Every run flow launches — whether a named `execute`, a `run_command`, a `run_python`, or a `run_executable` — is recorded as one lifecycle-aware history entry: written as `running` when it starts and updated to `completed` or `failed` when it finishes. Runs launched over MCP also capture **provenance**: which tool called (`claude`, `cursor`, …) and its session ID. That turns flow's history into an audit trail of what your assistant did.
 
 Query it from the CLI:
 

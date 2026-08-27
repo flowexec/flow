@@ -84,6 +84,7 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.LogModeFlag)
 	RegisterFlag(ctx, subCmd, *flags.BackgroundFlag)
 	RegisterFlag(ctx, subCmd, *flags.CmdFlag)
+	RegisterFlag(ctx, subCmd, *flags.InterpreterFlag)
 	RegisterFlag(ctx, subCmd, *flags.CmdModeFlag)
 	RegisterFlag(ctx, subCmd, *flags.LabelFlag)
 	RegisterFlag(ctx, subCmd, *flags.CmdDirFlag)
@@ -250,6 +251,21 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 		logMode = tuikitIO.LogMode(lm)
 	}
 
+	interpreter := executable.ExecInterpreter(flags.ValueFor[string](cmd, *flags.InterpreterFlag, false))
+	if interpreter != "" {
+		// Inline serial/parallel steps carry no interpreter of their own, so a
+		// multi-command batch could only run the first one as requested.
+		if len(commands) > 1 {
+			errhandler.HandleUsage(ctx, cmd, "--interpreter cannot be combined with multiple --cmd values")
+			return
+		}
+		probe := &executable.ExecExecutableType{Interpreter: &interpreter}
+		if err := probe.Validate(); err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%v", err)
+			return
+		}
+	}
+
 	joined := strings.Join(commands, "\n")
 	e := &executable.Executable{
 		Verb:        verb,
@@ -261,6 +277,9 @@ func execAdHoc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, c
 			Cmd:     commands[0],
 			Dir:     executable.Directory(dir),
 			LogMode: logMode,
+		}
+		if interpreter != "" {
+			e.Exec.Interpreter = &interpreter
 		}
 	} else {
 		steps := make(executable.SerialRefConfigList, len(commands))
