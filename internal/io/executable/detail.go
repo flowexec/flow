@@ -28,6 +28,9 @@ func executableDetailOpts(exec *executable.Executable) views.DetailContentOpts {
 func execTypeName(exec *executable.Executable) string {
 	switch {
 	case exec.Exec != nil:
+		if exec.Exec.InterpreterForFile() == executable.InterpreterPython {
+			return "Python Executable"
+		}
 		return "Shell Executable"
 	case exec.Launch != nil:
 		return "Launch Executable"
@@ -143,12 +146,23 @@ func shellExecConfig(e *executable.ExecutableEnvironment, s *executable.ExecExec
 	if s == nil {
 		return ""
 	}
-	md := "## Shell Configuration\n"
+	lang, label := "sh", "Shell"
+	if s.ResolveInterpreter() == executable.InterpreterPython {
+		lang = "python"
+	}
+	if s.InterpreterForFile() == executable.InterpreterPython {
+		label = "Python"
+	}
+
+	md := fmt.Sprintf("## %s Configuration\n", label)
 	if s.LogMode != "" {
 		md += fmt.Sprintf("**Log Mode:** %s\n\n", s.LogMode)
 	}
+	if s.InterpreterIsSet() {
+		md += fmt.Sprintf("**Interpreter:** %s\n\n", s.ResolveInterpreter())
+	}
 	if s.Cmd != "" {
-		md += fmt.Sprintf("**Command**\n```sh\n%s\n```\n", s.Cmd)
+		md += fmt.Sprintf("**Command**\n```%s\n%s\n```\n", lang, s.Cmd)
 	} else if s.File != "" {
 		md += fmt.Sprintf("**File:** `%s`\n\n", s.File)
 	}

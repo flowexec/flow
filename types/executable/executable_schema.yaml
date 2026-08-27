@@ -302,6 +302,14 @@ definitions:
       The host path may be absolute, `~/`-prefixed, or `//`-prefixed (workspace-relative).
       The container path must be absolute.
 
+  ExecInterpreter:
+    type: string
+    enum: [sh, python]
+    description: |
+      The interpreter used to run a command.
+      `sh` uses flow's built-in POSIX shell interpreter; `python` runs the command
+      as a Python script.
+
   ExecContainer:
     type: object
     required: [image]
@@ -381,9 +389,18 @@ definitions:
       file:
         type: string
         description: |
-          The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`).
+          The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`, `.py`).
           Only one of `cmd` or `file` must be set.
         default: ""
+      interpreter:
+        $ref: '#/definitions/ExecInterpreter'
+        description: |
+          The interpreter used to run `cmd`. Defaults to `sh`, flow's built-in POSIX
+          shell interpreter; `python` runs `cmd` as a Python script.
+
+          When set, this also overrides the interpreter inferred from a `file`
+          extension. When unset, `file` is run by the interpreter matching its
+          extension, so `file: script.py` runs under Python without setting this.
       container:
         $ref: '#/definitions/ExecContainer'
       logMode:

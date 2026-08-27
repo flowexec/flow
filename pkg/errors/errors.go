@@ -2,6 +2,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 type ExecutableNotFoundError struct {
@@ -96,6 +97,31 @@ func (e ContainerRuntimeError) Code() string { return ErrCodeExecutionFailed }
 
 func NewContainerRuntimeError(runtime string, err error) ContainerRuntimeError {
 	return ContainerRuntimeError{Runtime: runtime, Err: err}
+}
+
+// InterpreterNotFoundError indicates flow could not locate the interpreter
+// binary required to run an executable, e.g. no python on the PATH.
+type InterpreterNotFoundError struct {
+	Interpreter string
+	// Searched lists the candidates flow tried, in order, so the message can
+	// tell the user where to point FLOW_PYTHON_BIN.
+	Searched []string
+}
+
+func (e InterpreterNotFoundError) Error() string {
+	if len(e.Searched) == 0 {
+		return fmt.Sprintf("no %s interpreter found", e.Interpreter)
+	}
+	return fmt.Sprintf(
+		"no %s interpreter found (tried %s)",
+		e.Interpreter, strings.Join(e.Searched, ", "),
+	)
+}
+
+func (e InterpreterNotFoundError) Code() string { return ErrCodeExecutionFailed }
+
+func NewInterpreterNotFoundError(interpreter string, searched []string) InterpreterNotFoundError {
+	return InterpreterNotFoundError{Interpreter: interpreter, Searched: searched}
 }
 
 // ValidationError indicates a value failed semantic or schema validation.

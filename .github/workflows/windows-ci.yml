@@ -26,6 +26,10 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow
@@ -60,6 +64,10 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow
@@ -153,6 +161,10 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow
@@ -166,6 +178,13 @@ jobs:
           flow-binary: ./bin/flow.exe
           # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: "main"
+      # Run this one directly rather than through the action: it exercises flow's
+      # own interpreter resolution, so the binary under test must be the one that
+      # runs, with no install path in between.
+      - name: Run .py file execution test
+        run: ./bin/flow.exe test python-script
+        env:
+          DISABLE_FLOW_INTERACTIVE: "true"
 
   windows-validation-complete:
     name: "Windows validation complete"

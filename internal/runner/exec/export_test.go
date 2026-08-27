@@ -35,6 +35,20 @@ func SetRunFileFnForTest(fn RunFunc) func() {
 	return func() { runFileFn = prev }
 }
 
+// SetRunPythonFnForTest swaps the python command-runner seam and returns a restore func.
+func SetRunPythonFnForTest(fn RunFunc) func() {
+	prev := runPythonFn
+	runPythonFn = fn
+	return func() { runPythonFn = prev }
+}
+
+// SetRunPythonFileFnForTest swaps the python file-runner seam and returns a restore func.
+func SetRunPythonFileFnForTest(fn RunFunc) func() {
+	prev := runPythonFileFn
+	runPythonFileFn = fn
+	return func() { runPythonFileFn = prev }
+}
+
 // ContainerRunFunc matches the signature of run.RunContainer.
 type ContainerRunFunc = func(
 	ctx stdctx.Context,
