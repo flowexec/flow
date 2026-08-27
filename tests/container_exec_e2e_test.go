@@ -61,6 +61,19 @@ var _ = Describe("container exec e2e", func() {
 			}
 		})
 
+		It("runs python inside the container using the image's interpreter", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(ctx.Context, "exec", "examples:with-python-container",
+				"--log-level", "debug")).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("hello from with-python-container"))
+			Expect(out).To(ContainSubstring("in-container=true"))
+			// A real interpreter ran, and it was the image's - the host venv, if
+			// any, is deliberately not carried in.
+			Expect(out).To(ContainSubstring("py-major=3"))
+		})
+
 		It("runs the command inside the container", func() {
 			runner := utils.NewE2ECommandRunner()
 			stdOut := ctx.StdOut()
