@@ -61,3 +61,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_FLOW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_FLOW_GITHUB_TOKEN }}
+
+  # Publishing the docs is part of releasing: the site serves the JSON schemas
+  # that editors validate flowfiles against, so skipping it ships a release whose
+  # schema the world cannot see. This runs here rather than off the tag push
+  # because a tag pushed with GITHUB_TOKEN does not trigger workflows.
+  release-docs:
+    needs: release-binary
+    # Only for a dispatched release. A tag pushed by a human triggers
+    # release-docs.yaml on its own, and calling it here too would deploy twice.
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-docs.yaml
+    secrets: inherit
