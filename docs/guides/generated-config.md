@@ -5,12 +5,12 @@ title: Imported Executables Config Reference
 # Imported Executables Config Reference
 
 flow can automatically generate executables from scripts and Makefiles using special comments. 
-Supported script types include shell scripts (`.sh`), batch files (`.bat`, `.cmd`), and PowerShell scripts (`.ps1`).
+Supported script types include shell scripts (`.sh`), batch files (`.bat`, `.cmd`), PowerShell scripts (`.ps1`), and Python scripts (`.py`).
 flow parses these comments during workspace synchronization and creates executable definitions that can be run 
 like any other flow executable. See [Importing Executables](executables.md#importing-executables) for more details.
 
 > [!NOTE] The configuration comments must be at the top of the script file or right above the Makefile target definition.
-> - **Shell / PowerShell:** Use `# ` as the comment prefix (e.g., `# f:name=deploy`)
+> - **Shell / PowerShell / Python:** Use `# ` as the comment prefix (e.g., `# f:name=deploy`)
 > - **Batch files:** Use `REM ` or `:: ` as the comment prefix (e.g., `REM f:name=deploy`)
 
 ## Supported Fields
@@ -53,6 +53,16 @@ echo Deploying to %ENV_NAME% with token: %API_TOKEN%...
 # f:params=secretRef:api-key:API_TOKEN|prompt:Environment?:ENV_NAME|text:production:DEFAULT_ENV
 
 Write-Host "Deploying to $env:ENV_NAME with token: $($env:API_TOKEN.Substring(0,8))..."
+```
+
+```python [Python (.py)]
+#!/usr/bin/env python3
+# f:name=deploy-with-secrets f:verb=deploy
+# f:params=secretRef:api-key:API_TOKEN|prompt:Environment?:ENV_NAME|text:production:DEFAULT_ENV
+
+import os
+
+print(f"Deploying to {os.environ['ENV_NAME']} with token: {os.environ['API_TOKEN'][:8]}...")
 ```
 :::
 
@@ -99,6 +109,20 @@ if ($env:DRY_RUN -eq "true") {
 } else {
     Write-Host "Building version $env:VERSION"
 }
+```
+
+```python [Python (.py)]
+#!/usr/bin/env python3
+# f:name=build-app f:verb=build
+# f:args=flag:dry-run:DRY_RUN|pos:1:VERSION|flag:verbose:VERBOSE
+
+import os
+
+version = os.environ["VERSION"]
+if os.environ.get("DRY_RUN") == "true":
+    print(f"DRY RUN: Would build version {version}")
+else:
+    print(f"Building version {version}")
 ```
 :::
 
