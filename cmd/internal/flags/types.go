@@ -346,8 +346,8 @@ var CmdFlag = &Metadata{
 
 var InterpreterFlag = &Metadata{
 	Name: "interpreter",
-	Usage: "The interpreter to run an ad-hoc --cmd with: 'sh' (default) or 'python'. " +
-		"Only valid with a single --cmd.",
+	Usage: "The interpreter to run ad-hoc --cmd commands with: 'sh' (default) or 'python'. " +
+		"Applies to every --cmd in the invocation.",
 	Default:  "",
 	Required: false,
 }

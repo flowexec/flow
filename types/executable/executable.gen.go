@@ -327,6 +327,12 @@ type ParallelRefConfig struct {
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
 
+	// The interpreter used to run `cmd` for this step. Defaults to `sh`.
+	// Only applies to `cmd`; a `ref` uses the referenced executable's own
+	// interpreter.
+	//
+	Interpreter *ExecInterpreter `json:"interpreter,omitempty" yaml:"interpreter,omitempty" mapstructure:"interpreter,omitempty"`
+
 	// A human-readable label for this step, used for display purposes.
 	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 
@@ -540,6 +546,12 @@ type SerialRefConfig struct {
 	// for more information.
 	//
 	If string `json:"if,omitempty" yaml:"if,omitempty" mapstructure:"if,omitempty"`
+
+	// The interpreter used to run `cmd` for this step. Defaults to `sh`.
+	// Only applies to `cmd`; a `ref` uses the referenced executable's own
+	// interpreter.
+	//
+	Interpreter *ExecInterpreter `json:"interpreter,omitempty" yaml:"interpreter,omitempty" mapstructure:"interpreter,omitempty"`
 
 	// A human-readable label for this step, used for display purposes.
 	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`

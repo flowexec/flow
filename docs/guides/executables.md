@@ -350,11 +350,33 @@ Notes and limitations:
   `user: root` to opt out.
 - `.bat`, `.cmd`, and `.ps1` files are not supported with `container`.
 - `container` applies to `exec` executables only; inline `cmd` steps inside `serial`/`parallel` do
-  not inherit it — reference a container-backed executable instead.
+  not inherit it — reference a container-backed executable instead. (`interpreter` *is* available on
+  those steps — see below.)
 - `outputFile` destinations for params/args should resolve under the workspace root so the container
   can see them (use `//`-prefixed or flow-file-relative paths).
 - On macOS, Docker Desktop does not share `/var/folders` by default, so `dir: f:tmp` may fail to
   mount; use a workspace-relative directory instead.
+
+#### Per-step interpreters
+
+Inline `cmd` steps inside `serial` and `parallel` take their own `interpreter`, so one workflow can
+mix shell and Python without splitting into separate executables:
+
+```yaml
+executables:
+  - verb: run
+    name: pipeline
+    serial:
+      execs:
+        - cmd: ./fetch-data.sh
+        - cmd: |
+            import json
+            print(json.load(open("data.json"))["total"])
+          interpreter: python
+```
+
+A step that omits `interpreter` runs under the shell as before. A step using `ref` ignores the field
+— the referenced executable brings its own.
 
 ### serial - Sequential Execution
 

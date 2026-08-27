@@ -117,7 +117,7 @@ func handleExec(
 				return err
 			}
 		case refConfig.Cmd != "":
-			exec = execUtils.ExecutableForCmd(parent, refConfig.Cmd, i)
+			exec = execUtils.ExecutableForCmd(parent, refConfig.Cmd, refConfig.Interpreter, i)
 		default:
 			return errors.New("serial executable must have a ref or cmd")
 		}

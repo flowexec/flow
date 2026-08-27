@@ -158,7 +158,8 @@ func runExecutables(
 			if err != nil {
 				return errors.Wrap(err, fmt.Sprintf("unable to process %s executable %d", stage, i))
 			}
-			exec = execUtils.ExecutableForCmd(templateParent(ws.AssignedName(), ws.Location(), flowfileDir), cmd.String(), i)
+			exec = execUtils.ExecutableForCmd(
+				templateParent(ws.AssignedName(), ws.Location(), flowfileDir), cmd.String(), nil, i)
 		default:
 			return errors.New("post-run executable must have a ref or cmd")
 		}

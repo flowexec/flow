@@ -454,6 +454,11 @@ definitions:
           The command to execute.
           One of `cmd` or `ref` must be set.
         default: ""
+      interpreter:
+        $ref: '#/definitions/ExecInterpreter'
+        description: |
+          The interpreter used to run `cmd` for this step. Defaults to `sh`.
+          Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.
       ref:
         $ref: '#/definitions/Ref'
         description: |
@@ -636,6 +641,11 @@ definitions:
           The command to execute.
           One of `cmd` or `ref` must be set.
         default: ""
+      interpreter:
+        $ref: '#/definitions/ExecInterpreter'
+        description: |
+          The interpreter used to run `cmd` for this step. Defaults to `sh`.
+          Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.
       ref:
         $ref: '#/definitions/Ref'
         description: |

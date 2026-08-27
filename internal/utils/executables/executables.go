@@ -36,14 +36,20 @@ func ExecutableForRef(
 	return exec, nil
 }
 
-func ExecutableForCmd(parent *executable.Executable, cmd string, _ int) *executable.Executable {
+// ExecutableForCmd wraps an inline `cmd` step from a serial/parallel executable
+// in a transient executable. interpreter may be empty, in which case the step
+// runs under flow's built-in shell as it always has.
+func ExecutableForCmd(
+	parent *executable.Executable, cmd string, interpreter *executable.ExecInterpreter, _ int,
+) *executable.Executable {
 	vis := executable.ExecutableVisibility(common.VisibilityInternal)
 	exec := &executable.Executable{
 		Verb:       parent.Verb,
 		Name:       parent.Name,
 		Visibility: &vis,
 		Exec: &executable.ExecExecutableType{
-			Cmd: cmd,
+			Cmd:         cmd,
+			Interpreter: interpreter,
 		},
 	}
 	fields := map[string]interface{}{"executable": exec.Ref().String()}

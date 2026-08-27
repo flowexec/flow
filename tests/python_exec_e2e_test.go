@@ -117,14 +117,40 @@ var _ = Describe("python exec e2e", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("rejects --interpreter with multiple commands", func() {
-			// Serial/parallel steps carry no interpreter, so only the single-command
-			// form can honour the flag.
+		It("applies the interpreter to every command in a batch", func() {
 			runner := utils.NewE2ECommandRunner()
-			ctx.ExpectFailure()
-			err := runner.Run(ctx.Context, "exec", "--interpreter", "python",
-				"--cmd", "print(1)", "--cmd", "print(2)")
-			Expect(err).To(HaveOccurred())
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(ctx.Context, "exec", "--interpreter", "python",
+				"--cmd", "print('batch one')", "--cmd", "print('batch two')")).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("batch one"))
+			Expect(out).To(ContainSubstring("batch two"))
+		})
+	})
+
+	When("a serial executable mixes interpreters across steps", func() {
+		It("runs each step under its own interpreter", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			spec := `{"verb":"run","name":"mixed-steps","serial":{"execs":[` +
+				`{"cmd":"echo from-shell"},` +
+				`{"cmd":"import sys; print('from-python', sys.version_info[0])","interpreter":"python"}` +
+				`]}}`
+			Expect(runner.Run(ctx.Context, "exec", "--spec", spec)).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("from-shell"))
+			Expect(out).To(ContainSubstring("from-python 3"))
+		})
+
+		It("leaves steps without an interpreter on the shell", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			// `echo` is a shell builtin, so this only succeeds if the step really
+			// stayed on flow's POSIX interpreter.
+			spec := `{"verb":"run","name":"default-steps","serial":{"execs":[{"cmd":"echo still-shell"}]}}`
+			Expect(runner.Run(ctx.Context, "exec", "--spec", spec)).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("still-shell"))
 		})
 	})
 
