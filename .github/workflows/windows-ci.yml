@@ -26,12 +26,19 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        shell: bash
+        run: go build -o ./bin/flow.exe .
       - name: Run unit tests
         uses: flowexec/action@v1
         with:
           executable: "test unit"
           params: "CI=true"
           timeout: "5m"
+          flow-binary: ./bin/flow.exe
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: "main"
       - name: Upload unit test coverage
         if: always()
@@ -53,12 +60,19 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        shell: bash
+        run: go build -o ./bin/flow.exe .
       - name: Run E2E tests
         uses: flowexec/action@v1
         with:
           executable: "test e2e"
           params: "CI=true"
           timeout: "10m"
+          flow-binary: ./bin/flow.exe
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: "main"
           secrets: |
             test-secret=test-value-from-action
@@ -112,11 +126,18 @@ jobs:
         with:
           name: windows-flow-binary
           path: .bin
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        shell: bash
+        run: go build -o ./bin/flow.exe .
       - name: Run binary smoke test
         uses: flowexec/action@v1
         with:
           executable: "test binary"
           timeout: "5m"
+          flow-binary: ./bin/flow.exe
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: "main"
 
   native-scripts:
@@ -132,11 +153,18 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+      # Build the flow under review and run every task with it, so CI exercises
+      # the code as it would land on main rather than the released CLI.
+      - name: Build flow
+        shell: bash
+        run: go build -o ./bin/flow.exe .
       - name: Run .bat and .ps1 file execution tests
         uses: flowexec/action@v1
         with:
           executable: "test windows-scripts"
           timeout: "5m"
+          flow-binary: ./bin/flow.exe
+          # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: "main"
 
   windows-validation-complete:
