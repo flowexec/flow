@@ -1,5 +1,6 @@
 ---
 title: Workspaces
+description: "Organize automation across projects with flow workspaces, including git-sourced workspaces and cross-workspace executable references."
 ---
 
 # Workspaces

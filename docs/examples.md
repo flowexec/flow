@@ -1,5 +1,6 @@
 ---
 title: Examples
+description: "Real-world flow files from the flow-examples repository, covering Go projects, Docker, Kubernetes, Git automation, and HTTP APIs."
 ---
 
 # Examples

@@ -1,33 +1,37 @@
-## flow cache clear
+---
+title: flow cache clear
+description: "Clear cache data. Use --all to remove data across all scopes."
+---
+
+# flow cache clear
 
 Clear cache data. Use --all to remove data across all scopes.
 
-### Synopsis
+## Synopsis
 
 The data store is a key-value store that can be used to persist data across executions. Values that are set outside of an executable will persist across all executions until they are cleared. When set within an executable, the data will only persist across serial or parallel sub-executables but all values will be cleared when the parent executable completes. Use the --global flag to force use of the global cache scope, even when called from within an executable.
 
 This will remove all keys and values from the data store.
 
-```
+```shell
 flow cache clear [flags]
 ```
 
-### Options
+## Options
 
-```
-      --all             Force clear all stored data
-  -h, --help            help for clear
-  -o, --output string   Output format. One of: yaml, json, or tui.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `--all` |  | Force clear all stored data |
+| `-h, --help` |  | help for clear |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow cache](flow_cache.md)	 - Manage temporary key-value data.
-
+- [flow cache](flow_cache.md) — Manage temporary key-value data.

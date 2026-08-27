@@ -1,34 +1,36 @@
-## flow config set namespace
+---
+title: flow config set namespace
+description: "Change the current namespace."
+---
+
+# flow config set namespace
 
 Change the current namespace.
 
-```
+```shell
 flow config set namespace NAME [flags]
 ```
 
-### Examples
+## Examples
 
+```shell
+flow config set namespace myproject
+flow config set namespace default
 ```
 
-  flow config set namespace myproject
-  flow config set namespace default
+## Options
 
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for namespace |
 
-### Options
+## Options inherited from parent commands
 
-```
-  -h, --help   help for namespace
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### Options inherited from parent commands
+## See also
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
-
-### SEE ALSO
-
-* [flow config set](flow_config_set.md)	 - Set a global configuration value.
-
+- [flow config set](flow_config_set.md) — Set a global configuration value.

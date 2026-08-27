@@ -27,7 +27,11 @@ func main() {
 	rootCmd := cli.BuildRootCommand(ctx)
 	cli.RegisterAllCommands(ctx, rootCmd)
 	rootCmd.DisableAutoGenTag = true
-	if err := doc.GenMarkdownTree(rootCmd, filepath.Join(rootDir(), DocsDir, cliDir)); err != nil {
+	cliOut := filepath.Join(rootDir(), DocsDir, cliDir)
+	if err := doc.GenMarkdownTree(rootCmd, cliOut); err != nil {
+		panic(err)
+	}
+	if err := polishCLIDocs(cliOut); err != nil {
 		panic(err)
 	}
 

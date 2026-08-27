@@ -57,6 +57,7 @@ func generateMarkdownDocs() {
 					"OneLine":    removeNewlines,
 					"IsRequired": requiredStr,
 					"DefaultStr": defaultStr,
+					"YAMLStr":    yamlString,
 				}).
 				Parse(typeTemplate)
 			if err != nil {
@@ -152,7 +153,8 @@ func typeStr(s *schema.JSONSchema) string {
 func requiredStr(list []string, key schema.FieldKey) string {
 	for _, k := range list {
 		if strings.ToLower(k) == key.Lower() {
-			return "✘"
+			// A cross reads as "not required" to most people; say it plainly.
+			return "Yes"
 		}
 	}
 	return ""
@@ -160,6 +162,24 @@ func requiredStr(list []string, key schema.FieldKey) string {
 
 func removeNewlines(s string) string {
 	return strings.ReplaceAll(s, "\n", " ")
+}
+
+// yamlString renders a double-quoted YAML scalar for use in frontmatter, capped
+// at roughly what a search result will show.
+func yamlString(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	const maxLen = 180
+	if len(s) > maxLen {
+		if cut := strings.LastIndex(s[:maxLen], " "); cut > 0 {
+			s = s[:cut]
+		} else {
+			s = s[:maxLen]
+		}
+		s = strings.TrimRight(s, " .,;:") + "…"
+	}
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return `"` + s + `"`
 }
 
 func defaultStr(val interface{}) string {

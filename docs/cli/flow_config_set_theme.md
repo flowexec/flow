@@ -1,25 +1,29 @@
-## flow config set theme
+---
+title: flow config set theme
+description: "Set the theme for the TUI views"
+---
+
+# flow config set theme
 
 Set the theme for the TUI views
 
-```
+```shell
 flow config set theme [default|dark|light|dracula|tokyo-night] [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for theme
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for theme |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow config set](flow_config_set.md)	 - Set a global configuration value.
-
+- [flow config set](flow_config_set.md) — Set a global configuration value.

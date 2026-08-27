@@ -1,5 +1,6 @@
 ---
 title: Your First Workflow
+description: "Build a complete flow workflow from scratch: create a workspace, write a flow file, and run it."
 ---
 
 # Your First Workflow

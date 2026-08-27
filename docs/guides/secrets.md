@@ -1,5 +1,6 @@
 ---
 title: Working with Secrets
+description: "Store secrets in encrypted local vaults with AES-256, age, keyring, or environment backends, and inject them into runs without committing anything."
 ---
 
 # Working with Secrets

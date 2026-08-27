@@ -1,36 +1,38 @@
-## flow workspace switch
+---
+title: flow workspace switch
+description: "Switch the current workspace."
+---
+
+# flow workspace switch
 
 Switch the current workspace.
 
-```
+```shell
 flow workspace switch NAME [flags]
 ```
 
-### Examples
+## Examples
 
+```shell
+flow workspace switch myproject
+flow workspace switch myproject --fixed
 ```
 
-  flow workspace switch myproject
-  flow workspace switch myproject --fixed
+## Options
 
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-f, --fixed` |  | Set the workspace mode to fixed |
+| `-h, --help` |  | help for switch |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
-### Options
+## Options inherited from parent commands
 
-```
-  -f, --fixed           Set the workspace mode to fixed
-  -h, --help            help for switch
-  -o, --output string   Output format. One of: yaml, json, or tui.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### Options inherited from parent commands
+## See also
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
-
-### SEE ALSO
-
-* [flow workspace](flow_workspace.md)	 - Manage development workspaces.
-
+- [flow workspace](flow_workspace.md) — Manage development workspaces.

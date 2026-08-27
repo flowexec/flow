@@ -1,5 +1,6 @@
 ---
 title: Tuikit
+description: "tuikit is the terminal UI toolkit behind flow's interactive interface."
 ---
 
 > [!NOTE]

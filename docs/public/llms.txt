@@ -26,7 +26,8 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 - [Templates & Workflow Generation](https://flowexec.io/guides/templating): Generate executables from templates with interactive forms
 - [Advanced Workflows](https://flowexec.io/guides/advanced): Serial/parallel pipelines, retries, conditional execution, arguments/params
 - [Interactive UI](https://flowexec.io/guides/interactive): TUI customization and keybindings
-- [Integrations](https://flowexec.io/guides/integrations): MCP server, GitHub Actions, Docker, CI pipelines
+- [GitHub Actions](https://flowexec.io/guides/github-actions): the flowexec/action inputs and outputs, vault secrets in CI, multi-workspace and matrix builds
+- [Containers](https://flowexec.io/guides/containers): running a single executable inside an image via `exec.container`, and running the flow CLI itself from ghcr.io/flowexec/flow
 - [AI Tools](https://flowexec.io/guides/ai-tools): MCP setup and tools (including running arbitrary commands through flow), execution observability/provenance, llms.txt, JSON schemas, Claude Code skills and settings
 
 ## Configuration Reference

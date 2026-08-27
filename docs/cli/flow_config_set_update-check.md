@@ -1,25 +1,29 @@
-## flow config set update-check
+---
+title: flow config set update-check
+description: "Enable or disable background CLI update checks."
+---
+
+# flow config set update-check
 
 Enable or disable background CLI update checks.
 
-```
+```shell
 flow config set update-check [true|false] [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for update-check
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for update-check |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow config set](flow_config_set.md)	 - Set a global configuration value.
-
+- [flow config set](flow_config_set.md) — Set a global configuration value.

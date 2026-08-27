@@ -1,5 +1,6 @@
 ---
 title: Core Concepts
+description: "The three things flow is built on: workspaces that group automation by project, executables that define what runs, and vaults that hold secrets."
 ---
 
 # Core Concepts

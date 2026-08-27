@@ -1,39 +1,41 @@
-## flow secret get
+---
+title: flow secret get
+description: "Get the value of a secret in the current vault."
+---
+
+# flow secret get
 
 Get the value of a secret in the current vault.
 
-```
+```shell
 flow secret get REFERENCE [flags]
 ```
 
-### Examples
+## Examples
 
+```shell
+flow secret get MY_TOKEN
+flow secret get MY_TOKEN --as-plain-text
+flow secret get MY_TOKEN --copy
 ```
 
-  flow secret get MY_TOKEN
-  flow secret get MY_TOKEN --as-plain-text
-  flow secret get MY_TOKEN --copy
+## Options
 
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `--copy` |  | Copy the secret value to the clipboard |
+| `-h, --help` |  | help for get |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
+| `-p, --plaintext` |  | Output the secret value as plain text instead of an obfuscated string |
+| `-V, --vault` | `string` | Vault name to use instead of the current vault. |
 
-### Options
+## Options inherited from parent commands
 
-```
-      --copy            Copy the secret value to the clipboard
-  -h, --help            help for get
-  -o, --output string   Output format. One of: yaml, json, or tui.
-  -p, --plaintext       Output the secret value as plain text instead of an obfuscated string
-  -V, --vault string    Vault name to use instead of the current vault.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### Options inherited from parent commands
+## See also
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
-
-### SEE ALSO
-
-* [flow secret](flow_secret.md)	 - Manage secrets stored in a vault.
-
+- [flow secret](flow_secret.md) — Manage secrets stored in a vault.

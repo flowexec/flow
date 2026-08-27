@@ -1,26 +1,30 @@
-## flow config set notifications
+---
+title: flow config set notifications
+description: "Enable or disable notifications."
+---
+
+# flow config set notifications
 
 Enable or disable notifications.
 
-```
+```shell
 flow config set notifications [true|false] [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help    help for notifications
-      --sound   Update completion sound notification setting
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for notifications |
+| `--sound` |  | Update completion sound notification setting |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow config set](flow_config_set.md)	 - Set a global configuration value.
-
+- [flow config set](flow_config_set.md) — Set a global configuration value.

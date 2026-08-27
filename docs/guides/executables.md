@@ -1,5 +1,6 @@
 ---
 title: Executables
+description: "Every flow executable type and configuration option: exec, serial, parallel, request, render, and launch, with parameters, arguments, and conditionals."
 ---
 
 # Executables

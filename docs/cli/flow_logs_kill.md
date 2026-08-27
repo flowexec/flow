@@ -1,29 +1,33 @@
-## flow logs kill
+---
+title: flow logs kill
+description: "Terminate a running background process by run ID."
+---
+
+# flow logs kill
 
 Terminate a running background process by run ID.
 
-### Synopsis
+## Synopsis
 
 Send a termination signal to a running background process identified by its run ID.
 
-```
+```shell
 flow logs kill RUN_ID [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for kill
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for kill |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow logs](flow_logs.md)	 - View execution history and logs.
-
+- [flow logs](flow_logs.md) — View execution history and logs.

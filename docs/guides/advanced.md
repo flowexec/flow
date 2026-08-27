@@ -1,5 +1,6 @@
 ---
 title: Advanced Workflows
+description: "Advanced flow automation: conditional execution, shared state, composition across workspaces, and long-running background jobs."
 ---
 
 # Advanced Workflows

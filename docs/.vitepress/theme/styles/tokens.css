@@ -1,0 +1,266 @@
+/* ---------------------------------------------------------------------------
+   Everforest, mapped onto VitePress's variable contract.
+
+   VitePress derives almost everything from the primitive scales (gray-*,
+   red-*, …) and the background/text/border trio, so overriding those is enough
+   to retheme the whole default theme without touching its components.
+
+   Accents are Everforest medium. The light-mode accents are darkened from the
+   published palette: Everforest light is a deliberately low-contrast theme, and
+   the stock values land near 2.8:1 on cream, under the 4.5:1 needed for link
+   text. Every value below is checked against its own background.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Everforest light — bg0/bg1/bg2/bg3, fg, greys */
+  --ef-bg0: #FDF6E3;
+  --ef-bg1: #F4F0D9;
+  --ef-bg2: #EFEBD4;
+  --ef-bg3: #E6E2CC;
+  --ef-bg-dim: #F2EFDF;
+  --ef-fg: #5C6A72;
+
+  /* Structure, lifted from jahvon.dev's rhythm layer */
+  --radius: 12px;
+  --gap: 30px;
+}
+
+.dark {
+  /* Everforest dark (medium) */
+  --ef-bg0: #2D353B;
+  --ef-bg1: #343F44;
+  --ef-bg2: #3D484D;
+  --ef-bg3: #475258;
+  --ef-bg-dim: #232A2E;
+  --ef-fg: #D3C6AA;
+}
+
+/* --- Primitive scales ---------------------------------------------------- */
+
+:root {
+  --vp-c-gray-1: #DFD9C2;
+  --vp-c-gray-2: #E6E2CC;
+  --vp-c-gray-3: #EFEBD4;
+  --vp-c-gray-soft: rgba(147, 159, 145, 0.16);
+
+  --vp-c-red-1: #C43E3B;
+  --vp-c-red-2: #D6504C;
+  --vp-c-red-3: #E06663;
+  --vp-c-red-soft: rgba(248, 85, 82, 0.12);
+
+  --vp-c-yellow-1: #8A6100;
+  --vp-c-yellow-2: #A07200;
+  --vp-c-yellow-3: #B98500;
+  --vp-c-yellow-soft: rgba(223, 160, 0, 0.14);
+
+  --vp-c-green-1: #5C6E00;
+  --vp-c-green-2: #6E8300;
+  --vp-c-green-3: #8DA101;
+  --vp-c-green-soft: rgba(141, 161, 1, 0.14);
+
+  --vp-c-purple-1: #A83D86;
+  --vp-c-purple-2: #C04D9B;
+  --vp-c-purple-3: #DF69BA;
+  --vp-c-purple-soft: rgba(223, 105, 186, 0.12);
+}
+
+.dark {
+  --vp-c-gray-1: #4F585E;
+  --vp-c-gray-2: #475258;
+  --vp-c-gray-3: #3D484D;
+  --vp-c-gray-soft: rgba(157, 169, 160, 0.16);
+
+  --vp-c-red-1: #E67E80;
+  --vp-c-red-2: #D96C6E;
+  --vp-c-red-3: #B85B5D;
+  --vp-c-red-soft: rgba(230, 126, 128, 0.16);
+
+  --vp-c-yellow-1: #DBBC7F;
+  --vp-c-yellow-2: #C9A96C;
+  --vp-c-yellow-3: #A98F5A;
+  --vp-c-yellow-soft: rgba(219, 188, 127, 0.16);
+
+  --vp-c-green-1: #A7C080;
+  --vp-c-green-2: #94AC70;
+  --vp-c-green-3: #7B915C;
+  --vp-c-green-soft: rgba(167, 192, 128, 0.16);
+
+  --vp-c-purple-1: #D699B6;
+  --vp-c-purple-2: #C288A5;
+  --vp-c-purple-3: #A5718B;
+  --vp-c-purple-soft: rgba(214, 153, 182, 0.16);
+}
+
+/* --- Brand ---------------------------------------------------------------
+   flow's mark is Everforest blue #7FBBB3 / aqua #83C092. That pair works on
+   the dark ground as-is (5.7:1 and 5.9:1). On cream it is 2:1, so light mode
+   uses a deepened aqua that keeps the hue and clears 4.9:1.
+   ------------------------------------------------------------------------- */
+
+:root {
+  --vp-c-brand-1: #1F7A5A;
+  --vp-c-brand-2: #2A8A67;
+  --vp-c-brand-3: #35A77C;
+  --vp-c-brand-soft: rgba(53, 167, 124, 0.12);
+  --vp-c-brand: var(--vp-c-brand-1);
+}
+
+.dark {
+  --vp-c-brand-1: #7FBBB3;
+  --vp-c-brand-2: #83C092;
+  --vp-c-brand-3: #6BAAA2;
+  --vp-c-brand-soft: rgba(127, 187, 179, 0.16);
+}
+
+/* --- Background ----------------------------------------------------------- */
+
+:root {
+  --vp-c-bg: var(--ef-bg0);
+  --vp-c-bg-alt: var(--ef-bg1);
+  --vp-c-bg-elv: #FFFCF1;
+  --vp-c-bg-soft: var(--ef-bg1);
+}
+
+.dark {
+  --vp-c-bg: var(--ef-bg0);
+  --vp-c-bg-alt: var(--ef-bg-dim);
+  --vp-c-bg-elv: var(--ef-bg1);
+  --vp-c-bg-soft: var(--ef-bg1);
+}
+
+/* --- Borders -------------------------------------------------------------
+   The whole design leans on hairlines instead of shadow, so `border` has to
+   stay visible while `divider` stays quiet.
+   ------------------------------------------------------------------------- */
+
+:root {
+  --vp-c-border: #DBD5BC;
+  --vp-c-divider: #E9E4CE;
+  --vp-c-gutter: #E9E4CE;
+}
+
+.dark {
+  --vp-c-border: #475258;
+  --vp-c-divider: #3D484D;
+  --vp-c-gutter: #232A2E;
+}
+
+/* --- Text ---------------------------------------------------------------- */
+
+:root {
+  --vp-c-text-1: var(--ef-fg);   /* 5.2:1 on bg0 */
+  --vp-c-text-2: #66746C;        /* 4.6:1 — darkened from Everforest grey1 */
+  --vp-c-text-3: #839289;        /* 3.0:1, non-essential only */
+}
+
+.dark {
+  --vp-c-text-1: var(--ef-fg);   /* 7.4:1 */
+  --vp-c-text-2: #9DA9A0;        /* 5.1:1 */
+  --vp-c-text-3: #7A8478;        /* 3.2:1 */
+}
+
+/* --- Code ---------------------------------------------------------------- */
+
+:root {
+  --vp-code-block-bg: #F2EDD8;
+  --vp-code-bg: var(--vp-c-gray-soft);
+  --vp-code-copy-code-bg: var(--ef-bg2);
+  --vp-code-copy-code-hover-bg: var(--ef-bg3);
+  --vp-code-tab-bg: var(--vp-code-block-bg);
+}
+
+.dark {
+  --vp-code-block-bg: var(--ef-bg-dim);
+  --vp-code-copy-code-bg: var(--ef-bg2);
+  --vp-code-copy-code-hover-bg: var(--ef-bg3);
+}
+
+/* --- Buttons -------------------------------------------------------------- */
+
+:root {
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-border: var(--vp-c-brand-1);
+  --vp-button-brand-text: #FDF6E3;
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-hover-border: var(--vp-c-brand-2);
+  --vp-button-brand-hover-text: #FDF6E3;
+  --vp-button-brand-active-bg: var(--vp-c-brand-1);
+  --vp-button-brand-active-border: var(--vp-c-brand-1);
+
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-border: var(--vp-c-border);
+  --vp-button-alt-text: var(--vp-c-text-1);
+  --vp-button-alt-hover-bg: transparent;
+  --vp-button-alt-hover-border: var(--vp-c-text-3);
+  --vp-button-alt-hover-text: var(--vp-c-text-1);
+  --vp-button-alt-active-bg: transparent;
+  --vp-button-alt-active-border: var(--vp-c-text-3);
+}
+
+.dark {
+  --vp-button-brand-text: #2D353B;
+  --vp-button-brand-hover-text: #2D353B;
+}
+
+/* --- Inputs, search, nav -------------------------------------------------- */
+
+:root {
+  --vp-input-bg-color: var(--vp-c-bg);
+  --vp-input-border-color: var(--vp-c-border);
+  --vp-nav-bg-color: var(--vp-c-bg);
+  --vp-sidebar-bg-color: var(--vp-c-bg);
+  --vp-nav-screen-bg-color: var(--vp-c-bg);
+  --vp-local-nav-bg-color: var(--vp-c-bg);
+  --vp-local-search-bg: var(--vp-c-bg-elv);
+  --vp-local-search-result-border: var(--vp-c-divider);
+  --vp-local-search-result-selected-border: var(--vp-c-brand-1);
+  --vp-backdrop-bg-color: rgba(45, 53, 59, 0.55);
+}
+
+/* --- Hero ----------------------------------------------------------------
+   The mark keeps a glow, but as VitePress's blurred plate behind it rather
+   than the old `drop-shadow(5px 5px 100px #D699B6)` on the PNG itself — a
+   diffuse wash instead of a hard offset shadow, and it picks up both brand
+   hues instead of only the purple.
+   ------------------------------------------------------------------------- */
+
+:root {
+  --vp-home-hero-name-color: var(--vp-c-brand-1);
+  --vp-home-hero-name-background: transparent;
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(214, 153, 182, 0.34) 30%,
+    rgba(127, 187, 179, 0.34)
+  );
+  --vp-home-hero-image-filter: blur(38px);
+}
+
+.dark {
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(214, 153, 182, 0.34) 30%,
+    rgba(127, 187, 179, 0.34)
+  );
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(46px);
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(56px);
+  }
+}
+
+/* --- Shadows: none -------------------------------------------------------- */
+
+:root {
+  --vp-shadow-1: none;
+  --vp-shadow-2: none;
+  --vp-shadow-3: 0 0 0 1px var(--vp-c-border);
+  --vp-shadow-4: 0 0 0 1px var(--vp-c-border);
+  --vp-shadow-5: 0 0 0 1px var(--vp-c-border);
+}

@@ -1,5 +1,6 @@
 ---
 title: Breaking Changes
+description: "Breaking changes between flow releases, and what to do about each one when upgrading."
 ---
 
 # Breaking Changes

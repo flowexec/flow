@@ -1,31 +1,35 @@
-## flow mcp
+---
+title: flow mcp
+description: "Start Model Context Provider (MCP) server for AI assistant integration"
+---
+
+# flow mcp
 
 Start Model Context Provider (MCP) server for AI assistant integration
 
-### Synopsis
+## Synopsis
 
 Start a Model Context Protocol server that enables AI assistants to interact with your flow executables, workspaces, and configurations through natural language. AI assistants can discover, validate, and execute flow workflows, making your automation platform accessible through conversational interfaces/clients.
 
 This server used stdio for transport. For more information on MCP, see https://modelcontextprotocol.io
 
-```
+```shell
 flow mcp [flags]
 ```
 
-### Options
+## Options
 
-```
-  -h, --help   help for mcp
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-h, --help` |  | help for mcp |
 
-### Options inherited from parent commands
+## Options inherited from parent commands
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### SEE ALSO
+## See also
 
-* [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
-
+- [flow](flow.md) — flow is a command line interface designed to make managing and running development workflows easier.

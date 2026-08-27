@@ -295,7 +295,7 @@ var TemplateOutputPathFlag = &Metadata{
 var TemplateFlag = &Metadata{
 	Name:      "template",
 	Shorthand: "t",
-	Usage:     "Registered template name. Templates can be registered in the flow configuration file or with `flow set template`.",
+	Usage:     "Registered template name. Templates can be registered in the flow configuration file or with 'flow template add'.",
 	Default:   "",
 	Required:  false,
 }
@@ -338,7 +338,7 @@ var RunningFlag = &Metadata{
 var CmdFlag = &Metadata{
 	Name: "cmd",
 	Usage: "Run an ad-hoc shell command through flow instead of a named executable. " +
-		"The command runs with the current workspace's environment and is recorded in `flow logs`. " +
+		"The command runs with the current workspace's environment and is recorded in flow logs. " +
 		"Repeat --cmd to run multiple commands in one invocation (see --mode).",
 	Default:  []string{},
 	Required: false,
@@ -386,7 +386,7 @@ var SpecFlag = &Metadata{
 	Name: "spec",
 	Usage: "Run a transient executable from an inline definition (any type: exec, serial, parallel, request, " +
 		"render, launch). Accepts inline YAML/JSON, '@path' to read a file, or '-' to read stdin. " +
-		"The executable is not saved to disk but is recorded in `flow logs`.",
+		"The executable is not saved to disk but is recorded in flow logs.",
 	Default:  "",
 	Required: false,
 }

@@ -1,35 +1,21 @@
 ---
 title: AI Tools
+description: "Expose your workflows to Claude Code, Cursor, and any MCP client with flow's MCP server, plus llms.txt, JSON schemas, and a committed skill file."
 ---
 
 # AI Tools
 
-flow exposes your automation to AI coding tools through the [Model Context Protocol](https://modelcontextprotocol.io). Your assistant can discover, run, and write executables the same way you do — with full access to workspace context, secrets handling, and execution history.
+`flow mcp` exposes your automation over the [Model Context Protocol](https://modelcontextprotocol.io).
+A connected assistant discovers, runs, and writes executables through the same engine you use by
+hand — with the workspace's environment, secrets injected at run time, and every run recorded in
+flow's history.
 
-Beyond your named executables, flow can also act as your assistant's **shell**: it wraps arbitrary commands as transient, self-documenting runs so everything the assistant does executes with the right environment and lands in a single, attributable history — instead of scattered, untracked shell calls.
+flow provides the tools and stops there. It makes no model calls of its own and holds no vendor
+keys; the assistant is yours, and flow stays a deterministic task runner underneath it.
 
-## MCP Server
+## Setup
 
-### Setup
-
-Add this to your MCP client configuration (Claude Code, Cursor, Cline, or any MCP-compatible client):
-
-```json
-{
-  "mcpServers": {
-    "flow": {
-      "command": "flow",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-The server runs over stdio. That's the entire setup.
-
-**Commit it to your repo.** Claude Code and Cursor both read a `.mcp.json` at the repository root,
-so checking that file in means every teammate — and every fresh clone — gets flow's tools without
-per-person setup. Put the snippet above in `.mcp.json` and commit it:
+Put this in `.mcp.json` at the root of your repository and commit it:
 
 ```json title=".mcp.json"
 {
@@ -43,11 +29,19 @@ per-person setup. Put the snippet above in `.mcp.json` and commit it:
 }
 ```
 
-Each user still approves the server on first use, so committing it grants no access on its own —
-it just removes the setup step. Pair it with the skill in [Wiring It Up](#wiring-it-up-for-your-project)
-below: the `.mcp.json` supplies the tools, the skill tells the assistant to reach for them.
+That is the entire setup. Claude Code and Cursor both read `.mcp.json` from the repository root, so
+committing it means every teammate and every fresh clone gets flow's tools with no per-person
+configuration. Each user still approves the server on first use, so the file grants no access on its
+own — it only removes the setup step. Other MCP clients take the same object under their own config
+path.
 
-### What's available
+This repo does exactly that: see
+[`.mcp.json`](https://github.com/flowexec/flow/blob/main/.mcp.json) in the flow source.
+
+Connecting the server gives your assistant the tools; it does not make it *reach* for them.
+[Teach it to prefer flow](#teaching-your-assistant-to-use-it) with a committed instruction file.
+
+## What the server exposes
 
 **Tools**
 
@@ -92,11 +86,13 @@ Structured prompts the assistant can invoke for common tasks:
 | `migrate_automation` | Convert existing Makefile, npm scripts, or shell scripts to flow |
 | `explain_flow` | Explain flow concepts and configuration |
 
-## Wiring It Up for Your Project
+## Teaching your assistant to use it
 
-Connecting flow via MCP gives your assistant the tools — but it won't automatically reach for them over plain shell commands. If you ask it to run tests, it might just run `go test ./...` instead of your `test` executable.
+Ask an assistant to run the tests and it will happily type `go test ./...` instead of calling your
+`test` executable — the tools being available is not the same as the tools being used.
 
-The solution is a small instruction file committed to your repo. Claude Code calls these [background skills](https://agentskills.io): they load into context on every session without any manual invocation.
+The fix is a small instruction file committed alongside the `.mcp.json`. Claude Code calls these
+[background skills](https://agentskills.io): they load on every session with no manual invocation.
 
 Create `.claude/skills/flow-context/SKILL.md`:
 
@@ -107,31 +103,48 @@ description: This project uses flow for automation. When asked to build, test, r
 user-invocable: false
 ---
 
-This repository uses flow for automation. The `mcp__flow__*` MCP tools are available —
-prefer them over raw Bash for anything runnable.
+This repository uses **flow** for all development automation. The `mcp__flow__*` MCP tools are
+available — prefer them over raw `Bash` for anything runnable, so it executes with the workspace's
+environment and secrets and is captured in flow's execution history.
 
 ## Running work — pick the closest tool
 
-1. **Named task?** (build, test, lint, deploy, …) → `mcp__flow__list_executables` to find it,
-   then `mcp__flow__execute` with its verb + name. Don't hand-roll a shell command a flow
-   executable already covers.
+1. **Named task?** (build, test, lint, validate, generate, deploy, …) → `mcp__flow__list_executables`
+   to find it, then `mcp__flow__execute` with its verb + name. Don't hand-roll a shell command a
+   flow executable already covers.
 2. **Arbitrary one-off command?** (a `git ...`, a script) → `mcp__flow__run_command` with the
-   command and a short `label`. Runs with workspace env/secrets and lands in `flow logs`.
-   Pass `commands` (array) + `mode` (`serial`/`parallel`) to run several in one call.
-3. **One-off is Python?** → `mcp__flow__run_python` with `code` and a short `label`, rather
-   than `python -c` or a scratch `.py` file. flow resolves the workspace's virtualenv, so
-   imports see the project's dependencies, and tracebacks report real line numbers.
+   command and a short `label`. It runs with workspace env/secrets and lands in `flow logs` with
+   provenance. Pass `commands` (array) + `mode` (`serial`/`parallel`) to run several in one call.
+3. **One-off is Python?** → `mcp__flow__run_python` with `code` and a short `label`, rather than
+   `python -c` or a scratch `.py` file. flow resolves the workspace's virtualenv, so imports see
+   the project's dependencies and tracebacks report real line numbers.
 4. **Something richer than one command?** (a serial/parallel batch, an HTTP `request`) →
    `mcp__flow__run_executable` with an inline `spec`.
-5. Only fall back to Bash for things that genuinely shouldn't be recorded or that flow isn't
-   suited to (e.g. interactive/TTY programs).
+5. Only fall back to `Bash` when a command genuinely shouldn't be recorded or flow isn't the right
+   tool (e.g. interactive/TTY programs).
 
-Call `mcp__flow__get_info` at the start of a session, or when you need schema URLs to author
-.flow files. To review what you've run this session, call `mcp__flow__get_execution_logs`
-with `mine: true`.
+## Key executables in this repo
+
+Common refs: `test unit`, `lint`, `build app`. Use `mcp__flow__list_executables` to discover
+current names — don't assume them.
+
+## Context & authoring
+
+- Call `mcp__flow__get_info` at the start of a session, or when you need schema URLs to author
+  `.flow` files.
+- Author or edit flow files with `mcp__flow__write_flowfile` (validated server-side) rather than
+  writing YAML by hand.
+- To review what you've run this session, call `mcp__flow__get_execution_logs` with `mine: true`;
+  `source`/`session`/`status` filter history more broadly.
 ```
 
-`user-invocable: false` keeps it out of the `/` command menu — it's not something you invoke, it's just always there. Update the body with the specific executables your project uses.
+`user-invocable: false` keeps it out of the `/` command menu — it is not something you invoke, it is
+just always in context.
+
+The **Key executables** section is the part worth tailoring: name the handful of refs your project
+actually uses, and tell the assistant to discover the rest rather than guess. flow's own copy lives
+at [`.claude/skills/flow-context/SKILL.md`](https://github.com/flowexec/flow/blob/main/.claude/skills/flow-context/SKILL.md)
+if you want a working reference.
 
 ## Observability
 
@@ -182,3 +195,49 @@ executables:
 | `flow.yaml` (workspace) | [workspace_schema.json](https://flowexec.io/schemas/workspace_schema.json) |
 | `*.flow.tmpl` (template) | [template_schema.json](https://flowexec.io/schemas/template_schema.json) |
 | User config | [config_schema.json](https://flowexec.io/schemas/config_schema.json) |
+
+## Understanding flow itself
+
+Everything above is about running *your* automation. A different question — how flow itself works,
+why a reference resolves the way it does, what the runner does on a failed step — is answered by the
+Go source rather than by these guides.
+
+[DeepWiki](https://deepwiki.com/flowexec/flow) indexes the `flowexec/flow` repository and answers
+questions against it.
+
+### From this site
+
+Every page here has an **Ask AI** button in the nav. It sends your question to DeepWiki and renders
+the answer inline; expect roughly fifteen seconds.
+
+### From your assistant
+
+DeepWiki runs a public MCP server. Adding it alongside flow's own server lets an assistant read how
+flow works *and* run your workflows in the same session:
+
+```json title=".mcp.json"
+{
+  "mcpServers": {
+    "flow": {
+      "type": "stdio",
+      "command": "flow",
+      "args": ["mcp"]
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    }
+  }
+}
+```
+
+It exposes three tools — `ask_question`, `read_wiki_structure`, and `read_wiki_contents` — and takes
+any `owner/repo` it has indexed, so the same entry answers for your own dependencies too.
+
+This one is genuinely optional. It is a third-party service, it needs network access, and unlike
+flow's server it does put a model in the loop. Leave it out if either of those is a problem.
+
+> [!NOTE]
+> DeepWiki's answers are model-generated. They are grounded in real source, but they can be wrong or
+> lag behind `main`. Treat them as a fast way to find the right file, and confirm anything
+> load-bearing against the code or these guides.

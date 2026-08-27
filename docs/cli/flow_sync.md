@@ -1,42 +1,44 @@
-## flow sync
+---
+title: flow sync
+description: "Refresh workspace cache and discover new executables."
+---
+
+# flow sync
 
 Refresh workspace cache and discover new executables.
 
-### Synopsis
+## Synopsis
 
 Refresh the workspace cache and discover new executables. Use --git to also pull latest changes for all git-sourced workspaces before syncing. Use --force with --git to discard local changes and hard reset to the remote.
 
-```
+```shell
 flow sync [flags]
 ```
 
-### Examples
+## Examples
 
+```shell
+flow sync               # rescan all workspaces for new executables
+flow sync --git         # pull all git-sourced workspaces, then rescan
+flow sync --git --force # hard-reset git workspaces before rescan
 ```
 
-  flow sync               # rescan all workspaces for new executables
-  flow sync --git         # pull all git-sourced workspaces, then rescan
-  flow sync --git --force # hard-reset git workspaces before rescan
+## Options
 
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `--force` |  | Force update by discarding local changes (hard reset to remote) |
+| `-g, --git` |  | Pull latest changes for all git-sourced workspaces before syncing |
+| `-h, --help` |  | help for sync |
+| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
-### Options
+## Options inherited from parent commands
 
-```
-      --force           Force update by discarding local changes (hard reset to remote)
-  -g, --git             Pull latest changes for all git-sourced workspaces before syncing
-  -h, --help            help for sync
-  -o, --output string   Output format. One of: yaml, json, or tui.
-```
+| Flag | Type | Description |
+|------|------|-------------|
+| `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
+| `--sync` |  | Sync flow cache and workspaces |
 
-### Options inherited from parent commands
+## See also
 
-```
-  -L, --log-level string   Log verbosity level (debug, info, fatal) (default "info")
-      --sync               Sync flow cache and workspaces
-```
-
-### SEE ALSO
-
-* [flow](flow.md)	 - flow is a command line interface designed to make managing and running development workflows easier.
-
+- [flow](flow.md) — flow is a command line interface designed to make managing and running development workflows easier.
