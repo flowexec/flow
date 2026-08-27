@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"path/filepath"
+
 	"github.com/pkg/errors"
 
 	"github.com/flowexec/flow/v2/internal/runner"
@@ -16,6 +18,8 @@ import (
 var (
 	runCmdFn         = run.RunCmd
 	runFileFn        = run.RunFile
+	runPythonFn      = run.RunPythonCmd
+	runPythonFileFn  = run.RunPythonFile
 	runContainerFn   = run.RunContainer
 	resolveRuntimeFn = run.ResolveRuntime
 )
@@ -102,8 +106,17 @@ func (r *execRunner) Exec(
 	}
 
 	switch {
+	case execSpec.Cmd != "" && execSpec.ResolveInterpreter() == executable.InterpreterPython:
+		return runPythonFn(execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
 	case execSpec.Cmd != "":
 		return runCmdFn(execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
+	case execSpec.File != "" && execSpec.InterpreterForFile() == executable.InterpreterPython:
+		// An explicit interpreter overrides the extension, so route here rather
+		// than letting RunFile dispatch on the suffix alone.
+		return runPythonFileFn(
+			filepath.Join(targetDir, execSpec.File), targetDir,
+			envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask,
+		)
 	case execSpec.File != "":
 		return runFileFn(execSpec.File, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
 	default:

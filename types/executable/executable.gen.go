@@ -143,10 +143,19 @@ type ExecExecutableType struct {
 	// Dir corresponds to the JSON schema field "dir".
 	Dir Directory `json:"dir,omitempty" yaml:"dir,omitempty" mapstructure:"dir,omitempty"`
 
-	// The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`).
+	// The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`, `.py`).
 	// Only one of `cmd` or `file` must be set.
 	//
 	File string `json:"file,omitempty" yaml:"file,omitempty" mapstructure:"file,omitempty"`
+
+	// The interpreter used to run `cmd`. Defaults to `sh`, flow's built-in POSIX
+	// shell interpreter; `python` runs `cmd` as a Python script.
+	//
+	// When set, this also overrides the interpreter inferred from a `file`
+	// extension. When unset, `file` is run by the interpreter matching its
+	// extension, so `file: script.py` runs under Python without setting this.
+	//
+	Interpreter *ExecInterpreter `json:"interpreter,omitempty" yaml:"interpreter,omitempty" mapstructure:"interpreter,omitempty"`
 
 	// logFields corresponds to the JSON schema field "logFields".
 	logFields map[string]interface{} `json:"logFields,omitempty" yaml:"logFields,omitempty" mapstructure:"logFields,omitempty"`
@@ -159,6 +168,11 @@ type ExecExecutableType struct {
 	// Params corresponds to the JSON schema field "params".
 	Params ParameterList `json:"params,omitempty" yaml:"params,omitempty" mapstructure:"params,omitempty"`
 }
+
+type ExecInterpreter string
+
+const ExecInterpreterPython ExecInterpreter = "python"
+const ExecInterpreterSh ExecInterpreter = "sh"
 
 // The executable schema defines the structure of an executable in the Flow CLI.
 // Executables are the building blocks of workflows and are used to define the

@@ -38,16 +38,20 @@ var _ = Describe("Exec Runner", func() {
 		ctx        *testUtils.ContextWithMocks
 		mockEngine *mocks.MockEngine
 
-		cmdCalls       []runCall
-		fileCalls      []runCall
-		containerSpecs []run.ContainerSpec
-		cmdErr         error
-		fileErr        error
-		containerErr   error
+		cmdCalls        []runCall
+		fileCalls       []runCall
+		pythonCalls     []runCall
+		pythonFileCalls []runCall
+		containerSpecs  []run.ContainerSpec
+		cmdErr          error
+		fileErr         error
+		containerErr    error
 
-		restoreCmd       func()
-		restoreFile      func()
-		restoreContainer func()
+		restoreCmd        func()
+		restoreFile       func()
+		restorePython     func()
+		restorePythonFile func()
+		restoreContainer  func()
 	)
 
 	BeforeEach(func() {
@@ -58,6 +62,8 @@ var _ = Describe("Exec Runner", func() {
 
 		cmdCalls = nil
 		fileCalls = nil
+		pythonCalls = nil
+		pythonFileCalls = nil
 		containerSpecs = nil
 		cmdErr = nil
 		fileErr = nil
@@ -77,6 +83,20 @@ var _ = Describe("Exec Runner", func() {
 			fileCalls = append(fileCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
 			return fileErr
 		})
+		restorePython = exec.SetRunPythonFnForTest(func(
+			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
+		) error {
+			pythonCalls = append(pythonCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
+			return cmdErr
+		})
+		restorePythonFile = exec.SetRunPythonFileFnForTest(func(
+			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
+		) error {
+			pythonFileCalls = append(pythonFileCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
+			return fileErr
+		})
 		restoreContainer = exec.SetRunContainerFnForTest(func(
 			_ stdCtx.Context, spec run.ContainerSpec, _ tuikitIO.LogMode,
 			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
@@ -89,6 +109,8 @@ var _ = Describe("Exec Runner", func() {
 	AfterEach(func() {
 		restoreCmd()
 		restoreFile()
+		restorePython()
+		restorePythonFile()
 		restoreContainer()
 	})
 
@@ -138,6 +160,54 @@ var _ = Describe("Exec Runner", func() {
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 			Expect(cmdCalls).To(HaveLen(1))
 			Expect(cmdCalls[0].target).To(Equal("echo hello"))
+			Expect(fileCalls).To(BeEmpty())
+		})
+
+		It("routes a python cmd through runPython instead of the shell", func() {
+			interpreter := executable.InterpreterPython
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				Cmd: "print('hello')", Interpreter: &interpreter,
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(pythonCalls).To(HaveLen(1))
+			Expect(pythonCalls[0].target).To(Equal("print('hello')"))
+			Expect(cmdCalls).To(BeEmpty())
+		})
+
+		It("routes an explicit sh cmd through runCmd", func() {
+			interpreter := executable.InterpreterSh
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				Cmd: "echo hello", Interpreter: &interpreter,
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(cmdCalls).To(HaveLen(1))
+			Expect(pythonCalls).To(BeEmpty())
+		})
+
+		It("routes a .py file through runPythonFile without an explicit interpreter", func() {
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{File: "script.py"}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(pythonFileCalls).To(HaveLen(1))
+			// The python file seam receives a full path, unlike runFile.
+			Expect(pythonFileCalls[0].target).To(HaveSuffix("script.py"))
+			Expect(fileCalls).To(BeEmpty())
+		})
+
+		It("lets an explicit interpreter override the file extension", func() {
+			interpreter := executable.InterpreterPython
+			e := &executable.Executable{Exec: &executable.ExecExecutableType{
+				File: "script.sh", Interpreter: &interpreter,
+			}}
+			e.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
+
+			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+			Expect(pythonFileCalls).To(HaveLen(1))
 			Expect(fileCalls).To(BeEmpty())
 		})
 

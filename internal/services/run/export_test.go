@@ -33,3 +33,23 @@ func ResetRuntimeCacheForTest() {
 	defer autoRuntimeMu.Unlock()
 	autoRuntime = ""
 }
+
+// EnvValueForTest exposes envValue.
+func EnvValueForTest(envList []string, key string) string {
+	return envValue(envList, key)
+}
+
+// PythonEnvForTest exposes pythonEnv.
+func PythonEnvForTest(envList []string) []string {
+	return pythonEnv(envList)
+}
+
+// VenvPythonForTest exposes venvPython.
+func VenvPythonForTest(venvDir string) string {
+	return venvPython(venvDir)
+}
+
+// PathCandidatesForTest exposes pathCandidates.
+func PathCandidatesForTest() []string {
+	return pathCandidates()
+}

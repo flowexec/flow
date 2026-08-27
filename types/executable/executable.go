@@ -274,9 +274,14 @@ func (e *Executable) Validate() error {
 		return err
 	}
 
-	if e.Exec != nil && e.Exec.Container != nil {
-		if err := e.Exec.Container.Validate(); err != nil {
-			return fmt.Errorf("container validation failed - %w", err)
+	if e.Exec != nil {
+		if err := e.Exec.Validate(); err != nil {
+			return fmt.Errorf("exec validation failed - %w", err)
+		}
+		if e.Exec.Container != nil {
+			if err := e.Exec.Container.Validate(); err != nil {
+				return fmt.Errorf("container validation failed - %w", err)
+			}
 		}
 	}
 

@@ -209,9 +209,25 @@ Standard executable type. Runs a command/file in a subprocess.
 | `cmd` | The command to execute. Only one of `cmd` or `file` must be set.  | `string` |  |  |
 | `container` |  | [ExecutableExecContainer](#executableexeccontainer) |  |  |
 | `dir` |  | [ExecutableDirectory](#executabledirectory) |  |  |
-| `file` | The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`). Only one of `cmd` or `file` must be set.  | `string` |  |  |
+| `file` | The file to execute (`.sh`, `.bat`, `.cmd`, `.ps1`, `.py`). Only one of `cmd` or `file` must be set.  | `string` |  |  |
+| `interpreter` | The interpreter used to run `cmd`. Defaults to `sh`, flow's built-in POSIX shell interpreter; `python` runs `cmd` as a Python script.  When set, this also overrides the interpreter inferred from a `file` extension. When unset, `file` is run by the interpreter matching its extension, so `file: script.py` runs under Python without setting this.  | [ExecutableExecInterpreter](#executableexecinterpreter) |  |  |
 | `logMode` | The log mode to use when running the executable. This can either be `hidden`, `json`, `logfmt` or `text`  | `string` | logfmt |  |
 | `params` |  | [ExecutableParameterList](#executableparameterlist) |  |  |
+
+### ExecutableExecInterpreter
+
+The interpreter used to run a command.
+`sh` uses flow's built-in POSIX shell interpreter; `python` runs the command
+as a Python script.
+
+
+**Type:** `string`
+
+**Valid values:**
+- `sh`
+- `python`
+
+
 
 ### ExecutableLaunchExecutableType
 

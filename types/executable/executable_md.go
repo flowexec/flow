@@ -90,15 +90,18 @@ func shellExecMarkdown(e *ExecutableEnvironment, s *ExecExecutableType) string {
 	if s == nil {
 		return ""
 	}
-	mkdwn := "## Shell Configuration\n"
+	mkdwn := fmt.Sprintf("## %s Configuration\n", interpreterLabel(s))
 	if s.Dir != "" {
 		mkdwn += fmt.Sprintf("**Executed from:** `%s`\n", s.Dir)
 	}
 	if s.LogMode != "" {
 		mkdwn += fmt.Sprintf("**Log Mode:** %s\n", s.LogMode)
 	}
+	if s.InterpreterIsSet() {
+		mkdwn += fmt.Sprintf("**Interpreter:** %s\n", s.ResolveInterpreter())
+	}
 	if s.Cmd != "" {
-		mkdwn += fmt.Sprintf("**Command**\n```sh\n%s\n```\n", s.Cmd)
+		mkdwn += fmt.Sprintf("**Command**\n```%s\n%s\n```\n", codeFence(s), s.Cmd)
 	} else if s.File != "" {
 		mkdwn += fmt.Sprintf("**File:** `%s`\n", s.File)
 	}
@@ -388,4 +391,21 @@ func addPrefx(s, prefix string) string {
 		final += prefix + line + "\n"
 	}
 	return final
+}
+
+// interpreterLabel names the exec section after whatever actually runs the
+// command, so a python executable does not present itself as a shell one.
+func interpreterLabel(s *ExecExecutableType) string {
+	if s.InterpreterForFile() == InterpreterPython {
+		return "Python"
+	}
+	return "Shell"
+}
+
+// codeFence returns the markdown language hint for the command block.
+func codeFence(s *ExecExecutableType) string {
+	if s.ResolveInterpreter() == InterpreterPython {
+		return "python"
+	}
+	return "sh"
 }

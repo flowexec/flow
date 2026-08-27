@@ -231,8 +231,59 @@ executables:
 **Options:**
 - `cmd`: Inline command to run
 - `file`: Script file to execute
+- `interpreter`: Which interpreter runs `cmd` — `sh` (default) or `python` (see below)
 - `logMode`: How to format command output
 - `container`: Run the command or file inside a container image (see below)
+
+#### Running Python
+
+Set `exec.interpreter` to `python` to run `cmd` as a Python script instead of a shell command:
+
+```yaml
+executables:
+  - verb: run
+    name: report
+    exec:
+      interpreter: python
+      cmd: |
+        import json, sys
+        print(json.dumps({"python": sys.version_info[:2]}))
+```
+
+Parameters, arguments, and secrets reach the script through the environment exactly as they do for
+a shell command, so `os.environ` is how you read them.
+
+A `.py` file needs no `interpreter` at all — the extension implies it:
+
+```yaml
+exec:
+  file: scripts/analyze.py
+```
+
+Setting `interpreter` explicitly overrides whatever the extension would have implied.
+
+**How flow finds Python.** A project's virtualenv wins over bare system Python, so a script gets
+the dependencies its repository installed:
+
+| Order | Source |
+|-------|--------|
+| 1 | `FLOW_PYTHON_BIN`, if set |
+| 2 | `$VIRTUAL_ENV` — an activated virtualenv |
+| 3 | `<workspace root>/.venv` |
+| 4 | `python3` on the `PATH` |
+| 5 | `python` on the `PATH` |
+
+`FLOW_PYTHON_BIN` is an environment variable rather than a field, so you can pin an interpreter for
+a whole workspace in its `.env` file, or for one executable via `params`. If it is set but does not
+resolve, the run fails rather than silently falling back to a different interpreter.
+
+On Windows the virtualenv path is `Scripts\python.exe`, and `python` is preferred over `python3` —
+`python3.exe` there is usually the Microsoft Store alias stub rather than a real interpreter.
+
+flow runs `cmd` from a temporary file rather than `python -c`, which keeps your code out of the
+process table and means tracebacks carry real line numbers. It also sets `PYTHONUNBUFFERED=1` so
+output streams as it is produced, and `PYTHONDONTWRITEBYTECODE=1` to keep `__pycache__` out of your
+workspace. Set either variable yourself to override.
 
 #### Running in a container
 

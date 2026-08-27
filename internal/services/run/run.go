@@ -77,6 +77,7 @@ func RunCmd(
 // RunFile executes a file in a specific directory.
 // Shell scripts (.sh) are interpreted via the built-in POSIX shell interpreter.
 // Batch files (.bat, .cmd) are executed via cmd.exe and PowerShell scripts (.ps1) via pwsh/powershell.
+// Python scripts (.py) are executed via the interpreter resolved by ResolvePython.
 func RunFile(
 	filename, dir string,
 	envList []string,
@@ -101,6 +102,8 @@ func RunFile(
 		shell := findPowerShell()
 		return runNativeFile(shell, []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", fullPath},
 			dir, envList, logMode, logger, stdIn, logFields, task)
+	case ".py":
+		return RunPythonFile(fullPath, dir, envList, logMode, logger, stdIn, logFields, task)
 	default:
 		return runShellFile(fullPath, envList, logMode, logger, stdIn, logFields, task)
 	}

@@ -258,6 +258,28 @@ func ExecWithContainer(opts ...Option) *executable.Executable {
 	return e
 }
 
+func ExecWithPython(opts ...Option) *executable.Executable {
+	name := "with-python"
+	interpreter := executable.InterpreterPython
+	e := &executable.Executable{
+		Verb:       "run",
+		Name:       name,
+		Visibility: privateExecVisibility(),
+		Exec: &executable.ExecExecutableType{
+			Interpreter: &interpreter,
+			Cmd: fmt.Sprintf(
+				"import sys\nprint('hello from %s')\nprint('py-major=%%d' %% sys.version_info[0])\n",
+				name,
+			),
+		},
+	}
+	if len(opts) > 0 {
+		vals := NewOptionValues(opts...)
+		e.SetContext(vals.WorkspaceName, vals.WorkspacePath, vals.NamespaceName, vals.FlowFilePath)
+	}
+	return e
+}
+
 func ExecWithWorkspaceEnv(opts ...Option) *executable.Executable {
 	name := "with-workspace-env"
 	e := &executable.Executable{

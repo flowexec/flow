@@ -44,6 +44,14 @@ executables:
         fi
 
   - verb: test
+    name: python-script
+    description: Test .py file execution via the resolved python interpreter
+    tags: [python]
+    exec:
+      dir: //
+      file: .execs/scripts/test-python.py
+
+  - verb: test
     name: unit
     description: Run unit tests with coverage
     serial:
