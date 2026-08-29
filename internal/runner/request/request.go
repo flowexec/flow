@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jahvon/expression"
 	"github.com/pkg/errors"
@@ -51,9 +52,9 @@ func (r *requestRunner) Exec(
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 
-	url := expandEnvVars(envMap, requestSpec.URL)
-	body := expandEnvVars(envMap, requestSpec.Body)
-	if body != "" {
+	url := env.ExpandAuthored(requestSpec.URL, envMap)
+	body := env.ExpandAuthored(requestSpec.Body, envMap)
+	if body != "" && !isJSONDocument(body) {
 		body, err = expression.EvaluateString(body, map[string]interface{}{"env": envMap})
 		if err != nil {
 			return errors.Wrap(err, "unable to evaluate request body expression")
@@ -61,7 +62,7 @@ func (r *requestRunner) Exec(
 	}
 
 	for key, value := range requestSpec.Headers {
-		requestSpec.Headers[key] = expandEnvVars(envMap, value)
+		requestSpec.Headers[key] = env.ExpandAuthored(value, envMap)
 	}
 	restRequest := rest.Request{
 		URL:     url,
@@ -176,11 +177,14 @@ func writeResponseToFile(resp, responseFile string, format executable.RequestRes
 	return nil
 }
 
-func expandEnvVars(envMap map[string]string, value string) string {
-	if envMap == nil || value == "" {
-		return value
+// isJSONDocument reports whether the body is already a JSON object or array, in which
+// case it is sent as written. Anything else is an Expr expression. Restricting this to
+// objects and arrays keeps a bare JSON scalar - `"hello"` reads as a quoted string to
+// JSON and as a bare one to Expr - out of the ambiguous middle.
+func isJSONDocument(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	if !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "[") {
+		return false
 	}
-	return os.Expand(value, func(envVar string) string {
-		return envMap[envVar]
-	})
+	return json.Valid([]byte(trimmed))
 }
