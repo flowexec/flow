@@ -329,7 +329,7 @@
       "type": "object",
       "properties": {
         "args": {
-          "description": "Arguments to pass to the executable.",
+          "description": "Arguments to pass to the executable, in the same form you would type them\n(`--flag=value` or a positional value). `$VAR` references are expanded against the\nparent's environment.\n\nThe parent's environment always reaches the executable; values listed here override\nwhat it would otherwise inherit for the arguments they set.\n",
           "type": "array",
           "default": [],
           "items": {
@@ -357,7 +357,7 @@
         },
         "ref": {
           "$ref": "#/definitions/ExecutableRef",
-          "description": "A reference to another executable to run in serial.\nOne of `cmd` or `ref` must be set.\n",
+          "description": "A reference to another executable to run in parallel.\nOne of `cmd` or `ref` must be set.\n",
           "default": ""
         },
         "retries": {
@@ -460,7 +460,7 @@
           "$ref": "#/definitions/ExecutableArgumentList"
         },
         "body": {
-          "description": "The body of the request.",
+          "description": "The body of the request. `$VAR` references are expanded first.\n\nIf the result is a JSON object or array, it is sent as written. Otherwise it is\nevaluated as an Expr expression that must produce a string, which lets you build\na body from values that need escaping: `'{\"prompt\":' + toJSON(env[\"PROMPT\"]) + '}'`.\n",
           "type": "string",
           "default": ""
         },
@@ -582,7 +582,7 @@
       "type": "object",
       "properties": {
         "args": {
-          "description": "Arguments to pass to the executable.",
+          "description": "Arguments to pass to the executable, in the same form you would type them\n(`--flag=value` or a positional value). `$VAR` references are expanded against the\nparent's environment.\n\nThe parent's environment always reaches the executable; values listed here override\nwhat it would otherwise inherit for the arguments they set.\n",
           "type": "array",
           "default": [],
           "items": {

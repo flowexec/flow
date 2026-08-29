@@ -7,6 +7,65 @@ description: "Breaking changes between flow releases, and what to do about each 
 
 This page documents changes that require you to update existing flow files, config, or scripts when upgrading between major versions.
 
+## v2.3.0
+
+### Argument Values Are Literals
+
+**What changed:** A `$word` inside an argument value used to be expanded against flow's
+environment and deleted when it did not resolve, so `flow run notify 'costs $5'` arrived as
+`costs `. Argument values a user supplies are now literals, and pass through unchanged.
+
+Expansion still applies to the strings you write in a flow file — an argument's `default`,
+and a serial or parallel step's `args:` entries.
+
+**How to migrate:** If you relied on a *caller* passing `$VAR` for flow to expand, expand it
+in your shell instead (`flow run deploy "$TARGET"`), or move the reference into the
+argument's `default`.
+
+---
+
+### Unresolved Variables Are Left As Written
+
+**What changed:** A `$VAR` that does not resolve now stays in the string instead of becoming
+an empty string. This affects every context flow expands: `dir` paths, `cmd` strings, an
+argument's `default`, a step's `args:`, and a request's `url`, `headers` and `body`.
+
+**Before:** `url: "https://$API_HOST/deploy"` with no `API_HOST` requested `https:///deploy`.
+
+**After:** the same executable requests `https://$API_HOST/deploy`, which fails visibly.
+
+`$$` now produces a literal `$`, which previously had no escape.
+
+**How to migrate:** Nothing to change if your variables resolve. If you were depending on a
+missing variable collapsing to nothing, give it an explicit empty default via a `param`.
+
+---
+
+### Request Bodies That Are JSON Are Sent As JSON
+
+**What changed:** `body` was always evaluated as an Expr expression, and a JSON object is
+valid Expr — it parses as a map literal and was stringified as
+`map[environment:prod version:1.0]`. A body that is a JSON object or array is now sent as
+written. Anything else is still an expression.
+
+**How to migrate:** Nothing to change. A JSON body starts working; an expression body that
+returns a string keeps working.
+
+---
+
+### Step `args:` Override Inherited Values
+
+**What changed:** A serial or parallel step's `args:` list is now applied to the child, and
+overrides values it would otherwise inherit from the parent. It was previously ignored when
+the parent declared matching `args` — its mere presence, not its contents, was what enabled
+inheritance.
+
+**How to migrate:** Remove any placeholder `args:` entries added to force inheritance, such
+as `args: ["-"]`. Inheritance no longer requires them, and a placeholder now reaches the
+child as a real value.
+
+---
+
 ## v2.0.0
 
 ### `fromFile` Import Field Removed

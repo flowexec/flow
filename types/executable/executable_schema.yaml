@@ -462,7 +462,7 @@ definitions:
       ref:
         $ref: '#/definitions/Ref'
         description: |
-          A reference to another executable to run in serial.
+          A reference to another executable to run in parallel.
           One of `cmd` or `ref` must be set.
         default: ""
       if:
@@ -482,7 +482,13 @@ definitions:
         type: array
         items:
          type: string
-        description: Arguments to pass to the executable.
+        description: |
+          Arguments to pass to the executable, in the same form you would type them
+          (`--flag=value` or a positional value). `$VAR` references are expanded against the
+          parent's environment.
+
+          The parent's environment always reaches the executable; values listed here override
+          what it would otherwise inherit for the arguments they set.
         default: []
       retries:
         type: integer
@@ -583,7 +589,12 @@ definitions:
         default: ""
       body:
         type: string
-        description: The body of the request.
+        description: |
+          The body of the request. `$VAR` references are expanded first.
+
+          If the result is a JSON object or array, it is sent as written. Otherwise it is
+          evaluated as an Expr expression that must produce a string, which lets you build
+          a body from values that need escaping: `'{"prompt":' + toJSON(env["PROMPT"]) + '}'`.
         default: ""
       headers:
         type: object
@@ -669,7 +680,13 @@ definitions:
         type: array
         items:
           type: string
-        description: Arguments to pass to the executable.
+        description: |
+          Arguments to pass to the executable, in the same form you would type them
+          (`--flag=value` or a positional value). `$VAR` references are expanded against the
+          parent's environment.
+
+          The parent's environment always reaches the executable; values listed here override
+          what it would otherwise inherit for the arguments they set.
         default: []
       reviewRequired:
         type: boolean

@@ -196,12 +196,12 @@ Configuration for a parallel executable.
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
-| `args` | `array` (`string`) | [] |  | Arguments to pass to the executable. |
+| `args` | `array` (`string`) | [] |  | Arguments to pass to the executable, in the same form you would type them (`--flag=value` or a positional value). `$VAR` references are expanded against the parent's environment.  The parent's environment always reaches the executable; values listed here override what it would otherwise inherit for the arguments they set.  |
 | `cmd` | `string` |  |  | The command to execute. One of `cmd` or `ref` must be set.  |
 | `if` | `string` |  |  | An expression that determines whether the executable should run, using the Expr language syntax. The expression is evaluated at runtime and must resolve to a boolean value.  The expression has access to OS/architecture information (os, arch), environment variables (env), stored data (store), and context information (ctx) like workspace and paths.  For example, `os == "darwin"` will only run on macOS, `len(store["feature"]) > 0` will run if a value exists in the store, and `env["CI"] == "true"` will run in CI environments. See the [Expr documentation](https://expr-lang.org/docs/language-definition) for more information.  |
 | `interpreter` | [ExecutableExecInterpreter](#executableexecinterpreter) |  |  | The interpreter used to run `cmd` for this step. Defaults to `sh`. Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.  |
 | `name` | `string` |  |  | A human-readable label for this step, used for display purposes. |
-| `ref` | [ExecutableRef](#executableref) |  |  | A reference to another executable to run in serial. One of `cmd` or `ref` must be set.  |
+| `ref` | [ExecutableRef](#executableref) |  |  | A reference to another executable to run in parallel. One of `cmd` or `ref` must be set.  |
 | `retries` | `integer` | 0 |  | The number of times to retry the executable if it fails. |
 
 ### ExecutableParallelRefConfigList
@@ -263,7 +263,7 @@ Makes an HTTP request.
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
 | `args` | [ExecutableArgumentList](#executableargumentlist) |  |  |  |
-| `body` | `string` |  |  | The body of the request. |
+| `body` | `string` |  |  | The body of the request. `$VAR` references are expanded first.  If the result is a JSON object or array, it is sent as written. Otherwise it is evaluated as an Expr expression that must produce a string, which lets you build a body from values that need escaping: `'{"prompt":' + toJSON(env["PROMPT"]) + '}'`.  |
 | `headers` | `map` (`string` -> `string`) | map[] |  | A map of headers to include in the request. |
 | `logResponse` | `boolean` | false |  | If set to true, the response will be logged as program output. |
 | `method` | `string` | GET |  | The HTTP method to use when making the request. |
@@ -305,7 +305,7 @@ Configuration for a serial executable.
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
-| `args` | `array` (`string`) | [] |  | Arguments to pass to the executable. |
+| `args` | `array` (`string`) | [] |  | Arguments to pass to the executable, in the same form you would type them (`--flag=value` or a positional value). `$VAR` references are expanded against the parent's environment.  The parent's environment always reaches the executable; values listed here override what it would otherwise inherit for the arguments they set.  |
 | `cmd` | `string` |  |  | The command to execute. One of `cmd` or `ref` must be set.  |
 | `if` | `string` |  |  | An expression that determines whether the executable should run, using the Expr language syntax. The expression is evaluated at runtime and must resolve to a boolean value.  The expression has access to OS/architecture information (os, arch), environment variables (env), stored data (store), and context information (ctx) like workspace and paths.  For example, `os == "darwin"` will only run on macOS, `len(store["feature"]) > 0` will run if a value exists in the store, and `env["CI"] == "true"` will run in CI environments. See the [Expr documentation](https://expr-lang.org/docs/language-definition) for more information.  |
 | `interpreter` | [ExecutableExecInterpreter](#executableexecinterpreter) |  |  | The interpreter used to run `cmd` for this step. Defaults to `sh`. Only applies to `cmd`; a `ref` uses the referenced executable's own interpreter.  |

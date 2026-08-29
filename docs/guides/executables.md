@@ -111,7 +111,9 @@ executables:
 - `secretRef`: Reference to vault secret
 - `prompt`: Interactive user input
 - `text`: Static value
-- `envFile`: Load environment variables from a file
+- `envFile`: Load environment variables from a file. Relative paths resolve against the
+  directory holding the flow file (`FLOW_DEFINITION_DIR`), not the workspace root or your
+  current directory — setting `dir` on the executable does not change this.
 
 ### Arguments (`args`)
 
@@ -407,6 +409,14 @@ of the parent executable are inherited by the child executables.
 - `retries`: Number of times to retry failed steps
 - `reviewRequired`: Pause for user confirmation
 
+Each step also accepts:
+- `name`: A label for the step, shown in place of the ref in output
+- `if`: An [Expr expression](./expressions) gating whether the step runs
+- `interpreter`: The interpreter for a `cmd` step (a `ref` uses its own)
+- `args`: Arguments to pass to a `ref`'d executable, written as you would type them
+  (`--flag=value` or a positional value). `$VAR` expands against the parent environment.
+  These override what the step would otherwise inherit.
+
 ### parallel - Concurrent Execution
 
 Run multiple steps simultaneously:
@@ -433,6 +443,14 @@ of the parent executable are inherited by the child executables.
 - `maxThreads`: Maximum concurrent operations (default: 5)
 - `failFast`: Stop all operations on first failure (default: true)
 - `retries`: Number of times to retry failed operations
+
+Each step also accepts:
+- `name`: A label for the step, shown in place of the ref in output
+- `if`: An [Expr expression](./expressions) gating whether the step runs
+- `interpreter`: The interpreter for a `cmd` step (a `ref` uses its own)
+- `args`: Arguments to pass to a `ref`'d executable, written as you would type them
+  (`--flag=value` or a positional value). `$VAR` expands against the parent environment.
+  These override what the step would otherwise inherit.
 
 ### launch - Open Applications
 
@@ -493,12 +511,31 @@ executables:
 - `method`: HTTP method (GET, POST, PUT, PATCH, DELETE)
 - `url`: Request URL (required)
 - `headers`: Custom headers
-- `body`: Request body
+- `body`: Request body — sent as written when it is JSON, otherwise an [Expr expression](./expressions)
 - `timeout`: Request timeout
 - `validStatusCodes`: Acceptable status codes
 - `logResponse`: Log response body
 - `transformResponse`: Expr expression to reshape the response before output or file save
 - `responseFile`: Save response to file
+
+**Request bodies:**
+
+`$VAR` references in `body` are expanded first, the same as in `url` and `headers`. What
+happens next depends on the result:
+
+- **A JSON object or array is sent as written.** This is the common case — write the body
+  as JSON and interpolate values with `$VAR`.
+- **Anything else is evaluated as an [Expr expression](./expressions)** that must produce a
+  string.
+
+The expression form is worth reaching for when a value needs escaping. `toJSON` quotes and
+escapes its argument, so a prompt containing quotes or newlines survives intact — where
+pasting it into a JSON template would produce a malformed body:
+
+```yaml
+body: >
+  '{"model":' + toJSON(env["MODEL"]) + ',"prompt":' + toJSON(env["PROMPT"]) + '}'
+```
 
 **Transforming responses with `transformResponse`:**
 
@@ -524,7 +561,8 @@ transformResponse: fromJSON(body)["name"]
 transformResponse: upper(fromJSON(body)["status"])
 
 # Format an array as newline-separated output
-transformResponse: join(map(fromJSON(body)["items"], #["name"]), "\n")
+# NOTE: quote any expression containing '#' - in YAML, a space then '#' starts a comment
+transformResponse: 'join(map(fromJSON(body)["items"], #["name"]), "\n")'
 
 # Conditional with fallback
 transformResponse: code == 200 ? fromJSON(body)["result"] : "error " + string(code) + ": " + body
@@ -560,6 +598,10 @@ executables:
 |----------|------|-------------|
 | `env` | `map[string]string` | Params and environment variables from the executable |
 | `data` | `any` | Parsed contents of `templateDataFile` (nil if not set) |
+
+By default a `render` opens an interactive viewer. To use one non-interactively — in CI, a
+script, or piped into another command — set `DISABLE_FLOW_INTERACTIVE=true`, which makes it
+write plain text to stdout. See [Interactive UI](./interactive#disabling-the-tui).
 
 `data` is typed based on the file content — a JSON object becomes a map, a JSON array becomes a slice. Access fields with bracket notation: `data["key"]` or `data[0]["field"]`.
 
