@@ -303,7 +303,15 @@ type ParallelExecutableType struct {
 
 // Configuration for a parallel executable.
 type ParallelRefConfig struct {
-	// Arguments to pass to the executable.
+	// Arguments to pass to the executable, in the same form you would type them
+	// (`--flag=value` or a positional value). `$VAR` references are expanded against
+	// the
+	// parent's environment.
+	//
+	// The parent's environment always reaches the executable; values listed here
+	// override
+	// what it would otherwise inherit for the arguments they set.
+	//
 	Args []string `json:"args,omitempty" yaml:"args,omitempty" mapstructure:"args,omitempty"`
 
 	// The command to execute.
@@ -336,7 +344,7 @@ type ParallelRefConfig struct {
 	// A human-readable label for this step, used for display purposes.
 	Name string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 
-	// A reference to another executable to run in serial.
+	// A reference to another executable to run in parallel.
 	// One of `cmd` or `ref` must be set.
 	//
 	Ref Ref `json:"ref,omitempty" yaml:"ref,omitempty" mapstructure:"ref,omitempty"`
@@ -419,7 +427,14 @@ type RequestExecutableType struct {
 	// Args corresponds to the JSON schema field "args".
 	Args ArgumentList `json:"args,omitempty" yaml:"args,omitempty" mapstructure:"args,omitempty"`
 
-	// The body of the request.
+	// The body of the request. `$VAR` references are expanded first.
+	//
+	// If the result is a JSON object or array, it is sent as written. Otherwise it is
+	// evaluated as an Expr expression that must produce a string, which lets you
+	// build
+	// a body from values that need escaping: `'{"prompt":' + toJSON(env["PROMPT"]) +
+	// '}'`.
+	//
 	Body string `json:"body,omitempty" yaml:"body,omitempty" mapstructure:"body,omitempty"`
 
 	// A map of headers to include in the request.
@@ -523,7 +538,15 @@ type SerialExecutableType struct {
 
 // Configuration for a serial executable.
 type SerialRefConfig struct {
-	// Arguments to pass to the executable.
+	// Arguments to pass to the executable, in the same form you would type them
+	// (`--flag=value` or a positional value). `$VAR` references are expanded against
+	// the
+	// parent's environment.
+	//
+	// The parent's environment always reaches the executable; values listed here
+	// override
+	// what it would otherwise inherit for the arguments they set.
+	//
 	Args []string `json:"args,omitempty" yaml:"args,omitempty" mapstructure:"args,omitempty"`
 
 	// The command to execute.
