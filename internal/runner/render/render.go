@@ -67,7 +67,7 @@ func (r *renderRunner) Exec(
 	inputArgs []string,
 ) error {
 	renderSpec := e.Render
-	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
+	if _, err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 

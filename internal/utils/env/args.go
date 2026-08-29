@@ -14,7 +14,22 @@ func BuildArgsEnvMap(
 	execArgs []string,
 	env map[string]string,
 ) (map[string]string, error) {
-	al, err := resolveArgValues(args, execArgs, env)
+	al, err := resolveArgValues(args, execArgs, env, false)
+	if err != nil {
+		return nil, err
+	}
+	return argsToEnvMap(al, env), nil
+}
+
+// BuildChildArgsEnvMap is BuildArgsEnvMap with the precedence a child step needs: a value
+// passed explicitly on the step wins over one inherited from the parent environment. At
+// the top level the opposite holds, so that a --param override beats a positional arg.
+func BuildChildArgsEnvMap(
+	args executable.ArgumentList,
+	execArgs []string,
+	env map[string]string,
+) (map[string]string, error) {
+	al, err := resolveArgValues(args, execArgs, env, true)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +76,13 @@ func resolveArgValues(
 	args executable.ArgumentList,
 	execArgs []string,
 	env map[string]string,
+	preferInput bool,
 ) (executable.ArgumentList, error) {
 	if len(args) == 0 {
 		return nil, nil
 	}
 	flagArgs, posArgs := parseArgs(args, execArgs)
-	if err := setArgValues(args, flagArgs, posArgs, env); err != nil {
+	if err := setArgValues(args, flagArgs, posArgs, env, preferInput); err != nil {
 		return nil, err
 	}
 	return args, nil
@@ -77,26 +93,36 @@ func setArgValues(
 	flagArgs map[string]string,
 	posArgs []string,
 	env map[string]string,
+	preferInput bool,
 ) error {
-	for i, arg := range args {
-		if arg.EnvKey != "" {
-			if val, found := env[arg.EnvKey]; found {
-				// Use the input value if provided
-				arg.Set(val)
-				args[i] = arg
-				continue
-			}
+	fromEnv := func(arg executable.Argument) (string, bool) {
+		if arg.EnvKey == "" {
+			return "", false
 		}
-
+		val, found := env[arg.EnvKey]
+		return val, found
+	}
+	fromInput := func(arg executable.Argument) (string, bool) {
 		if arg.Flag != "" {
-			if val, ok := flagArgs[arg.Flag]; ok {
+			val, ok := flagArgs[arg.Flag]
+			return val, ok
+		}
+		if arg.Pos != nil && *arg.Pos != 0 && *arg.Pos <= len(posArgs) {
+			return posArgs[*arg.Pos-1], true
+		}
+		return "", false
+	}
+
+	sources := []func(executable.Argument) (string, bool){fromEnv, fromInput}
+	if preferInput {
+		sources = []func(executable.Argument) (string, bool){fromInput, fromEnv}
+	}
+	for i, arg := range args {
+		for _, source := range sources {
+			if val, ok := source(arg); ok {
 				arg.Set(val)
 				args[i] = arg
-			}
-		} else if arg.Pos != nil && *arg.Pos != 0 {
-			if *arg.Pos <= len(posArgs) {
-				arg.Set(posArgs[*arg.Pos-1])
-				args[i] = arg
+				break
 			}
 		}
 	}

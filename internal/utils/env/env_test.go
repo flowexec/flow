@@ -53,7 +53,7 @@ var _ = Describe("Env", func() {
 				promptedEnv := map[string]string{
 					"TEST_PROMPT": "my value",
 				}
-				err := env.SetEnv("demo", exec, []string{}, promptedEnv)
+				_, err := env.SetEnv("demo", exec, []string{}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_TEXT")
 				Expect(exists).To(BeTrue())
@@ -82,7 +82,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := map[string]string{}
-				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				_, err = env.SetEnv("", exec, []string{}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 
 				val, exists := os.LookupEnv("TEST_ENV_VAR1")
@@ -111,7 +111,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := map[string]string{}
-				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				_, err = env.SetEnv("", exec, []string{}, promptedEnv)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("env key SPECIFIC_VAR not found in env file"))
 			})
@@ -136,7 +136,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := map[string]string{}
-				err = env.SetEnv("", exec, []string{}, promptedEnv)
+				_, err = env.SetEnv("", exec, []string{}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 
 				val, exists := os.LookupEnv("TEST_ENV_VAR2")
@@ -156,7 +156,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := map[string]string{}
-				err := env.SetEnv("", exec, []string{}, promptedEnv)
+				_, err := env.SetEnv("", exec, []string{}, promptedEnv)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to read .env file"))
 			})
@@ -170,7 +170,7 @@ TEST_ENV_VAR3=value3`
 					},
 				}
 				promptedEnv := make(map[string]string)
-				err := env.SetEnv("", exec, []string{"test", "--flag=value"}, promptedEnv)
+				_, err := env.SetEnv("", exec, []string{"test", "--flag=value"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_POS")
 				Expect(exists).To(BeTrue())
@@ -186,7 +186,7 @@ TEST_ENV_VAR3=value3`
 					Args:   []executable.Argument{{EnvKey: "TEST_KEY", Flag: "flag"}},
 				}
 				promptedEnv := map[string]string{"TEST_KEY": "input"}
-				err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
+				_, err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_KEY")
 				Expect(exists).To(BeTrue())
@@ -199,7 +199,7 @@ TEST_ENV_VAR3=value3`
 					Args:   []executable.Argument{{EnvKey: "TEST_KEY", Flag: "flag"}},
 				}
 				promptedEnv := map[string]string{"TEST_KEY": "input"}
-				err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
+				_, err := env.SetEnv("", exec, []string{"--flag=flag"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				val, exists := os.LookupEnv("TEST_KEY")
 				Expect(exists).To(BeTrue())
@@ -212,7 +212,7 @@ TEST_ENV_VAR3=value3`
 					Args: []executable.Argument{{EnvKey: "TEST_LITERAL", Pos: &pos}},
 				}
 				promptedEnv := map[string]string{"KNOWN": "resolved"}
-				err := env.SetEnv("", exec, []string{"arg has $5 and $HOME and $KNOWN"}, promptedEnv)
+				_, err := env.SetEnv("", exec, []string{"arg has $5 and $HOME and $KNOWN"}, promptedEnv)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(os.Getenv("TEST_LITERAL")).To(Equal("arg has $5 and $HOME and $KNOWN"))
 			})
@@ -223,7 +223,7 @@ TEST_ENV_VAR3=value3`
 					Params: []executable.Parameter{{EnvKey: "GREETING", Text: "hello"}},
 					Args:   []executable.Argument{{EnvKey: "TEST_DEFAULT", Pos: &pos, Default: "$GREETING world"}},
 				}
-				err := env.SetEnv("", exec, []string{}, map[string]string{})
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(os.Getenv("TEST_DEFAULT")).To(Equal("hello world"))
 			})
@@ -233,7 +233,7 @@ TEST_ENV_VAR3=value3`
 				exec := &executable.ExecutableEnvironment{
 					Args: []executable.Argument{{EnvKey: "TEST_UNRESOLVED", Pos: &pos, Default: "$$5 for $NOPE"}},
 				}
-				err := env.SetEnv("", exec, []string{}, map[string]string{})
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for $NOPE"))
 			})
@@ -244,7 +244,7 @@ TEST_ENV_VAR3=value3`
 					Args: []executable.Argument{{EnvKey: "TEST_INPUT", Pos: &pos}},
 				}
 				inputArgs := []string{"$HOME"}
-				err := env.SetEnv("", exec, inputArgs, map[string]string{"HOME": "/somewhere"})
+				_, err := env.SetEnv("", exec, inputArgs, map[string]string{"HOME": "/somewhere"})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(inputArgs).To(Equal([]string{"$HOME"}))
 			})

@@ -15,7 +15,10 @@ import (
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
-// SetEnv sets environment variables based on the parameters and arguments defined in the executable environment.
+// SetEnv sets environment variables based on the parameters and arguments defined in the
+// executable environment. It returns the fully resolved environment - the input env plus
+// every param and argument value - so callers can hand it to child executables, which do
+// not inherit the process environment this writes to.
 //
 //nolint:gocognit
 func SetEnv(
@@ -23,7 +26,7 @@ func SetEnv(
 	exec *executable.ExecutableEnvironment,
 	inputArgs []string,
 	inputEnv map[string]string,
-) error {
+) (map[string]string, error) {
 	var errs []error
 
 	envMap := make(map[string]string)
@@ -89,9 +92,9 @@ func SetEnv(
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("failed to set values for parameters: %w", errors.Join(errs...))
+		return envMap, fmt.Errorf("failed to set values for parameters: %w", errors.Join(errs...))
 	}
-	return nil
+	return envMap, nil
 }
 
 // CreateTempEnvFiles creates temporary files for parameters and arguments that have an OutputFile defined.
@@ -121,7 +124,7 @@ func CreateTempEnvFiles(
 		tempFiles = append(tempFiles, dest)
 	}
 
-	al, err := resolveArgValues(exec.Args, args, promptedEnv)
+	al, err := resolveArgValues(exec.Args, args, promptedEnv, false)
 	if err != nil {
 		errs = append(errs, err)
 	} else {

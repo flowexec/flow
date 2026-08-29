@@ -162,7 +162,7 @@ var _ = Describe("ParallelRunner", func() {
 			parentExec := &executable.Executable{
 				Parallel: &executable.ParallelExecutableType{
 					Args:  executable.ArgumentList{{EnvKey: "TEST_VAR", Pos: &pos1}},
-					Execs: []executable.ParallelRefConfig{{Ref: "test:child", Args: []string{"var=$TEST_VAR"}}},
+					Execs: []executable.ParallelRefConfig{{Ref: "test:child", Args: []string{"--var=$TEST_VAR"}}},
 				},
 			}
 			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")

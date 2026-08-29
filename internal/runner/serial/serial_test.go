@@ -25,6 +25,19 @@ func TestSerialRunner(t *testing.T) {
 	RunSpecs(t, "Serial Runner Suite")
 }
 
+// expectEngineRun stands in for the engine, running each step's function inline so the
+// child runner mock sees the env and args the runner built for it.
+func expectEngineRun(mockEngine *mocks.MockEngine) {
+	mockEngine.EXPECT().
+		Execute(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ stdCtx.Context, execs []engine.Exec, _ ...engine.OptionFunc) engine.ResultSummary {
+			for _, exec := range execs {
+				Expect(exec.Function()).To(Succeed())
+			}
+			return engine.ResultSummary{Results: []engine.Result{{}}}
+		})
+}
+
 var _ = Describe("SerialRunner", func() {
 	var (
 		ctx        *testUtils.ContextWithMocks
@@ -151,6 +164,121 @@ var _ = Describe("SerialRunner", func() {
 			Expect(serialRnr.Exec(ctx.Ctx, rootExec, mockEngine, make(map[string]string), nil)).To(Succeed())
 		})
 
+		It("should pass parent params to a child that declares no args", func() {
+			parentExec := &executable.Executable{
+				Serial: &executable.SerialExecutableType{
+					Params: executable.ParameterList{{EnvKey: "OUTERP", Text: "outer-param"}},
+					Execs:  []executable.SerialRefConfig{{Ref: "test:child"}},
+				},
+			}
+			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")
+
+			childExec := &executable.Executable{
+				Request: &executable.RequestExecutableType{URL: "http://127.0.0.1/path?p=$OUTERP"},
+			}
+			childExec.SetContext("test", "/test", "test", "/test/child.flow")
+			ctx.ExecutableCache.EXPECT().GetExecutableByRef(gomock.Any()).Return(childExec, nil).Times(1)
+
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
+			ctx.RunnerMock.EXPECT().
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(
+					_ *context.Context,
+					_ *executable.Executable,
+					_ engine.Engine,
+					inputEnv map[string]string,
+					_ []string,
+				) error {
+					Expect(inputEnv).To(HaveKeyWithValue("OUTERP", "outer-param"))
+					return nil
+				}).Times(1)
+
+			expectEngineRun(mockEngine)
+			Expect(serialRnr.Exec(ctx.Ctx, parentExec, mockEngine, make(map[string]string), nil)).To(Succeed())
+		})
+
+		It("should pass a parent arg to a child that declares no step args", func() {
+			pos1 := 1
+			parentExec := &executable.Executable{
+				Serial: &executable.SerialExecutableType{
+					Args:  executable.ArgumentList{{EnvKey: "OUTER", Pos: &pos1}},
+					Execs: []executable.SerialRefConfig{{Ref: "test:child"}},
+				},
+			}
+			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")
+
+			childExec := &executable.Executable{
+				Exec: &executable.ExecExecutableType{
+					Cmd:  "echo $OUTER",
+					Args: executable.ArgumentList{{EnvKey: "OUTER", Pos: &pos1, Default: "(unset)"}},
+				},
+			}
+			childExec.SetContext("test", "/test", "test", "/test/child.flow")
+			ctx.ExecutableCache.EXPECT().GetExecutableByRef(gomock.Any()).Return(childExec, nil).Times(1)
+
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
+			ctx.RunnerMock.EXPECT().
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(
+					_ *context.Context,
+					_ *executable.Executable,
+					_ engine.Engine,
+					inputEnv map[string]string,
+					inputArgs []string,
+				) error {
+					Expect(inputEnv).To(HaveKeyWithValue("OUTER", "passed-in"))
+					Expect(inputArgs).To(ContainElement("passed-in"))
+					return nil
+				}).Times(1)
+
+			expectEngineRun(mockEngine)
+			Expect(serialRnr.Exec(
+				ctx.Ctx, parentExec, mockEngine, make(map[string]string), []string{"passed-in"},
+			)).To(Succeed())
+		})
+
+		It("should let args declared on the step override the inherited value", func() {
+			pos1 := 1
+			parentExec := &executable.Executable{
+				Serial: &executable.SerialExecutableType{
+					Args: executable.ArgumentList{{EnvKey: "OUTER", Pos: &pos1}},
+					Execs: []executable.SerialRefConfig{{
+						Ref:  "test:child",
+						Args: []string{"--var=step-value"},
+					}},
+				},
+			}
+			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")
+
+			childExec := &executable.Executable{
+				Exec: &executable.ExecExecutableType{
+					Cmd:  "echo $OUTER",
+					Args: executable.ArgumentList{{EnvKey: "OUTER", Flag: "var"}},
+				},
+			}
+			childExec.SetContext("test", "/test", "test", "/test/child.flow")
+			ctx.ExecutableCache.EXPECT().GetExecutableByRef(gomock.Any()).Return(childExec, nil).Times(1)
+
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
+			ctx.RunnerMock.EXPECT().
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(
+					_ *context.Context,
+					_ *executable.Executable,
+					_ engine.Engine,
+					inputEnv map[string]string,
+					_ []string,
+				) error {
+					Expect(inputEnv).To(HaveKeyWithValue("OUTER", "step-value"))
+					return nil
+				}).Times(1)
+
+			expectEngineRun(mockEngine)
+			Expect(serialRnr.Exec(
+				ctx.Ctx, parentExec, mockEngine, make(map[string]string), []string{"parent-value"},
+			)).To(Succeed())
+		})
+
 		It("should pass environment args from parent to child executables", func() {
 			pos1 := 1
 			parentExec := &executable.Executable{
@@ -158,7 +286,7 @@ var _ = Describe("SerialRunner", func() {
 					Args: executable.ArgumentList{{EnvKey: "TEST_VAR", Pos: &pos1}},
 					Execs: []executable.SerialRefConfig{{
 						Ref:  "test:child",
-						Args: []string{"var=$TEST_VAR"},
+						Args: []string{"--var=$TEST_VAR"},
 					},
 					},
 				},

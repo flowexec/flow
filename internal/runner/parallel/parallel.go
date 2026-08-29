@@ -3,10 +3,8 @@ package parallel
 import (
 	stdCtx "context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/flowexec/tuikit/io"
 	"github.com/jahvon/expression"
@@ -48,7 +46,8 @@ func (r *parallelRunner) Exec(
 	inputArgs []string,
 ) error {
 	parallelSpec := e.Parallel
-	if err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
+	parentEnv, err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv)
+	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 
@@ -67,7 +66,7 @@ func (r *parallelRunner) Exec(
 	}
 
 	if len(parallelSpec.Execs) > 0 {
-		return handleExec(ctx, e, eng, parallelSpec, inputEnv)
+		return handleExec(ctx, e, eng, parallelSpec, parentEnv)
 	}
 
 	return fmt.Errorf("no parallel executables to run")
@@ -77,7 +76,7 @@ func handleExec(
 	ctx *context.Context, parent *executable.Executable,
 	eng engine.Engine,
 	parallelSpec *executable.ParallelExecutableType,
-	inputEnv map[string]string,
+	parentEnv map[string]string,
 ) error {
 	groupCtx, cancel := stdCtx.WithCancel(ctx)
 	defer cancel()
@@ -102,7 +101,7 @@ func handleExec(
 		root.WorkspacePath(),
 		root.FlowFilePath(),
 		ctx.ProcessTmpDir,
-		inputEnv,
+		parentEnv,
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to expand directory")
@@ -145,40 +144,7 @@ func handleExec(
 		exec := resolved[i].exec
 
 		// Prepare the environment and arguments for the child executable
-		childEnv := make(map[string]string)
-		childArgs := make([]string, 0)
-		maps.Copy(childEnv, inputEnv)
-		if len(refConfig.Args) > 0 {
-			execEnv := exec.Env()
-			if execEnv == nil || execEnv.Args == nil {
-				logger.Log().Warnf(
-					"executable %s has no arguments defined, skipping argument processing",
-					exec.Ref().String(),
-				)
-			} else {
-				for _, arg := range os.Environ() {
-					kv := strings.SplitN(arg, "=", 2)
-					if len(kv) == 2 {
-						childEnv[kv[0]] = kv[1]
-					}
-				}
-
-				if parallelSpec.Args == nil {
-					childArgs = refConfig.Args
-				} else {
-					childArgs = envUtils.BuildArgsFromEnv(execEnv.Args, childEnv)
-					if len(childArgs) == 0 {
-						childArgs = refConfig.Args // If no resolved args, fallback to original args
-					}
-				}
-
-				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, childArgs, childEnv)
-				if err != nil {
-					logger.Log().WrapError(err, "unable to process arguments")
-				}
-				maps.Copy(childEnv, a)
-			}
-		}
+		childEnv, childArgs := runner.ChildEnvAndArgs(parentEnv, refConfig.Args, exec)
 
 		// Set log fields and directory for the executable
 		switch {
@@ -244,7 +210,7 @@ func handleExec(
 					return false, err
 				}
 
-				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, parentEnv)
 				truthy, err := expression.IsTruthy(ifCondition, conditionalData)
 				if err != nil {
 					return false, err
