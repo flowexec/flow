@@ -18,6 +18,13 @@ func (a *Argument) Value() string {
 	return a.value
 }
 
+// IsSet reports whether a value was resolved for the argument, as opposed to it falling
+// back to the declared default. Callers use this to tell a user-supplied literal apart
+// from an author-written default that may contain $VAR references.
+func (a *Argument) IsSet() bool {
+	return a.value != ""
+}
+
 func (a *Argument) Validate() error {
 	if err := utils.ValidateOneOf("argument type", a.Flag, a.Pos); err != nil {
 		return err

@@ -1,7 +1,6 @@
 package env
 
 import (
-	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -19,7 +18,7 @@ func BuildArgsEnvMap(
 	if err != nil {
 		return nil, err
 	}
-	return argsToEnvMap(al), nil
+	return argsToEnvMap(al, env), nil
 }
 
 func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[string]string, posArgs []string) {
@@ -66,14 +65,6 @@ func resolveArgValues(
 	if len(args) == 0 {
 		return nil, nil
 	}
-	if env != nil {
-		// Expand environment variables in arguments
-		for i, a := range execArgs {
-			execArgs[i] = os.Expand(a, func(key string) string {
-				return env[key]
-			})
-		}
-	}
 	flagArgs, posArgs := parseArgs(args, execArgs)
 	if err := setArgValues(args, flagArgs, posArgs, env); err != nil {
 		return nil, err
@@ -112,15 +103,26 @@ func setArgValues(
 	return args.ValidateValues()
 }
 
-func argsToEnvMap(args executable.ArgumentList) map[string]string {
+func argsToEnvMap(args executable.ArgumentList, env map[string]string) map[string]string {
 	envMap := make(map[string]string)
 	for _, arg := range args {
 		if arg.OutputFile != "" && arg.EnvKey == "" {
 			continue
 		}
-		envMap[arg.EnvKey] = arg.Value()
+		envMap[arg.EnvKey] = argValue(arg, env)
 	}
 	return envMap
+}
+
+// argValue returns the value to use for a resolved argument. A value that was actually
+// supplied - on the command line, or inherited from the parent environment - is a
+// literal. Only the declared default is authored in the flow file, so only it is
+// expanded.
+func argValue(arg executable.Argument, env map[string]string) string {
+	if arg.IsSet() {
+		return arg.Value()
+	}
+	return ExpandAuthored(arg.Default, env)
 }
 
 func filterArgsWithOutputFile(args executable.ArgumentList) executable.ArgumentList {

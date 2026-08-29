@@ -82,15 +82,10 @@ func SetEnv(
 		errs = append(errs, fmt.Errorf("failed to build inputArgs env map: %w", err))
 	}
 	for key, val := range argEnvMap {
-		val = os.Expand(val, func(key string) string {
-			if v, ok := envMap[key]; ok {
-				return v
-			}
-			return ""
-		})
 		if err := os.Setenv(key, val); err != nil {
 			errs = append(errs, fmt.Errorf("failed to set env %s: %w", key, err))
 		}
+		envMap[key] = val
 	}
 
 	if len(errs) > 0 {
@@ -132,7 +127,7 @@ func CreateTempEnvFiles(
 	} else {
 		filtered := filterArgsWithOutputFile(al)
 		for _, arg := range filtered {
-			dest, err := createEnvValueFile(arg.OutputFile, arg.Value(), wsPath, flowfilePath, promptedEnv)
+			dest, err := createEnvValueFile(arg.OutputFile, argValue(arg, promptedEnv), wsPath, flowfilePath, promptedEnv)
 			if err != nil {
 				errs = append(errs, err)
 				continue
@@ -215,12 +210,7 @@ func BuildEnvMap(
 		return nil, fmt.Errorf("failed to build inputArgs env map: %w", err)
 	}
 	for key, val := range argEnvMap {
-		envMap[key] = os.Expand(val, func(key string) string {
-			if v, ok := envMap[key]; ok {
-				return v
-			}
-			return ""
-		})
+		envMap[key] = val
 	}
 
 	if len(errs) > 0 {
