@@ -49,3 +49,44 @@ func SerialExecWithExit(opts ...Option) *executable.Executable {
 	}
 	return e
 }
+
+// InheritedEnvChildExec echoes the values it resolved, so a parent's propagation can be
+// asserted from the command output. It declares no step args of its own.
+func InheritedEnvChildExec(opts ...Option) *executable.Executable {
+	pos := 1
+	e := &executable.Executable{
+		Verb:       "run",
+		Name:       "inherited-env-child",
+		Visibility: privateExecVisibility(),
+		Exec: &executable.ExecExecutableType{
+			Args: executable.ArgumentList{{EnvKey: "OUTER", Pos: &pos, Default: "(unset)"}},
+			Cmd:  "echo \"child OUTER=[$OUTER] OUTERP=[$OUTERP]\"",
+		},
+	}
+	if len(opts) > 0 {
+		vals := NewOptionValues(opts...)
+		e.SetContext(vals.WorkspaceName, vals.WorkspacePath, vals.NamespaceName, vals.FlowFilePath)
+	}
+	return e
+}
+
+// SerialExecWithInheritedEnv refs a child without declaring step args, the shape in which
+// a parent's args and params used to stop reaching the child entirely.
+func SerialExecWithInheritedEnv(opts ...Option) *executable.Executable {
+	pos := 1
+	e := &executable.Executable{
+		Verb:       "run",
+		Name:       "serial-inherited-env",
+		Visibility: privateExecVisibility(),
+		Serial: &executable.SerialExecutableType{
+			Args:   executable.ArgumentList{{EnvKey: "OUTER", Pos: &pos, Default: "outer-value"}},
+			Params: executable.ParameterList{{EnvKey: "OUTERP", Text: "outer-param"}},
+			Execs:  []executable.SerialRefConfig{{Ref: "run examples:inherited-env-child"}},
+		},
+	}
+	if len(opts) > 0 {
+		vals := NewOptionValues(opts...)
+		e.SetContext(vals.WorkspaceName, vals.WorkspacePath, vals.NamespaceName, vals.FlowFilePath)
+	}
+	return e
+}
