@@ -5,7 +5,7 @@ description: "The Expr-based expression language flow uses for conditionals and 
 
 # Expression Language
 
-flow uses the [Expr language](https://expr-lang.org) for dynamic expressions and template logic. The same language appears in four places — learn it once and it works everywhere.
+flow uses the [Expr language](https://expr-lang.org) for dynamic expressions and template logic. The same language appears in five places — learn it once and it works everywhere.
 
 ## Where Expressions Are Used
 
@@ -13,12 +13,13 @@ flow uses the [Expr language](https://expr-lang.org) for dynamic expressions and
 |---------|--------|-------------------|:-----------:|
 | Step `if` conditions | Bare expression (no delimiters) | `os`, `arch`, `env`, `store`, `ctx` | ✓ |
 | `transformResponse` | Bare expression (no delimiters) | `body`, `code`, `status`, `headers` | |
+| Request `body` | Bare expression, **only when the body is not JSON** | `env` | |
 | Template files (`.flow.tmpl`) | <span v-pre>`{{ expression }}`</span> delimiters | `name`, `form`, `env`, `os`, `arch`, … | |
 | Render templates (render `.md`) | <span v-pre>`{{ expression }}`</span> delimiters | `env`, `data` | |
 
 For the variables available in each surface, see the context-specific docs:
 - **Step conditions** — [Advanced Workflows: Conditional Execution](./advanced#conditional-execution)
-- **transformResponse** — [Executables: request](./executables#request---http-requests)
+- **transformResponse** and **request body** — [Executables: request](./executables#request---http-requests)
 - **Template files** — [Templates & Workflow Generation: Template Language](./templating#template-language)
 - **Render templates** — [Executables: render](./executables#render---dynamic-documentation)
 
@@ -30,6 +31,37 @@ Expr is a sandboxed, typed, Go-native expression language. The key things that d
 - There are no pipes (`|`) for function application — use `upper(name)`, not `name | upper`
 - `if` conditions use `==`, `not`, `and`, `or` — not `eq`, `ne`, `!`
 - Shell execution via `$("command")` is available **only in step `if` conditions** — not in `transformResponse` or template surfaces
+
+## Writing Expressions in a Flow File
+
+Expressions live inside YAML, and YAML gets a say in what reaches flow. Three things bite:
+
+**`#` starts a comment.** The closure shorthand used by `map()` and `filter()` is also YAML's
+comment marker, so an unquoted expression is silently truncated at the first ` #`:
+
+```yaml
+# WRONG — YAML keeps only `join(map(fromJSON(body)["items"],`
+transformResponse: join(map(fromJSON(body)["items"], #["name"]), "\n")
+
+# RIGHT
+transformResponse: 'join(map(fromJSON(body)["items"], #["name"]), "\n")'
+```
+
+The give-away is an error pointing past the end of what you wrote, like
+`unexpected token EOF (1:32)`.
+
+**A leading `{` starts a flow mapping.** Quote or use a block scalar for anything beginning
+with `{` or `[`.
+
+**A bare `: ` splits a key from a value.** Quote expressions containing one.
+
+Single quotes are the safest wrapper, since Expr's own string literals are usually double
+quoted. When an expression needs both, reach for a block scalar:
+
+```yaml
+if: >
+  env["DEPLOY_ENV"] == "production" and $("git branch --show-current") == "main"
+```
 
 ## Core Syntax
 

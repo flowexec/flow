@@ -48,6 +48,16 @@ var _ = Describe("exec e2e", func() {
 		Entry("request with transformation", "examples:request-with-transform"),
 	)
 
+	Describe("serial parent environment inheritance", func() {
+		It("passes the parent's args and params to a child that declares no step args", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(ctx.Context, "exec", "examples:serial-inherited-env", "passed-in")).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("child OUTER=[passed-in] OUTERP=[outer-param]"))
+		})
+	})
+
 	When("param overrides are provided", func() {
 		It("should run the executable with the provided overrides", func() {
 			runner := utils.NewE2ECommandRunner()

@@ -38,6 +38,8 @@ func ExamplesExecFlowFile(opts ...Option) *executable.FlowFile {
 			ExecWithContainer(opts...),
 			ExecWithPython(opts...),
 			ExecWithPythonContainer(opts...),
+			SerialExecWithInheritedEnv(opts...),
+			InheritedEnvChildExec(opts...),
 		},
 	}
 	if len(opts) > 0 {

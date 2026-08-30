@@ -56,7 +56,7 @@ func (r *launchRunner) Exec(
 	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
-	if err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, envMap); err != nil {
+	if _, err := env.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, envMap); err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 

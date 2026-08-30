@@ -2,6 +2,7 @@ package request_test
 
 import (
 	stdCtx "context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -77,6 +78,58 @@ var _ = Describe("Request Runner", func() {
 					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 				}
 			}))
+		})
+
+		Describe("body", func() {
+			var received string
+			var bodyServer *httptest.Server
+
+			BeforeEach(func() {
+				received = ""
+				bodyServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					b, _ := io.ReadAll(r.Body)
+					received = string(b)
+					w.WriteHeader(http.StatusOK)
+					_, _ = w.Write([]byte(`{"ok": true}`))
+				}))
+			})
+
+			AfterEach(func() { bodyServer.Close() })
+
+			sendBody := func(body string, envMap map[string]string) {
+				exec := &executable.Executable{
+					Request: &executable.RequestExecutableType{
+						URL:    bodyServer.URL,
+						Method: executable.RequestExecutableTypeMethodPOST,
+						Body:   body,
+					},
+				}
+				ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(1)
+				Expect(requestRnr.Exec(ctx.Ctx, exec, mockEngine, envMap, nil)).To(Succeed())
+			}
+
+			It("should send a JSON object body as written", func() {
+				sendBody(
+					"{\n  \"environment\": \"$ENVIRONMENT\",\n  \"version\": \"$VERSION\"\n}",
+					map[string]string{"ENVIRONMENT": "prod", "VERSION": "1.0"},
+				)
+				Expect(received).To(MatchJSON(`{"environment": "prod", "version": "1.0"}`))
+			})
+
+			It("should send a nested JSON body as written", func() {
+				sendBody(`{"messages": [{"role": "user"}]}`, map[string]string{})
+				Expect(received).To(MatchJSON(`{"messages": [{"role": "user"}]}`))
+			})
+
+			It("should evaluate a non-JSON body as an expression", func() {
+				sendBody(`'{"model":' + toJSON(env["MODEL"]) + '}'`, map[string]string{"MODEL": `a "quoted" name`})
+				Expect(received).To(MatchJSON(`{"model": "a \"quoted\" name"}`))
+			})
+
+			It("should send a JSON array body as written", func() {
+				sendBody(`[1, 2, 3]`, map[string]string{})
+				Expect(received).To(Equal(`[1, 2, 3]`))
+			})
 		})
 
 		It("should send a GET request and log the response", func() {

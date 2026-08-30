@@ -3,7 +3,6 @@ package serial
 import (
 	"bufio"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,7 +46,8 @@ func (r *serialRunner) Exec(
 	inputArgs []string,
 ) error {
 	serialSpec := e.Serial
-	if err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv); err != nil {
+	parentEnv, err := envUtils.SetEnv(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv)
+	if err != nil {
 		return errors.Wrap(err, "unable to set parameters to env")
 	}
 
@@ -66,7 +66,7 @@ func (r *serialRunner) Exec(
 	}
 
 	if len(serialSpec.Execs) > 0 {
-		return handleExec(ctx, e, eng, serialSpec, inputEnv)
+		return handleExec(ctx, e, eng, serialSpec, parentEnv)
 	}
 	return fmt.Errorf("no serial executables to run")
 }
@@ -76,7 +76,7 @@ func handleExec(
 	parent *executable.Executable,
 	eng engine.Engine,
 	serialSpec *executable.SerialExecutableType,
-	inputEnv map[string]string,
+	parentEnv map[string]string,
 ) error {
 	// Expand the directory of the serial execution. The root / parent's directory is used if one is not specified.
 	var root *executable.Executable
@@ -92,7 +92,7 @@ func handleExec(
 		root.WorkspacePath(),
 		root.FlowFilePath(),
 		ctx.ProcessTmpDir,
-		inputEnv,
+		parentEnv,
 	)
 	if err != nil {
 		return errors.Wrap(err, "unable to expand directory")
@@ -135,40 +135,7 @@ func handleExec(
 		exec := resolved[i].exec
 
 		// Prepare the environment and arguments for the child executable
-		childEnv := make(map[string]string)
-		childArgs := make([]string, 0)
-		maps.Copy(childEnv, inputEnv)
-		if len(refConfig.Args) > 0 {
-			execEnv := exec.Env()
-			if execEnv == nil || execEnv.Args == nil {
-				logger.Log().Warnf(
-					"executable %s has no arguments defined, skipping argument processing",
-					exec.Ref().String(),
-				)
-			} else {
-				for _, arg := range os.Environ() {
-					kv := strings.SplitN(arg, "=", 2)
-					if len(kv) == 2 {
-						childEnv[kv[0]] = kv[1]
-					}
-				}
-
-				if serialSpec.Args == nil {
-					childArgs = refConfig.Args
-				} else {
-					childArgs = envUtils.BuildArgsFromEnv(execEnv.Args, childEnv)
-					if len(childArgs) == 0 {
-						childArgs = refConfig.Args // If no resolved args, fallback to original args
-					}
-				}
-
-				a, err := envUtils.BuildArgsEnvMap(execEnv.Args, childArgs, childEnv)
-				if err != nil {
-					logger.Log().WrapError(err, "unable to process arguments")
-				}
-				maps.Copy(childEnv, a)
-			}
-		}
+		childEnv, childArgs := runner.ChildEnvAndArgs(parentEnv, refConfig.Args, exec)
 
 		// Set log fields and directory for the executable
 		switch {
@@ -228,7 +195,7 @@ func handleExec(
 					return false, err
 				}
 
-				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, inputEnv)
+				conditionalData := runner.ExpressionEnv(ctx, parent, cacheData, parentEnv)
 				truthy, err := expression.IsTruthy(ifCondition, conditionalData)
 				if err != nil {
 					return false, err

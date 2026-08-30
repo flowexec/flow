@@ -413,8 +413,20 @@ executables:
 ```
 
 > [!NOTE]
-> In serial and parallel executables, `params` and `args` that are defined at the parent level will apply to all 
-> child executables. Argument from the parent -> child executable should use matching `EnvKey` to ensure proper resolution.
+> In serial and parallel executables, `params` and `args` defined at the parent level apply to all
+> child executables, whether the child runs a command, a request, or a render. An argument passed
+> from parent to child is matched by `envKey`, so both must declare the same one.
+>
+> A step's own `args:` list overrides what it would otherwise inherit, for the arguments it sets:
+>
+> ```yaml
+> serial:
+>   args: [{pos: 1, envKey: TARGET}]
+>   execs:
+>     - ref: deploy service          # inherits TARGET
+>     - ref: deploy service
+>       args: ["--target=staging"]   # overrides it
+> ```
 
 **Resolution example:**
 ```shell
@@ -434,7 +446,23 @@ flow deploy app --param ENVIRONMENT=production -- --verbose=false
 
 ### Environment Variable Expansion
 
-Environment variables are expanded in certain contexts:
+`$VAR` and `${VAR}` are expanded in the parts of a flow file *you* write:
+
+- `dir` paths
+- `cmd` strings
+- A request's `url`, `headers`, and `body`
+- An argument's `default`
+- A serial or parallel step's `args:` entries
+
+They are **not** expanded in values a *user* supplies — a command-line argument, a prompt
+response, or a `text` param. Those are literals, so `flow run notify 'costs $5'` sends
+`costs $5`.
+
+Two rules apply everywhere expansion happens:
+
+- `$$` produces a literal `$`.
+- A variable that does not resolve is left as written, so a missing `$API_HOST` shows up in
+  the command or URL rather than silently becoming an empty string.
 
 **Directory paths:**
 ```yaml
