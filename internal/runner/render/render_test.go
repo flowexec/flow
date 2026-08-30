@@ -84,9 +84,9 @@ var _ = Describe("Render Runner", func() {
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(1)
 			// Begin marker + rendered content + end marker, in order.
 			gomock.InOrder(
-				ctx.Logger.EXPECT().Print(gomock.Regex("^"+regexEscape(render.PlainBeginMarker)+" file=tmpl.md$")),
+				ctx.Logger.EXPECT().Println(gomock.Regex("^"+regexEscape(render.PlainBeginMarker)+" file=tmpl.md$")),
 				ctx.Logger.EXPECT().Print(gomock.Eq("# Hello\n\nworld\n")),
-				ctx.Logger.EXPECT().Print(gomock.Eq(render.PlainEndMarker)),
+				ctx.Logger.EXPECT().Println(gomock.Eq(render.PlainEndMarker)),
 			)
 
 			Expect(renderRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
@@ -102,9 +102,9 @@ var _ = Describe("Render Runner", func() {
 
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(1)
 			gomock.InOrder(
-				ctx.Logger.EXPECT().Print(gomock.Regex(regexEscape(render.PlainBeginMarker))),
-				ctx.Logger.EXPECT().Print(gomock.Eq("Name: flow")),
-				ctx.Logger.EXPECT().Print(gomock.Eq(render.PlainEndMarker)),
+				ctx.Logger.EXPECT().Println(gomock.Regex(regexEscape(render.PlainBeginMarker))),
+				ctx.Logger.EXPECT().Print(gomock.Eq("Name: flow\n")),
+				ctx.Logger.EXPECT().Println(gomock.Eq(render.PlainEndMarker)),
 			)
 
 			Expect(renderRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
@@ -120,9 +120,9 @@ var _ = Describe("Render Runner", func() {
 
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(1)
 			gomock.InOrder(
-				ctx.Logger.EXPECT().Print(gomock.Regex(regexEscape(render.PlainBeginMarker))),
-				ctx.Logger.EXPECT().Print(gomock.Eq("Env: prod")),
-				ctx.Logger.EXPECT().Print(gomock.Eq(render.PlainEndMarker)),
+				ctx.Logger.EXPECT().Println(gomock.Regex(regexEscape(render.PlainBeginMarker))),
+				ctx.Logger.EXPECT().Print(gomock.Eq("Env: prod\n")),
+				ctx.Logger.EXPECT().Println(gomock.Eq(render.PlainEndMarker)),
 			)
 
 			Expect(renderRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
@@ -157,9 +157,9 @@ var _ = Describe("Render Runner", func() {
 
 			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(1)
 			gomock.InOrder(
-				ctx.Logger.EXPECT().Print(gomock.Regex(regexEscape(render.PlainBeginMarker))),
-				ctx.Logger.EXPECT().Print(gomock.Eq("hello")),
-				ctx.Logger.EXPECT().Print(gomock.Eq(render.PlainEndMarker)),
+				ctx.Logger.EXPECT().Println(gomock.Regex(regexEscape(render.PlainBeginMarker))),
+				ctx.Logger.EXPECT().Print(gomock.Eq("hello\n")),
+				ctx.Logger.EXPECT().Println(gomock.Eq(render.PlainEndMarker)),
 			)
 
 			Expect(renderRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())

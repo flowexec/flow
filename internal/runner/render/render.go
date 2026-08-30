@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/flowexec/tuikit/views"
 	"github.com/jahvon/expression"
@@ -127,7 +128,7 @@ func (r *renderRunner) Exec(
 
 	logger.Log().Infof("Rendering content from file %s", contentFile)
 
-	if !ctx.Config.ShowTUI() || InteractiveDisabled() {
+	if !ctx.Config.ShowTUI() || InteractiveDisabled() || !io.TTYAttached(ctx.StdIn(), ctx.StdOut()) {
 		renderPlain(contentFile, data)
 		return nil
 	}
@@ -148,9 +149,12 @@ func (r *renderRunner) Exec(
 // callers scraping log output can extract the block deterministically.
 func renderPlain(contentFile, data string) {
 	log := logger.Log()
-	log.Print(fmt.Sprintf("%s file=%s", PlainBeginMarker, filepath.Base(contentFile)))
+	log.Println(fmt.Sprintf("%s file=%s", PlainBeginMarker, filepath.Base(contentFile)))
+	if !strings.HasSuffix(data, "\n") {
+		data += "\n"
+	}
 	log.Print(data)
-	log.Print(PlainEndMarker)
+	log.Println(PlainEndMarker)
 }
 
 func readDataFile(dir, path string) (interface{}, error) {

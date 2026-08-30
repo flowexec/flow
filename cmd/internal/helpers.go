@@ -57,6 +57,9 @@ func MarkFlagFilename(_ *context.Context, cmd *cobra.Command, name string) {
 }
 
 func TUIEnabled(ctx *context.Context, cmd *cobra.Command) bool {
+	if !flowIO.TTYAttached(ctx.StdIn(), ctx.StdOut()) {
+		return false
+	}
 	if flags.HasFlag(cmd, *flags.OutputFormatFlag) {
 		format := flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false)
 		if format == "yaml" || format == "yml" || format == "json" {

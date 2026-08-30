@@ -599,9 +599,10 @@ executables:
 | `env` | `map[string]string` | Params and environment variables from the executable |
 | `data` | `any` | Parsed contents of `templateDataFile` (nil if not set) |
 
-By default a `render` opens an interactive viewer. To use one non-interactively — in CI, a
-script, or piped into another command — set `DISABLE_FLOW_INTERACTIVE=true`, which makes it
-write plain text to stdout. See [Interactive UI](./interactive#disabling-the-tui).
+By default a `render` opens an interactive viewer, and falls back to writing plain text to
+stdout when it isn't attached to a terminal — in CI, a script, or piped into another command.
+To force plain text while attached to a terminal, set `DISABLE_FLOW_INTERACTIVE=true`. See
+[Interactive UI](./interactive#disabling-the-tui).
 
 `data` is typed based on the file content — a JSON object becomes a map, a JSON array becomes a slice. Access fields with bracket notation: `data["key"]` or `data[0]["field"]`.
 
