@@ -1,6 +1,6 @@
 module github.com/flowexec/flow/v2
 
-go 1.25.8
+go 1.26.0
 
 require (
 	charm.land/bubbletea/v2 v2.0.8
@@ -29,7 +29,7 @@ require (
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.41.0
 	gopkg.in/yaml.v3 v3.0.1
-	mvdan.cc/sh/v3 v3.13.1
+	mvdan.cc/sh/v3 v3.14.0
 )
 
 require (
