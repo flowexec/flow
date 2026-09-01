@@ -15,8 +15,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jahvon/expression v0.1.4
 	github.com/mark3labs/mcp-go v0.57.0
-	github.com/onsi/ginkgo/v2 v2.32.0
-	github.com/onsi/gomega v1.42.1
+	github.com/onsi/ginkgo/v2 v2.32.1
+	github.com/onsi/gomega v1.43.0
 	github.com/otiai10/copy v1.14.1
 	github.com/pkg/errors v0.9.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
