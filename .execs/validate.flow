@@ -68,7 +68,7 @@ executables:
               export PATH="$PATH:./bin"
             fi
 
-            if [ "$CI" = "true" ]; then
+            if [ "${CI:-}" = "true" ]; then
               echo "Running golangci-lint with sarif output..."
               golangci-lint run ./... --fix --output.sarif.path lint.sarif --output.text.path stdout
             else
@@ -82,12 +82,16 @@ executables:
     exec:
       dir: //
       cmd: |
+        # Without this, a failed install leaves the scan to run a missing binary and the step
+        # still "succeeds" — CI then fails two steps later on an empty SARIF file.
+        set -euo pipefail
+
         if ! command -v govulncheck &> /dev/null; then
           echo "Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
         fi
 
-        if [ "$CI" = "true" ]; then
+        if [ "${CI:-}" = "true" ]; then
           govulncheck -format sarif ./... > govuln.sarif
           echo "Security scan completed. Results saved to govuln.sarif"
         else
