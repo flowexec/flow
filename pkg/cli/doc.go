@@ -5,6 +5,7 @@
 //   - Add cross-cutting hooks (PreRun/PostRun) to commands
 //   - Override existing commands with custom implementations
 //   - Add new commands alongside Flow's built-in commands
+//   - Add tools, prompts, and resources to Flow's MCP server
 //
 // # Basic Usage
 //
@@ -51,6 +52,17 @@
 //	cli.WalkCommands(rootCmd, func(cmd *cobra.Command) {
 //	    // Do something with each command
 //	})
+//
+// # Extending the MCP Server
+//
+// Add tools, prompts, or resources to the server started by the mcp command:
+//
+//	cli.RegisterAllCommands(ctx, rootCmd, cli.WithMCPExtensions(cli.MCPExtension{
+//	    Name:  "mycli",
+//	    Tools: []server.ServerTool{{Tool: mcp.NewTool("mycli_status"), Handler: statusHandler}},
+//	}), cli.WithMCPServerInfo("mycli", "1.0.0"))
+//
+// Collisions with flow's built-ins fail at startup rather than overriding them.
 //
 // # Thread Safety
 //

@@ -111,4 +111,13 @@ var _ = Describe("RegisterAllCommands", func() {
 		Expect(commandNames).To(HaveKey("workspace"))
 		Expect(commandNames).To(HaveKey("config"))
 	})
+
+	It("should register the mcp command when MCP options are provided", func() {
+		cli.RegisterAllCommands(ctx, rootCmd,
+			cli.WithMCPExtensions(cli.MCPExtension{Name: "ext"}),
+			cli.WithMCPServerInfo("mycli", "1.0.0"),
+		)
+
+		Expect(cli.FindCommand(rootCmd, "mcp")).NotTo(BeNil())
+	})
 })

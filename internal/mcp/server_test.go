@@ -37,9 +37,11 @@ var _ = Describe("MCP Server", func() {
 		ctx = context.Background()
 		ctrl := gomock.NewController(GinkgoT())
 		mockExecutor = mocks.NewMockCommandExecutor(ctrl)
-		flowServer = flowMcp.NewServer(mockExecutor)
-
 		var err error
+
+		flowServer, err = flowMcp.NewServer(mockExecutor)
+		Expect(err).ToNot(HaveOccurred())
+
 		mcpClient, err = client.NewInProcessClient(flowServer.GetMCPServer())
 		Expect(err).ToNot(HaveOccurred())
 
