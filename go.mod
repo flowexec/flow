@@ -29,7 +29,7 @@ require (
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.41.0
 	gopkg.in/yaml.v3 v3.0.1
-	mvdan.cc/sh/v3 v3.13.1
+	mvdan.cc/sh/v3 v3.14.1
 )
 
 require (
