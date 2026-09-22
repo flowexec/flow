@@ -9,6 +9,7 @@ import (
 	"github.com/flowexec/flow/v2/cmd/internal"
 	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
+	"github.com/flowexec/flow/v2/internal/mcp"
 	"github.com/flowexec/flow/v2/internal/updater"
 	"github.com/flowexec/flow/v2/internal/version"
 	"github.com/flowexec/flow/v2/pkg/cache"
@@ -101,7 +102,7 @@ func printUpdateNotice(ctx *context.Context, cmd *cobra.Command) {
 	}
 }
 
-func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
+func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command, mcpOpts ...mcp.Option) {
 	if ctx == nil {
 		panic("current context is not initialized")
 	} else if rootCmd == nil {
@@ -119,6 +120,6 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command) {
 	internal.RegisterLogsCmd(ctx, rootCmd)
 	internal.RegisterSyncCmd(ctx, rootCmd)
 	internal.RegisterSchemaCmd(ctx, rootCmd)
-	internal.RegisterMCPCmd(ctx, rootCmd)
+	internal.RegisterMCPCmd(ctx, rootCmd, mcpOpts...)
 	internal.RegisterCliCmd(ctx, rootCmd)
 }

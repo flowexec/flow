@@ -41,8 +41,12 @@ func BuildRootCommand(ctx *context.Context, opts ...RootOption) *cobra.Command {
 }
 
 // RegisterAllCommands registers all Flow commands to the root command.
-func RegisterAllCommands(ctx *context.Context, rootCmd *cobra.Command) {
-	cmd.RegisterSubCommands(ctx, rootCmd)
+func RegisterAllCommands(ctx *context.Context, rootCmd *cobra.Command, opts ...RegisterOption) {
+	config := &registerConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+	cmd.RegisterSubCommands(ctx, rootCmd, config.mcpOptions...)
 }
 
 // Execute runs the root command. This is a convenience wrapper around cobra's Execute.
