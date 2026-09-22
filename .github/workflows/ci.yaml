@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow
@@ -35,7 +35,7 @@ jobs:
           # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.4
+        uses: github/codeql-action/upload-sarif@v4.37.9
         with:
           sarif_file: lint.sarif
           category: golangci-lint
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -78,7 +78,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -134,7 +134,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       - name: Install mockgen
         run: go install go.uber.org/mock/mockgen@v0.4.0
       # Build the flow under review and run every task with it, so CI exercises
@@ -167,7 +167,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI. The
       # bootstrap binary lives in ./bin; `build binary` writes its own to .bin.
@@ -200,7 +200,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -222,7 +222,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.25.x"
+          go-version-file: go.mod
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow
@@ -235,6 +235,6 @@ jobs:
           # Fallback for action releases predating flow-binary; drop once v1 includes it.
           flow-version: 'main'
       - name: Upload govuln SARIF file
-        uses: github/codeql-action/upload-sarif@v4.37.4
+        uses: github/codeql-action/upload-sarif@v4.37.9
         with:
           sarif_file: govuln.sarif
