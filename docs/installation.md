@@ -33,7 +33,7 @@ brew install flowexec/tap/flow
 ### Go Install
 
 ```bash
-go install github.com/flowexec/flow@latest
+go install github.com/flowexec/flow/v2@latest
 ```
 
 ### Manual Download
