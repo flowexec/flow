@@ -14,3 +14,13 @@ func ExecTypeNameForTest(e *executable.Executable) string {
 func ExecBodyMarkdownForTest(e *executable.Executable) string {
 	return execBodyMarkdown(e)
 }
+
+// NamespaceRowsForTest exposes namespaceChildren as (label, count, namespace, filter) tuples.
+func NamespaceRowsForTest(execs executable.ExecutableList, wsName string) [][4]string {
+	rows := namespaceChildren(execs, wsName, Filter{Namespace: executable.WildcardNamespace})
+	out := make([][4]string, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, [4]string{r.Data[0], r.Data[1], r.Data[wsRowCellNsName], r.Data[wsRowCellNsFilt]})
+	}
+	return out
+}

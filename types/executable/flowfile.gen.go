@@ -36,10 +36,12 @@ type FlowFile struct {
 	// The namespace to be given to all executables in the flow file.
 	// If not set, the executables in the file will be grouped into the root (*)
 	// namespace.
-	// Namespaces can be reused across multiple flow files.
+	// Namespaces can be reused across multiple flow files, and nested with `/` (e.g.
+	// `api/v2`).
+	// Each segment may contain letters, digits, `_`, `.`, `@`, and `-`.
 	//
 	// Namespaces are used to reference executables in the CLI using the format
-	// `workspace:namespace/name`.
+	// `workspace/namespace:name`.
 	//
 	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty" mapstructure:"namespace,omitempty"`
 

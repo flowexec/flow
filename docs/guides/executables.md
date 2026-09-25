@@ -821,6 +821,8 @@ executables:
 - `ref: build workspace/namespace:api` - Full reference
 - `ref: build workspace/api` - Specific workspace
 - `ref: build namespace:api` - Specific namespace
+- `ref: build workspace/parent/child:api` - Nested namespace
+- `ref: build ./parent/child:api` - Nested namespace in the parent's workspace
 
 **Cross-workspace requirements:**
 - Referenced executables must have `visibility: public`

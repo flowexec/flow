@@ -54,7 +54,7 @@
       }
     },
     "ExecutableRef": {
-      "description": "A reference to an executable.\nThe format is `\u003cverb\u003e \u003cworkspace\u003e/\u003cnamespace\u003e:\u003cexecutable name\u003e`.\nFor example, `exec ws/ns:my-workflow`.\n\n- If the workspace is not specified, the current workspace will be used.\n- If the namespace is not specified, the current namespace will be used.\n- Excluding the name will reference the executable with a matching verb but an unspecified name and namespace (e.g. `exec ws` or simply `exec`).\n",
+      "description": "A reference to an executable.\nThe format is `\u003cverb\u003e \u003cworkspace\u003e/\u003cnamespace\u003e:\u003cexecutable name\u003e`.\nFor example, `exec ws/ns:my-workflow`.\n\nNamespaces can be nested with `/` (e.g. `exec ws/api/v2:my-workflow`). The first `/` always ends the\nworkspace, so a nested namespace requires a workspace; use `.` for the current workspace (`exec ./api/v2:my-workflow`).\n\nWorkspace names, namespace segments, and executable names may contain letters, digits, `_`, `.`, `@`, and `-`.\n\n- If the workspace is not specified, the current workspace will be used.\n- If the namespace is not specified, the current namespace will be used.\n- Excluding the name will reference the executable with a matching verb but an unspecified name and namespace (e.g. `exec ws` or simply `exec`).\n",
       "type": "string"
     },
     "Field": {

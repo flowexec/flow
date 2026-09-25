@@ -70,6 +70,9 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 	pathOrURL := args[1]
+	if err := common.ValidateIdentifier("workspace name", name); err != nil {
+		errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+	}
 
 	userConfig := ctx.Config
 	if _, found := userConfig.Workspaces[name]; found {

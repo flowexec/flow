@@ -48,6 +48,20 @@ var _ = Describe("config e2e", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring("Namespace set to test-namespace"))
 		})
+
+		It("should accept a nested namespace", func() {
+			Expect(run.Run(ctx.Context, "config", "set", "namespace", "parent/child")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Namespace set to parent/child"))
+		})
+
+		It("should reject an invalid namespace", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "config", "set", "namespace", "parent//child")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid namespace")))
+		})
 	})
 
 	When("setting workspace mode (flow config set workspace-mode)", func() {

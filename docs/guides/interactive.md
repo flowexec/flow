@@ -44,6 +44,9 @@ flow browse --workspace api-service
 # Filter by namespace
 flow browse --namespace deployment
 
+# Filter by a namespace and everything nested under it
+flow browse --namespace 'deployment/*'
+
 # Filter by verb
 flow browse --verb deploy
 

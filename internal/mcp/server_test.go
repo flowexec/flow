@@ -141,7 +141,7 @@ var _ = Describe("MCP Server", func() {
 
 			expectedTemplates := []string{
 				"flow://workspace/{name}",
-				"flow://executable/{workspace}/{namespace}/{name}",
+				"flow://executable/{workspace}/{+namespace}/{name}",
 				"flow://flowfile/{+path}",
 				"flow://logs/{run_id}",
 			}

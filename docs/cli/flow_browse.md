@@ -29,6 +29,7 @@ flow browse                              # interactive multi-pane browser
 flow browse --list                       # flat list of all executables
 flow browse --verb run                   # list only 'run' executables
 flow browse --namespace myproject        # filter by namespace
+flow browse --namespace 'myproject/*'    # include nested namespaces
 ```
 
 ## Options
@@ -40,7 +41,7 @@ flow browse --namespace myproject        # filter by namespace
 | `-f, --filter` | `string` | Filter executable by reference substring. |
 | `-h, --help` |  | help for browse |
 | `-l, --list` |  | Show a simple list view of executables instead of interactive discovery. |
-| `-n, --namespace` | `string` | Filter executables by namespace. |
+| `-n, --namespace` | `string` | Filter executables by namespace. Use 'ns/*' to include nested namespaces. |
 | `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 | `-t, --tag` | `stringArray` | Filter by tags. |
 | `-v, --verb` | `string` | Filter executables by verb. |

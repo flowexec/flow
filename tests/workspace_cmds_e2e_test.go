@@ -51,6 +51,13 @@ var _ = Describe("workspace e2e", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring(fmt.Sprintf("Workspace '%s' created", wsName)))
 		})
+
+		It("rejects an invalid workspace name", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "workspace", "add", "bad/name", wsPath)
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid workspace name")))
+		})
 	})
 
 	When("setting a workspace (flow workspace switch)", func() {

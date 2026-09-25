@@ -199,6 +199,9 @@ func resolveExecutableForRun(
 	if len(args) == 0 {
 		ref = context.ExpandRef(ctx, executable.NewRef("", verb))
 	} else {
+		if _, _, _, err := executable.ParseExecutableID(args[0]); err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+		}
 		ref = context.ExpandRef(ctx, executable.NewRef(args[0], verb))
 	}
 
@@ -990,6 +993,10 @@ var (
 
   # Execute in a specific workspace and namespace
   flow exec ws/ns:build
+
+  # Execute in a nested namespace ('.' is the current workspace)
+  flow exec ws/ns/child:build
+  flow exec ./ns/child:build
 
   # Pass flag and positional arguments to the executable
   flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4

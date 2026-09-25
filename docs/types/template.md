@@ -56,6 +56,11 @@ A reference to an executable.
 The format is `<verb> <workspace>/<namespace>:<executable name>`.
 For example, `exec ws/ns:my-workflow`.
 
+Namespaces can be nested with `/` (e.g. `exec ws/api/v2:my-workflow`). The first `/` always ends the
+workspace, so a nested namespace requires a workspace; use `.` for the current workspace (`exec ./api/v2:my-workflow`).
+
+Workspace names, namespace segments, and executable names may contain letters, digits, `_`, `.`, `@`, and `-`.
+
 - If the workspace is not specified, the current workspace will be used.
 - If the namespace is not specified, the current namespace will be used.
 - Excluding the name will reference the executable with a matching verb but an unspecified name and namespace (e.g. `exec ws` or simply `exec`).

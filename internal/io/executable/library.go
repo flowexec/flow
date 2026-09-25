@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/flowexec/tuikit"
@@ -49,6 +50,7 @@ const (
 	wsRowCellKind   = 4 // "all" | "workspace" | "namespace"
 	wsRowCellWsName = 5 // workspace name (for namespace children)
 	wsRowCellNsName = 6 // namespace name ("" for root namespace)
+	wsRowCellNsFilt = 7 // namespace filter; `ns/*` for a row that groups nested namespaces
 	wsRowKindAll    = "all"
 	wsRowKindWS     = "workspace"
 	wsRowKindNS     = "namespace"
@@ -126,12 +128,23 @@ func namespacesForWorkspace(
 			hasRoot = true
 			continue
 		}
-		nsSet[ns] = struct{}{}
+		// Include every ancestor so nested namespaces render under their parents.
+		segs := strings.Split(ns, executable.NamespaceSeparator)
+		for i := range segs {
+			nsSet[strings.Join(segs[:i+1], executable.NamespaceSeparator)] = struct{}{}
+		}
 	}
 	for ns := range nsSet {
 		namespaces = append(namespaces, ns)
 	}
-	sort.Strings(namespaces)
+	// Compare by segment so children sort directly after their parent (plain string order
+	// would put `api-x` between `api` and `api/v2`).
+	sort.Slice(namespaces, func(i, j int) bool {
+		return slices.Compare(
+			strings.Split(namespaces[i], executable.NamespaceSeparator),
+			strings.Split(namespaces[j], executable.NamespaceSeparator),
+		) < 0
+	})
 	return hasRoot, namespaces
 }
 
@@ -146,16 +159,25 @@ func namespaceChildren(execs executable.ExecutableList, wsName string, filter Fi
 		nsFilter.Namespace = ""
 		count := len(applyFilter(execs, nsFilter))
 		children = append(children, views.TableRow{
-			Data: padRow([]string{rootNamespaceLabel, fmt.Sprintf("%d", count), "", ""}, wsRowKindNS, wsName, ""),
+			Data: padNamespaceRow(
+				[]string{rootNamespaceLabel, fmt.Sprintf("%d", count), "", ""}, wsName, "", "",
+			),
 		})
 	}
-	for _, ns := range namespaces {
+	for i, ns := range namespaces {
+		// A namespace with nested namespaces selects its whole subtree.
+		filterValue := ns
+		if i+1 < len(namespaces) && strings.HasPrefix(namespaces[i+1], ns+executable.NamespaceSeparator) {
+			filterValue = ns + executable.NamespaceSeparator + executable.WildcardNamespace
+		}
 		nsFilter := filter
 		nsFilter.Workspace = wsName
-		nsFilter.Namespace = ns
+		nsFilter.Namespace = filterValue
 		count := len(applyFilter(execs, nsFilter))
 		children = append(children, views.TableRow{
-			Data: padRow([]string{ns, fmt.Sprintf("%d", count), "", ""}, wsRowKindNS, wsName, ns),
+			Data: padNamespaceRow(
+				[]string{namespaceLabel(ns), fmt.Sprintf("%d", count), "", ""}, wsName, ns, filterValue,
+			),
 		})
 	}
 	return children
@@ -438,7 +460,7 @@ func executableFilterFromSelection(base Filter, selections []views.PageSelection
 		out.Namespace = executable.WildcardNamespace
 	case wsRowKindNS:
 		out.Workspace = data[wsRowCellWsName]
-		out.Namespace = data[wsRowCellNsName]
+		out.Namespace = data[wsRowCellNsFilt]
 	}
 	return out
 }
@@ -447,12 +469,27 @@ func executableFilterFromSelection(base Filter, selections []views.PageSelection
 // `wsRowCellKind`. The first three cells are the visible columns; remaining
 // cells are not rendered by the table but survive Selectable.SelectedData().
 func padRow(visible []string, kind, wsName, nsName string) []string {
-	row := make([]string, wsRowCellKind+3)
+	row := make([]string, wsRowCellNsFilt+1)
 	copy(row, visible)
 	row[wsRowCellKind] = kind
 	row[wsRowCellWsName] = wsName
 	row[wsRowCellNsName] = nsName
+	row[wsRowCellNsFilt] = nsName
 	return row
+}
+
+// padNamespaceRow is padRow for a namespace child row, whose filter may differ from its
+// namespace when the row groups nested namespaces.
+func padNamespaceRow(visible []string, wsName, nsName, nsFilter string) []string {
+	row := padRow(visible, wsRowKindNS, wsName, nsName)
+	row[wsRowCellNsFilt] = nsFilter
+	return row
+}
+
+// namespaceLabel renders a namespace as its last segment, indented by its depth.
+func namespaceLabel(ns string) string {
+	depth := strings.Count(ns, executable.NamespaceSeparator)
+	return strings.Repeat("  ", depth) + ns[strings.LastIndex(ns, executable.NamespaceSeparator)+1:]
 }
 
 // withWorkspace overrides the workspace field of a filter and resets the

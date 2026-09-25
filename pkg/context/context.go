@@ -371,7 +371,7 @@ func (ctx *Context) Finalize() {
 func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 	id := ref.ID()
 	ws, ns, name := executable.MustParseExecutableID(id)
-	if (ws == "" || ws == executable.WildcardWorkspace) && ctx.CurrentWorkspace != nil {
+	if isImplicitWorkspace(ws) && ctx.CurrentWorkspace != nil {
 		ws = ctx.CurrentWorkspace.AssignedName()
 	}
 	if ns == "" {
@@ -383,13 +383,18 @@ func ExpandRef(ctx *Context, ref executable.Ref) executable.Ref {
 func ExpandRefFromParent(parent *executable.Executable, ref executable.Ref) executable.Ref {
 	id := ref.ID()
 	ws, ns, name := executable.MustParseExecutableID(id)
-	if ws == "" || ws == executable.WildcardWorkspace {
+	if isImplicitWorkspace(ws) {
 		ws = parent.Workspace()
 	}
 	if ns == "" {
 		ns = parent.Namespace()
 	}
 	return executable.NewRef(executable.NewExecutableID(ws, ns, name), ref.Verb())
+}
+
+// isImplicitWorkspace reports whether a parsed workspace should resolve from context.
+func isImplicitWorkspace(ws string) bool {
+	return ws == "" || ws == executable.WildcardWorkspace || ws == executable.CurrentWorkspace
 }
 
 // LogWorkspaceResolution records which workspace was chosen and why. It is separate from

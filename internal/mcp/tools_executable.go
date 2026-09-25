@@ -27,8 +27,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
 				"Validated server-side; see the flow docs for the full verb list.")),
 		mcp.WithString("executable_id",
-			mcp.Pattern(`^([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)?:)?[a-zA-Z0-9_-]+$`),
-			mcp.Description("Executable ID (workspace/namespace:name or just name if using the current workspace/namespace)")),
+			mcp.Pattern(executable.ExecutableIDPattern),
+			mcp.Description("Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
+				"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
 	)
 	getExecutable.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a specific executable by reference",
@@ -66,11 +67,12 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
 				"Validated server-side; see the flow docs for the full verb list.")),
 		mcp.WithString("executable_id",
-			mcp.Pattern(`^([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)?:)?[a-zA-Z0-9_-]+$`),
+			mcp.Pattern(executable.ExecutableIDPattern),
 			mcp.Description(
 				"Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
 					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
-					"both (`ws/ns:`) or neither if the current workspace/namespace should be used.")),
+					"both (`ws/ns:`) or neither if the current workspace/namespace should be used. "+
+					"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
 		mcp.WithString("args", mcp.Description("Arguments to pass")),
 		mcp.WithString("dir", mcp.Description(
 			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+

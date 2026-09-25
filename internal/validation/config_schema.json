@@ -85,7 +85,7 @@
       "description": "Override the default color palette for the interactive UI.\nThis can be used to customize the colors of the UI.\n"
     },
     "currentNamespace": {
-      "description": "The name of the current namespace.\n\nNamespaces are used to reference executables in the CLI using the format `workspace:namespace/name`.\nIf the namespace is not set, only executables defined without a namespace will be discovered.\n",
+      "description": "The name of the current namespace.\n\nNamespaces are used to reference executables in the CLI using the format `workspace/namespace:name`.\nIf the namespace is not set, only executables defined without a namespace will be discovered.\n",
       "type": "string",
       "default": ""
     },
