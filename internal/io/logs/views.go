@@ -101,7 +101,7 @@ func unifiedDetailView(container *tuikit.Container, record UnifiedRecord, ds sto
 		case content == "":
 			body = "no data found in log entry"
 		default:
-			body = content
+			body = HideStreamField(content)
 		}
 	}
 

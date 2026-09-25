@@ -142,3 +142,18 @@ func TestExtractContent_MaxBytesKeepsPartialLineWhenNoBoundary(t *testing.T) {
 		t.Fatalf("expected truncated=true")
 	}
 }
+
+func TestHideStreamField(t *testing.T) {
+	raw := `time="25 Sep 26 10:41 EDT" level=info msg="compiling..." task=build
+time="25 Sep 26 10:41 EDT" level=info msg="warn: deprecated" task=build stream=stderr
+time="25 Sep 26 10:41 EDT" level=info msg="mentions stream=stderr inline"
+time="25 Sep 26 10:41 EDT" level=error msg="exit status 1"`
+	want := `time="25 Sep 26 10:41 EDT" level=info msg="compiling..." task=build
+time="25 Sep 26 10:41 EDT" level=info msg="warn: deprecated" task=build
+time="25 Sep 26 10:41 EDT" level=info msg="mentions stream=stderr inline"
+time="25 Sep 26 10:41 EDT" level=error msg="exit status 1"`
+
+	if got := logs.HideStreamField(raw); got != want {
+		t.Errorf("unexpected output:\n got: %q\nwant: %q", got, want)
+	}
+}

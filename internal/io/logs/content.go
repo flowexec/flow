@@ -78,3 +78,21 @@ func ExtractContent(raw string, opts ContentOptions) (ContentResult, error) {
 	}
 	return res, nil
 }
+
+// streamStderrField is the logfmt field the logger appends last on lines a command wrote
+// to stderr.
+const streamStderrField = " stream=stderr"
+
+// HideStreamField drops the trailing stream=stderr field from archived logfmt lines. The
+// field tells machine readers a command's stderr apart from flow's own errors; human-readable
+// views don't need it.
+func HideStreamField(content string) string {
+	if !strings.Contains(content, streamStderrField) {
+		return content
+	}
+	lines := strings.Split(content, "\n")
+	for i, ln := range lines {
+		lines[i] = strings.TrimSuffix(ln, streamStderrField)
+	}
+	return strings.Join(lines, "\n")
+}
