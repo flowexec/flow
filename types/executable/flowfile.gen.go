@@ -38,6 +38,7 @@ type FlowFile struct {
 	// namespace.
 	// Namespaces can be reused across multiple flow files, and nested with `/` (e.g.
 	// `api/v2`).
+	// Each segment may contain letters, digits, `_`, `.`, `@`, and `-`.
 	//
 	// Namespaces are used to reference executables in the CLI using the format
 	// `workspace/namespace:name`.

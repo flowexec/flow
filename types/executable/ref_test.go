@@ -30,6 +30,7 @@ var _ = Describe("ParseExecutableID", func() {
 		Entry("deeply nested namespace", "ws/a/b/c:build", "ws", "a/b/c", "build"),
 		Entry("nested namespace, no name", "ws/api/v2:", "ws", "api/v2", ""),
 		Entry("current workspace shorthand", "./api/v2:build", ".", "api/v2", "build"),
+		Entry("dots and at signs", "my.ws/team@x/v1.2:db.migrate", "my.ws", "team@x/v1.2", "db.migrate"),
 	)
 
 	DescribeTable("invalid IDs",
@@ -41,6 +42,9 @@ var _ = Describe("ParseExecutableID", func() {
 		Entry("colon in name", "ws/api:build:extra"),
 		Entry("empty namespace segment", "ws/api//v2:build"),
 		Entry("trailing namespace separator", "ws/api/:build"),
+		Entry("dot namespace segment", "ws/api/./v2:build"),
+		Entry("dot-dot namespace segment", "ws/../v2:build"),
+		Entry("unsupported character in name", "ws/api:build+x"),
 	)
 
 	It("round-trips nested namespaces through NewExecutableID", func() {
@@ -70,6 +74,9 @@ var _ = Describe("ValidateNamespace", func() {
 		Entry("colon", "api:v2", false),
 		Entry("space", "api v2", false),
 		Entry("wildcard", "*", false),
+		Entry("dots and at signs", "team@x/v1.2", true),
+		Entry("dot segment", "api/.", false),
+		Entry("dot-dot segment", "../api", false),
 	)
 })
 
@@ -105,6 +112,7 @@ var _ = Describe("ExecutableIDPattern", func() {
 		Entry("nested", "ws/api/v2:build", true),
 		Entry("current workspace", "./api/v2:build", true),
 		Entry("nested without ws", "api/v2:build", true), // parses as ws=api, ns=v2
+		Entry("dots and at signs", "my.ws/team@x/v1.2:db.migrate", true),
 		Entry("nested path without colon", "ws/api/build", false),
 		Entry("space", "ws/api:bu ild", false),
 	)

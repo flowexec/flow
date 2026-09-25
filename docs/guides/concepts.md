@@ -156,6 +156,9 @@ flow send ./api/v2:request
 The first `/` always separates the workspace, so `api/v2:request` means workspace `api`, namespace `v2`.
 Reference a nested namespace with its workspace, or with `.` for the current one.
 
+Workspace names, namespace segments, and executable names may contain letters, digits, `_`, `.`, `@`, and `-`
+(but not be exactly `.` or `..`).
+
 **Verbs**
 
 The "verb" is a single word that describes the operation being executed. It can be configured in the flowfile for

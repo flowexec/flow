@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -252,8 +251,10 @@ func (e *Executable) Validate() error {
 	} else if err := e.Verb.Validate(); err != nil {
 		return err
 	}
-	if strings.ContainsAny(e.Name, " /:") {
-		return fmt.Errorf("name cannot contain spaces, '/', or ':'")
+	if e.Name != "" {
+		if err := common.ValidateIdentifier("name", e.Name); err != nil {
+			return err
+		}
 	}
 
 	if e.Env() != nil {
@@ -532,23 +533,21 @@ const (
 // ExecutableIDPattern matches the ID forms accepted by ParseExecutableID: `name`, `ns:name`,
 // `ws/name`, and `ws/parent/child:name`, where ws may be `.` and name may be empty.
 const ExecutableIDPattern = `^(` +
-	`((\.|[a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*:)?)` + // ws/ with an optional, possibly nested, ns:
-	`|([a-zA-Z0-9_-]+:)?` + // or an optional single-segment ns:
-	`)[a-zA-Z0-9_-]*$`
+	`(` + idChars + `+/(` + idChars + `+(/` + idChars + `+)*:)?)` + // ws/ with an optional, possibly nested, ns:
+	`|(` + idChars + `+:)?` + // or an optional single-segment ns:
+	`)` + idChars + `*$`
 
-var namespaceSegmentRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+const idChars = common.IdentifierChars
 
 // ValidateNamespace checks that ns is empty (the root namespace) or one or more
-// `/`-separated segments of letters, digits, `_`, and `-`.
+// `/`-separated identifier segments.
 func ValidateNamespace(ns string) error {
 	if ns == "" {
 		return nil
 	}
 	for _, seg := range strings.Split(ns, NamespaceSeparator) {
-		if !namespaceSegmentRegex.MatchString(seg) {
-			return fmt.Errorf(
-				"invalid namespace %q: segments must be non-empty and contain only letters, digits, '_', or '-'", ns,
-			)
+		if err := common.ValidateIdentifier("namespace segment", seg); err != nil {
+			return fmt.Errorf("invalid namespace %q: %w", ns, err)
 		}
 	}
 	return nil
@@ -586,8 +585,10 @@ func ParseExecutableID(id string) (workspace, namespace, name string, err error)
 		}
 	}
 
-	if strings.ContainsAny(name, NamespaceSeparator+":") {
-		return "", "", "", fmt.Errorf("invalid executable ID %q: name cannot contain '/' or ':'", id)
+	if name != "" {
+		if err := common.ValidateIdentifier("name", name); err != nil {
+			return "", "", "", fmt.Errorf("invalid executable ID %q: %w", id, err)
+		}
 	}
 	return workspace, namespace, name, nil
 }

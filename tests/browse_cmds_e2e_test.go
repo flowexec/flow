@@ -266,7 +266,7 @@ var _ = Describe("browse e2e", Ordered, func() {
 			ctx.ExpectFailure()
 			err := run.Run(ctx.Context, "exec", "./nested/child")
 			Expect(err).To(HaveOccurred())
-			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("name cannot contain")))
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid name")))
 		})
 	})
 })

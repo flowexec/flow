@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -111,4 +112,21 @@ func (v Visibility) Level() int {
 	default:
 		return 2
 	}
+}
+
+// IdentifierChars is the character class allowed in workspace names, namespace segments, and executable names.
+const IdentifierChars = `[a-zA-Z0-9_.@-]`
+
+var identifierRegex = regexp.MustCompile(`^` + IdentifierChars + `+$`)
+
+// ValidateIdentifier checks that s is a non-empty identifier of letters, digits, `_`, `.`, `@`, or `-`.
+// `.` and `..` are rejected since they read as path navigation (and `.` is the current-workspace shorthand).
+func ValidateIdentifier(kind, s string) error {
+	if !identifierRegex.MatchString(s) || s == "." || s == ".." {
+		return fmt.Errorf(
+			"invalid %s %q: must be non-empty, contain only letters, digits, '_', '.', '@', or '-', "+
+				"and not be '.' or '..'", kind, s,
+		)
+	}
+	return nil
 }
