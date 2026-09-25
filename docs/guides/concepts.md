@@ -147,7 +147,14 @@ flow send request
 
 # Nameless executable (verb only)
 flow build
+
+# Nested namespace (workspace required; `.` is the current workspace)
+flow send my-workspace/api/v2:request
+flow send ./api/v2:request
 ```
+
+The first `/` always separates the workspace, so `api/v2:request` means workspace `api`, namespace `v2`.
+Reference a nested namespace with its workspace, or with `.` for the current one.
 
 **Verbs**
 
@@ -239,6 +246,9 @@ executables:
   - name: stop
   - name: restart
 ```
+
+Namespaces can be nested with `/` (for example, `namespace: api/v2`) to build a hierarchy. Filter a namespace and
+everything nested under it with `flow browse --namespace 'api/*'`.
 
 **Tags** - Label executables for easy filtering:
 ```yaml

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -251,8 +252,8 @@ func (e *Executable) Validate() error {
 	} else if err := e.Verb.Validate(); err != nil {
 		return err
 	}
-	if strings.Contains(e.Name, " ") {
-		return fmt.Errorf("name cannot contain spaces")
+	if strings.ContainsAny(e.Name, " /:") {
+		return fmt.Errorf("name cannot contain spaces, '/', or ':'")
 	}
 
 	if e.Env() != nil {
@@ -510,7 +511,7 @@ func (l ExecutableList) FilterByNamespace(ns string) ExecutableList {
 
 	filteredExecs := make(ExecutableList, 0)
 	for _, exec := range l {
-		if exec.Namespace() == ns {
+		if NamespaceMatches(exec.Namespace(), ns) {
 			filteredExecs = append(filteredExecs, exec)
 		}
 	}
@@ -520,31 +521,83 @@ func (l ExecutableList) FilterByNamespace(ns string) ExecutableList {
 const (
 	WildcardNamespace = "*"
 	WildcardWorkspace = "*"
+	// CurrentWorkspace is the workspace shorthand for "the workspace this reference is resolved from".
+	CurrentWorkspace = "."
+
+	NamespaceSeparator = "/"
+	// subtreeSuffix, appended to a namespace filter, matches that namespace and all of its descendants.
+	subtreeSuffix = NamespaceSeparator + WildcardNamespace
 )
 
-func MustParseExecutableID(id string) (workspace, namespace, name string) {
+// ExecutableIDPattern matches the ID forms accepted by ParseExecutableID: `name`, `ns:name`,
+// `ws/name`, and `ws/parent/child:name`, where ws may be `.` and name may be empty.
+const ExecutableIDPattern = `^(` +
+	`((\.|[a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*:)?)` + // ws/ with an optional, possibly nested, ns:
+	`|([a-zA-Z0-9_-]+:)?` + // or an optional single-segment ns:
+	`)[a-zA-Z0-9_-]*$`
+
+var namespaceSegmentRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// ValidateNamespace checks that ns is empty (the root namespace) or one or more
+// `/`-separated segments of letters, digits, `_`, and `-`.
+func ValidateNamespace(ns string) error {
+	if ns == "" {
+		return nil
+	}
+	for _, seg := range strings.Split(ns, NamespaceSeparator) {
+		if !namespaceSegmentRegex.MatchString(seg) {
+			return fmt.Errorf(
+				"invalid namespace %q: segments must be non-empty and contain only letters, digits, '_', or '-'", ns,
+			)
+		}
+	}
+	return nil
+}
+
+// NamespaceMatches reports whether ns satisfies filter. A filter of `*` matches everything,
+// `parent/*` matches `parent` and every namespace nested under it, and anything else is an exact match.
+func NamespaceMatches(ns, filter string) bool {
+	if filter == WildcardNamespace {
+		return true
+	}
+	if parent, ok := strings.CutSuffix(filter, subtreeSuffix); ok {
+		return ns == parent || strings.HasPrefix(ns, parent+NamespaceSeparator)
+	}
+	return ns == filter
+}
+
+// ParseExecutableID splits an ID of the form `[workspace/][namespace:]name`. The first `/` ends the
+// workspace and the last `:` ends the namespace, so a nested namespace (`ws/parent/child:name`)
+// requires a workspace qualifier. Omitted parts are returned as their wildcard.
+func ParseExecutableID(id string) (workspace, namespace, name string, err error) {
 	if id == "" {
-		return WildcardWorkspace, "", ""
+		return WildcardWorkspace, "", "", nil
 	}
 
-	parts := strings.Split(id, "/")
-	switch len(parts) {
-	case 1: // no workspace
-		subparts := strings.Split(parts[0], ":")
-		if len(subparts) == 1 { // no namespace
-			return WildcardWorkspace, WildcardNamespace, subparts[0]
-		} else if len(subparts) == 2 { // namespace AND name
-			return WildcardWorkspace, subparts[0], subparts[1]
-		}
-	case 2: // workspace
-		subparts := strings.Split(parts[1], ":")
-		if len(subparts) == 1 { // no namespace
-			return parts[0], WildcardNamespace, subparts[0]
-		} else if len(subparts) == 2 {
-			return parts[0], subparts[0], subparts[1]
+	workspace, rest := WildcardWorkspace, id
+	if before, after, ok := strings.Cut(id, NamespaceSeparator); ok {
+		workspace, rest = before, after
+	}
+	namespace, name = WildcardNamespace, rest
+	if i := strings.LastIndex(rest, ":"); i >= 0 {
+		namespace, name = rest[:i], rest[i+1:]
+		if err := ValidateNamespace(namespace); err != nil {
+			return "", "", "", fmt.Errorf("invalid executable ID %q: %w", id, err)
 		}
 	}
-	panic(fmt.Sprintf("invalid executable ID: %s", id))
+
+	if strings.ContainsAny(name, NamespaceSeparator+":") {
+		return "", "", "", fmt.Errorf("invalid executable ID %q: name cannot contain '/' or ':'", id)
+	}
+	return workspace, namespace, name, nil
+}
+
+func MustParseExecutableID(id string) (workspace, namespace, name string) {
+	workspace, namespace, name, err := ParseExecutableID(id)
+	if err != nil {
+		panic(err.Error())
+	}
+	return workspace, namespace, name
 }
 
 func NewExecutableID(workspace, namespace, name string) string {

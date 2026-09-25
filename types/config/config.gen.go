@@ -76,7 +76,7 @@ type Config struct {
 	// The name of the current namespace.
 	//
 	// Namespaces are used to reference executables in the CLI using the format
-	// `workspace:namespace/name`.
+	// `workspace/namespace:name`.
 	// If the namespace is not set, only executables defined without a namespace will
 	// be discovered.
 	//

@@ -57,6 +57,9 @@ func LoadFlowFile(cfgFile string) (*executable.FlowFile, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode config file")
 	}
+	if err := executable.ValidateNamespace(cfg.Namespace); err != nil {
+		return nil, err
+	}
 	return cfg, nil
 }
 

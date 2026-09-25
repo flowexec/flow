@@ -42,6 +42,10 @@ flow show docs
 # Execute in a specific workspace and namespace
 flow exec ws/ns:build
 
+# Execute in a nested namespace ('.' is the current workspace)
+flow exec ws/ns/child:build
+flow exec ./ns/child:build
+
 # Pass flag and positional arguments to the executable
 flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 ```

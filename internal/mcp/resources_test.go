@@ -3,6 +3,8 @@ package mcp
 
 import (
 	"testing"
+
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestExtractExecutableURIParts(t *testing.T) {
@@ -42,6 +44,13 @@ func TestExtractExecutableURIParts(t *testing.T) {
 			wantName: "myexec",
 		},
 		{
+			name:     "nested namespace",
+			uri:      "flow://executable/myws/parent/child/myexec",
+			wantWS:   "myws",
+			wantNS:   "parent/child",
+			wantName: "myexec",
+		},
+		{
 			name:     "malformed missing segments",
 			uri:      "flow://executable/onlyname",
 			wantWS:   "",
@@ -63,5 +72,18 @@ func TestExtractExecutableURIParts(t *testing.T) {
 				t.Errorf("name: got %q, want %q", got.name, tc.wantName)
 			}
 		})
+	}
+}
+
+func TestExecutableURITemplateMatchesNestedNamespace(t *testing.T) {
+	tmpl := mcp.NewResourceTemplate(executableURITemplate, "test")
+	for _, uri := range []string{
+		"flow://executable/myws/myns/myexec",
+		"flow://executable/myws/parent/child/myexec",
+		"flow://executable/myws//myexec",
+	} {
+		if !tmpl.URITemplate.Regexp().MatchString(uri) {
+			t.Errorf("template did not match %q", uri)
+		}
 	}
 }

@@ -23,7 +23,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
 | `colorOverride` | [ColorPalette](#colorpalette) |  |  | Override the default color palette for the interactive UI. This can be used to customize the colors of the UI.  |
-| `currentNamespace` | `string` |  |  | The name of the current namespace.  Namespaces are used to reference executables in the CLI using the format `workspace:namespace/name`. If the namespace is not set, only executables defined without a namespace will be discovered.  |
+| `currentNamespace` | `string` |  |  | The name of the current namespace.  Namespaces are used to reference executables in the CLI using the format `workspace/namespace:name`. If the namespace is not set, only executables defined without a namespace will be discovered.  |
 | `currentVault` | `string` |  |  | The name of the currently active vault. |
 | `currentWorkspace` | `string` |  |  | The name of the current workspace. This should match a key in the `workspaces` or `remoteWorkspaces` map. |
 | `defaultLogMode` | `string` | logfmt |  | The default log mode to use when running executables. This can either be `hidden`, `json`, `logfmt` or `text`  `hidden` will not display any logs. `json` will display logs in JSON format. `logfmt` will display logs with a log level, timestamp, and message. `text` will just display the log message.  |

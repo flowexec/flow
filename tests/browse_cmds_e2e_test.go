@@ -204,4 +204,69 @@ var _ = Describe("browse e2e", Ordered, func() {
 			Expect(out).To(ContainSubstring("fresh-exec"))
 		})
 	})
+
+	When("executables live in nested namespaces", func() {
+		BeforeEach(func() {
+			v := executable.FlowFileVisibility(common.VisibilityPrivate)
+			for _, ff := range []struct{ ns, name string }{
+				{"nested", "parent-exec"},
+				{"nested/child", "child-exec"},
+			} {
+				flowFile := &executable.FlowFile{
+					Namespace:  ff.ns,
+					Visibility: &v,
+					Executables: executable.ExecutableList{
+						{Verb: "run", Name: ff.name, Exec: &executable.ExecExecutableType{Cmd: "echo ran " + ff.name}},
+					},
+				}
+				path := filepath.Join(ctx.WorkspaceDir(), ff.name+".flow")
+				flowFile.SetContext(utils.TestWorkspaceName, ctx.WorkspaceDir(), path)
+				Expect(filesystem.WriteFlowFile(path, flowFile)).To(Succeed())
+			}
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
+			utils.ResetTestContext(ctx, GinkgoTB())
+		})
+
+		It("filters to only the exact namespace", func() {
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "browse", "--list", "--namespace", "nested/child")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("child-exec"))
+			Expect(out).NotTo(ContainSubstring("parent-exec"))
+		})
+
+		It("filters a namespace subtree with ns/*", func() {
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "browse", "--list", "--namespace", "nested/*")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("child-exec"))
+			Expect(out).To(ContainSubstring("parent-exec"))
+		})
+
+		It("resolves a fully qualified nested reference", func() {
+			stdOut := ctx.StdOut()
+			id := utils.TestWorkspaceName + "/nested/child:child-exec"
+			Expect(run.Run(ctx.Context, "browse", "run", id)).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("child-exec"))
+		})
+
+		It("runs a nested executable through the current-workspace shorthand", func() {
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "exec", "./nested/child:child-exec")).To(Succeed())
+			out, err := readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("ran child-exec"))
+		})
+
+		It("rejects a nested path without a namespace separator", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "exec", "./nested/child")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("name cannot contain")))
+		})
+	})
 })

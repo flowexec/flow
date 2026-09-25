@@ -28,7 +28,7 @@ func addServerResources(srv *server.MCPServer) {
 
 	// Resource template: executable by workspace/namespace/name
 	executableTemplate := mcp.NewResourceTemplate(
-		"flow://executable/{workspace}/{namespace}/{name}",
+		executableURITemplate,
 		"Executable Definition",
 		mcp.WithTemplateDescription("Executable definition and metadata as JSON"),
 		mcp.WithTemplateMIMEType("application/json"),
@@ -277,24 +277,33 @@ func extractURIParam(uri, prefix string) string {
 	return strings.TrimPrefix(uri, prefix)
 }
 
+// executableURITemplate uses reserved expansion for the namespace so nested namespaces
+// (which contain `/`) still match.
+const executableURITemplate = "flow://executable/{workspace}/{+namespace}/{name}"
+
 type executableURIParts struct {
 	workspace string
 	namespace string
 	name      string
 }
 
-// extractExecutableURIParts parses flow://executable/{workspace}/{namespace}/{name}
+// extractExecutableURIParts parses flow://executable/{workspace}/{namespace}/{name}. The namespace
+// may itself contain `/` (nested namespaces), so it is everything between the first and last segment.
 func extractExecutableURIParts(uri string) executableURIParts {
 	const prefix = "flow://executable/"
 	trimmed := strings.TrimPrefix(uri, prefix)
-	parts := strings.SplitN(trimmed, "/", 3)
-	if len(parts) != 3 {
+	ws, rest, ok := strings.Cut(trimmed, "/")
+	if !ok {
+		return executableURIParts{}
+	}
+	i := strings.LastIndex(rest, "/")
+	if i < 0 {
 		return executableURIParts{}
 	}
 	return executableURIParts{
-		workspace: parts[0],
-		namespace: parts[1],
-		name:      parts[2],
+		workspace: ws,
+		namespace: rest[:i],
+		name:      rest[i+1:],
 	}
 }
 

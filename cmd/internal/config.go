@@ -11,12 +11,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
 	configIO "github.com/flowexec/flow/v2/internal/io/config"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
 	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func RegisterConfigCmd(ctx *context.Context, rootCmd *cobra.Command) {
@@ -115,12 +117,15 @@ func registerSetNamespaceCmd(ctx *context.Context, setCmd *cobra.Command) {
 	setCmd.AddCommand(namespaceCmd)
 }
 
-func setNamespaceFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+func setNamespaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	namespace := args[0]
+	if err := executable.ValidateNamespace(namespace); err != nil {
+		errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+	}
 	userConfig := ctx.Config
 	userConfig.CurrentNamespace = namespace
 	if err := filesystem.WriteConfig(userConfig); err != nil {
-		logger.Log().FatalErr(err)
+		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess("Namespace set to " + namespace)
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/executable"
 	"github.com/flowexec/flow/v2/types/workspace"
 )
 
@@ -110,6 +111,33 @@ var _ = ginkgo.Describe("Context", func() {
 			}
 			Expect(ctx.CurrentWorkspaceName()).To(Equal("discovered"))
 			Expect(ctx.WorkspaceIsRegistered()).To(BeFalse())
+		})
+	})
+
+	ginkgo.Describe("ExpandRef", func() {
+		var ctx *Context
+
+		ginkgo.BeforeEach(func() {
+			ws := &workspace.Workspace{}
+			ws.SetContext("cur", "/src/cur")
+			ctx = &Context{CurrentWorkspace: ws, Config: &config.Config{}}
+		})
+
+		ginkgo.It("resolves the `.` workspace to the current workspace", func() {
+			ref := ExpandRef(ctx, executable.NewRef("./api/v2:build", "exec"))
+			Expect(ref.String()).To(Equal("exec cur/api/v2:build"))
+		})
+
+		ginkgo.It("keeps an explicit workspace with a nested namespace", func() {
+			ref := ExpandRef(ctx, executable.NewRef("other/api/v2:build", "exec"))
+			Expect(ref.String()).To(Equal("exec other/api/v2:build"))
+		})
+
+		ginkgo.It("resolves the `.` workspace to the parent's workspace", func() {
+			parent := &executable.Executable{Verb: "exec", Name: "parent"}
+			parent.SetContext("pws", "/src/pws", "api", "/src/pws/f.flow")
+			ref := ExpandRefFromParent(parent, executable.NewRef("./api/v2:child", "exec"))
+			Expect(ref.String()).To(Equal("exec pws/api/v2:child"))
 		})
 	})
 

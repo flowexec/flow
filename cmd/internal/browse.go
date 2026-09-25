@@ -221,8 +221,11 @@ func viewExecutable(ctx *context.Context, cmd *cobra.Command, args []string) {
 	var execID string
 	if len(args) > 1 {
 		id := args[1]
-		ws, ns, name := executable.MustParseExecutableID(id)
-		if ws == executable.WildcardWorkspace && ctx.CurrentWorkspace != nil {
+		ws, ns, name, err := executable.ParseExecutableID(id)
+		if err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+		}
+		if (ws == executable.WildcardWorkspace || ws == executable.CurrentWorkspace) && ctx.CurrentWorkspace != nil {
 			ws = ctx.CurrentWorkspace.AssignedName()
 		}
 		if ns == executable.WildcardNamespace && ctx.Config.CurrentNamespace != "" {
@@ -270,6 +273,7 @@ const browseExamples = `
   flow browse --list                       # flat list of all executables
   flow browse --verb run                   # list only 'run' executables
   flow browse --namespace myproject        # filter by namespace
+  flow browse --namespace 'myproject/*'    # include nested namespaces
 `
 
 var browseLong = fmt.Sprintf(`Browse executables across workspaces.

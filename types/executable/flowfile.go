@@ -58,7 +58,7 @@ func (f *FlowFile) YAML() (string, error) {
 func (l *FlowFileList) FilterByNamespace(namespace string) FlowFileList {
 	filteredCfgs := make(FlowFileList, 0)
 	for _, cfg := range *l {
-		if cfg.Namespace == namespace {
+		if NamespaceMatches(cfg.Namespace, namespace) {
 			filteredCfgs = append(filteredCfgs, cfg)
 		}
 	}

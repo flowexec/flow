@@ -59,7 +59,7 @@ var AllNamespacesFlag = &Metadata{
 var FilterNamespaceFlag = &Metadata{
 	Name:      "namespace",
 	Shorthand: "n",
-	Usage:     "Filter executables by namespace.",
+	Usage:     "Filter executables by namespace. Use 'ns/*' to include nested namespaces.",
 	Default:   "",
 	Required:  false,
 }
