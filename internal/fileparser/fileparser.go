@@ -89,9 +89,12 @@ func parseScriptFile(wsPath, fn, expandedFile string) (executable.ExecutableList
 	return executable.ExecutableList{exec}, nil
 }
 
+// shortenWsPath returns path relative to the workspace root as a `//` directory. The
+// relative part uses forward slashes on every platform, the form ExpandDirectory reads.
 func shortenWsPath(wsPath string, path string) string {
 	if strings.HasPrefix(path, wsPath) {
-		return "//" + strings.TrimPrefix(path[len(wsPath):], string(filepath.Separator))
+		rel := strings.TrimPrefix(path[len(wsPath):], string(filepath.Separator))
+		return "//" + filepath.ToSlash(rel)
 	}
 
 	return path

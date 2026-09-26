@@ -86,7 +86,7 @@ func ResolvePython(envList []string) (string, error) {
 // not installed and merely prints a store advertisement before exiting non-zero.
 // Preferring "python" finds a real installation and only falls back to the alias.
 func pathCandidates() []string {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		return []string{"python", "python3"}
 	}
 	return []string{"python3", "python"}
@@ -94,7 +94,7 @@ func pathCandidates() []string {
 
 // venvPython returns the interpreter path inside a virtualenv directory.
 func venvPython(venvDir string) string {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		return filepath.Join(venvDir, "Scripts", "python.exe")
 	}
 	return filepath.Join(venvDir, "bin", "python")

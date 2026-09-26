@@ -1,6 +1,9 @@
 package fileparser_test
 
 import (
+	"os"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -20,5 +23,17 @@ var _ = Describe("ExecutablesFromShFile", func() {
 		Expect(exec.Exec).NotTo(BeNil())
 		Expect(exec.Exec.File).To(Equal("simple.sh"))
 		Expect(exec.Exec.Dir).To(Equal(executable.Directory("//")))
+	})
+
+	It("uses forward slashes for a nested directory on every platform", func() {
+		ws := GinkgoT().TempDir()
+		dir := filepath.Join(ws, "scripts", "ci")
+		Expect(os.MkdirAll(dir, 0o755)).To(Succeed())
+		path := filepath.Join(dir, "simple.sh")
+		Expect(os.WriteFile(path, []byte("#!/bin/sh\necho hi\n"), 0o600)).To(Succeed())
+
+		exec, err := fileparser.ExecutablesFromShFile(ws, path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exec.Exec.Dir).To(Equal(executable.Directory("//scripts/ci")))
 	})
 })

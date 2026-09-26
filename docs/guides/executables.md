@@ -238,6 +238,14 @@ executables:
 - `logMode`: How to format command output
 - `container`: Run the command or file inside a container image (see below)
 
+::: tip Windows
+`cmd` and `.sh` files run in flow's built-in POSIX shell, so the syntax works everywhere. On
+Windows it also provides `base64`, `cat`, `chmod`, `cp`, `find`, `gzip`, `ls`, `mkdir`, `mktemp`,
+`mv`, `rm`, `shasum`, `tar`, `touch`, and `xargs`; any other command must be on `PATH`. Call a
+script as `bash script.sh` rather than `./script.sh`, or branch with `if: os == "windows"`.
+`FLOW_CORE_UTILS=true|false` overrides the built-ins on any platform.
+:::
+
 #### Running Python
 
 Set `exec.interpreter` to `python` to run `cmd` as a Python script instead of a shell command:

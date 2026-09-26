@@ -106,6 +106,30 @@ var _ = Describe("Run", func() {
 		})
 	})
 
+	Describe("core utilities", func() {
+		// An empty PATH leaves the built-in implementations as the only way mkdir can
+		// resolve, so this holds on every platform, not just where they are the default.
+		mkdirWith := func(enabled string) (string, error) {
+			GinkgoT().Setenv(run.CoreUtilsEnv, enabled)
+			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
+			logger.EXPECT().LogMode().Return(tuikitIO.Hidden).AnyTimes()
+			dir := GinkgoT().TempDir()
+			env := []string{"PATH=" + GinkgoT().TempDir()}
+			return dir, run.RunCmd("mkdir -p a/b", dir, env, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+		}
+
+		It("provides mkdir without one on PATH when enabled", func() {
+			dir, err := mkdirWith("true")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(filepath.Join(dir, "a", "b")).To(BeADirectory())
+		})
+
+		It("leaves command resolution to PATH when disabled", func() {
+			_, err := mkdirWith("false")
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Describe("RunFile", func() {
 		var tmpDir string
 

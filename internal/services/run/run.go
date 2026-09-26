@@ -52,6 +52,7 @@ func RunCmd(
 	runner, err := interp.New(
 		interp.Dir(dir),
 		interp.Env(expand.ListEnviron(envList...)),
+		interp.ExecHandlers(execHandlers()...),
 		interp.StdIO(
 			stdIn,
 			stdOutWriter(logMode, logger, task, flattenedFields...),
@@ -186,6 +187,7 @@ func runShellFile(
 	}
 	runner, err := interp.New(
 		interp.Env(expand.ListEnviron(envList...)),
+		interp.ExecHandlers(execHandlers()...),
 		interp.StdIO(
 			stdIn,
 			stdOutWriter(logMode, logger, task, flattenedFields...),
