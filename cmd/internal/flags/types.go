@@ -208,7 +208,7 @@ var LogFilterWorkspaceFlag = &Metadata{
 
 var LogFilterStatusFlag = &Metadata{
 	Name:     "status",
-	Usage:    "Filter history by status (running, completed, or failed; success/failure accepted as aliases).",
+	Usage:    "Filter history by status (running, completed, failed, or cancelled; success/failure accepted as aliases).",
 	Default:  "",
 	Required: false,
 }

@@ -1,0 +1,16 @@
+//go:build windows
+
+package run
+
+import (
+	"os"
+	"time"
+)
+
+// killTimeout is how long a cancelled child gets to exit after being interrupted before it is killed.
+const killTimeout = 2 * time.Second
+
+// Windows has no interrupt to deliver to an arbitrary process, so cancellation kills outright.
+func interruptProcess(proc *os.Process) error {
+	return proc.Kill()
+}

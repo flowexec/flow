@@ -137,3 +137,22 @@ func (e ValidationError) Code() string { return ErrCodeValidationFailed }
 func NewValidationError(msg string, details map[string]any) ValidationError {
 	return ValidationError{Msg: msg, Details: details}
 }
+
+// RunCancelledError indicates an executable run was stopped by an interrupt or termination signal
+// rather than failing on its own.
+type RunCancelledError struct {
+	Signal string
+}
+
+func (e RunCancelledError) Error() string {
+	if e.Signal == "" {
+		return "run cancelled"
+	}
+	return fmt.Sprintf("run cancelled (%s)", e.Signal)
+}
+
+func (e RunCancelledError) Code() string { return ErrCodeCancelled }
+
+func NewRunCancelledError(signal string) RunCancelledError {
+	return RunCancelledError{Signal: signal}
+}

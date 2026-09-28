@@ -123,6 +123,7 @@ const (
 	RunRunning   RunStatus = "running"
 	RunCompleted RunStatus = "completed"
 	RunFailed    RunStatus = "failed"
+	RunCancelled RunStatus = "cancelled"
 )
 
 // ExecutionRecord holds metadata about a single executable run.
@@ -172,6 +173,7 @@ const (
 	BackgroundRunning   BackgroundRunStatus = "running"
 	BackgroundCompleted BackgroundRunStatus = "completed"
 	BackgroundFailed    BackgroundRunStatus = "failed"
+	BackgroundCancelled BackgroundRunStatus = "cancelled"
 )
 
 // BackgroundRun holds metadata about a detached background execution.

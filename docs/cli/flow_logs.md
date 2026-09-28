@@ -46,7 +46,7 @@ flow logs --last --grep ERROR      # last run, only lines matching /ERROR/
 | `--session` | `string` | Filter history to a single provenance session ID (e.g. an AI agent session). |
 | `--since` | `string` | Filter history to entries after a duration (e.g. 1h, 30m, 7d). |
 | `--source` | `string` | Filter history by run origin, e.g. 'cli', 'desktop' or 'mcp'. |
-| `--status` | `string` | Filter history by status (running, completed, or failed; success/failure accepted as aliases). |
+| `--status` | `string` | Filter history by status (running, completed, failed, or cancelled; success/failure accepted as aliases). |
 | `--tail` | `int` | Include only the last N lines of log output (implies --content). |
 | `-w, --workspace` | `string` | Filter history by workspace name. |
 

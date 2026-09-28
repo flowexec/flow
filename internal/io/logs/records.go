@@ -8,14 +8,13 @@ import (
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
-	"github.com/flowexec/flow/v2/internal/utils/process"
 	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // RecordFilter holds optional criteria for filtering unified records.
 type RecordFilter struct {
 	Workspace string
-	Status    string // lifecycle status: running/completed/failed (success/failure accepted as aliases)
+	Status    string // lifecycle status: running/completed/failed/cancelled (success/failure accepted as aliases)
 	Source    string // provenance origin, e.g. "cli", "desktop", "mcp"
 	Session   string // provenance session ID
 	Client    string // provenance client name (e.g. "claude", "cursor")
@@ -24,7 +23,7 @@ type RecordFilter struct {
 }
 
 // matchStatus reports whether a record's lifecycle status matches the requested filter value,
-// accepting friendly aliases (success/failure) alongside the canonical running/completed/failed.
+// accepting friendly aliases (success/failure) alongside the canonical running/completed/failed/cancelled.
 func matchStatus(r UnifiedRecord, want string) bool {
 	canonical := CanonicalStatus(r)
 	switch strings.ToLower(strings.TrimSpace(want)) {
@@ -34,6 +33,8 @@ func matchStatus(r UnifiedRecord, want string) bool {
 		return canonical == store.RunFailed
 	case "running", "active", "in-progress":
 		return canonical == store.RunRunning
+	case "cancelled", "canceled":
+		return canonical == store.RunCancelled
 	default:
 		return string(canonical) == strings.ToLower(strings.TrimSpace(want))
 	}
@@ -92,23 +93,19 @@ type UnifiedRecord struct {
 	LogEntry *tuikitIO.ArchiveEntry
 }
 
-// CanonicalStatus returns the lifecycle status of a record (running/completed/failed), deriving it
-// from the exit code for legacy records that predate the Status field.
+// CanonicalStatus returns the lifecycle status of a record (running/completed/failed/cancelled).
 func CanonicalStatus(r UnifiedRecord) store.RunStatus {
-	if r.Status != "" {
-		return r.Status
-	}
-	if r.ExitCode == 0 {
-		return store.RunCompleted
-	}
-	return store.RunFailed
+	return r.EffectiveStatus()
 }
 
-// StatusText returns a human-readable status for display: "running" for in-progress runs,
-// otherwise "ok" or "exit(N)" derived from the exit code.
+// StatusText returns a human-readable status for display: "running" or "cancelled" when the run
+// was not left to finish, otherwise "ok" or "exit(N)" derived from the exit code.
 func StatusText(r UnifiedRecord) string {
-	if CanonicalStatus(r) == store.RunRunning {
+	switch CanonicalStatus(r) {
+	case store.RunRunning:
 		return "running"
+	case store.RunCancelled:
+		return "cancelled"
 	}
 	if r.ExitCode == 0 {
 		return "ok"
@@ -133,20 +130,15 @@ func OriginText(r UnifiedRecord) string {
 // the correction back to the store. This prevents an abnormally-terminated run from lingering as
 // active, mirroring the stale-detection done for background runs in `flow logs --running`.
 func reconcileStale(ds store.DataStore, records []store.ExecutionRecord) []store.ExecutionRecord {
+	now := time.Now()
 	for i := range records {
-		r := &records[i]
-		if r.Status != store.RunRunning || r.PID == 0 || process.Alive(r.PID) {
+		reconciled, changed := records[i].Reconciled(now)
+		if !changed {
 			continue
 		}
-		now := time.Now()
-		r.Status = store.RunFailed
-		r.ExitCode = 1
-		r.CompletedAt = &now
-		if r.Error == "" {
-			r.Error = "process exited unexpectedly"
-		}
-		if ds != nil && r.ID != "" {
-			_ = ds.RecordExecution(*r)
+		records[i] = reconciled
+		if ds != nil && reconciled.ID != "" {
+			_ = ds.RecordExecution(reconciled)
 		}
 	}
 	return records

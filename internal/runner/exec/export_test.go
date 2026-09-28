@@ -12,6 +12,7 @@ import (
 // RunFunc matches the signature of run.RunCmd / run.RunFile so tests can
 // substitute either seam without importing the run package.
 type RunFunc = func(
+	ctx stdctx.Context,
 	s, dir string,
 	envList []string,
 	logMode io.LogMode,

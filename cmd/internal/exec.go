@@ -6,6 +6,7 @@ import (
 	stdio "io"
 	"os"
 	osExec "os/exec"
+	"os/signal"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -189,9 +190,15 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	prov := runProvenanceFromEnv()
 	recordRunStart(ctx, ref, startTime, prov, transientMeta{})
 
+	stopSignals := cancelOnTermSignal(ctx, func(cancelErr error) {
+		recordExecution(ctx, ref, startTime, time.Since(startTime), cancelErr, prov, transientMeta{})
+	})
 	eng := engine.NewExecEngine()
 	runErr := runner.Exec(ctx, e, eng, envMap, execArgs)
 	dur := time.Since(startTime)
+	if cancelErr := stopSignals(); cancelErr != nil {
+		runErr = cancelErr
+	}
 
 	cleanupProcessStore(ctx)
 	recordExecution(ctx, ref, startTime, dur, runErr, prov, transientMeta{})
@@ -504,9 +511,15 @@ func runTransientExecutable(
 	}
 	recordRunStart(ctx, ref, startTime, prov, meta)
 
+	stopSignals := cancelOnTermSignal(ctx, func(cancelErr error) {
+		recordExecution(ctx, ref, startTime, time.Since(startTime), cancelErr, prov, meta)
+	})
 	eng := engine.NewExecEngine()
 	runErr := runner.Exec(ctx, e, eng, envMap, nil)
 	dur := time.Since(startTime)
+	if cancelErr := stopSignals(); cancelErr != nil {
+		runErr = cancelErr
+	}
 
 	cleanupProcessStore(ctx)
 	recordExecution(ctx, ref, startTime, dur, runErr, prov, meta)
@@ -700,10 +713,14 @@ func finalizeBackgroundRun(ctx *context.Context, runID string, runErr error) {
 	if archivePath := findArchiveByID(ctx.LogArchiveID); archivePath != "" {
 		run.LogArchiveID = archivePath
 	}
-	if runErr != nil {
+	switch {
+	case isRunCancelled(runErr):
+		run.Status = store.BackgroundCancelled
+		run.Error = runErr.Error()
+	case runErr != nil:
 		run.Status = store.BackgroundFailed
 		run.Error = runErr.Error()
-	} else {
+	default:
 		run.Status = store.BackgroundCompleted
 	}
 	if err := ctx.DataStore.SaveBackgroundRun(run); err != nil {
@@ -838,6 +855,9 @@ func recordExecution(
 		record.ExitCode = 1
 		record.Error = runErr.Error()
 		record.Status = store.RunFailed
+		if isRunCancelled(runErr) {
+			record.Status = store.RunCancelled
+		}
 	}
 	if archivePath := findArchiveByID(ctx.LogArchiveID); archivePath != "" {
 		record.LogArchiveID = archivePath
@@ -849,6 +869,44 @@ func recordExecution(
 			logger.Log().Debug("failed to record execution history", "err", recErr)
 		}
 	}
+}
+
+// cancelOnTermSignal cancels ctx when flow receives an interrupt or termination signal, so the
+// executable's commands are stopped instead of flow dying mid-run with its record still "running".
+// onCancel runs before the cancellation propagates so the run is recorded even if flow is killed
+// before the executable unwinds.
+func cancelOnTermSignal(ctx *context.Context, onCancel func(error)) (stop func() error) {
+	sigCh := make(chan os.Signal, 1)
+	notifyTermSignals(sigCh)
+	done := make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		select {
+		case sig := <-sigCh:
+			cancelErr := flowErrors.NewRunCancelledError(sig.String())
+			onCancel(cancelErr)
+			ctx.Cancel()
+			result <- cancelErr
+		case <-done:
+			// A signal delivered to the whole process group can end the run before it is seen here.
+			select {
+			case sig := <-sigCh:
+				result <- flowErrors.NewRunCancelledError(sig.String())
+			default:
+				result <- nil
+			}
+		}
+	}()
+	return func() error {
+		signal.Stop(sigCh)
+		close(done)
+		return <-result
+	}
+}
+
+func isRunCancelled(err error) bool {
+	var cancelled flowErrors.RunCancelledError
+	return errors.As(err, &cancelled)
 }
 
 // findArchiveByID searches log archive entries for one matching the given ID.

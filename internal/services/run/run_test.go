@@ -1,9 +1,11 @@
 package run_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/flowexec/tuikit/io/mocks"
@@ -42,7 +44,7 @@ var _ = Describe("Run", func() {
 				logger.EXPECT().LogMode().DoAndReturn(func() tuikitIO.LogMode {
 					return tuikitIO.Hidden
 				}).AnyTimes()
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+				err := run.RunCmd(context.Background(), "echo \"foo\"", "", nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -54,7 +56,7 @@ var _ = Describe("Run", func() {
 				}).AnyTimes()
 				logger.EXPECT().Print("foo").Times(1)
 				logger.EXPECT().Print("\n").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Text, logger, os.Stdin, nil, nil)
+				err := run.RunCmd(context.Background(), "echo \"foo\"", "", nil, tuikitIO.Text, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -65,7 +67,7 @@ var _ = Describe("Run", func() {
 					return tuikitIO.Logfmt
 				}).AnyTimes()
 				logger.EXPECT().Info("foo").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
+				err := run.RunCmd(context.Background(), "echo \"foo\"", "", nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -76,7 +78,7 @@ var _ = Describe("Run", func() {
 					return tuikitIO.JSON
 				}).AnyTimes()
 				logger.EXPECT().Info("foo").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, nil, nil)
+				err := run.RunCmd(context.Background(), "echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -88,7 +90,7 @@ var _ = Describe("Run", func() {
 				}).AnyTimes()
 				fields := map[string]interface{}{"key": "value"}
 				logger.EXPECT().Info("foo", "key", "value").Times(1)
-				err := run.RunCmd("echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, fields, nil)
+				err := run.RunCmd(context.Background(), "echo \"foo\"", "", nil, tuikitIO.JSON, logger, os.Stdin, fields, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -100,9 +102,23 @@ var _ = Describe("Run", func() {
 				}).AnyTimes()
 				env := []string{"key=value"}
 				logger.EXPECT().Info("value").Times(1)
-				err := run.RunCmd("echo \"$key\"", "", env, tuikitIO.JSON, logger, os.Stdin, nil, nil)
+				err := run.RunCmd(context.Background(), "echo \"$key\"", "", env, tuikitIO.JSON, logger, os.Stdin, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
+	})
+
+	Describe("cancellation", func() {
+		It("stops a running command when the context is cancelled", func() {
+			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
+			logger.EXPECT().LogMode().Return(tuikitIO.Hidden).AnyTimes()
+			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer cancel()
+
+			start := time.Now()
+			err := run.RunCmd(ctx, "sleep 30", "", nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(time.Since(start)).To(BeNumerically("<", 10*time.Second))
 		})
 	})
 
@@ -115,7 +131,7 @@ var _ = Describe("Run", func() {
 			logger.EXPECT().LogMode().Return(tuikitIO.Hidden).AnyTimes()
 			dir := GinkgoT().TempDir()
 			env := []string{"PATH=" + GinkgoT().TempDir()}
-			return dir, run.RunCmd("mkdir -p a/b", dir, env, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			return dir, run.RunCmd(context.Background(), "mkdir -p a/b", dir, env, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
 		}
 
 		It("provides mkdir without one on PATH when enabled", func() {
@@ -153,14 +169,14 @@ var _ = Describe("Run", func() {
 			}).AnyTimes()
 			logger.EXPECT().Print("foo").Times(1)
 			logger.EXPECT().Print("\n").Times(1)
-			err = run.RunFile("test.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
+			err = run.RunFile(context.Background(), "test.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error for a non-existent file", func() {
 			logger.EXPECT().SetMode(gomock.Any()).AnyTimes()
 			logger.EXPECT().LogMode().AnyTimes()
-			err := run.RunFile("missing.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
+			err := run.RunFile(context.Background(), "missing.sh", tmpDir, nil, tuikitIO.Logfmt, logger, os.Stdin, nil, nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("file does not exist"))
 		})
@@ -175,7 +191,7 @@ var _ = Describe("Run", func() {
 			logger.EXPECT().LogMode().AnyTimes()
 			logger.EXPECT().Print(gomock.Any()).AnyTimes()
 
-			err = run.RunFile("test.bat", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			err = run.RunFile(context.Background(), "test.bat", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
 			// On non-Windows this will fail because cmd.exe doesn't exist, but crucially
 			// it should NOT fail with "unable to parse file" (which would mean it hit the shell parser).
 			if err != nil {
@@ -191,7 +207,7 @@ var _ = Describe("Run", func() {
 			logger.EXPECT().LogMode().AnyTimes()
 			logger.EXPECT().Print(gomock.Any()).AnyTimes()
 
-			err = run.RunFile("test.ps1", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
+			err = run.RunFile(context.Background(), "test.ps1", tmpDir, nil, tuikitIO.Hidden, logger, os.Stdin, nil, nil)
 			// Same as above — on non-Windows/non-pwsh systems this may fail,
 			// but it must NOT fail with a shell parse error.
 			if err != nil {

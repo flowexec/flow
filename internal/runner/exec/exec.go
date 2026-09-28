@@ -113,18 +113,22 @@ func (r *execRunner) Exec(
 
 	switch {
 	case execSpec.Cmd != "" && execSpec.ResolveInterpreter() == executable.InterpreterPython:
-		return runPythonFn(execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
+		return runPythonFn(
+			ctx, execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask,
+		)
 	case execSpec.Cmd != "":
-		return runCmdFn(execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
+		return runCmdFn(ctx, execSpec.Cmd, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
 	case execSpec.File != "" && execSpec.InterpreterForFile() == executable.InterpreterPython:
 		// An explicit interpreter overrides the extension, so route here rather
 		// than letting RunFile dispatch on the suffix alone.
 		return runPythonFileFn(
-			filepath.Join(targetDir, execSpec.File), targetDir,
+			ctx, filepath.Join(targetDir, execSpec.File), targetDir,
 			envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask,
 		)
 	case execSpec.File != "":
-		return runFileFn(execSpec.File, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask)
+		return runFileFn(
+			ctx, execSpec.File, targetDir, envList, logMode, logger.Log(), ctx.StdIn(), logFields, ctx.CurrentTask,
+		)
 	default:
 		return errors.New("unable to determine how e should be run")
 	}
