@@ -145,6 +145,36 @@ var _ = Describe("InferVerb", func() {
 		Entry("vet", "vet", executable.VerbLint),
 		Entry("a verb inside a word", "rebuilder", executable.VerbExec),
 		Entry("no verb", "docker", executable.VerbExec),
+		Entry("a verb in camelCase", "prodBuild", executable.VerbBuild),
+		Entry("any valid verb as a word", "db:migrate", executable.VerbMigrate),
+		Entry("any valid verb as the first word", "backup-db", executable.VerbBackup),
+		Entry("a synonym", "docker-up", executable.VerbStart),
+		Entry("an npm pre hook", "prebuild", executable.VerbBuild),
+		Entry("an npm post hook", "postinstall", executable.VerbInstall),
+		Entry("a noun-like verb as a word", "search-index", executable.VerbExec),
+		Entry("a noun-like verb as the whole name", "index", executable.VerbIndex),
+		Entry("nouns before a verb-like word", "package-lock", executable.VerbExec),
+	)
+
+	It("infers a custom verb from a word", func() {
+		executable.RegisterCustomVerbs("sync")
+		DeferCleanup(executable.RegisterCustomVerbs)
+		Expect(fileparser.InferVerb("sync-assets")).To(Equal(executable.Verb("sync")))
+	})
+
+	// The word fallback only runs where the pattern passes fall back to exec, so names they
+	// already matched keep their verb even when a later word is a more specific one.
+	DescribeTable("keeps the verb the pattern passes infer",
+		func(name string, expected executable.Verb) {
+			Expect(fileparser.InferVerb(name)).To(Equal(expected))
+		},
+		Entry(nil, "compile-assets", executable.VerbBuild),
+		Entry(nil, "publish-docs", executable.VerbDeploy),
+		Entry(nil, "reset-db", executable.VerbClean),
+		Entry(nil, "buildProd", executable.VerbBuild),
+		Entry(nil, "test:e2e", executable.VerbTest),
+		Entry(nil, "preview", executable.VerbStart),
+		Entry(nil, "docker-push", executable.VerbDeploy),
 	)
 })
 
