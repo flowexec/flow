@@ -45,7 +45,7 @@ func updateFunc(ctx *context.Context, cmd *cobra.Command) {
 	current := version.SemVer()
 	if current == "" {
 		errhandler.HandleFatal(ctx, cmd,
-			fmt.Errorf("current version is unknown (dev build); cannot update"))
+			fmt.Errorf("unknown version (local or dev build); cannot update"))
 		return
 	}
 
