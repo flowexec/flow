@@ -55,6 +55,21 @@ executables:
 - **timeout**: Maximum execution time (e.g., 30s, 5m, 1h)
 - **visibility**: Access control (public, private, internal, hidden)
 
+### Custom Verbs
+
+If none of the built-in verbs fit, register your own:
+
+```shell
+flow config add verb status
+```
+
+The verb can then be used in flow files (`verb: status`) and on the command line (`flow status my-services`).
+Remove one with `flow config remove verb status`.
+
+> [!NOTE]
+> Custom verbs are stored in your user config, not the workspace. Anyone running a flow file that uses one needs to
+> register it too.
+
 ### Visibility Levels
 
 - **public**: Available from any workspace

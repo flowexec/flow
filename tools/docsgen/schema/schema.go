@@ -29,11 +29,14 @@ type JSONSchema struct {
 	Required             []string                 `json:"required,omitempty"             yaml:"required,omitempty"`
 	Default              interface{}              `json:"default,omitempty"              yaml:"default,omitempty"`
 	Enum                 []string                 `json:"enum,omitempty"                 yaml:"enum,omitempty"`
+	Pattern              string                   `json:"pattern,omitempty"              yaml:"pattern,omitempty"`
+	AnyOf                []*JSONSchema            `json:"anyOf,omitempty"                yaml:"anyOf,omitempty"`
 	Definitions          map[FieldKey]*JSONSchema `json:"definitions,omitempty"          yaml:"definitions,omitempty"`
 	Properties           map[FieldKey]*JSONSchema `json:"properties,omitempty"           yaml:"properties,omitempty"`
 	AdditionalProperties *JSONSchema              `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 	Items                *JSONSchema              `json:"items,omitempty"                yaml:"items,omitempty"`
 	Ext                  SchemaExt                `json:"-"                              yaml:"goJSONSchema,omitempty"`
+	Docsgen              DocsgenExt               `json:"-"                              yaml:"docsgen,omitempty"`
 }
 
 type SchemaExt struct {
@@ -178,4 +181,18 @@ func TitleCase(s string) string {
 	}
 	firstLetter := strings.ToUpper(s[:1])
 	return firstLetter + s[1:]
+}
+
+type DocsgenExt struct {
+	// OpenPattern publishes an enum as "one of the enum values, or any string matching this
+	// pattern", so editors still suggest the enum values without rejecting others.
+	OpenPattern string `json:"-" yaml:"openPattern"`
+}
+
+func (s *JSONSchema) ApplyOpenPattern() {
+	if s.Docsgen.OpenPattern == "" || len(s.Enum) == 0 {
+		return
+	}
+	s.AnyOf = []*JSONSchema{{Enum: s.Enum}, {Pattern: s.Docsgen.OpenPattern}}
+	s.Enum = nil
 }

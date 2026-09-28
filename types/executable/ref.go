@@ -2,6 +2,7 @@ package executable
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -12,6 +13,9 @@ const (
 	ViewGroupID      = "view"
 	ConfigGroupID    = "config"
 	UpdateGroupID    = "update"
+	EvaluateGroupID  = "evaluate"
+
+	CustomVerbPattern = `^[a-z][a-z0-9-]*$`
 )
 
 var (
@@ -33,11 +37,49 @@ var (
 
 		VerbUpdate:  UpdateGroupID,
 		VerbUpgrade: UpdateGroupID,
+
+		VerbEvaluate: EvaluateGroupID,
+		VerbEval:     EvaluateGroupID,
 	}
+
+	customVerbs      []Verb
+	customVerbRegexp = regexp.MustCompile(CustomVerbPattern)
 )
 
-//nolint:funlen
 func ValidVerbs() []Verb {
+	return append(builtinVerbs(), customVerbs...)
+}
+
+func RegisterCustomVerbs(verbs ...string) {
+	registered := make([]Verb, 0, len(verbs))
+	for _, v := range verbs {
+		if ValidateCustomVerbName(v) != nil || slices.Contains(registered, Verb(v)) {
+			continue
+		}
+		registered = append(registered, Verb(v))
+	}
+	customVerbs = registered
+}
+
+func IsBuiltinVerb(v Verb) bool {
+	return slices.Contains(builtinVerbs(), v)
+}
+
+func ValidateCustomVerbName(name string) error {
+	if !customVerbRegexp.MatchString(name) {
+		return fmt.Errorf(
+			"invalid verb %q: must contain only lowercase letters, numbers, and hyphens",
+			name,
+		)
+	}
+	if IsBuiltinVerb(Verb(name)) {
+		return fmt.Errorf("verb %q is already a built-in verb", name)
+	}
+	return nil
+}
+
+//nolint:funlen
+func builtinVerbs() []Verb {
 	return []Verb{
 		VerbAbort,
 		VerbActivate,
@@ -58,6 +100,7 @@ func ValidVerbs() []Verb {
 		VerbCompress,
 		VerbConfigure,
 		VerbConnect,
+		VerbCopy,
 		VerbCreate,
 		VerbDeactivate,
 		VerbDebug,
@@ -66,12 +109,16 @@ func ValidVerbs() []Verb {
 		VerbDelete,
 		VerbDeploy,
 		VerbDestroy,
+		VerbDiff,
 		VerbDisable,
 		VerbDisconnect,
+		VerbDownload,
 		VerbEdit,
 		VerbEnable,
 		VerbEncrypt,
 		VerbErase,
+		VerbEval,
+		VerbEvaluate,
 		VerbExec,
 		VerbExecute,
 		VerbExport,
@@ -84,6 +131,7 @@ func ValidVerbs() []Verb {
 		VerbGet,
 		VerbImport,
 		VerbIndex,
+		VerbInfer,
 		VerbInit,
 		VerbInspect,
 		VerbInstall,
@@ -110,11 +158,13 @@ func ValidVerbs() []Verb {
 		VerbPatch,
 		VerbPause,
 		VerbPing,
-		VerbPreload,
+		VerbPlan,
 		VerbPrefetch,
+		VerbPreload,
 		VerbProfile,
 		VerbProvision,
 		VerbPublish,
+		VerbPull,
 		VerbPurge,
 		VerbPush,
 		VerbQueue,
@@ -124,13 +174,17 @@ func ValidVerbs() []Verb {
 		VerbRelease,
 		VerbReload,
 		VerbRemove,
+		VerbRender,
 		VerbRequest,
 		VerbReset,
 		VerbRestart,
 		VerbRestore,
+		VerbResume,
 		VerbRetrieve,
+		VerbReview,
 		VerbRollback,
 		VerbRun,
+		VerbSave,
 		VerbScale,
 		VerbScan,
 		VerbSchedule,
@@ -144,21 +198,26 @@ func ValidVerbs() []Verb {
 		VerbStart,
 		VerbStash,
 		VerbStop,
+		VerbSummarize,
 		VerbTag,
 		VerbTeardown,
 		VerbTerminate,
 		VerbTest,
 		VerbTidy,
 		VerbTrace,
+		VerbTrain,
 		VerbTransform,
 		VerbTrigger,
+		VerbTune,
 		VerbTunnel,
 		VerbUndeploy,
 		VerbUninstall,
+		VerbUnlock,
 		VerbUnmount,
 		VerbUnset,
 		VerbUpdate,
 		VerbUpgrade,
+		VerbUpload,
 		VerbValidate,
 		VerbVerify,
 		VerbView,

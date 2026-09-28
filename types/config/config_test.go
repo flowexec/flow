@@ -107,3 +107,25 @@ var _ = Describe("Workspace path lookups", func() {
 		})
 	})
 })
+
+var _ = Describe("Validate custom verbs", func() {
+	It("accepts valid custom verbs", func() {
+		cfg := &config.Config{CustomVerbs: []string{"status", "health"}}
+		Expect(cfg.Validate()).To(Succeed())
+	})
+
+	It("rejects an invalid custom verb", func() {
+		cfg := &config.Config{CustomVerbs: []string{"Status"}}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("invalid custom verb")))
+	})
+
+	It("rejects a custom verb that duplicates a built-in", func() {
+		cfg := &config.Config{CustomVerbs: []string{"build"}}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("already a built-in verb")))
+	})
+
+	It("rejects duplicate custom verbs", func() {
+		cfg := &config.Config{CustomVerbs: []string{"status", "status"}}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("duplicate custom verb")))
+	})
+})

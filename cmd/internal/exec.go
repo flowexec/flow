@@ -7,6 +7,7 @@ import (
 	"os"
 	osExec "os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,6 +44,23 @@ const (
 	// backgroundRunIDEnv is set on child processes spawned by --background.
 	backgroundRunIDEnv = "FLOW_BACKGROUND_RUN_ID"
 )
+
+// DropShadowedVerbAliases removes custom verbs from the exec command's aliases when they collide
+// with another root command. Cobra resolves the command first, so the verb could never be invoked;
+// this catches verbs added to the config file by hand rather than through 'config add verb'.
+func DropShadowedVerbAliases(rootCmd *cobra.Command) {
+	execCmd, _, err := rootCmd.Find([]string{"exec"})
+	if err != nil || execCmd == rootCmd {
+		return
+	}
+	execCmd.Aliases = slices.DeleteFunc(execCmd.Aliases, func(alias string) bool {
+		if executable.IsBuiltinVerb(executable.Verb(alias)) || !isRootCommandName(rootCmd, alias) {
+			return false
+		}
+		logger.Log().Warnf("custom verb %q conflicts with the flow %s command and will be ignored", alias, alias)
+		return true
+	})
+}
 
 func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	subCmd := &cobra.Command{

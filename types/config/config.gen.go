@@ -89,6 +89,12 @@ type Config struct {
 	// or `remoteWorkspaces` map.
 	CurrentWorkspace string `json:"currentWorkspace" yaml:"currentWorkspace" mapstructure:"currentWorkspace"`
 
+	// Additional executable verbs registered by the user.
+	// Verbs must be lowercase words made up of letters, numbers, and hyphens.
+	// Manage them with `flow config add verb` and `flow config remove verb`.
+	//
+	CustomVerbs []string `json:"customVerbs,omitempty" yaml:"customVerbs,omitempty" mapstructure:"customVerbs,omitempty"`
+
 	// The default log mode to use when running executables.
 	// This can either be `hidden`, `json`, `logfmt` or `text`
 	//

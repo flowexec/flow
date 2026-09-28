@@ -104,19 +104,49 @@ func ValidateBytes(data []byte, ft FileType, strict bool) (*Result, error) {
 		return nil, fmt.Errorf("compiling schema: %w", err)
 	}
 
-	validationErr := schema.Validate(doc)
-	if validationErr == nil {
+	var issues []Issue
+	if validationErr := schema.Validate(doc); validationErr != nil {
+		verr := &jsonschema.ValidationError{}
+		if !errors.As(validationErr, &verr) {
+			return nil, fmt.Errorf("unexpected validation error type: %w", validationErr)
+		}
+		issues = collectIssues(verr)
+	}
+	if ft == FileTypeFlowFile {
+		issues = append(issues, verbIssues(doc)...)
+	}
+	if len(issues) == 0 {
 		return &Result{Valid: true}, nil
 	}
-
-	verr := &jsonschema.ValidationError{}
-	ok := errors.As(validationErr, &verr)
-	if !ok {
-		return nil, fmt.Errorf("unexpected validation error type: %w", validationErr)
-	}
-
-	issues := collectIssues(verr)
 	return &Result{Valid: false, Errors: issues}, nil
+}
+
+// verbIssues reports verbs that are neither built-in nor registered as custom verbs. The published
+// schema accepts any well-formed verb so that custom verbs validate, which leaves this check to Go.
+func verbIssues(doc any) []Issue {
+	root, _ := doc.(map[string]any)
+	execs, _ := root["executables"].([]any)
+	var issues []Issue
+	check := func(path string, val any) {
+		str, ok := val.(string)
+		if !ok {
+			return
+		}
+		if err := executable.Verb(str).Validate(); err != nil {
+			issues = append(issues, Issue{Path: path, Message: err.Error()})
+		}
+	}
+	for i, e := range execs {
+		exec, _ := e.(map[string]any)
+		if v, ok := exec["verb"]; ok {
+			check(fmt.Sprintf("/executables/%d/verb", i), v)
+		}
+		aliases, _ := exec["verbAliases"].([]any)
+		for j, a := range aliases {
+			check(fmt.Sprintf("/executables/%d/verbAliases/%d", i, j), a)
+		}
+	}
+	return issues
 }
 
 func schemaFileName(ft FileType) string {
