@@ -833,6 +833,11 @@ properties:
     default: ""
     goJSONSchema:
       identifier: flowFilePath
+  sourceFilePath:
+    type: string
+    default: ""
+    goJSONSchema:
+      identifier: sourceFilePath
   inheritedDescription:
     type: string
     default: ""

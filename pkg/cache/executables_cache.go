@@ -29,6 +29,7 @@ type ExecutableCache interface {
 	Update() error
 	GetExecutableByRef(ref executable.Ref) (*executable.Executable, error)
 	GetExecutableList() (executable.ExecutableList, error)
+	AliasRefs() (map[executable.Ref]executable.Ref, error)
 }
 type WorkspaceInfo struct {
 	WorkspaceName string `json:"workspaceName" yaml:"workspaceName"`
@@ -42,6 +43,9 @@ type ExecutableCacheData struct {
 	AliasMap map[executable.Ref]executable.Ref `json:"aliasMap" yaml:"aliasMap"`
 	// Map of config paths to their workspace / workspace path
 	ConfigMap map[string]WorkspaceInfo `json:"configMap" yaml:"configMap"`
+	// Executables contributed by an ExecutableSource, keyed by ref. They are stored whole because
+	// flow can't re-read the files they came from.
+	SourcedExecutables map[executable.Ref]*SourcedExecutable `json:"sourcedExecutables,omitempty" yaml:"-"`
 
 	loadedMu          sync.Mutex
 	loadedExecutables map[string]*executable.Executable
@@ -65,19 +69,26 @@ func NewExecutableCache(wsCache WorkspaceCache, s store.DataStore) ExecutableCac
 // newExecutableCacheData returns an empty, ready-to-populate index.
 func newExecutableCacheData() *ExecutableCacheData {
 	return &ExecutableCacheData{
-		ExecutableMap: make(map[executable.Ref]string),
-		AliasMap:      make(map[executable.Ref]executable.Ref),
-		ConfigMap:     make(map[string]WorkspaceInfo),
+		ExecutableMap:      make(map[executable.Ref]string),
+		AliasMap:           make(map[executable.Ref]executable.Ref),
+		ConfigMap:          make(map[string]WorkspaceInfo),
+		SourcedExecutables: make(map[executable.Ref]*SourcedExecutable),
 	}
 }
 
 // indexWorkspaceExecutables walks one workspace's flow files and records every visible, valid
-// executable (and its aliases) in data. wsCfg must already carry its name and location.
+// executable (and its aliases) in data, then adds the executables of registered sources. wsCfg
+// must already carry its name and location.
 //
 // This is shared by the persisted cache and the in-memory overlay built for a workspace
 // discovered from the working directory, so the two agree on visibility, validation, generated
 // imports, and alias expansion.
-func indexWorkspaceExecutables(data *ExecutableCacheData, wsCfg *workspace.Workspace) { //nolint:gocognit
+func indexWorkspaceExecutables(data *ExecutableCacheData, wsCfg *workspace.Workspace) {
+	indexFlowFileExecutables(data, wsCfg)
+	indexSourcedExecutables(data, wsCfg)
+}
+
+func indexFlowFileExecutables(data *ExecutableCacheData, wsCfg *workspace.Workspace) { //nolint:gocognit
 	name := wsCfg.AssignedName()
 	flowFiles, err := filesystem.LoadWorkspaceFlowFiles(wsCfg)
 	if err != nil {
@@ -162,6 +173,7 @@ func (c *ExecutableCacheImpl) Update() error {
 		wsCfg.SetContext(name, wsCacheData.WorkspaceLocations[name])
 		indexWorkspaceExecutables(cacheData, wsCfg)
 	}
+	carrySourcedExecutables(cacheData, c.persistedData(), wsCacheData.Workspaces)
 
 	data, err := json.Marshal(cacheData)
 	if err != nil {
@@ -180,6 +192,20 @@ func (c *ExecutableCacheImpl) Update() error {
 	return nil
 }
 
+// persistedData reads the index as last written to the store, or nil when there is none.
+func (c *ExecutableCacheImpl) persistedData() *ExecutableCacheData {
+	raw, err := c.Store.GetCacheEntry(execCacheKey)
+	if err != nil || raw == nil {
+		return nil
+	}
+	data := &ExecutableCacheData{}
+	if err := json.Unmarshal(raw, data); err != nil {
+		logger.Log().Warn("unable to decode previous executable cache data", "err", err)
+		return nil
+	}
+	return data
+}
+
 // lookupExecutable resolves ref against an index, following the alias map when the ref is not a
 // primary one, and loading the owning flow file to return the executable itself.
 func lookupExecutable(data *ExecutableCacheData, ref executable.Ref) (*executable.Executable, error) {
@@ -193,16 +219,21 @@ func lookupExecutable(data *ExecutableCacheData, ref executable.Ref) (*executabl
 	data.loadedMu.Unlock()
 
 	primaryRef := ref
-	cfgPath, found := data.ExecutableMap[ref]
-	if !found {
+	_, isPrimary := data.ExecutableMap[ref]
+	if _, isSourced := data.SourcedExecutables[ref]; !isPrimary && !isSourced {
 		aliasedPrimaryRef, aliasFound := data.AliasMap[ref]
 		if !aliasFound {
 			return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 		}
 		primaryRef = aliasedPrimaryRef
-		if cfgPath, found = data.ExecutableMap[primaryRef]; !found {
-			return nil, flowErrors.NewExecutableNotFoundError(ref.String())
-		}
+	}
+
+	if exec, found := visibleSourced(data, primaryRef); found {
+		return exec, nil
+	}
+	cfgPath, found := data.ExecutableMap[primaryRef]
+	if !found {
+		return nil, flowErrors.NewExecutableNotFoundError(ref.String())
 	}
 
 	wsInfo, found := data.ConfigMap[cfgPath]
@@ -229,8 +260,9 @@ func lookupExecutable(data *ExecutableCacheData, ref executable.Ref) (*executabl
 	return exec, nil
 }
 
-// listExecutables returns every executable in an index, ordered by flow file path. Callers
-// paginate this list across separate calls, so map order would silently drop entries.
+// listExecutables returns every executable in an index, ordered by flow file path and then
+// followed by sourced executables. Callers paginate this list across separate calls, so map order
+// would silently drop entries.
 func listExecutables(data *ExecutableCacheData) executable.ExecutableList {
 	list := make(executable.ExecutableList, 0)
 	for _, cfgPath := range slices.Sorted(maps.Keys(data.ConfigMap)) {
@@ -241,7 +273,20 @@ func listExecutables(data *ExecutableCacheData) executable.ExecutableList {
 		}
 		list = append(list, cfg.Executables...)
 	}
-	return list
+	return append(list, listSourced(data)...)
+}
+
+// aliasRefs returns a copy of an index's alias map, without aliases of executables that aren't
+// resolvable in this process.
+func aliasRefs(data *ExecutableCacheData) map[executable.Ref]executable.Ref {
+	refs := make(map[executable.Ref]executable.Ref, len(data.AliasMap))
+	for alias, primary := range data.AliasMap {
+		if s, sourced := data.SourcedExecutables[primary]; sourced && !sourceRegistered(s.Source) {
+			continue
+		}
+		refs[alias] = primary
+	}
+	return refs
 }
 
 // loadFlowFileWithImports reads a flow file, attaches its workspace context, and appends the
@@ -282,6 +327,17 @@ func (c *ExecutableCacheImpl) GetExecutableList() (executable.ExecutableList, er
 		return nil, errors.New("no cached executables found")
 	}
 	return listExecutables(data), nil
+}
+
+func (c *ExecutableCacheImpl) AliasRefs() (map[executable.Ref]executable.Ref, error) {
+	if err := c.initExecutableCacheData(); err != nil {
+		return nil, err
+	}
+	data := c.currentData()
+	if data == nil {
+		return nil, errors.New("no cached executables found")
+	}
+	return aliasRefs(data), nil
 }
 
 func (c *ExecutableCacheImpl) currentData() *ExecutableCacheData {

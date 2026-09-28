@@ -213,6 +213,19 @@ func (e *Executable) FlowFilePath() string {
 	return e.flowFilePath
 }
 
+func (e *Executable) SourceFilePath() string {
+	if e.sourceFilePath != "" {
+		return e.sourceFilePath
+	}
+	return e.flowFilePath
+}
+
+// SetSourceFilePath records the file an executable was generated from, when that is not the
+// flow file it belongs to.
+func (e *Executable) SetSourceFilePath(path string) {
+	e.sourceFilePath = path
+}
+
 const TimeoutOverrideEnv = "FLOW_DEFAULT_TIMEOUT"
 
 func (e *Executable) SetDefaults() {
