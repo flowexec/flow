@@ -328,7 +328,7 @@ A list of executables to run in serial. The executables can be defined by it's e
 ### ExecutableVerb
 
 Keywords that describe the action an executable performs. Executables are configured with a single verb,
-but core verbs have aliases that can be used interchangeably when referencing executables. This allows users 
+but core verbs have aliases that can be used interchangeably when referencing executables. This allows users
 to use the verb that best describes the action they are performing.
 
 ### Default Verb Aliases
