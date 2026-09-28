@@ -62,6 +62,7 @@ var (
 	nameSanitizer  = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
 	wordSeparators = regexp.MustCompile(`[\s:_.-]+`)
 	camelBoundary  = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+	wordPattern    = regexp.MustCompile(`[^\s:_.-]+`)
 )
 
 // InferVerb infers the most likely Executable verb from a script or makeTarget name. A name that
@@ -128,14 +129,18 @@ func wordVerb(word string) (executable.Verb, bool) {
 }
 
 // NormalizeName strips any character that is not a letter, number, dash, or underscore,
-// and also removes the verb prefix from the name if present.
+// and also removes the verb from the name so the ref doesn't repeat it: as a prefix
+// (`build-app` → `app`), or otherwise as a later word (`db-migrate` → `db`).
 func NormalizeName(name, verb string) string {
-	name = strings.TrimPrefix(name, verb)
-	name = strings.TrimPrefix(name, ":")
-	name = strings.TrimPrefix(name, "-")
-	name = strings.TrimPrefix(name, "_")
+	stripped := strings.TrimPrefix(name, verb)
+	if stripped == name {
+		stripped = removeVerbWord(name, verb)
+	}
+	stripped = strings.TrimPrefix(stripped, ":")
+	stripped = strings.TrimPrefix(stripped, "-")
+	stripped = strings.TrimPrefix(stripped, "_")
 
-	return nameSanitizer.ReplaceAllString(name, "-")
+	return nameSanitizer.ReplaceAllString(stripped, "-")
 }
 
 // ShortenWsPath returns path relative to the workspace root as a `//` directory. The relative
@@ -154,4 +159,45 @@ func ShortenWsPath(wsPath string, path string) executable.Directory {
 func scriptName(filePath string) string {
 	fn := filepath.Base(filePath)
 	return strings.TrimSuffix(fn, filepath.Ext(fn))
+}
+
+func removeVerbWord(name, verb string) string {
+	if verb == "" || verb == executable.VerbExec.String() {
+		return name
+	}
+	lower := strings.ToLower(name)
+	for _, vp := range verbPatterns {
+		if vp.regex.MatchString(lower) {
+			return name
+		}
+	}
+	spans := wordSpans(name)
+	if len(spans) < 2 {
+		return name
+	}
+	for _, span := range spans[1:] {
+		start, end := span[0], span[1]
+		if !strings.EqualFold(name[start:end], verb) {
+			continue
+		}
+		if wordSeparators.MatchString(name[start-1 : start]) {
+			start--
+		}
+		return name[:start] + name[end:]
+	}
+	return name
+}
+
+func wordSpans(name string) [][2]int {
+	var spans [][2]int
+	for _, loc := range wordPattern.FindAllStringIndex(name, -1) {
+		start := loc[0]
+		for _, b := range camelBoundary.FindAllStringIndex(name[loc[0]:loc[1]], -1) {
+			split := loc[0] + b[0] + 1
+			spans = append(spans, [2]int{start, split})
+			start = split
+		}
+		spans = append(spans, [2]int{start, loc[1]})
+	}
+	return spans
 }

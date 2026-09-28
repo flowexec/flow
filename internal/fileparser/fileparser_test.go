@@ -184,9 +184,18 @@ var _ = Describe("NormalizeName", func() {
 			Expect(fileparser.NormalizeName(name, verb)).To(Equal(expected))
 		},
 		Entry("drops the verb prefix", "build-app", "build", "app"),
-		Entry("keeps a later verb", "docker-build", "build", "docker-build"),
 		Entry("replaces invalid characters", "db:migrate", "exec", "db-migrate"),
 		Entry("a name that is only the verb", "lint", "lint", ""),
+		Entry("drops a later verb word", "db-migrate", "migrate", "db"),
+		Entry("drops a later verb word inside a name", "prod-db-migrate-now", "migrate", "prod-db-now"),
+		Entry("drops a verb after a colon", "db:migrate:up", "migrate", "db-up"),
+		Entry("drops a camelCase verb word", "prodBackup", "backup", "prod"),
+		Entry("drops only the first later verb word", "db-seed-seed", "seed", "db-seed"),
+		Entry("keeps a word that only contains the verb", "db-migrates", "migrate", "db-migrates"),
+		Entry("keeps a later word after a leading pattern word", "compile-and-build", "build", "compile-and-build"),
+		Entry("keeps a later exec word", "docker-exec", "exec", "docker-exec"),
+		Entry("keeps a synonym", "compose-down", "stop", "compose-down"),
+		Entry("handles a name with no words", "--", "migrate", "-"),
 	)
 })
 

@@ -41,7 +41,7 @@ var _ = Describe("ExecutablesFromShFile", func() {
 		ws := GinkgoT().TempDir()
 		for file, ref := range map[string]string{
 			"lint-go.sh":      "lint go",
-			"docker-build.sh": "build docker-build",
+			"docker-build.sh": "build docker",
 		} {
 			path := filepath.Join(ws, file)
 			Expect(os.WriteFile(path, []byte("#!/bin/sh\necho hi\n"), 0o600)).To(Succeed())
