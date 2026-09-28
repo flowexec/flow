@@ -55,7 +55,7 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 			"(useful for reviewing what you have run so far).")),
 		mcp.WithString("source", mcp.Description("Filter by run origin: 'cli' or 'mcp'.")),
 		mcp.WithString("session", mcp.Description("Filter to a single provenance session ID.")),
-		mcp.WithString("status", mcp.Description("Filter by status: running, completed, or failed.")),
+		mcp.WithString("status", mcp.Description("Filter by status: running, completed, failed, or cancelled.")),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
 		mcp.WithBoolean("content", mcp.Description("Include each run's captured log output. Implied by "+
 			"`tail` or `grep`. Output is always capped (see `max_bytes`) to protect the context window.")),

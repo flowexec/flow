@@ -17,7 +17,7 @@ flow logs
 
 This shows a table of recent executions with the executable reference, time, duration, status, and origin (which client launched the run). Press `Enter` to view full details and log output for any entry.
 
-Each record is **lifecycle-aware**: it appears as `running` the moment a run starts and updates to `completed` or `failed` when it finishes — so an in-progress foreground run is visible from another terminal, not just after it exits. (A run whose process dies unexpectedly is reconciled to `failed` the next time you view history.)
+Each record is **lifecycle-aware**: it appears as `running` the moment a run starts and updates to `completed` or `failed` when it finishes, or `cancelled` when flow is interrupted or terminated (Ctrl-C, `SIGTERM`, `flow logs kill`) — so an in-progress foreground run is visible from another terminal, not just after it exits. (A run whose process dies without recording its outcome, such as on `SIGKILL`, is reconciled to `failed` the next time you view history.)
 
 **TUI keyboard shortcuts:**
 
@@ -60,14 +60,14 @@ Use flags to narrow results:
 
 ```shell
 flow logs -w my-workspace            # filter by workspace
-flow logs --status failed             # running, completed, or failed
+flow logs --status failed             # running, completed, failed, or cancelled
 flow logs --status running            # only in-progress runs
 flow logs --since 1h                  # last hour (supports d, h, m, s)
 flow logs --limit 5                   # at most 5 records
 flow logs -w api --status completed --since 7d
 ```
 
-`--status` accepts the lifecycle values `running`, `completed`, and `failed` (`success`/`failure` still work as aliases).
+`--status` accepts the lifecycle values `running`, `completed`, `failed`, and `cancelled` (`success`/`failure` still work as aliases).
 
 Filters work with all output modes (`--last`, `-o yaml`, TUI, etc.).
 

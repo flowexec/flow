@@ -135,7 +135,7 @@ func killAndUpdate(r store.BackgroundRun, ds store.DataStore) {
 	}
 	_ = killProcess(proc)
 	now := time.Now()
-	r.Status = store.BackgroundFailed
+	r.Status = store.BackgroundCancelled
 	r.Error = "killed by user"
 	r.CompletedAt = &now
 	if ds != nil {

@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -125,6 +126,7 @@ func envValue(envList []string, key string) string {
 // produces tracebacks with real line numbers, and sidesteps shell quoting for
 // multi-line scripts.
 func RunPythonCmd(
+	ctx context.Context,
 	code, dir string,
 	envList []string,
 	logMode io.LogMode,
@@ -146,13 +148,14 @@ func RunPythonCmd(
 
 	logger.Debugf("running python (%s) in dir (%s)", pythonBin, dir)
 	return runNativeFile(
-		pythonBin, []string{scriptPath}, dir,
+		ctx, pythonBin, []string{scriptPath}, dir,
 		pythonEnv(envList), logMode, logger, stdIn, logFields, task,
 	)
 }
 
 // RunPythonFile executes an existing .py file with the resolved interpreter.
 func RunPythonFile(
+	ctx context.Context,
 	fullPath, dir string,
 	envList []string,
 	logMode io.LogMode,
@@ -172,7 +175,7 @@ func RunPythonFile(
 
 	logger.Debugf("executing python file (%s) with %s", fullPath, pythonBin)
 	return runNativeFile(
-		pythonBin, []string{fullPath}, dir,
+		ctx, pythonBin, []string{fullPath}, dir,
 		pythonEnv(envList), logMode, logger, stdIn, logFields, task,
 	)
 }

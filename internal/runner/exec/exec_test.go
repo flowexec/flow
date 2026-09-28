@@ -82,28 +82,28 @@ var _ = Describe("Exec Runner", func() {
 		containerErr = nil
 
 		restoreCmd = exec.SetRunCmdFnForTest(func(
-			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ stdCtx.Context, s, dir string, envList []string, logMode tuikitIO.LogMode,
 			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
 		) error {
 			cmdCalls = append(cmdCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
 			return cmdErr
 		})
 		restoreFile = exec.SetRunFileFnForTest(func(
-			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ stdCtx.Context, s, dir string, envList []string, logMode tuikitIO.LogMode,
 			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
 		) error {
 			fileCalls = append(fileCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
 			return fileErr
 		})
 		restorePython = exec.SetRunPythonFnForTest(func(
-			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ stdCtx.Context, s, dir string, envList []string, logMode tuikitIO.LogMode,
 			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
 		) error {
 			pythonCalls = append(pythonCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})
 			return cmdErr
 		})
 		restorePythonFile = exec.SetRunPythonFileFnForTest(func(
-			s, dir string, envList []string, logMode tuikitIO.LogMode,
+			_ stdCtx.Context, s, dir string, envList []string, logMode tuikitIO.LogMode,
 			_ tuikitIO.Logger, _ *os.File, _ map[string]any, _ *tuikitIO.TaskContext,
 		) error {
 			pythonFileCalls = append(pythonFileCalls, runCall{target: s, dir: dir, envList: envList, mode: logMode})

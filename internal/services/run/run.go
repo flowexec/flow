@@ -22,6 +22,7 @@ func init() {
 
 // RunCmd executes a command in the current shell in a specific directory.
 func RunCmd(
+	ctx context.Context,
 	commandStr, dir string,
 	envList []string,
 	logMode io.LogMode,
@@ -32,7 +33,6 @@ func RunCmd(
 ) error {
 	logger.Debugf("running command in dir (%s):\n%s", dir, strings.TrimSpace(commandStr))
 
-	ctx := context.Background()
 	parser := syntax.NewParser()
 	reader := strings.NewReader(strings.TrimSpace(commandStr))
 	prog, err := parser.Parse(reader, "")
@@ -80,6 +80,7 @@ func RunCmd(
 // Batch files (.bat, .cmd) are executed via cmd.exe and PowerShell scripts (.ps1) via pwsh/powershell.
 // Python scripts (.py) are executed via the interpreter resolved by ResolvePython.
 func RunFile(
+	ctx context.Context,
 	filename, dir string,
 	envList []string,
 	logMode io.LogMode,
@@ -98,15 +99,15 @@ func RunFile(
 	ext := strings.ToLower(filepath.Ext(filename))
 	switch ext {
 	case ".bat", ".cmd":
-		return runNativeFile("cmd", []string{"/C", fullPath}, dir, envList, logMode, logger, stdIn, logFields, task)
+		return runNativeFile(ctx, "cmd", []string{"/C", fullPath}, dir, envList, logMode, logger, stdIn, logFields, task)
 	case ".ps1":
 		shell := findPowerShell()
-		return runNativeFile(shell, []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", fullPath},
+		return runNativeFile(ctx, shell, []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", fullPath},
 			dir, envList, logMode, logger, stdIn, logFields, task)
 	case ".py":
-		return RunPythonFile(fullPath, dir, envList, logMode, logger, stdIn, logFields, task)
+		return RunPythonFile(ctx, fullPath, dir, envList, logMode, logger, stdIn, logFields, task)
 	default:
-		return runShellFile(fullPath, envList, logMode, logger, stdIn, logFields, task)
+		return runShellFile(ctx, fullPath, envList, logMode, logger, stdIn, logFields, task)
 	}
 }
 
@@ -121,6 +122,7 @@ func findPowerShell() string {
 
 // runNativeFile executes a file using a native system command (e.g. cmd.exe, pwsh).
 func runNativeFile(
+	ctx context.Context,
 	command string, args []string,
 	dir string,
 	envList []string,
@@ -140,7 +142,9 @@ func runNativeFile(
 		flattenedFields = append(flattenedFields, k, v)
 	}
 
-	cmd := osexec.Command(command, args...)
+	cmd := osexec.CommandContext(ctx, command, args...)
+	cmd.Cancel = func() error { return interruptProcess(cmd.Process) }
+	cmd.WaitDelay = killTimeout
 	cmd.Dir = dir
 	cmd.Env = envList
 	cmd.Stdin = stdIn
@@ -155,6 +159,7 @@ func runNativeFile(
 
 // runShellFile executes a file using the built-in POSIX shell interpreter.
 func runShellFile(
+	ctx context.Context,
 	fullPath string,
 	envList []string,
 	logMode io.LogMode,
@@ -163,7 +168,6 @@ func runShellFile(
 	logFields map[string]interface{},
 	task *io.TaskContext,
 ) error {
-	ctx := context.Background()
 	file, err := os.OpenFile(filepath.Clean(fullPath), os.O_RDONLY, 0)
 	if err != nil {
 		return fmt.Errorf("unable to open file - %w", err)

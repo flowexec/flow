@@ -315,7 +315,7 @@ func logsKillFunc(ctx *context.Context, runID string) {
 	}
 
 	now := time.Now()
-	run.Status = store.BackgroundFailed
+	run.Status = store.BackgroundCancelled
 	run.Error = "killed by user"
 	run.CompletedAt = &now
 	if err := ctx.DataStore.SaveBackgroundRun(run); err != nil {

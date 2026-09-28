@@ -288,6 +288,23 @@ func TestStatusText(t *testing.T) {
 	if got := logs.StatusText(rec("x", 2, time.Now())); got != "exit(2)" {
 		t.Fatalf("expected 'exit(2)', got %q", got)
 	}
+	cancelled := logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{Status: store.RunCancelled, ExitCode: 1}}
+	if got := logs.StatusText(cancelled); got != "cancelled" {
+		t.Fatalf("expected 'cancelled', got %q", got)
+	}
+}
+
+func TestFilterRecords_ByCancelledStatus(t *testing.T) {
+	cancelled := logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{
+		Ref: "c", Status: store.RunCancelled, ExitCode: 1,
+	}}
+	failed := logs.UnifiedRecord{ExecutionRecord: store.ExecutionRecord{Ref: "f", Status: store.RunFailed, ExitCode: 1}}
+	for _, want := range []string{"cancelled", "canceled"} {
+		got := logs.FilterRecords([]logs.UnifiedRecord{cancelled, failed}, logs.RecordFilter{Status: want})
+		if len(got) != 1 || got[0].Ref != "c" {
+			t.Fatalf("status %q: expected only the cancelled record, got %+v", want, got)
+		}
+	}
 }
 
 func TestLoadRecords_ReconcilesStaleRunningRecord(t *testing.T) {
@@ -297,12 +314,15 @@ func TestLoadRecords_ReconcilesStaleRunningRecord(t *testing.T) {
 
 	// A "running" record whose process is no longer alive (an implausibly high PID).
 	ds.EXPECT().GetAllExecutionHistory(10).Return(map[string][]store.ExecutionRecord{
-		"one": {{ID: "run-1", Ref: "one", StartedAt: now, Status: store.RunRunning, PID: 2_000_000_000}},
+		"one": {{ID: "run-1", Ref: "one", StartedAt: now.Add(-time.Minute), Status: store.RunRunning, PID: 2_000_000_000}},
 	}, nil)
 	// The stale record is persisted back as failed.
 	ds.EXPECT().RecordExecution(gomock.Any()).DoAndReturn(func(r store.ExecutionRecord) error {
 		if r.Status != store.RunFailed {
 			t.Fatalf("expected stale record persisted as failed, got %q", r.Status)
+		}
+		if r.Duration <= 0 {
+			t.Fatalf("expected stale record persisted with its elapsed duration, got %v", r.Duration)
 		}
 		return nil
 	})
