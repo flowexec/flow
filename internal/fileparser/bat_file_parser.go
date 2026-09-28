@@ -12,10 +12,10 @@ import (
 var batCommentPrefixes = []string{"REM ", ":: "}
 
 func ExecutablesFromBatFile(wsPath, filePath string) (*executable.Executable, error) {
-	fn := filepath.Base(filePath)
+	fn := scriptName(filePath)
 	verb := InferVerb(fn)
 	execName := NormalizeName(fn, verb.String())
-	dir := executable.Directory(shortenWsPath(wsPath, filepath.Dir(filePath)))
+	dir := ShortenWsPath(wsPath, filepath.Dir(filePath))
 	exec := &executable.Executable{
 		Verb: verb,
 		Name: execName,

@@ -31,7 +31,7 @@ func ExecutablesFromDockerCompose(wsPath, path string) (executable.ExecutableLis
 	}
 
 	execs := make(executable.ExecutableList, 0)
-	dir := executable.Directory(shortenWsPath(wsPath, filepath.Dir(path)))
+	dir := ShortenWsPath(wsPath, filepath.Dir(path))
 	// Per-service start/build
 	for svc, data := range cf.Services {
 		execs = append(execs, &executable.Executable{

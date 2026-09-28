@@ -225,6 +225,9 @@ type Executable struct {
 	// Serial corresponds to the JSON schema field "serial".
 	Serial *SerialExecutableType `json:"serial,omitempty" yaml:"serial,omitempty" mapstructure:"serial,omitempty"`
 
+	// sourceFilePath corresponds to the JSON schema field "sourceFilePath".
+	sourceFilePath string `json:"sourceFilePath,omitempty" yaml:"sourceFilePath,omitempty" mapstructure:"sourceFilePath,omitempty"`
+
 	// Tags corresponds to the JSON schema field "tags".
 	Tags ExecutableTags `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags,omitempty"`
 

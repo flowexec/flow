@@ -59,6 +59,23 @@ var _ = Describe("ExecutablesFromImports", func() {
 		}
 	})
 
+	It("records the imported file each executable came from", func() {
+		flowFile.Imports = append(flowFile.Imports, "Makefile", "complex.sh")
+
+		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeEmpty())
+
+		wsPath := flowFile.WorkspacePath()
+		for _, e := range result {
+			Expect(e.FlowFilePath()).To(Equal(flowFile.ConfigPath()))
+			Expect(e.SourceFilePath()).To(BeElementOf(
+				filepath.Join(wsPath, "Makefile"),
+				filepath.Join(wsPath, "complex.sh"),
+			))
+		}
+	})
+
 	It("should return executables from bat file imports", func() {
 		flowFile.Imports = append(flowFile.Imports, "simple.bat")
 		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
@@ -113,5 +130,85 @@ var _ = Describe("ExecutablesFromImports", func() {
 		result, err := fileparser.ExecutablesFromImports("ws", flowFile)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(result).ToNot(BeNil())
+	})
+})
+
+var _ = Describe("InferVerb", func() {
+	DescribeTable("infers the verb from a name",
+		func(name string, expected executable.Verb) {
+			Expect(fileparser.InferVerb(name)).To(Equal(expected))
+		},
+		Entry("a verb", "lint", executable.VerbLint),
+		Entry("a verb prefix", "build-app", executable.VerbBuild),
+		Entry("a verb as a later word", "docker-build", executable.VerbBuild),
+		Entry("a verb after a colon", "db:migrate:test", executable.VerbTest),
+		Entry("vet", "vet", executable.VerbLint),
+		Entry("a verb inside a word", "rebuilder", executable.VerbExec),
+		Entry("no verb", "docker", executable.VerbExec),
+		Entry("a verb in camelCase", "prodBuild", executable.VerbBuild),
+		Entry("any valid verb as a word", "db:migrate", executable.VerbMigrate),
+		Entry("any valid verb as the first word", "backup-db", executable.VerbBackup),
+		Entry("a synonym", "docker-up", executable.VerbStart),
+		Entry("an npm pre hook", "prebuild", executable.VerbBuild),
+		Entry("an npm post hook", "postinstall", executable.VerbInstall),
+		Entry("a noun-like verb as a word", "search-index", executable.VerbExec),
+		Entry("a noun-like verb as the whole name", "index", executable.VerbIndex),
+		Entry("nouns before a verb-like word", "package-lock", executable.VerbExec),
+	)
+
+	It("infers a custom verb from a word", func() {
+		executable.RegisterCustomVerbs("sync")
+		DeferCleanup(executable.RegisterCustomVerbs)
+		Expect(fileparser.InferVerb("sync-assets")).To(Equal(executable.Verb("sync")))
+	})
+
+	// The word fallback only runs where the pattern passes fall back to exec, so names they
+	// already matched keep their verb even when a later word is a more specific one.
+	DescribeTable("keeps the verb the pattern passes infer",
+		func(name string, expected executable.Verb) {
+			Expect(fileparser.InferVerb(name)).To(Equal(expected))
+		},
+		Entry(nil, "compile-assets", executable.VerbBuild),
+		Entry(nil, "publish-docs", executable.VerbDeploy),
+		Entry(nil, "reset-db", executable.VerbClean),
+		Entry(nil, "buildProd", executable.VerbBuild),
+		Entry(nil, "test:e2e", executable.VerbTest),
+		Entry(nil, "preview", executable.VerbStart),
+		Entry(nil, "docker-push", executable.VerbDeploy),
+	)
+})
+
+var _ = Describe("NormalizeName", func() {
+	DescribeTable("normalizes a name",
+		func(name, verb, expected string) {
+			Expect(fileparser.NormalizeName(name, verb)).To(Equal(expected))
+		},
+		Entry("drops the verb prefix", "build-app", "build", "app"),
+		Entry("replaces invalid characters", "db:migrate", "exec", "db-migrate"),
+		Entry("a name that is only the verb", "lint", "lint", ""),
+		Entry("drops a later verb word", "db-migrate", "migrate", "db"),
+		Entry("drops a later verb word inside a name", "prod-db-migrate-now", "migrate", "prod-db-now"),
+		Entry("drops a verb after a colon", "db:migrate:up", "migrate", "db-up"),
+		Entry("drops a camelCase verb word", "prodBackup", "backup", "prod"),
+		Entry("drops only the first later verb word", "db-seed-seed", "seed", "db-seed"),
+		Entry("keeps a word that only contains the verb", "db-migrates", "migrate", "db-migrates"),
+		Entry("keeps a later word after a leading pattern word", "compile-and-build", "build", "compile-and-build"),
+		Entry("keeps a later exec word", "docker-exec", "exec", "docker-exec"),
+		Entry("keeps a synonym", "compose-down", "stop", "compose-down"),
+		Entry("handles a name with no words", "--", "migrate", "-"),
+	)
+})
+
+var _ = Describe("ShortenWsPath", func() {
+	It("returns a path inside the workspace relative to its root", func() {
+		ws := filepath.Join("home", "ws")
+		Expect(fileparser.ShortenWsPath(ws, filepath.Join(ws, "sub", "dir"))).
+			To(Equal(executable.Directory("//sub/dir")))
+	})
+
+	It("returns a path outside the workspace unchanged", func() {
+		other := filepath.Join("home", "other")
+		Expect(fileparser.ShortenWsPath(filepath.Join("home", "ws"), other)).
+			To(Equal(executable.Directory(other)))
 	})
 })

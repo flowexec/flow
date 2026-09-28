@@ -137,6 +137,22 @@ func (c *localExecutableCache) GetExecutableList() (executable.ExecutableList, e
 	return append(list, listExecutables(c.index())...), nil
 }
 
+func (c *localExecutableCache) AliasRefs() (map[executable.Ref]executable.Ref, error) {
+	base, err := c.base.AliasRefs()
+	if err != nil {
+		return nil, err
+	}
+	name := c.ws.AssignedName()
+	refs := make(map[executable.Ref]executable.Ref, len(base))
+	for alias, primary := range base {
+		if primary.Workspace() != name {
+			refs[alias] = primary
+		}
+	}
+	maps.Copy(refs, aliasRefs(c.index()))
+	return refs, nil
+}
+
 // NewLocalTemplateCache resolves templates from a discovered workspace first, falling back to the
 // persisted cache.
 func NewLocalTemplateCache(base TemplateCache, ws *workspace.Workspace) TemplateCache {

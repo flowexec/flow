@@ -36,4 +36,20 @@ var _ = Describe("ExecutablesFromShFile", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(exec.Exec.Dir).To(Equal(executable.Directory("//scripts/ci")))
 	})
+
+	It("names the executable from the file name without its extension", func() {
+		ws := GinkgoT().TempDir()
+		for file, ref := range map[string]string{
+			"lint-go.sh":      "lint go",
+			"docker-build.sh": "build docker",
+		} {
+			path := filepath.Join(ws, file)
+			Expect(os.WriteFile(path, []byte("#!/bin/sh\necho hi\n"), 0o600)).To(Succeed())
+
+			exec, err := fileparser.ExecutablesFromShFile(ws, path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exec.Verb.String() + " " + exec.Name).To(Equal(ref))
+			Expect(exec.Exec.File).To(Equal(file))
+		}
+	})
 })

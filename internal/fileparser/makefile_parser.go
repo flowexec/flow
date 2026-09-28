@@ -60,7 +60,7 @@ func ExecutablesFromMakefile(wsPath, path string) (executable.ExecutableList, er
 	}
 
 	execs := make(executable.ExecutableList, 0, len(targets))
-	dir := executable.Directory(shortenWsPath(wsPath, filepath.Dir(path)))
+	dir := ShortenWsPath(wsPath, filepath.Dir(path))
 
 	for _, t := range targets {
 		verb := InferVerb(t.name)

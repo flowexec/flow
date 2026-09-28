@@ -30,7 +30,7 @@ func ExecutablesFromPackageJSON(wsPath, path string) (executable.ExecutableList,
 	}
 
 	execs := make(executable.ExecutableList, 0)
-	dir := executable.Directory(shortenWsPath(wsPath, filepath.Dir(path)))
+	dir := ShortenWsPath(wsPath, filepath.Dir(path))
 
 	// default npm install
 	execs = append(execs, &executable.Executable{

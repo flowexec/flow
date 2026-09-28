@@ -47,6 +47,9 @@ func ExecutablesFromImports(
 			continue
 		}
 		setCtx(parsed...)
+		for _, e := range parsed {
+			e.SetSourceFilePath(expandedFile)
+		}
 		executables = append(executables, parsed...)
 	}
 
@@ -87,15 +90,4 @@ func parseScriptFile(wsPath, fn, expandedFile string) (executable.ExecutableList
 		return nil, err
 	}
 	return executable.ExecutableList{exec}, nil
-}
-
-// shortenWsPath returns path relative to the workspace root as a `//` directory. The
-// relative part uses forward slashes on every platform, the form ExpandDirectory reads.
-func shortenWsPath(wsPath string, path string) string {
-	if strings.HasPrefix(path, wsPath) {
-		rel := strings.TrimPrefix(path[len(wsPath):], string(filepath.Separator))
-		return "//" + filepath.ToSlash(rel)
-	}
-
-	return path
 }

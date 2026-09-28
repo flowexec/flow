@@ -39,6 +39,21 @@ func (m *MockExecutableCache) EXPECT() *MockExecutableCacheMockRecorder {
 	return m.recorder
 }
 
+// AliasRefs mocks base method.
+func (m *MockExecutableCache) AliasRefs() (map[executable.Ref]executable.Ref, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AliasRefs")
+	ret0, _ := ret[0].(map[executable.Ref]executable.Ref)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AliasRefs indicates an expected call of AliasRefs.
+func (mr *MockExecutableCacheMockRecorder) AliasRefs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AliasRefs", reflect.TypeOf((*MockExecutableCache)(nil).AliasRefs))
+}
+
 // GetExecutableByRef mocks base method.
 func (m *MockExecutableCache) GetExecutableByRef(arg0 executable.Ref) (*executable.Executable, error) {
 	m.ctrl.T.Helper()
