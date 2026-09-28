@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +32,8 @@ func RegisterConfigCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	registerConfigResetCmd(ctx, setCmd)
 	registerConfigGetCmd(ctx, setCmd)
 	registerSetConfigCmd(ctx, setCmd)
+	registerAddConfigCmd(ctx, setCmd)
+	registerRemoveConfigCmd(ctx, setCmd)
 	rootCmd.AddCommand(setCmd)
 }
 
@@ -331,6 +334,121 @@ func setTimeoutFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 	logger.Log().PlainTextSuccess("Default timeout set to " + timeoutStr)
 }
 
+func registerAddConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
+	addCmd := &cobra.Command{
+		Use:   "add",
+		Short: "Add an entry to a global configuration list.",
+	}
+	verbCmd := &cobra.Command{
+		Use:     "verb NAME [NAME...]",
+		Short:   "Register custom executable verbs.",
+		Long:    configAddVerbLong,
+		Example: configAddVerbExamples,
+		Args:    cobra.MinimumNArgs(1),
+		Run:     func(cmd *cobra.Command, args []string) { addVerbFunc(ctx, cmd, args) },
+	}
+	addCmd.AddCommand(verbCmd)
+	configCmd.AddCommand(addCmd)
+}
+
+func addVerbFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	userConfig := ctx.Config
+	added := make([]string, 0, len(args))
+	for _, name := range args {
+		if err := executable.ValidateCustomVerbName(name); err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+			return
+		}
+		// Cobra matches a subcommand name before an alias, so a verb sharing a command's name would
+		// never reach the exec command.
+		if isRootCommandName(cmd.Root(), name) {
+			errhandler.HandleUsage(ctx, cmd, "verb %q conflicts with the flow %s command", name, name)
+			return
+		}
+		if slices.Contains(userConfig.CustomVerbs, name) || slices.Contains(added, name) {
+			continue
+		}
+		added = append(added, name)
+	}
+	if len(added) == 0 {
+		logger.Log().PlainTextInfo("Verbs already registered: " + strings.Join(args, ", "))
+		return
+	}
+
+	userConfig.CustomVerbs = append(userConfig.CustomVerbs, added...)
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	executable.RegisterCustomVerbs(userConfig.CustomVerbs...)
+	// Executables are validated against the verb set when cached, so resync to pick up the change.
+	if err := ctx.ExecutableCache.Update(); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	logger.Log().PlainTextSuccess("Registered verbs: " + strings.Join(added, ", "))
+}
+
+func isRootCommandName(root *cobra.Command, name string) bool {
+	for _, c := range root.Commands() {
+		// The exec command's aliases are the verbs themselves.
+		if c.Name() == "exec" {
+			continue
+		}
+		if c.Name() == name || slices.Contains(c.Aliases, name) {
+			return true
+		}
+	}
+	return name == "help" || name == "completion"
+}
+
+func registerRemoveConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
+	removeCmd := &cobra.Command{
+		Use:     "remove",
+		Aliases: []string{"rm"},
+		Short:   "Remove an entry from a global configuration list.",
+	}
+	verbCmd := &cobra.Command{
+		Use:     "verb NAME [NAME...]",
+		Short:   "Unregister custom executable verbs.",
+		Example: configRemoveVerbExamples,
+		Args:    cobra.MinimumNArgs(1),
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			remaining := slices.DeleteFunc(slices.Clone(ctx.Config.CustomVerbs), func(v string) bool {
+				return slices.Contains(args, v)
+			})
+			return remaining, cobra.ShellCompDirectiveNoFileComp
+		},
+		Run: func(cmd *cobra.Command, args []string) { removeVerbFunc(ctx, cmd, args) },
+	}
+	removeCmd.AddCommand(verbCmd)
+	configCmd.AddCommand(removeCmd)
+}
+
+func removeVerbFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	userConfig := ctx.Config
+	for _, name := range args {
+		if !slices.Contains(userConfig.CustomVerbs, name) {
+			errhandler.HandleUsage(ctx, cmd, "verb %q is not a registered custom verb", name)
+			return
+		}
+	}
+	userConfig.CustomVerbs = slices.DeleteFunc(userConfig.CustomVerbs, func(v string) bool {
+		return slices.Contains(args, v)
+	})
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	executable.RegisterCustomVerbs(userConfig.CustomVerbs...)
+	// Executables are validated against the verb set when cached, so resync to pick up the change.
+	if err := ctx.ExecutableCache.Update(); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	logger.Log().PlainTextSuccess("Removed verbs: " + strings.Join(args, ", "))
+}
+
 func registerConfigGetCmd(ctx *context.Context, configCmd *cobra.Command) {
 	getCmd := &cobra.Command{
 		Use:     "get",
@@ -365,6 +483,21 @@ Use 'config get' to view current values and 'config set &lt;setting&gt;' subcomm
 	configNamespaceExamples = `
   flow config set namespace myproject
   flow config set namespace default
+`
+
+	configAddVerbLong = `Register one or more custom executable verbs. Custom verbs are standalone (they do not join a
+built-in alias group) and can be used in flow files and on the command line like any built-in verb.
+
+Custom verbs are stored in your user config, so anyone running a flow file that uses one needs to
+register it too.`
+
+	configAddVerbExamples = `
+  flow config add verb status
+  flow config add verb status health
+`
+
+	configRemoveVerbExamples = `
+  flow config remove verb status
 `
 
 	strEnabled  = "enabled"

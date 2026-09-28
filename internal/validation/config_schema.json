@@ -98,6 +98,14 @@
       "type": "string",
       "default": ""
     },
+    "customVerbs": {
+      "description": "Additional executable verbs registered by the user.\nVerbs must be lowercase words made up of letters, numbers, and hyphens.\nManage them with `flow config add verb` and `flow config remove verb`.\n",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
     "defaultLogMode": {
       "description": "The default log mode to use when running executables.\nThis can either be `hidden`, `json`, `logfmt` or `text`\n\n`hidden` will not display any logs.\n`json` will display logs in JSON format.\n`logfmt` will display logs with a log level, timestamp, and message.\n`text` will just display the log message.\n",
       "type": "string",

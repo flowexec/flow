@@ -26,6 +26,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | `currentNamespace` | `string` |  |  | The name of the current namespace.  Namespaces are used to reference executables in the CLI using the format `workspace/namespace:name`. If the namespace is not set, only executables defined without a namespace will be discovered.  |
 | `currentVault` | `string` |  |  | The name of the currently active vault. |
 | `currentWorkspace` | `string` |  |  | The name of the current workspace. This should match a key in the `workspaces` or `remoteWorkspaces` map. |
+| `customVerbs` | `array` (`string`) | [] |  | Additional executable verbs registered by the user. Verbs must be lowercase words made up of letters, numbers, and hyphens. Manage them with `flow config add verb` and `flow config remove verb`.  |
 | `defaultLogMode` | `string` | logfmt |  | The default log mode to use when running executables. This can either be `hidden`, `json`, `logfmt` or `text`  `hidden` will not display any logs. `json` will display logs in JSON format. `logfmt` will display logs with a log level, timestamp, and message. `text` will just display the log message.  |
 | `defaultTimeout` | `string` | 30m |  | The default timeout to use when running executables. This should be a valid duration string.  |
 | `interactive` | [Interactive](#interactive) |  |  |  |

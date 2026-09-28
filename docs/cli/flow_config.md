@@ -30,6 +30,8 @@ Use 'config get' to view current values and 'config set &lt;setting&gt;' subcomm
 ## See also
 
 - [flow](flow.md) — flow is a command line interface designed to make managing and running development workflows easier.
+- [flow config add](flow_config_add.md) — Add an entry to a global configuration list.
 - [flow config get](flow_config_get.md) — Get the current global configuration values.
+- [flow config remove](flow_config_remove.md) — Remove an entry from a global configuration list.
 - [flow config reset](flow_config_reset.md) — Restore the default flow configuration values. This will overwrite the current configuration.
 - [flow config set](flow_config_set.md) — Set a global configuration value.

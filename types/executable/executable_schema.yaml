@@ -11,33 +11,43 @@ definitions:
     type: string
     description: |
       Keywords that describe the action an executable performs. Executables are configured with a single verb,
-      but core verbs have aliases that can be used interchangeably when referencing executables. This allows users 
+      but core verbs have aliases that can be used interchangeably when referencing executables. This allows users
       to use the verb that best describes the action they are performing.
-      
+
       ### Default Verb Aliases
-      
+
       - **Execution Group**: `exec`, `run`, `execute`
       - **Retrieval Group**: `get`, `fetch`, `retrieve`
       - **Display Group**: `show`, `view`, `list`
       - **Configuration Group**: `configure`, `setup`
       - **Update Group**: `update`, `upgrade`
-      
+      - **Evaluation Group**: `evaluate`, `eval`
+
       ### Usage Notes
-      
+
       1. [Verb + Name] must be unique within the namespace of the workspace.
       2. When referencing an executable, users can use any verb from the default or configured alias group.
       3. All other verbs are standalone and self-descriptive.
-      
+
+      ### Custom Verbs
+
+      Additional verbs can be registered in the user config with `flow config add verb <name>`.
+      Custom verbs are standalone and can be used anywhere a built-in verb can.
+
       ### Examples
-      
+
       - An executable configured with the `exec` verb can also be referenced using "run" or "execute".
       - An executable configured with `get` can also be called with "list", "show", or "view".
       - Operations like `backup`, `migrate`, `flush` are standalone verbs without aliases.
       - Use domain-specific verbs like `deploy`, `scale`, `tunnel` for clear operational intent.
-      
+
       By providing minimal aliasing with comprehensive verb coverage, flow enables natural language operations
       while maintaining simplicity and flexibility for diverse development and operations workflows.
     default: exec
+    # The enum lists built-in verbs; the published JSON schema also accepts user-registered custom
+    # verbs matching this pattern.
+    docsgen:
+      openPattern: "^[a-z][a-z0-9-]*$"
     enum:
       - abort
       - activate
@@ -67,12 +77,16 @@ definitions:
       - delete
       - deploy
       - destroy
+      - diff
       - disable
       - disconnect
+      - download
       - edit
       - enable
       - encrypt
       - erase
+      - eval
+      - evaluate
       - exec
       - execute
       - export
@@ -85,6 +99,7 @@ definitions:
       - get
       - import
       - index
+      - infer
       - init
       - inspect
       - install
@@ -111,11 +126,13 @@ definitions:
       - patch
       - pause
       - ping
-      - preload
+      - plan
       - prefetch
+      - preload
       - profile
       - provision
       - publish
+      - pull
       - purge
       - push
       - queue
@@ -125,11 +142,14 @@ definitions:
       - release
       - reload
       - remove
+      - render
       - request
       - reset
       - restart
       - restore
+      - resume
       - retrieve
+      - review
       - rollback
       - run
       - save
@@ -146,21 +166,26 @@ definitions:
       - start
       - stash
       - stop
+      - summarize
       - tag
       - teardown
       - terminate
       - test
       - tidy
       - trace
+      - train
       - transform
       - trigger
+      - tune
       - tunnel
       - undeploy
       - uninstall
+      - unlock
       - unmount
       - unset
       - update
       - upgrade
+      - upload
       - validate
       - verify
       - view
@@ -224,7 +249,7 @@ definitions:
         type: string
         description: |
           The name of the environment variable that will be assigned the value.
-          
+
           When specified with `envFile`, only the environment variable with this name will be set.
         default: ""
   ParameterList:

@@ -1,10 +1,13 @@
 package executable_test
 
 import (
+	"os"
 	"regexp"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/v2/types/executable"
 )
@@ -116,4 +119,77 @@ var _ = Describe("ExecutableIDPattern", func() {
 		Entry("nested path without colon", "ws/api/build", false),
 		Entry("space", "ws/api:bu ild", false),
 	)
+})
+
+var _ = Describe("Custom verbs", func() {
+	AfterEach(func() {
+		executable.RegisterCustomVerbs()
+	})
+
+	It("accepts a registered custom verb", func() {
+		Expect(executable.Verb("status").Validate()).To(HaveOccurred())
+		executable.RegisterCustomVerbs("status")
+		Expect(executable.Verb("status").Validate()).To(Succeed())
+		Expect(executable.SortedValidVerbs()).To(ContainElement("status"))
+	})
+
+	It("replaces the registered set on each call", func() {
+		executable.RegisterCustomVerbs("status")
+		executable.RegisterCustomVerbs("health")
+		Expect(executable.Verb("status").Validate()).To(HaveOccurred())
+		Expect(executable.Verb("health").Validate()).To(Succeed())
+	})
+
+	It("ignores invalid names, built-ins, and duplicates", func() {
+		builtins := len(executable.ValidVerbs())
+		executable.RegisterCustomVerbs("status", "status", "build", "Bad")
+		Expect(executable.ValidVerbs()).To(HaveLen(builtins + 1))
+	})
+
+	It("keeps custom verbs out of built-in alias groups", func() {
+		executable.RegisterCustomVerbs("status")
+		Expect(executable.Verb("status").Equals(executable.VerbView)).To(BeFalse())
+		Expect(executable.RelatedVerbs("status")).To(BeEmpty())
+	})
+
+	DescribeTable("ValidateCustomVerbName",
+		func(name string, valid bool) {
+			err := executable.ValidateCustomVerbName(name)
+			if valid {
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				Expect(err).To(HaveOccurred())
+			}
+		},
+		Entry("simple word", "status", true),
+		Entry("hyphenated", "health-check", true),
+		Entry("with digits", "check2", true),
+		Entry("empty", "", false),
+		Entry("uppercase", "Status", false),
+		Entry("space", "my verb", false),
+		Entry("leading digit", "2fa", false),
+		Entry("wildcard", "*", false),
+		Entry("built-in", "build", false),
+	)
+})
+
+var _ = Describe("Built-in verbs", func() {
+	It("match the schema's verb enum and custom verb pattern", func() {
+		data, err := os.ReadFile("executable_schema.yaml")
+		Expect(err).NotTo(HaveOccurred())
+		var schema struct {
+			Definitions struct {
+				Verb struct {
+					Enum    []string `yaml:"enum"`
+					Docsgen struct {
+						OpenPattern string `yaml:"openPattern"`
+					} `yaml:"docsgen"`
+				} `yaml:"Verb"`
+			} `yaml:"definitions"`
+		}
+		Expect(yaml.Unmarshal(data, &schema)).To(Succeed())
+		Expect(schema.Definitions.Verb.Enum).NotTo(BeEmpty())
+		Expect(executable.SortedValidVerbs()).To(ConsistOf(schema.Definitions.Verb.Enum))
+		Expect(schema.Definitions.Verb.Docsgen.OpenPattern).To(Equal(executable.CustomVerbPattern))
+	})
 })

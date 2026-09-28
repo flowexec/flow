@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("user config load error: %w", err))
 	}
+	executable.RegisterCustomVerbs(cfg.CustomVerbs...)
 
 	archiveDir, archiveID := initLogArchive()
 	loggerOpts := logger.InitOptions{

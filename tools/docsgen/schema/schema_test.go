@@ -116,3 +116,23 @@ var _ = Describe("MergeSchemas", func() {
 		})
 	})
 })
+
+var _ = Describe("ApplyOpenPattern", func() {
+	It("rewrites an annotated enum into an anyOf", func() {
+		s := &schema.JSONSchema{Type: "string", Enum: []string{"a", "b"}}
+		s.Docsgen.OpenPattern = "^[a-z]+$"
+		s.ApplyOpenPattern()
+		Expect(s.Enum).To(BeNil())
+		Expect(s.AnyOf).To(Equal([]*schema.JSONSchema{
+			{Enum: []string{"a", "b"}},
+			{Pattern: "^[a-z]+$"},
+		}))
+	})
+
+	It("leaves schemas without the annotation unchanged", func() {
+		s := &schema.JSONSchema{Type: "string", Enum: []string{"a", "b"}}
+		s.ApplyOpenPattern()
+		Expect(s.Enum).To(Equal([]string{"a", "b"}))
+		Expect(s.AnyOf).To(BeNil())
+	})
+})

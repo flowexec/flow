@@ -258,7 +258,7 @@ Reference secrets from different vaults:
 
 ```yaml
 executables:
-  - verb: sync
+  - verb: deploy
     name: environments
     exec:
       params:
@@ -266,7 +266,7 @@ executables:
           envKey: PROD_API_KEY
         - secretRef: staging/api-key
           envKey: STAGING_API_KEY
-      cmd: ./sync-environments.sh
+      cmd: ./deploy-environments.sh
 ```
 
 ## Secret Management

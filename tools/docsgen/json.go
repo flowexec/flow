@@ -32,6 +32,9 @@ func generateJSONSchemas() {
 			for _, value := range s.Definitions {
 				schema.MergeSchemas(s, value, fn, sm)
 			}
+			for _, value := range s.Definitions {
+				value.ApplyOpenPattern()
+			}
 
 			s.Title = fn.Title()
 			schemaJSON, err := json.MarshalIndent(s, "", "  ")

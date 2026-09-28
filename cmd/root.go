@@ -122,4 +122,5 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command, mcpOpts .
 	internal.RegisterSchemaCmd(ctx, rootCmd)
 	internal.RegisterMCPCmd(ctx, rootCmd, mcpOpts...)
 	internal.RegisterCliCmd(ctx, rootCmd)
+	internal.DropShadowedVerbAliases(rootCmd)
 }

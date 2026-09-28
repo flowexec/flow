@@ -86,6 +86,7 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 	}
 
 	cfg.SetDefaults()
+	executable.RegisterCustomVerbs(cfg.CustomVerbs...)
 	if cfg.DefaultTimeout != 0 && os.Getenv(executable.TimeoutOverrideEnv) == "" {
 		// HACK: Set the default timeout as an environment variable to be used by the exec runner
 		// This is a temporary solution until the config handling is refactored a bit

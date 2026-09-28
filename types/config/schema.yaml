@@ -165,6 +165,15 @@ properties:
       display a notice if one is available after each command.
       Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.
     default: false
+  customVerbs:
+    type: array
+    items:
+      type: string
+    description: |
+      Additional executable verbs registered by the user.
+      Verbs must be lowercase words made up of letters, numbers, and hyphens.
+      Manage them with `flow config add verb` and `flow config remove verb`.
+    default: []
 required:
   - workspaces
   - currentWorkspace

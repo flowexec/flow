@@ -328,7 +328,7 @@ A list of executables to run in serial. The executables can be defined by it's e
 ### ExecutableVerb
 
 Keywords that describe the action an executable performs. Executables are configured with a single verb,
-but core verbs have aliases that can be used interchangeably when referencing executables. This allows users 
+but core verbs have aliases that can be used interchangeably when referencing executables. This allows users
 to use the verb that best describes the action they are performing.
 
 ### Default Verb Aliases
@@ -338,12 +338,18 @@ to use the verb that best describes the action they are performing.
 - **Display Group**: `show`, `view`, `list`
 - **Configuration Group**: `configure`, `setup`
 - **Update Group**: `update`, `upgrade`
+- **Evaluation Group**: `evaluate`, `eval`
 
 ### Usage Notes
 
 1. [Verb + Name] must be unique within the namespace of the workspace.
 2. When referencing an executable, users can use any verb from the default or configured alias group.
 3. All other verbs are standalone and self-descriptive.
+
+### Custom Verbs
+
+Additional verbs can be registered in the user config with `flow config add verb <name>`.
+Custom verbs are standalone and can be used anywhere a built-in verb can.
 
 ### Examples
 
@@ -356,7 +362,7 @@ By providing minimal aliasing with comprehensive verb coverage, flow enables nat
 while maintaining simplicity and flexibility for diverse development and operations workflows.
 
 **Type:** `string` &middot; **Default:** `exec`
-**Valid values:** `abort`, `activate`, `add`, `analyze`, `apply`, `archive`, `audit`, `backup`, `benchmark`, `build`, `bundle`, `check`, `clean`, `clear`, `commit`, `compile`, `compress`, `configure`, `connect`, `copy`, `create`, `deactivate`, `debug`, `decompress`, `decrypt`, `delete`, `deploy`, `destroy`, `disable`, `disconnect`, `edit`, `enable`, `encrypt`, `erase`, `exec`, `execute`, `export`, `expose`, `fetch`, `fix`, `flush`, `format`, `generate`, `get`, `import`, `index`, `init`, `inspect`, `install`, `join`, `kill`, `launch`, `lint`, `list`, `load`, `lock`, `login`, `logout`, `manage`, `merge`, `migrate`, `modify`, `monitor`, `mount`, `new`, `notify`, `open`, `package`, `partition`, `patch`, `pause`, `ping`, `preload`, `prefetch`, `profile`, `provision`, `publish`, `purge`, `push`, `queue`, `reboot`, `recover`, `refresh`, `release`, `reload`, `remove`, `request`, `reset`, `restart`, `restore`, `retrieve`, `rollback`, `run`, `save`, `scale`, `scan`, `schedule`, `seed`, `send`, `serve`, `set`, `setup`, `show`, `snapshot`, `start`, `stash`, `stop`, `tag`, `teardown`, `terminate`, `test`, `tidy`, `trace`, `transform`, `trigger`, `tunnel`, `undeploy`, `uninstall`, `unmount`, `unset`, `update`, `upgrade`, `validate`, `verify`, `view`, `watch`
+**Valid values:** `abort`, `activate`, `add`, `analyze`, `apply`, `archive`, `audit`, `backup`, `benchmark`, `build`, `bundle`, `check`, `clean`, `clear`, `commit`, `compile`, `compress`, `configure`, `connect`, `copy`, `create`, `deactivate`, `debug`, `decompress`, `decrypt`, `delete`, `deploy`, `destroy`, `diff`, `disable`, `disconnect`, `download`, `edit`, `enable`, `encrypt`, `erase`, `eval`, `evaluate`, `exec`, `execute`, `export`, `expose`, `fetch`, `fix`, `flush`, `format`, `generate`, `get`, `import`, `index`, `infer`, `init`, `inspect`, `install`, `join`, `kill`, `launch`, `lint`, `list`, `load`, `lock`, `login`, `logout`, `manage`, `merge`, `migrate`, `modify`, `monitor`, `mount`, `new`, `notify`, `open`, `package`, `partition`, `patch`, `pause`, `ping`, `plan`, `prefetch`, `preload`, `profile`, `provision`, `publish`, `pull`, `purge`, `push`, `queue`, `reboot`, `recover`, `refresh`, `release`, `reload`, `remove`, `render`, `request`, `reset`, `restart`, `restore`, `resume`, `retrieve`, `review`, `rollback`, `run`, `save`, `scale`, `scan`, `schedule`, `seed`, `send`, `serve`, `set`, `setup`, `show`, `snapshot`, `start`, `stash`, `stop`, `summarize`, `tag`, `teardown`, `terminate`, `test`, `tidy`, `trace`, `train`, `transform`, `trigger`, `tune`, `tunnel`, `undeploy`, `uninstall`, `unlock`, `unmount`, `unset`, `update`, `upgrade`, `upload`, `validate`, `verify`, `view`, `watch`
 
 ### Imports
 

@@ -12,6 +12,8 @@ import (
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"gopkg.in/yaml.v3"
+
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 //go:generate go run github.com/atombender/go-jsonschema@v0.16.0 -et --only-models -p config -o config.gen.go schema.yaml
@@ -29,6 +31,14 @@ func (c *Config) Validate() error {
 	}
 	if err := c.DefaultLogMode.Validate(); err != nil {
 		return err
+	}
+	for i, v := range c.CustomVerbs {
+		if err := executable.ValidateCustomVerbName(v); err != nil {
+			return fmt.Errorf("invalid custom verb: %w", err)
+		}
+		if slices.Contains(c.CustomVerbs[:i], v) {
+			return fmt.Errorf("duplicate custom verb %s", v)
+		}
 	}
 
 	return nil
@@ -194,6 +204,9 @@ func (c *Config) Markdown() string {
 	}
 	if c.DefaultLogMode != "" {
 		general += fmt.Sprintf("**Log Mode:** %s\n\n", c.DefaultLogMode)
+	}
+	if len(c.CustomVerbs) > 0 {
+		general += fmt.Sprintf("**Custom Verbs:** %s\n\n", strings.Join(c.CustomVerbs, ", "))
 	}
 	sections = append(sections, general)
 
