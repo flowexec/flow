@@ -19,6 +19,7 @@ import (
 	"github.com/flowexec/tuikit/views"
 	"github.com/gen2brain/beeep"
 	"github.com/spf13/cobra"
+	"mvdan.cc/sh/v3/interp"
 
 	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
@@ -852,7 +853,7 @@ func recordExecution(
 		Label:       meta.label,
 	}
 	if runErr != nil {
-		record.ExitCode = 1
+		record.ExitCode = exitCode(runErr)
 		record.Error = runErr.Error()
 		record.Status = store.RunFailed
 		if isRunCancelled(runErr) {
@@ -907,6 +908,16 @@ func cancelOnTermSignal(ctx *context.Context, onCancel func(error)) (stop func()
 func isRunCancelled(err error) bool {
 	var cancelled flowErrors.RunCancelledError
 	return errors.As(err, &cancelled)
+}
+
+func exitCode(err error) int {
+	if status, ok := errors.AsType[interp.ExitStatus](err); ok {
+		return int(status)
+	}
+	if exitErr, ok := errors.AsType[*osExec.ExitError](err); ok && exitErr.ExitCode() > 0 {
+		return exitErr.ExitCode()
+	}
+	return 1
 }
 
 // findArchiveByID searches log archive entries for one matching the given ID.
