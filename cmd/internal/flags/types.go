@@ -220,6 +220,13 @@ var LogFilterSourceFlag = &Metadata{
 	Required: false,
 }
 
+var LogFilterIDFlag = &Metadata{
+	Name:     "id",
+	Usage:    "Show only the run with this ID.",
+	Default:  "",
+	Required: false,
+}
+
 var LogFilterSessionFlag = &Metadata{
 	Name:     "session",
 	Usage:    "Filter history to a single provenance session ID (e.g. an AI agent session).",

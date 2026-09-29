@@ -133,6 +133,20 @@ func TestFilterRecords_Provenance(t *testing.T) {
 	}
 }
 
+func TestFilterRecords_ID(t *testing.T) {
+	now := time.Now()
+	a, b := rec("exec ws/a", 1, now), rec("exec ws/b", 0, now)
+	a.ID, b.ID = "run-a", "run-b"
+
+	got := logs.FilterRecords([]logs.UnifiedRecord{a, b}, logs.RecordFilter{ID: "run-b"})
+	if len(got) != 1 || got[0].Ref != "exec ws/b" {
+		t.Fatalf("expected only run-b, got %+v", got)
+	}
+	if got := logs.FilterRecords([]logs.UnifiedRecord{a, b}, logs.RecordFilter{ID: "nope"}); len(got) != 0 {
+		t.Fatalf("expected no runs for an unknown ID, got %d", len(got))
+	}
+}
+
 func TestFilterRecords_Since(t *testing.T) {
 	old := time.Now().Add(-2 * time.Hour)
 	mid := time.Now().Add(-30 * time.Minute)

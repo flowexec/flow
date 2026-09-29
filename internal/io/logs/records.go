@@ -13,6 +13,7 @@ import (
 
 // RecordFilter holds optional criteria for filtering unified records.
 type RecordFilter struct {
+	ID        string // a single run, by its ID
 	Workspace string
 	Status    string // lifecycle status: running/completed/failed/cancelled (success/failure accepted as aliases)
 	Source    string // provenance origin, e.g. "cli", "desktop", "mcp"
@@ -57,6 +58,9 @@ func extractWorkspace(ref string) string {
 func FilterRecords(records []UnifiedRecord, f RecordFilter) []UnifiedRecord {
 	var filtered []UnifiedRecord
 	for _, r := range records {
+		if f.ID != "" && r.ID != f.ID {
+			continue
+		}
 		if f.Workspace != "" {
 			// Refs are formatted as "verb ws/ns:name" — workspace is between the space and the first "/".
 			ws := extractWorkspace(r.Ref)

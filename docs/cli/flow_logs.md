@@ -38,6 +38,7 @@ flow logs --last --grep ERROR      # last run, only lines matching /ERROR/
 | `--content` |  | Include each record's log output (json/yaml only; already shown for --last text output). |
 | `--grep` | `string` | Include only log lines matching this regular expression (implies --content). |
 | `-h, --help` |  | help for logs |
+| `--id` | `string` | Show only the run with this ID. |
 | `--last` |  | Print the last execution's logs |
 | `--limit` | `int` | Maximum number of records to display. |
 | `--max-bytes` | `int` | Cap included log output to the last N bytes, keeping the tail (implies --content). |

@@ -51,6 +51,8 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 			"still-running executions too (you get a snapshot of what has been written so far). "+
 			"Set `mine` to see only what this session has run so far."),
 		mcp.WithBoolean("last", mcp.Description("Get only the last execution logs")),
+		mcp.WithString("id", mcp.Description("Return only the run with this ID, as given by a run's "+
+			"`id` here or in `flow logs`. Add `tail` or `grep` to include its output.")),
 		mcp.WithBoolean("mine", mcp.Description("Only return runs launched by this MCP session "+
 			"(useful for reviewing what you have run so far).")),
 		mcp.WithString("source", mcp.Description("Filter by run origin: 'cli' or 'mcp'.")),
@@ -159,6 +161,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		source := request.GetString("source", "")
 		session := request.GetString("session", "")
 		status := request.GetString("status", "")
+		id := request.GetString("id", "")
 
 		// `mine` scopes results to the calling MCP session's own runs so an agent can review
 		// exactly what it launched — resolved from the live session, not client-supplied.
@@ -173,6 +176,9 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		cmdArgs := []string{"logs", "--output", "json"}
 		if last {
 			cmdArgs = append(cmdArgs, "--last")
+		}
+		if id != "" {
+			cmdArgs = append(cmdArgs, "--id", id)
 		}
 		if source != "" {
 			cmdArgs = append(cmdArgs, "--source", source)

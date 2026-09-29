@@ -57,7 +57,7 @@ Connecting the server gives your assistant the tools; it does not make it *reach
 | `run_command` | Run one or more **arbitrary** shell commands through flow (with a `label`, working `dir`, and optional `workspace`) — captured in history like any executable |
 | `run_python` | Run **Python** code through flow (with `code`, a `label`, working `dir`, and optional `workspace`) — uses the workspace's virtualenv when there is one |
 | `run_executable` | Run a **transient executable of any type** from an inline `spec` — a serial/parallel batch, an HTTP `request`, a `render`, or a `launch` — without saving a file |
-| `get_execution_logs` | Output from recent runs, filterable by `source`/`session`/`status`, or `mine` for this session's own runs |
+| `get_execution_logs` | Output from recent runs, filterable by `source`/`session`/`status`, `mine` for this session's own runs, or `id` for one run |
 | `sync_executables` | Refresh cached workspace and executable state |
 | `write_flowfile` | Create or update a `.flow` file, validated before writing |
 

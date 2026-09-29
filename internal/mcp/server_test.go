@@ -517,6 +517,19 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
+			It("should look up a single run by its id, with its output", func() {
+				mockExecutor.EXPECT().
+					Execute("logs", "--output", "json", "--id", "run-1", "--content", "--max-bytes", "50000", "--tail", "40").
+					Return(`{"history":[]}`, nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("get_execution_logs", map[string]interface{}{
+					"id":   "run-1",
+					"tail": 40,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
 			It("should request content with the default byte cap when tail is set", func() {
 				mockExecutor.EXPECT().
 					Execute("logs", "--output", "json", "--content", "--max-bytes", "50000", "--tail", "20").
