@@ -95,7 +95,10 @@ executables:
         fi
 
         if [ "${CI:-}" = "true" ]; then
-          govulncheck -format sarif ./... > govuln.sarif
+          # govulncheck can list the same call stack twice for a finding, and upload-sarif rejects
+          # duplicate stacks.
+          govulncheck -format sarif ./... \
+            | jq '.runs[].results[] |= (if .stacks then .stacks |= unique else . end)' > govuln.sarif
           echo "Security scan completed. Results saved to govuln.sarif"
         else
           govulncheck ./...
