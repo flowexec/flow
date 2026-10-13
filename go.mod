@@ -2,7 +2,7 @@ module github.com/flowexec/flow/v2
 
 go 1.26.0
 
-toolchain go1.26.8
+toolchain go1.26.9
 
 require (
 	charm.land/bubbletea/v2 v2.0.10
