@@ -17,6 +17,6 @@
     "vitepress": "^1.6.4",
     "vitepress-plugin-tabs": "0.7.1",
     "vue": "^3.5.13",
-    "wrangler": "^4.136.3"
+    "wrangler": "^4.146.0"
   }
 }
