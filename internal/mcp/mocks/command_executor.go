@@ -20,6 +20,7 @@ import (
 type MockCommandExecutor struct {
 	ctrl     *gomock.Controller
 	recorder *MockCommandExecutorMockRecorder
+	isgomock struct{}
 }
 
 // MockCommandExecutorMockRecorder is the mock recorder for MockCommandExecutor.
@@ -40,10 +41,10 @@ func (m *MockCommandExecutor) EXPECT() *MockCommandExecutorMockRecorder {
 }
 
 // Execute mocks base method.
-func (m *MockCommandExecutor) Execute(arg0 ...string) (string, error) {
+func (m *MockCommandExecutor) Execute(args ...string) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{}
-	for _, a := range arg0 {
+	for _, a := range args {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Execute", varargs...)
@@ -53,16 +54,16 @@ func (m *MockCommandExecutor) Execute(arg0 ...string) (string, error) {
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockCommandExecutorMockRecorder) Execute(arg0 ...any) *gomock.Call {
+func (mr *MockCommandExecutorMockRecorder) Execute(args ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockCommandExecutor)(nil).Execute), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockCommandExecutor)(nil).Execute), args...)
 }
 
 // ExecuteContext mocks base method.
-func (m *MockCommandExecutor) ExecuteContext(arg0 context.Context, arg1 ...string) (string, error) {
+func (m *MockCommandExecutor) ExecuteContext(ctx context.Context, args ...string) (string, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0}
-	for _, a := range arg1 {
+	varargs := []any{ctx}
+	for _, a := range args {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ExecuteContext", varargs...)
@@ -72,8 +73,8 @@ func (m *MockCommandExecutor) ExecuteContext(arg0 context.Context, arg1 ...strin
 }
 
 // ExecuteContext indicates an expected call of ExecuteContext.
-func (mr *MockCommandExecutorMockRecorder) ExecuteContext(arg0 any, arg1 ...any) *gomock.Call {
+func (mr *MockCommandExecutorMockRecorder) ExecuteContext(ctx any, args ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0}, arg1...)
+	varargs := append([]any{ctx}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteContext", reflect.TypeOf((*MockCommandExecutor)(nil).ExecuteContext), varargs...)
 }

@@ -19,7 +19,7 @@ import (
 
 const tmplCacheKey = "templates"
 
-//go:generate mockgen -destination=mocks/mock_template_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache TemplateCache
+//go:generate go tool mockgen -destination=mocks/mock_template_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache TemplateCache
 type TemplateCache interface {
 	Update() error
 	// GetTemplate resolves a discovered template by its flat name, or by a

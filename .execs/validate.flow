@@ -85,22 +85,18 @@ executables:
     exec:
       dir: //
       cmd: |
-        # Without this, a failed install leaves the scan to run a missing binary and the step
-        # still "succeeds" — CI then fails two steps later on an empty SARIF file.
+        # Without this, a failed scan still lets the step "succeed" — CI then fails two steps
+        # later on an empty SARIF file.
         set -euo pipefail
 
-        if ! command -v govulncheck &> /dev/null; then
-          echo "Installing govulncheck..."
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-        fi
-
+        # govulncheck is pinned as a tool in go.mod, so local and CI runs use the same version.
         if [ "${CI:-}" = "true" ]; then
           # govulncheck can list the same call stack twice for a finding, and upload-sarif rejects
           # duplicate stacks.
-          govulncheck -format sarif ./... \
+          go tool govulncheck -format sarif ./... \
             | jq '.runs[].results[] |= (if .stacks then .stacks |= unique else . end)' > govuln.sarif
           echo "Security scan completed. Results saved to govuln.sarif"
         else
-          govulncheck ./...
+          go tool govulncheck ./...
           echo "Security scan completed. No vulnerabilities found."
         fi

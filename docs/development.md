@@ -150,13 +150,17 @@ flow build binary ./bin/flow-dev
 
 ### Required Tools
 
-These are installed automatically by `flow install tools`:
+These are installed at their pinned versions by `flow install tools`:
 
 - [cobra-cli](https://github.com/spf13/cobra-cli) - CLI scaffolding
 - [goreleaser](https://goreleaser.com/) - Binary builds and package distribution
-- [golangci-lint](https://golangci-lint.run/) - Code linting
-- [ginkgo](https://onsi.github.io/ginkgo/) - BDD testing framework
+
+These are pinned in `go.mod` with `tool` directives and run with `go tool`, so they need no install:
+
 - [mockgen](https://github.com/uber-go/mock) - Generate test mocks
+- [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) - Vulnerability scanning
+
+[golangci-lint](https://golangci-lint.run/) runs at a pinned version through `go run` in `flow lint`.
 
 ### Additional Tools
 

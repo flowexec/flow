@@ -10,7 +10,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/runner/engine/retry"
 )
 
-//go:generate mockgen -destination=mocks/mock_engine.go -package=mocks github.com/flowexec/flow/v2/internal/runner/engine Engine
+//go:generate go tool mockgen -destination=mocks/mock_engine.go -package=mocks github.com/flowexec/flow/v2/internal/runner/engine Engine
 
 type Result struct {
 	ID      string
