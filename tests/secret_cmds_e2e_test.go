@@ -162,6 +162,57 @@ var _ = Describe("vault/secrets e2e", Ordered, func() {
 		})
 	})
 
+	When("piping a secret value on stdin (flow secret set NAME)", func() {
+		pipe := func(data string) {
+			reader, writer, err := os.Pipe()
+			Expect(err).NotTo(HaveOccurred())
+			_, err = writer.Write([]byte(data))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writer.Close()).To(Succeed())
+			ctx.SetIO(reader, ctx.StdOut())
+		}
+
+		BeforeAll(func() {
+			Expect(run.Run(
+				ctx.Context, "vault", "create", "piped", "--type", "unencrypted", "--path", GinkgoTB().TempDir(),
+			)).To(Succeed())
+			utils.ResetTestContext(ctx, GinkgoTB())
+		})
+
+		It("stores multi-line input exactly and never echoes it", func() {
+			pipe("line1\nline2\n")
+			Expect(run.Run(ctx.Context, "secret", "set", "pem", "--vault", "piped")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).NotTo(ContainSubstring("line1"))
+			Expect(out).To(ContainSubstring("Secret pem set in vault"))
+
+			stdOut, err := os.CreateTemp(GinkgoTB().TempDir(), "get-out")
+			Expect(err).NotTo(HaveOccurred())
+			ctx.SetIO(ctx.StdIn(), stdOut)
+			Expect(run.Run(
+				ctx.Context, "secret", "get", "pem", "--vault", "piped", "--plaintext", "--output", "json",
+			)).To(Succeed())
+			out, err = readFileContent(stdOut)
+			Expect(err).NotTo(HaveOccurred())
+			var envelope struct {
+				Result struct {
+					Data struct {
+						Value string `json:"value"`
+					} `json:"data"`
+				} `json:"result"`
+			}
+			Expect(json.Unmarshal([]byte(out), &envelope)).To(Succeed())
+			Expect(envelope.Result.Data.Value).To(Equal("line1\nline2\n"))
+		})
+
+		It("fatals on an empty pipe instead of storing an empty secret", func() {
+			pipe("")
+			ctx.ExpectFailure()
+			Expect(run.Run(ctx.Context, "secret", "set", "empty", "--vault", "piped")).NotTo(Succeed())
+		})
+	})
+
 	When("getting a secret (flow secret get)", func() {
 		It("should return the secret value", func() {
 			stdOut := ctx.StdOut()

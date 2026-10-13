@@ -37,6 +37,8 @@ var _ = Describe("cache e2e", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = writer.Write([]byte("test-value\n"))
 			Expect(err).ToNot(HaveOccurred())
+			// The multiline value prompt reads stdin to EOF.
+			Expect(writer.Close()).To(Succeed())
 
 			ctx.SetIO(reader, ctx.StdOut())
 			Expect(run.Run(ctx.Context, "cache", "set", "test-key")).To(Succeed())
