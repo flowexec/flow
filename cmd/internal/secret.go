@@ -261,9 +261,10 @@ func setSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 			ctx.StdIn(),
 			ctx.StdOut(),
 			&views.FormField{
-				Key:   "value",
-				Type:  views.PromptTypeMasked,
-				Title: "Enter the secret value",
+				Key:      "value",
+				Type:     views.PromptTypeMasked,
+				Title:    "Enter the secret value",
+				Required: true,
 			})
 		if err != nil {
 			errhandler.HandleFatal(ctx, cmd, err)
