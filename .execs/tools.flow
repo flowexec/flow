@@ -9,6 +9,9 @@ executables:
       dir: //
       failFast: false
       maxThreads: 3
+      # mockgen and govulncheck are pinned as tools in go.mod and run with `go tool`, so they
+      # need no install. The tools below are kept out of go.mod because their dependency trees
+      # would leak into the module graph of anything importing pkg/.
       execs:
         - cmd: |
             if ! command -v go &> /dev/null; then
@@ -16,22 +19,19 @@ executables:
               exit 1
             fi
         - cmd: |
-            if ! command -v cobra-cli &> /dev/null; then
-              echo "cobra-cli is not installed. Installing..."
-              go install github.com/spf13/cobra-cli@v1.3.0
+            # GOBIN is shared across repos, so a binary already on PATH may be another repo's
+            # version. Reinstall whenever its module version differs from the pin.
+            want=v1.3.0
+            have=$(go version -m "$(command -v cobra-cli 2>/dev/null)" 2>/dev/null | awk '$1 == "mod" {print $3}')
+            if [ "$have" != "$want" ]; then
+              echo "Installing cobra-cli ${want} (found: ${have:-none})..."
+              go install github.com/spf13/cobra-cli@${want}
             fi
         - cmd: |
-            if ! command -v goreleaser &> /dev/null; then
-              echo "goreleaser is not installed. Installing..."
-              go install github.com/goreleaser/goreleaser/v2@v2.12.5
-            fi
-        - cmd: |
-            if ! command -v ginkgo &> /dev/null; then
-              echo "ginkgo is not installed. Installing..."
-              go install github.com/onsi/ginkgo/v2/ginkgo@v2.20.2
-            fi
-        - cmd: |
-            if ! command -v mockgen &> /dev/null; then
-              echo "mockgen is not installed. Installing..."
-              go install go.uber.org/mock/mockgen@v0.4.0
+            # Keep in sync with the goreleaser install in .github/workflows/release.yaml.
+            want=v2.12.5
+            have=$(go version -m "$(command -v goreleaser 2>/dev/null)" 2>/dev/null | awk '$1 == "mod" {print $3}')
+            if [ "$have" != "$want" ]; then
+              echo "Installing goreleaser ${want} (found: ${have:-none})..."
+              go install github.com/goreleaser/goreleaser/v2@${want}
             fi

@@ -21,6 +21,7 @@ import (
 type MockEngine struct {
 	ctrl     *gomock.Controller
 	recorder *MockEngineMockRecorder
+	isgomock struct{}
 }
 
 // MockEngineMockRecorder is the mock recorder for MockEngine.
@@ -41,10 +42,10 @@ func (m *MockEngine) EXPECT() *MockEngineMockRecorder {
 }
 
 // Execute mocks base method.
-func (m *MockEngine) Execute(arg0 context.Context, arg1 []engine.Exec, arg2 ...engine.OptionFunc) engine.ResultSummary {
+func (m *MockEngine) Execute(ctx context.Context, execs []engine.Exec, opts ...engine.OptionFunc) engine.ResultSummary {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, execs}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Execute", varargs...)
@@ -53,8 +54,8 @@ func (m *MockEngine) Execute(arg0 context.Context, arg1 []engine.Exec, arg2 ...e
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockEngineMockRecorder) Execute(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockEngineMockRecorder) Execute(ctx, execs any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, execs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockEngine)(nil).Execute), varargs...)
 }

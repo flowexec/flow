@@ -135,8 +135,6 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Install mockgen
-        run: go install go.uber.org/mock/mockgen@v0.4.0
       # Build the flow under review and run every task with it, so CI exercises
       # the code as it would land on main rather than the released CLI.
       - name: Build flow

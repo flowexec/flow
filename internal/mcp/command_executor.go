@@ -100,7 +100,7 @@ func mcpProvenance(ctx context.Context) runProvenance {
 	return prov
 }
 
-//go:generate mockgen -destination=mocks/command_executor.go -package=mocks . CommandExecutor
+//go:generate go tool mockgen -destination=mocks/command_executor.go -package=mocks . CommandExecutor
 type CommandExecutor interface {
 	Execute(args ...string) (string, error)
 	ExecuteContext(ctx context.Context, args ...string) (string, error)

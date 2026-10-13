@@ -21,6 +21,7 @@ import (
 type MockWorkspaceCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkspaceCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockWorkspaceCacheMockRecorder is the mock recorder for MockWorkspaceCache.

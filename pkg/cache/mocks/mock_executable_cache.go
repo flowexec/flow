@@ -20,6 +20,7 @@ import (
 type MockExecutableCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockExecutableCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockExecutableCacheMockRecorder is the mock recorder for MockExecutableCache.
@@ -55,18 +56,18 @@ func (mr *MockExecutableCacheMockRecorder) AliasRefs() *gomock.Call {
 }
 
 // GetExecutableByRef mocks base method.
-func (m *MockExecutableCache) GetExecutableByRef(arg0 executable.Ref) (*executable.Executable, error) {
+func (m *MockExecutableCache) GetExecutableByRef(ref executable.Ref) (*executable.Executable, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExecutableByRef", arg0)
+	ret := m.ctrl.Call(m, "GetExecutableByRef", ref)
 	ret0, _ := ret[0].(*executable.Executable)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetExecutableByRef indicates an expected call of GetExecutableByRef.
-func (mr *MockExecutableCacheMockRecorder) GetExecutableByRef(arg0 any) *gomock.Call {
+func (mr *MockExecutableCacheMockRecorder) GetExecutableByRef(ref any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutableByRef", reflect.TypeOf((*MockExecutableCache)(nil).GetExecutableByRef), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutableByRef", reflect.TypeOf((*MockExecutableCache)(nil).GetExecutableByRef), ref)
 }
 
 // GetExecutableList mocks base method.

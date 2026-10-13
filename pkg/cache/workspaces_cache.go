@@ -18,7 +18,7 @@ import (
 
 const wsCacheKey = "workspaces"
 
-//go:generate mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache WorkspaceCache
+//go:generate go tool mockgen -destination=mocks/mock_workspace_cache.go -package=mocks github.com/flowexec/flow/v2/pkg/cache WorkspaceCache
 type WorkspaceCache interface {
 	Update() error
 	GetData() *WorkspaceCacheData

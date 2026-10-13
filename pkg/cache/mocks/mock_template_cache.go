@@ -20,6 +20,7 @@ import (
 type MockTemplateCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockTemplateCacheMockRecorder
+	isgomock struct{}
 }
 
 // MockTemplateCacheMockRecorder is the mock recorder for MockTemplateCache.
@@ -40,18 +41,18 @@ func (m *MockTemplateCache) EXPECT() *MockTemplateCacheMockRecorder {
 }
 
 // GetTemplate mocks base method.
-func (m *MockTemplateCache) GetTemplate(arg0 string) (*executable.Template, error) {
+func (m *MockTemplateCache) GetTemplate(name string) (*executable.Template, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTemplate", arg0)
+	ret := m.ctrl.Call(m, "GetTemplate", name)
 	ret0, _ := ret[0].(*executable.Template)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTemplate indicates an expected call of GetTemplate.
-func (mr *MockTemplateCacheMockRecorder) GetTemplate(arg0 any) *gomock.Call {
+func (mr *MockTemplateCacheMockRecorder) GetTemplate(name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*MockTemplateCache)(nil).GetTemplate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplate", reflect.TypeOf((*MockTemplateCache)(nil).GetTemplate), name)
 }
 
 // GetTemplateList mocks base method.

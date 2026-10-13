@@ -13,7 +13,7 @@ import (
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
-//go:generate mockgen -destination=mocks/mock_runner.go -package=mocks github.com/flowexec/flow/v2/internal/runner Runner
+//go:generate go tool mockgen -destination=mocks/mock_runner.go -package=mocks github.com/flowexec/flow/v2/internal/runner Runner
 type Runner interface {
 	Name() string
 	Exec(
