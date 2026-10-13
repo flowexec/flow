@@ -107,6 +107,33 @@ var _ = Describe("ResolveWorkspace", func() {
 			Expect(res.Path).To(Equal(parent))
 		})
 
+		It("discovers a linked worktree nested under a boundary directory", func() {
+			parent := mkWorkspace("repo")
+			worktree := mkWorkspace("repo/.claude/worktrees/feature")
+			gitDir := mkDir("repo/.git/worktrees/feature")
+			Expect(os.WriteFile(filepath.Join(gitDir, "commondir"), []byte("../..\n"), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(worktree, ".git"), []byte("gitdir: "+gitDir+"\n"), 0600)).To(Succeed())
+			cfg := dynamic(map[string]string{"repo": parent}, "repo")
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{
+				Dir: mkDir("repo/.claude/worktrees/feature/cmd"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Path).To(Equal(worktree))
+			Expect(res.Registered).To(BeFalse())
+			Expect(res.Source).To(Equal(filesystem.SourceDiscovered))
+		})
+
+		It("walks past a vendored submodule inside a registered workspace", func() {
+			parent := mkWorkspace("repo")
+			sub := mkWorkspace("repo/vendor/dep")
+			mkDir("repo/.git/modules/dep")
+			Expect(os.WriteFile(filepath.Join(sub, ".git"), []byte("gitdir: ../../.git/modules/dep\n"), 0600)).To(Succeed())
+			cfg := dynamic(map[string]string{"repo": parent}, "repo")
+			res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{Dir: sub})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Path).To(Equal(parent))
+		})
+
 		It("still discovers a standalone clone under a directory named external", func() {
 			// The boundary only applies inside a registered workspace; an unrelated path that
 			// happens to contain "external" is a legitimate root.

@@ -196,6 +196,11 @@ func discoveryBoundary(cfg *config.Config) func(string) bool {
 		if _, registered := cfg.NameForWorkspacePath(root); registered {
 			return false
 		}
+		// A linked worktree is a working copy of the user's own repo, not a dependency, wherever
+		// a tool chose to put it (Claude Code, for one, nests them under .claude/worktrees).
+		if isLinkedWorktree(root) {
+			return false
+		}
 		parent, found := cfg.WorkspaceForPath(root)
 		if !found {
 			return false
@@ -211,6 +216,26 @@ func discoveryBoundary(cfg *config.Config) func(string) bool {
 		}
 		return false
 	}
+}
+
+// isLinkedWorktree reports whether dir is the root of a `git worktree add` checkout. Its .git is
+// a file pointing at a gitdir that holds a commondir file; a submodule also has a .git file, but
+// its gitdir has no commondir, so a vendored submodule stays behind the boundary.
+func isLinkedWorktree(dir string) bool {
+	data, err := os.ReadFile(filepath.Clean(filepath.Join(dir, ".git")))
+	if err != nil {
+		return false
+	}
+	gitDir, ok := strings.CutPrefix(strings.TrimSpace(string(data)), "gitdir:")
+	if !ok {
+		return false
+	}
+	gitDir = strings.TrimSpace(gitDir)
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(dir, gitDir)
+	}
+	info, err := os.Stat(filepath.Join(gitDir, "commondir"))
+	return err == nil && !info.IsDir()
 }
 
 // loadResolved builds a result for a registered workspace, creating its flow.yaml if the user
