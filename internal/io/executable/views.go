@@ -22,6 +22,11 @@ func sortByID(a, b *executable.Executable) int {
 	return strings.Compare(a.ID(), b.ID())
 }
 
+// runCommand is the command a user would type to run the executable with the given ref.
+func runCommand(ref executable.Ref) string {
+	return "flow " + ref.String()
+}
+
 func NewExecutableView(
 	ctx *context.Context,
 	exec *executable.Executable,
@@ -42,13 +47,6 @@ func NewExecutableView(
 			},
 		},
 		{
-			Key: "c", Label: "copy ref",
-			Callback: func() error {
-				common.CopyToClipboard(container, exec.Ref().String(), "copied reference to clipboard")
-				return nil
-			},
-		},
-		{
 			Key: "e", Label: "edit",
 			Callback: func() error {
 				if err := common.OpenInEditor(exec.FlowFilePath(), ctx.StdIn(), ctx.StdOut()); err != nil {
@@ -59,6 +57,7 @@ func NewExecutableView(
 		},
 	}
 	opts := executableDetailOpts(exec)
+	opts.CopyValue = runCommand(exec.Ref())
 	return views.NewDetailContentView(
 		container.RenderState(),
 		opts,
@@ -92,6 +91,7 @@ func NewExecutableListView(
 		})
 	}
 	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.CopyFunc = func(row []string) string { return runCommand(executable.Ref(row[0])) }
 	selectedExec := func() *executable.Executable {
 		row := table.GetSelectedRow()
 		if row == nil {
@@ -151,13 +151,6 @@ func NewTemplateView(
 			},
 		},
 		{
-			Key: "c", Label: "copy location",
-			Callback: func() error {
-				common.CopyToClipboard(container, template.Location(), "copied location to clipboard")
-				return nil
-			},
-		},
-		{
 			Key: "e", Label: "edit",
 			Callback: func() error {
 				if err := common.OpenInEditor(template.Location(), ctx.StdIn(), ctx.StdOut()); err != nil {
@@ -168,6 +161,7 @@ func NewTemplateView(
 		},
 	}
 	opts := templateDetailOpts(template)
+	opts.CopyValue = template.Location()
 	return views.NewDetailContentView(
 		container.RenderState(),
 		opts,

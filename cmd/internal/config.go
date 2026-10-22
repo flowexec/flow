@@ -102,6 +102,7 @@ func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
 	registerSetLogModeCmd(ctx, setCmd)
 	registerSetTUICmd(ctx, setCmd)
 	registerSetNotificationsCmd(ctx, setCmd)
+	registerSetMouseCmd(ctx, setCmd)
 	registerSetThemeCmd(ctx, setCmd)
 	registerSetTimeoutCmd(ctx, setCmd)
 	registerSetUpdateCheckCmd(ctx, setCmd)
@@ -247,6 +248,38 @@ func setNotificationsFunc(ctx *context.Context, cmd *cobra.Command, args []strin
 		strVal = strEnabled
 	}
 	logger.Log().PlainTextSuccess("Notifications " + strVal)
+}
+
+func registerSetMouseCmd(ctx *context.Context, setCmd *cobra.Command) {
+	mouseCmd := &cobra.Command{
+		Use:       "mouse [true|false]",
+		Short:     "Enable or disable mouse support in the interactive UI.",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"true", "false"},
+		Run:       func(cmd *cobra.Command, args []string) { setMouseFunc(ctx, cmd, args) },
+	}
+	setCmd.AddCommand(mouseCmd)
+}
+
+func setMouseFunc(ctx *context.Context, _ *cobra.Command, args []string) {
+	enabled, err := strconv.ParseBool(args[0])
+	if err != nil {
+		logger.Log().FatalErr(errors.Wrap(err, "invalid boolean value"))
+	}
+
+	userConfig := ctx.Config
+	if userConfig.Interactive == nil {
+		userConfig.Interactive = &config.Interactive{}
+	}
+	userConfig.Interactive.Mouse = &enabled
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		logger.Log().FatalErr(err)
+	}
+	strVal := strDisabled
+	if enabled {
+		strVal = strEnabled
+	}
+	logger.Log().PlainTextSuccess("Mouse support " + strVal)
 }
 
 func registerSetThemeCmd(ctx *context.Context, setCmd *cobra.Command) {

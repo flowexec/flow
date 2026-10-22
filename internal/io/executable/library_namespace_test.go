@@ -28,3 +28,22 @@ func TestNamespaceRowsNestUnderParents(t *testing.T) {
 		t.Errorf("namespace rows:\n got %v\nwant %v", got, want)
 	}
 }
+
+func TestCopyValues(t *testing.T) {
+	cases := []struct{ kind, ws, ns, want string }{
+		{"all", "", "", ""},
+		{"workspace", "flow", "", "flow"},
+		{"namespace", "flow", "", "flow"},
+		{"namespace", "flow", "api/v2", "flow/api/v2"},
+		{"namespace", "", "api", "api"},
+	}
+	for _, c := range cases {
+		if got := io.WorkspaceRowCopyValueForTest(c.kind, c.ws, c.ns); got != c.want {
+			t.Errorf("workspace row (%s, %q, %q): got %q, want %q", c.kind, c.ws, c.ns, got, c.want)
+		}
+	}
+
+	if got := io.RunCommandForTest(executable.Ref("build flow/api:binary")); got != "flow build flow/api:binary" {
+		t.Errorf("run command: got %q", got)
+	}
+}

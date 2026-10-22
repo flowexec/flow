@@ -298,6 +298,7 @@ func workspacesPage(
 				{Title: "Location", Percentage: 30},
 			}
 			table := views.NewTable(render, columns, rows, views.TableDisplayFull)
+			table.CopyFunc = workspaceRowCopyValue
 			keys := workspacePageKeys(ctx, table, wsList)
 			return table, keys
 		},
@@ -355,15 +356,6 @@ func executablePageKeys(
 			}
 			return nil
 		}},
-		{Key: "c", Label: "copy ref", Callback: func() error {
-			ex := selectedExec()
-			if ex == nil {
-				container.SetNotice("no executable selected", themes.OutputLevelError)
-				return nil
-			}
-			common.CopyToClipboard(container, ex.Ref().String(), "copied reference to clipboard")
-			return nil
-		}},
 	}
 }
 
@@ -395,6 +387,7 @@ func executablesPage(
 				})
 			}
 			table := views.NewTable(render, columns, rows, views.TableDisplayFull)
+			table.CopyFunc = func(row []string) string { return runCommand(executable.Ref(row[0])) }
 			keys := executablePageKeys(ctx, table, visible, runFunc)
 			return table, keys
 		},
@@ -512,6 +505,23 @@ func decodeSelection(table *views.Table) (wsName, nsName string) {
 		return "", ""
 	}
 	return data[wsRowCellWsName], data[wsRowCellNsName]
+}
+
+// workspaceRowCopyValue copies the assigned workspace name, or workspace/namespace for a
+// namespace row, rather than the display label in the first column.
+func workspaceRowCopyValue(row []string) string {
+	if len(row) <= wsRowCellNsName {
+		return ""
+	}
+	wsName, nsName := row[wsRowCellWsName], row[wsRowCellNsName]
+	switch {
+	case wsName != "" && nsName != "":
+		return wsName + "/" + nsName
+	case nsName != "":
+		return nsName
+	default:
+		return wsName
+	}
 }
 
 func selectedWorkspace(table *views.Table, wsList workspace.WorkspaceList) *workspace.Workspace {

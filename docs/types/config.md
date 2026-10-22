@@ -72,6 +72,7 @@ Configurations for the interactive UI.
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
 | `enabled` | `boolean` |  | Yes |  |
+| `mouse` | `boolean` |  |  | Whether the interactive UI responds to the mouse: scrolling, clicking to select, and clicking breadcrumbs to go back. Defaults to `true`. While enabled, most terminals require holding Shift (Option on iTerm2) to select text.  |
 | `notifyOnCompletion` | `boolean` |  |  | Whether to send a desktop notification when a command completes. |
 | `soundOnCompletion` | `boolean` |  |  | Whether to play a sound when a command completes. |
 

@@ -9,7 +9,6 @@ import (
 	"github.com/flowexec/tuikit/types"
 	"github.com/flowexec/tuikit/views"
 
-	ioCommon "github.com/flowexec/flow/v2/internal/io/common"
 	"github.com/flowexec/flow/v2/internal/vault"
 	"github.com/flowexec/flow/v2/pkg/context"
 )
@@ -82,13 +81,8 @@ func linkedSecretCallbacks(
 				return nil
 			},
 		},
-		{
-			Key: "c", Label: "copy",
-			Callback: func() error {
-				ioCommon.CopyToClipboard(container, secret.PlainTextString(), "secret copied to clipboard")
-				return nil
-			},
-		},
+		copyNameCallback(container, ref),
+		copyValueCallback(container, secret),
 		{
 			// Deliberately labelled "unlink" rather than "delete": this removes
 			// the link and leaves the secret where it is.

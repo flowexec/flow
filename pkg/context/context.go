@@ -278,17 +278,27 @@ func (ctx *Context) TUIContainer() *tuikit.Container {
 		}
 
 		var err error
-		ctx.tuiContainer, err = tuikit.NewContainer(
-			ctx.ctx, app,
-			tuikit.WithInput(ctx.stdIn),
-			tuikit.WithOutput(ctx.stdOut),
-			tuikit.WithTheme(theme),
-		)
+		ctx.tuiContainer, err = tuikit.NewContainer(ctx.ctx, app, ctx.containerOptions(theme)...)
 		if err != nil {
 			panic(errors.Wrap(err, "TUI container initialization error"))
 		}
 	})
 	return ctx.tuiContainer
+}
+
+// withMouse is a variable so tests can observe whether mouse support is requested.
+var withMouse = tuikit.WithMouse
+
+func (ctx *Context) containerOptions(theme themes.Theme) []tuikit.ContainerOptions {
+	opts := []tuikit.ContainerOptions{
+		tuikit.WithInput(ctx.stdIn),
+		tuikit.WithOutput(ctx.stdOut),
+		tuikit.WithTheme(theme),
+	}
+	if ctx.Config.MouseEnabled() {
+		opts = append(opts, withMouse())
+	}
+	return opts
 }
 
 // SetTUIContainer sets the TUI container directly, bypassing lazy init.

@@ -164,6 +164,12 @@ func (c *Config) SendSoundNotification() bool {
 		c.Interactive.SoundOnCompletion != nil && *c.Interactive.SoundOnCompletion
 }
 
+// MouseEnabled reports whether the interactive UI should respond to the mouse. It is on unless
+// explicitly disabled.
+func (c *Config) MouseEnabled() bool {
+	return c.Interactive == nil || c.Interactive.Mouse == nil || *c.Interactive.Mouse
+}
+
 func (c *Config) YAML() (string, error) {
 	yamlBytes, err := yaml.Marshal(c)
 	if err != nil {
@@ -210,21 +216,8 @@ func (c *Config) Markdown() string {
 	}
 	sections = append(sections, general)
 
-	// Interactive settings
-	if c.Interactive != nil { //nolint:nestif
-		interactive := "## Interactive\n"
-		if c.Interactive.Enabled {
-			interactive += "**Enabled:** yes\n\n"
-			if c.Interactive.NotifyOnCompletion != nil && *c.Interactive.NotifyOnCompletion {
-				interactive += "**Notify on Completion:** yes\n\n"
-			}
-			if c.Interactive.SoundOnCompletion != nil && *c.Interactive.SoundOnCompletion {
-				interactive += "**Sound on Completion:** yes\n\n"
-			}
-		} else {
-			interactive += "**Enabled:** no\n\n"
-		}
-		sections = append(sections, interactive)
+	if c.Interactive != nil {
+		sections = append(sections, c.interactiveMarkdown())
 	}
 
 	// Workspaces
@@ -260,4 +253,22 @@ func (c *Config) Markdown() string {
 
 func (ct ConfigTheme) String() string {
 	return string(ct)
+}
+
+func (c *Config) interactiveMarkdown() string {
+	interactive := "## Interactive\n"
+	if !c.Interactive.Enabled {
+		return interactive + "**Enabled:** no\n\n"
+	}
+	interactive += "**Enabled:** yes\n\n"
+	if c.Interactive.NotifyOnCompletion != nil && *c.Interactive.NotifyOnCompletion {
+		interactive += "**Notify on Completion:** yes\n\n"
+	}
+	if c.Interactive.SoundOnCompletion != nil && *c.Interactive.SoundOnCompletion {
+		interactive += "**Sound on Completion:** yes\n\n"
+	}
+	if !c.MouseEnabled() {
+		interactive += "**Mouse:** no\n\n"
+	}
+	return interactive
 }
