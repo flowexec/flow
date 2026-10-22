@@ -164,6 +164,8 @@ The interactive `flow logs` view shows an **Origin** column (the client, or `cli
 
 The assistant can review its own activity too: `get_execution_logs` accepts the same `source`/`session`/`status` filters, plus `mine: true` — a shortcut that scopes results to the calling session's own runs, so it can check "what have I run so far?" without guessing a session ID.
 
+How flow decides which session a run belongs to — including how an application embedding the server can name it per tool call — is covered in [Run Provenance](run-provenance.md#what-a-session-is).
+
 ## llms.txt
 
 flow publishes an [`llms.txt`](https://flowexec.io/llms.txt) index following the [llmstxt.org](https://llmstxt.org) standard — a plain-text map of all documentation pages and schemas. Tools that support it can pull the full docs in one request.

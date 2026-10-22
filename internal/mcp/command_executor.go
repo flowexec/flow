@@ -57,6 +57,23 @@ func runDirFromContext(ctx context.Context) string {
 	return dir
 }
 
+// callSessionCtxKey keys a session named by the tool call itself.
+type callSessionCtxKey struct{}
+
+// WithCallSession returns a context naming the session the current tool call belongs to. An empty
+// session leaves ctx unchanged.
+func WithCallSession(ctx context.Context, session string) context.Context {
+	if session == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, callSessionCtxKey{}, session)
+}
+
+func callSessionFromContext(ctx context.Context) string {
+	session, _ := ctx.Value(callSessionCtxKey{}).(string)
+	return session
+}
+
 // stdioSessionID is what mcp-go reports as the session ID for every stdio connection — a
 // package constant, not a per-connection value (see mcp-go server/stdio.go). Taken at face
 // value it collapses every run from every client into one "session".
@@ -80,6 +97,12 @@ func mcpProvenance(ctx context.Context) runProvenance {
 		if withInfo, ok := sess.(server.SessionWithClientInfo); ok {
 			prov.Client = withInfo.GetClientInfo().Name
 		}
+	}
+	// The call is the only thing that knows which conversation it belongs to. A server process
+	// can start before a conversation, outlive it, or serve several, so the transport and the
+	// server's environment can both name the wrong one.
+	if callSession := callSessionFromContext(ctx); callSession != "" {
+		prov.Session = callSession
 	}
 	// A transport that issues genuine per-connection IDs keeps them; only substitute when it
 	// gave us nothing usable.

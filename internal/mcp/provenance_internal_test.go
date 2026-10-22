@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
@@ -106,11 +107,90 @@ func TestMCPProvenance(t *testing.T) {
 		}
 	})
 
+	t.Run("prefers the call's session over the transport's and the environment's", func(t *testing.T) {
+		t.Setenv(store.RunSessionEnv, "server-start-conversation")
+		for _, transportID := range []string{stdioSessionID, "real-session-7"} {
+			ctx := srv.WithContext(context.Background(), fakeSession{id: transportID})
+			ctx = WithCallSession(ctx, "call-conversation")
+			if prov := mcpProvenance(ctx); prov.Session != "call-conversation" {
+				t.Errorf("transport %q: expected the call's session, got %q", transportID, prov.Session)
+			}
+		}
+	})
+
+	t.Run("an empty call session falls through", func(t *testing.T) {
+		ctx := srv.WithContext(context.Background(), fakeSession{id: "real-session-7"})
+		if prov := mcpProvenance(WithCallSession(ctx, "")); prov.Session != "real-session-7" {
+			t.Errorf("expected the transport's session ID, got %q", prov.Session)
+		}
+
+		t.Setenv(store.RunSessionEnv, "harness-conversation-9")
+		ctx = srv.WithContext(context.Background(), fakeSession{id: stdioSessionID})
+		if prov := mcpProvenance(WithCallSession(ctx, "")); prov.Session != "harness-conversation-9" {
+			t.Errorf("expected the inherited session, got %q", prov.Session)
+		}
+	})
+
 	t.Run("always marks the run as MCP-sourced", func(t *testing.T) {
 		if prov := mcpProvenance(context.Background()); prov.Source != store.RunSourceMCP {
 			t.Errorf("expected source %q, got %q", store.RunSourceMCP, prov.Source)
 		}
 	})
+}
+
+// capturingExecutor records the context of the last command it was asked to run.
+type capturingExecutor struct{ ctx context.Context }
+
+func (c *capturingExecutor) Execute(args ...string) (string, error) {
+	return c.ExecuteContext(context.Background(), args...)
+}
+
+func (c *capturingExecutor) ExecuteContext(ctx context.Context, _ ...string) (string, error) {
+	c.ctx = ctx
+	return "", nil
+}
+
+func TestCallSessionFromExtensionMiddleware(t *testing.T) {
+	t.Setenv(store.RunSessionEnv, "server-start-conversation")
+	mw := func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+		return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			return next(WithCallSession(ctx, "call-conversation"), req)
+		}
+	}
+	executor := &capturingExecutor{}
+	flowServer, err := NewServer(executor, WithExtensions(Extension{
+		ServerOptions: []server.ServerOption{server.WithToolHandlerMiddleware(mw)},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := client.NewInProcessClient(flowServer.GetMCPServer())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Initialize(context.Background(), mcp.InitializeRequest{
+		Params: mcp.InitializeParams{ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "run_command"
+	req.Params.Arguments = map[string]any{"command": "echo hi"}
+	if _, err := c.CallTool(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+
+	if executor.ctx == nil {
+		t.Fatal("expected the tool to invoke the executor")
+	}
+	prov, ok := provenanceFromContext(executor.ctx)
+	if !ok {
+		t.Fatal("expected provenance on the executor's context")
+	}
+	if prov.Session != "call-conversation" {
+		t.Errorf("expected the call's session forwarded to the subprocess, got %q", prov.Session)
+	}
 }
 
 func TestProcessSessionID_StableAndNonEmpty(t *testing.T) {
