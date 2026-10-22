@@ -15,8 +15,8 @@
     "js-yaml": "^4.3.1",
     "markdown-it": "^14.3.3",
     "vitepress": "^1.6.4",
-    "vitepress-plugin-tabs": "0.7.1",
-    "vue": "^3.5.43",
-    "wrangler": "^4.149.0"
+    "vitepress-plugin-tabs": "0.9.1",
+    "vue": "^3.5.44",
+    "wrangler": "^4.151.2"
   }
 }
