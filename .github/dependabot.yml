@@ -4,29 +4,31 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: friday
       time: "08:00"
     labels:
       - "dependencies"
     commit-message:
-        prefix: "chore: "
+      prefix: "chore: "
     groups:
-      experimental-golang-deps:
+      # Pre-1.0 and co-developed, so minor bumps can be breaking.
+      flowexec-deps:
         patterns:
-          - "golang.org/x/*"
-      testing-deps:
+          - "github.com/flowexec/*"
+      # Majors are left out and arrive as their own PRs.
+      go-deps:
         patterns:
-          - "github.com/onsi/ginkgo/v2"
-          - "github.com/onsi/gomega"
-      charmbracelet-deps:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      go-security:
+        applies-to: security-updates
         patterns:
-          - "github.com/charmbracelet/*"
-          - "charm.land/*"
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-      day: friday
       time: "08:00"
     labels:
       - "dependencies"
@@ -40,9 +42,25 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: friday
       time: "08:00"
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore: "
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "monthly"
+      time: "08:00"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore: "
+    groups:
+      # Majors are left out and arrive as their own PRs.
+      docs-deps:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
