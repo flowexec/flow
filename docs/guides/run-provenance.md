@@ -68,11 +68,12 @@ flow logs --session 4ce5bfea-7ada-4b20-b59e-bcc0df500181
 
 **Whatever the caller says belongs together.** flow resolves it in this order:
 
-1. a per-connection ID from the transport, when one exists
-2. otherwise `FLOW_RUN_SESSION` from the environment — the caller told us
-3. otherwise a UUID minted once per `flow mcp` process
+1. a session named by the tool call itself, when an embedder supplies one
+2. otherwise a per-connection ID from the transport, when one exists
+3. otherwise `FLOW_RUN_SESSION` from the environment — the caller told us
+4. otherwise a UUID minted once per `flow mcp` process
 
-Step 2 is what keeps a single conversation intact. An assistant does not only use MCP; it
+Step 3 is what keeps a single conversation intact. An assistant does not only use MCP; it
 also shells out to `flow` directly. If the server invented an ID while the shell inherited a
 different one, the same conversation would land in two groups. A caller that tags its
 environment gets both paths under one ID.
@@ -80,6 +81,29 @@ environment gets both paths under one ID.
 The minted UUID is a last resort, and it approximates a conversation rather than being one —
 a client that reconnects mid-conversation gets a new one. If you know your own conversation
 identity, supply it and flow will use it instead.
+
+#### Naming the session per call
+
+The environment is read when the server starts, and a server's lifetime rarely matches a
+conversation's: it can start before one, outlive it, or serve several. Some clients name their
+conversation on every tool call instead, usually in the request's `_meta`. An application that
+embeds flow's MCP server can pass that through: register tool-handler middleware via an
+`MCPExtension`'s `ServerOptions` and wrap the context with `cli.WithMCPRunSession`:
+
+```go
+mw := func(next server.ToolHandlerFunc) server.ToolHandlerFunc {
+    return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+        return next(cli.WithMCPRunSession(ctx, sessionFromMeta(req)), req)
+    }
+}
+cli.RegisterAllCommands(ctx, root, cli.WithMCPExtensions(cli.MCPExtension{
+    ServerOptions: []server.ServerOption{server.WithToolHandlerMiddleware(mw)},
+}))
+```
+
+That session wins over the transport's and `FLOW_RUN_SESSION`, for every run the call launches
+and for `get_execution_logs` with `mine: true`. An empty value changes nothing. Which `_meta`
+keys to read is the embedder's call; flow does not interpret any.
 
 ## Everything else: three environment variables
 
@@ -169,8 +193,8 @@ built on them fails silently — history quietly stops grouping and nobody notic
 maps its own variables onto the contract above; flow stays neutral.
 
 **No conversation identity of its own.** A session is a grouping key, not a claim about what a
-conversation is. flow will happily record a conversation ID you hand it — that is what step 2
-above is for — but it never goes looking for one, and it stores nothing that points back at a
+conversation is. flow will happily record a conversation ID you hand it — that is what steps 1
+and 3 above are for — but it never goes looking for one, and it stores nothing that points back at a
 chat. When nobody supplies an identity, the minted per-process UUID is an approximation, and
 flow treats it as one. Deciding what a conversation *is* stays with the client, which is the
 only thing that can know.

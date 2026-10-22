@@ -1,6 +1,10 @@
 package cli
 
-import "github.com/flowexec/flow/v2/internal/mcp"
+import (
+	"context"
+
+	"github.com/flowexec/flow/v2/internal/mcp"
+)
 
 // MCPExtension adds tools, prompts, resources, instructions, or server options to the MCP server
 // started by the mcp command. Registrations are added after flow's built-ins; a name or URI that
@@ -31,4 +35,13 @@ func WithMCPServerInfo(name, version string) RegisterOption {
 	return func(c *registerConfig) {
 		c.mcpOptions = append(c.mcpOptions, mcp.WithServerInfo(name, version))
 	}
+}
+
+// WithMCPRunSession returns a context that attributes runs launched by the current MCP tool call
+// to session. It is meant for tool-handler middleware registered through an MCPExtension's
+// ServerOptions (e.g. server.WithToolHandlerMiddleware), for clients that name their conversation
+// on each call. A non-empty session takes precedence over the transport's session ID and
+// FLOW_RUN_SESSION; an empty one changes nothing.
+func WithMCPRunSession(ctx context.Context, session string) context.Context {
+	return mcp.WithCallSession(ctx, session)
 }
