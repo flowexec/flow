@@ -12,7 +12,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.6.5",
-    "js-yaml": "^4.3.1",
+    "js-yaml": "^5.5.0",
     "markdown-it": "^15.0.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-tabs": "0.7.1",
