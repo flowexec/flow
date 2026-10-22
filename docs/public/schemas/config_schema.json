@@ -68,6 +68,10 @@
         "enabled": {
           "type": "boolean"
         },
+        "mouse": {
+          "description": "Whether the interactive UI responds to the mouse: scrolling, clicking to select, and clicking\nbreadcrumbs to go back. Defaults to `true`. While enabled, most terminals require holding\nShift (Option on iTerm2) to select text.\n",
+          "type": "boolean"
+        },
         "notifyOnCompletion": {
           "description": "Whether to send a desktop notification when a command completes.",
           "type": "boolean"

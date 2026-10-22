@@ -24,3 +24,13 @@ func NamespaceRowsForTest(execs executable.ExecutableList, wsName string) [][4]s
 	}
 	return out
 }
+
+// WorkspaceRowCopyValueForTest exposes workspaceRowCopyValue for a row built like the library's.
+func WorkspaceRowCopyValueForTest(kind, wsName, nsName string) string {
+	return workspaceRowCopyValue(padRow([]string{"label", "0", "", ""}, kind, wsName, nsName))
+}
+
+// RunCommandForTest exposes runCommand.
+func RunCommandForTest(ref executable.Ref) string {
+	return runCommand(ref)
+}

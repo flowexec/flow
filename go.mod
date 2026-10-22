@@ -11,7 +11,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20260406091427-a791e22d5143
-	github.com/flowexec/tuikit v0.5.1
+	github.com/flowexec/tuikit v0.6.1
 	github.com/flowexec/vault v0.4.1
 	github.com/gen2brain/beeep v0.11.2
 	github.com/google/uuid v1.6.0

@@ -62,6 +62,7 @@ func NewWorkspaceView(
 	}
 
 	opts := workspaceDetailOpts(ws)
+	opts.CopyValue = ws.AssignedName()
 	return views.NewDetailContentView(container.RenderState(), opts, workspaceKeyCallbacks...)
 }
 
@@ -95,6 +96,7 @@ func NewWorkspaceListView(
 		})
 	}
 	table := views.NewTable(container.RenderState(), columns, rows, views.TableDisplayMini)
+	table.CopyFunc = func(row []string) string { return row[3] }
 	table.SetOnSelect(func(_ int) error {
 		row := table.GetSelectedRow()
 		if row == nil || len(row.Data()) < 4 {

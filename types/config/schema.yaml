@@ -26,6 +26,12 @@ definitions:
       soundOnCompletion:
         type: boolean
         description: Whether to play a sound when a command completes.
+      mouse:
+        type: boolean
+        description: |
+          Whether the interactive UI responds to the mouse: scrolling, clicking to select, and clicking
+          breadcrumbs to go back. Defaults to `true`. While enabled, most terminals require holding
+          Shift (Option on iTerm2) to select text.
     required: [ enabled ]
 
   ColorPalette:

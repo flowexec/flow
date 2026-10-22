@@ -31,7 +31,35 @@ flow browse  # Launch the interactive browser
 - <kbd>Tab</kbd> - Toggle the executable detail viewer
 - <kbd>R</kbd> - Run the selected executable (when applicable)
 - <kbd>H</kbd> - Show help menu with all shortcuts
+- <kbd>C</kbd> - Copy the selected item (see [Copying](#copying))
 - <kbd>Q</kbd> - Quit the browser
+
+**Mouse:**
+- Scroll wheel - Move the selection in lists and tables, or scroll detail views
+- Click - Select a row; click it again to open it
+- Click a breadcrumb - Go back to that page
+
+While mouse support is on, hold <kbd>Shift</kbd> (<kbd>Option</kbd> on iTerm2) to select text with the mouse.
+To turn it off, see [Mouse Support](#mouse-support).
+
+### Copying
+
+Press <kbd>C</kbd> in any view to copy to the clipboard:
+
+| View | Copies |
+|------|--------|
+| Executable list or detail | The command that runs it, e.g. `flow build api:binary` |
+| Workspace list or detail | The workspace name (`workspace/namespace` for a namespace row) |
+| Template detail | The template file's location |
+| Secret list or detail | The secret name, never its value |
+| YAML or JSON views | The raw YAML or JSON |
+| Other lists and tables | The first column of the selected row |
+
+In a secret's detail view, <kbd>V</kbd> copies the secret value.
+
+Copying writes both the system clipboard and the OSC 52 terminal escape, so it works locally and over
+SSH. Over SSH your terminal has to support OSC 52; in tmux, add `set -g set-clipboard on` to your
+`tmux.conf`.
 
 ### Filtering and Search
 
@@ -158,6 +186,14 @@ flow config set notifications true --sound
 
 # Disable notifications
 flow config set notifications false
+```
+
+### Mouse Support
+
+Mouse support is on by default. Turn it off to select text without holding <kbd>Shift</kbd>:
+
+```shell
+flow config set mouse false
 ```
 
 ### Log Display

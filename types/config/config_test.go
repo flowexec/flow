@@ -108,6 +108,19 @@ var _ = Describe("Workspace path lookups", func() {
 	})
 })
 
+var _ = Describe("MouseEnabled", func() {
+	It("is on when unset", func() {
+		Expect((&config.Config{}).MouseEnabled()).To(BeTrue())
+		Expect((&config.Config{Interactive: &config.Interactive{Enabled: true}}).MouseEnabled()).To(BeTrue())
+	})
+
+	It("follows the interactive.mouse setting", func() {
+		on, off := true, false
+		Expect((&config.Config{Interactive: &config.Interactive{Mouse: &on}}).MouseEnabled()).To(BeTrue())
+		Expect((&config.Config{Interactive: &config.Interactive{Mouse: &off}}).MouseEnabled()).To(BeFalse())
+	})
+})
+
 var _ = Describe("Validate custom verbs", func() {
 	It("accepts valid custom verbs", func() {
 		cfg := &config.Config{CustomVerbs: []string{"status", "health"}}

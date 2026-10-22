@@ -182,6 +182,14 @@ type Interactive struct {
 	// Enabled corresponds to the JSON schema field "enabled".
 	Enabled bool `json:"enabled" yaml:"enabled" mapstructure:"enabled"`
 
+	// Whether the interactive UI responds to the mouse: scrolling, clicking to
+	// select, and clicking
+	// breadcrumbs to go back. Defaults to `true`. While enabled, most terminals
+	// require holding
+	// Shift (Option on iTerm2) to select text.
+	//
+	Mouse *bool `json:"mouse,omitempty" yaml:"mouse,omitempty" mapstructure:"mouse,omitempty"`
+
 	// Whether to send a desktop notification when a command completes.
 	NotifyOnCompletion *bool `json:"notifyOnCompletion,omitempty" yaml:"notifyOnCompletion,omitempty" mapstructure:"notifyOnCompletion,omitempty"`
 

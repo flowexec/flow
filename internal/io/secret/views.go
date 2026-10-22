@@ -140,13 +140,8 @@ func NewSecretView(
 				return nil
 			},
 		},
-		{
-			Key: "c", Label: "copy",
-			Callback: func() error {
-				ioCommon.CopyToClipboard(container, secret.PlainTextString(), "secret copied to clipboard")
-				return nil
-			},
-		},
+		copyNameCallback(container, ref),
+		copyValueCallback(container, secret),
 		{
 			Key: "x", Label: "delete",
 			Callback: func() error {
@@ -175,6 +170,28 @@ func NewSecretView(
 	detail := views.NewDetailView(container.RenderState(), body, metadata...)
 	detail.SetKeyCallbacks(secretKeyCallbacks)
 	return detail
+}
+
+// copyNameCallback takes the copy key so it copies the secret's name; the detail view's
+// default would copy its body, which is the secret value.
+func copyNameCallback(container *tuikit.Container, ref vault.SecretRef) types.KeyCallback {
+	return types.KeyCallback{
+		Key: types.KeyCopy, Label: "copy name",
+		Callback: func() error {
+			container.CopyToClipboard(ref.Key())
+			return nil
+		},
+	}
+}
+
+func copyValueCallback(container *tuikit.Container, secret vault.Secret) types.KeyCallback {
+	return types.KeyCallback{
+		Key: "v", Label: "copy value",
+		Callback: func() error {
+			ioCommon.CopySecretToClipboard(container, secret.PlainTextString(), "secret value copied to clipboard")
+			return nil
+		},
+	}
 }
 
 func NewSecretListView(

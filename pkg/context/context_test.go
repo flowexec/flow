@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/flowexec/tuikit"
 	"github.com/flowexec/tuikit/themes"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -111,6 +112,33 @@ var _ = ginkgo.Describe("Context", func() {
 			}
 			Expect(ctx.CurrentWorkspaceName()).To(Equal("discovered"))
 			Expect(ctx.WorkspaceIsRegistered()).To(BeFalse())
+		})
+	})
+
+	ginkgo.Describe("container options", func() {
+		var mouseRequested bool
+
+		ginkgo.BeforeEach(func() {
+			mouseRequested = false
+			orig := withMouse
+			withMouse = func() tuikit.ContainerOptions {
+				mouseRequested = true
+				return orig()
+			}
+			ginkgo.DeferCleanup(func() { withMouse = orig })
+		})
+
+		ginkgo.It("enables the mouse by default", func() {
+			ctx := &Context{Config: &config.Config{}}
+			ctx.containerOptions(themes.EverforestTheme())
+			Expect(mouseRequested).To(BeTrue())
+		})
+
+		ginkgo.It("leaves the mouse off when the config disables it", func() {
+			off := false
+			ctx := &Context{Config: &config.Config{Interactive: &config.Interactive{Enabled: true, Mouse: &off}}}
+			ctx.containerOptions(themes.EverforestTheme())
+			Expect(mouseRequested).To(BeFalse())
 		})
 	})
 

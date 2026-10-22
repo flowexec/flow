@@ -26,6 +26,7 @@ Each record is **lifecycle-aware**: it appears as `running` the moment a run sta
 | `Enter` | List view   | Open detail view          |
 | `d`     | Detail view | Delete the current record |
 | `x`     | List view   | Delete all records        |
+| `c`     | Any view    | Copy the selected ref, or the log in the detail view |
 
 ### Structured Output
 
