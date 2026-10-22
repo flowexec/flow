@@ -47,18 +47,20 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore: "
-  # Docs site: security updates only, batched into one PR.
   - package-ecosystem: "npm"
     directory: "/docs"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 0
+      time: "08:00"
     labels:
       - "dependencies"
     commit-message:
       prefix: "chore: "
     groups:
-      docs-security:
-        applies-to: security-updates
+      # Majors are left out and arrive as their own PRs.
+      docs-deps:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
