@@ -148,7 +148,7 @@ func argValue(arg executable.Argument, env map[string]string) string {
 	if arg.IsSet() {
 		return arg.Value()
 	}
-	return ExpandAuthored(arg.Default, env)
+	return expandDefault(arg.Default, env)
 }
 
 func filterArgsWithOutputFile(args executable.ArgumentList) executable.ArgumentList {

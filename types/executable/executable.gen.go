@@ -11,6 +11,11 @@ type Argument struct {
 	// If the argument is required and no default is provided, the executable will
 	// fail.
 	//
+	// `$VAR` and `${VAR}` are expanded against the executable's environment, then the
+	// environment
+	// flow was started in. A variable that does not resolve is left as written. Use
+	// `$$` for a literal `$`.
+	//
 	Default string `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// The name of the environment variable that will be assigned the value.

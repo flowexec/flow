@@ -228,6 +228,29 @@ TEST_ENV_VAR3=value3`
 				Expect(os.Getenv("TEST_DEFAULT")).To(Equal("hello world"))
 			})
 
+			It("should expand a default against flow's own process environment", func() {
+				pos := 1
+				GinkgoT().Setenv("TEST_PROCESS_VAR", "/from/process")
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{{EnvKey: "TEST_PROCESS_DEFAULT", Pos: &pos, Default: "$TEST_PROCESS_VAR/x"}},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_PROCESS_DEFAULT")).To(Equal("/from/process/x"))
+			})
+
+			It("should prefer the executable's env over the process environment in a default", func() {
+				pos := 1
+				GinkgoT().Setenv("TEST_SHADOWED_VAR", "from-process")
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{{EnvKey: "TEST_SHADOWED_VAR", Text: "from-param"}},
+					Args:   []executable.Argument{{EnvKey: "TEST_SHADOW_DEFAULT", Pos: &pos, Default: "$TEST_SHADOWED_VAR"}},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_SHADOW_DEFAULT")).To(Equal("from-param"))
+			})
+
 			It("should leave an unresolved variable in a default as written and unescape $$", func() {
 				pos := 1
 				exec := &executable.ExecutableEnvironment{
