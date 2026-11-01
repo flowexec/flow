@@ -345,6 +345,78 @@ var _ = Describe("MCP Server", func() {
 				// The tail is kept, since errors typically surface at the end of a run's output.
 				Expect(out.Output).To(HaveSuffix(strings.Repeat("x", 100)))
 			})
+
+			It("should report exit code 0 on success", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", "test:test-flow").
+					Return("ok", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+				Expect(getTextContent(result)).To(ContainSubstring(`"exitCode":0`))
+			})
+		})
+
+		DescribeTable("failed runs",
+			func(tool string, args map[string]interface{}, cliArgs []any) {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), cliArgs...).
+					Return("step output\nboom\n", &flowMcp.CLIExitError{Code: 2})
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest(tool, args))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring("boom"))
+				Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeExecutionFailed))
+
+				structured, marshalErr := json.Marshal(result.StructuredContent)
+				Expect(marshalErr).ToNot(HaveOccurred())
+				var out flowMcp.ExecutionOutput
+				Expect(json.Unmarshal(structured, &out)).To(Succeed())
+				Expect(out.ExitCode).To(Equal(2))
+				Expect(out.Output).To(Equal("step output\nboom\n"))
+			},
+			Entry("execute", "execute",
+				map[string]interface{}{"executable_verb": "test", "executable_id": "test:flow"},
+				[]any{"test", "test:flow"}),
+			Entry("run_command", "run_command",
+				map[string]interface{}{"command": "false"},
+				[]any{"exec", "--cmd", "false"}),
+			Entry("run_python", "run_python",
+				map[string]interface{}{"code": "raise SystemExit(1)"},
+				[]any{"exec", "--interpreter", "python", "--cmd", "raise SystemExit(1)"}),
+			Entry("run_executable", "run_executable",
+				map[string]interface{}{"spec": "verb: run"},
+				[]any{"exec", "--spec", "verb: run"}),
+		)
+
+		It("should report -1 when flow could not be started", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "exec", "--cmd", "true").
+				Return("", errors.New("flow not found"))
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+				"command": "true",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(`"exitCode":-1`))
+		})
+
+		It("should report a missing workspace as an error", func() {
+			mockExecutor.EXPECT().
+				Execute("workspace", "get", "missing", "--output", "json").
+				Return(`{"error":{"code":"NOT_FOUND"}}`, &flowMcp.CLIExitError{Code: 1})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+				"workspace_name": "missing",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
 		})
 
 		Context("run_command tool", func() {

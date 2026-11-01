@@ -231,8 +231,7 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		if err != nil {
 			ref := strings.Join([]string{executableVerb, executableID}, " ")
-			capped, _ := capOutput(output)
-			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s execution failed: %s", ref, capped)), nil
+			return executionFailure(ref+" execution failed", output, err), nil
 		}
 
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
@@ -442,8 +441,7 @@ func runTransientTool(
 	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
 
 	if err != nil {
-		capped, _ := capOutput(output)
-		return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s: %s", failMsg, capped)), nil
+		return executionFailure(failMsg, output, err), nil
 	}
 
 	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")

@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -27,12 +28,11 @@ func fakeFlowBinary(t *testing.T, exitCode int) {
 	t.Setenv(cliBinaryEnvKey, path)
 }
 
-// A non-zero exit is a normal outcome for a flow command (a failing test, a
-// script that raises). It must come back as output with a nil error, not as a
-// panic: a panic here kills the tool handler's goroutine before it replies, and
-// the MCP client then waits on a request that never gets a response.
-func TestExecuteContext_NonZeroExitReturnsOutputNotPanic(t *testing.T) {
-	fakeFlowBinary(t, 1)
+// A non-zero exit must come back as the captured output plus an error handlers can
+// act on, not as a nil error (the failure goes unreported) and not as a panic (the
+// tool handler's goroutine dies and the MCP client waits on a reply that never comes).
+func TestExecuteContext_NonZeroExitReturnsOutputAndExitError(t *testing.T) {
+	fakeFlowBinary(t, 3)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -41,8 +41,12 @@ func TestExecuteContext_NonZeroExitReturnsOutputNotPanic(t *testing.T) {
 	}()
 
 	out, err := (&FlowCLIExecutor{}).ExecuteContext(context.Background(), "anything")
-	if err != nil {
-		t.Errorf("err = %v, want nil for a non-zero exit", err)
+	var exitErr *CLIExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("err = %v, want *CLIExitError", err)
+	}
+	if exitErr.Code != 3 {
+		t.Errorf("exit code = %d, want 3", exitErr.Code)
 	}
 	if !strings.Contains(out, "stdout-line") || !strings.Contains(out, "stderr-line") {
 		t.Errorf("output = %q, want both streams captured", out)

@@ -157,18 +157,27 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Only return an error if it's not an exit error: a non-zero exit is a
-		// normal outcome whose detail is already in the captured output.
-		//
 		// The target must be *exec.ExitError, not exec.ExitError. ExitError's
 		// Error method has a pointer receiver, so the value type does not
 		// implement error and errors.As panics on it - which killed the tool
 		// handler's goroutine before it could reply, leaving the MCP client
 		// waiting on a request that never got a response.
 		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
-			return string(output), err
+		if errors.As(err, &exitErr) {
+			return string(output), &CLIExitError{Code: exitErr.ExitCode()}
 		}
+		return string(output), err
 	}
 	return string(output), nil
+}
+
+// CLIExitError reports that the flow subprocess ran and exited non-zero. The detail is in the
+// captured output returned alongside it. Code is flow's own exit status, not the status of the
+// command flow ran; that one is recorded in the run's history entry.
+type CLIExitError struct {
+	Code int
+}
+
+func (e *CLIExitError) Error() string {
+	return fmt.Sprintf("flow exited with status %d", e.Code)
 }

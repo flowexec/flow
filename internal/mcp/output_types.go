@@ -103,9 +103,13 @@ type ExecutableListOutput struct {
 	TotalCount  int                `json:"totalCount"`
 }
 
-// ExecutionOutput is the output of the execute tool.
+// ExecutionOutput is the output of the execute, run_command, run_python, and run_executable tools.
 type ExecutionOutput struct {
 	Output string `json:"output"`
+	// ExitCode is the flow process's exit status: 0 on success, non-zero when the run failed (the
+	// result then also has isError set), or -1 if flow could not be started. Flow reports any
+	// failed run as 1, so the failing command's own status comes from get_execution_logs.
+	ExitCode int `json:"exitCode"`
 	// Truncated is true when Output was cut to protect the context window. The run itself
 	// completed in full; the untruncated output remains available via get_execution_logs.
 	Truncated bool `json:"truncated,omitempty"`

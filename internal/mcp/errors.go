@@ -2,6 +2,9 @@ package mcp
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -34,4 +37,22 @@ func toolErrorWithDetails(code, message string, details map[string]any) *mcp.Cal
 		return mcp.NewToolResultError(message)
 	}
 	return mcp.NewToolResultError(string(data))
+}
+
+// executionFailure returns the error result for a run that failed, keeping its output and exit
+// code in the structured result so a client doesn't have to parse them out of the error text.
+func executionFailure(message, output string, err error) *mcp.CallToolResult {
+	exitCode := -1
+	var exitErr *CLIExitError
+	if errors.As(err, &exitErr) {
+		exitCode = exitErr.Code
+	}
+	capped, truncated := capOutput(output)
+	result := toolErrorWithDetails(
+		ErrCodeExecutionFailed,
+		fmt.Sprintf("%s: %s", message, strings.TrimSpace(capped)),
+		map[string]any{"exitCode": exitCode},
+	)
+	result.StructuredContent = ExecutionOutput{Output: capped, ExitCode: exitCode, Truncated: truncated}
+	return result
 }
