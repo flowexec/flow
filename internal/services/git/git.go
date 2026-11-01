@@ -9,11 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 var sshURLPattern = regexp.MustCompile(`^[\w.-]+@[\w.-]+:[\w./-]+$`)
@@ -45,7 +48,102 @@ func ClonePath(gitURL string) (string, error) {
 	repoPath = strings.TrimSuffix(repoPath, ".git")
 	repoPath = strings.TrimPrefix(repoPath, "/")
 	repoPath = strings.ReplaceAll(repoPath, ":", "_") // sanitize Windows drive-letter colons
-	return filepath.Join(filesystem.CachedDataDirPath(), "git-workspaces", host, repoPath), nil
+	return filepath.Join(clonesDir(), host, repoPath), nil
+}
+
+func clonesDir() string {
+	return filepath.Join(filesystem.CachedDataDirPath(), "git-workspaces")
+}
+
+// IsManagedClone reports whether repoDir is a clone flow made under its cache directory, as opposed
+// to a checkout the user owns.
+func IsManagedClone(repoDir string) bool {
+	rel, err := filepath.Rel(filesystem.NormalizePath(clonesDir()), filesystem.NormalizePath(repoDir))
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// RepairWorkspaceConfig undoes what earlier versions of flow did to flow.yaml in a managed clone, so
+// that it can't block a pull. A tracked file that differs from HEAD only by flow's rewrite is
+// restored; one with any other change is the user's and stays as it is. It reports whether it
+// restored the file.
+func RepairWorkspaceConfig(repoDir string) (bool, error) {
+	status, err := gitOutput(repoDir, "status", "--porcelain", "--", filesystem.WorkspaceConfigFileName)
+	if err != nil {
+		return false, err
+	}
+	switch {
+	case strings.HasPrefix(status, "??"):
+		return false, ExcludeWorkspaceConfig(repoDir)
+	case !strings.HasPrefix(status, " M"):
+		return false, nil
+	}
+
+	current, err := os.ReadFile(filepath.Clean(filepath.Join(repoDir, filesystem.WorkspaceConfigFileName)))
+	if err != nil {
+		return false, err
+	}
+	committed, err := gitOutput(repoDir, "show", "HEAD:"+filesystem.WorkspaceConfigFileName)
+	if err != nil {
+		return false, err
+	}
+	if !isGitFieldRewrite(current, []byte(committed)) {
+		return false, nil
+	}
+	if err := runGit(repoDir, "checkout", "HEAD", "--", filesystem.WorkspaceConfigFileName); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// isGitFieldRewrite reports whether current is committed as flow used to rewrite it: decoded into
+// the workspace type, which loses comments, formatting, and unknown keys, then re-encoded with the
+// git fields added.
+func isGitFieldRewrite(current, committed []byte) bool {
+	var currentCfg, committedCfg workspace.Workspace
+	if err := yaml.Unmarshal(current, &currentCfg); err != nil || currentCfg.GitRemote == "" {
+		return false
+	}
+	if err := yaml.Unmarshal(committed, &committedCfg); err != nil {
+		return false
+	}
+	for _, cfg := range []*workspace.Workspace{&currentCfg, &committedCfg} {
+		cfg.GitRemote, cfg.GitRef, cfg.GitRefType = "", "", workspace.WorkspaceGitRefTypeBlank
+	}
+	currentYAML, err := yaml.Marshal(&currentCfg)
+	if err != nil {
+		return false
+	}
+	committedYAML, err := yaml.Marshal(&committedCfg)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(currentYAML, committedYAML)
+}
+
+// ExcludeWorkspaceConfig has git ignore a flow.yaml that flow generated in a clone of a repository
+// without one. The clone stays clean, and git overwrites an ignored file, so upstream can still add
+// its own flow.yaml later.
+func ExcludeWorkspaceConfig(repoDir string) error {
+	excludeFile := filepath.Clean(filepath.Join(repoDir, ".git", "info", "exclude"))
+	const pattern = "/" + filesystem.WorkspaceConfigFileName
+
+	existing, err := os.ReadFile(excludeFile)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if slices.Contains(strings.Split(string(existing), "\n"), pattern) {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(excludeFile), 0750); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(excludeFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString("\n" + pattern + "\n")
+	return err
 }
 
 // Clone clones a git repository to the target directory.
@@ -175,6 +273,23 @@ func runGit(dir string, args ...string) error {
 		return errors.Wrap(err, cmdStr)
 	}
 	return nil
+}
+
+// gitOutput executes a git command and returns its stdout.
+func gitOutput(dir string, args ...string) (string, error) {
+	if err := EnsureInstalled(); err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
+	out, err := cmd.Output()
+	if err != nil {
+		return "", errors.Wrapf(err, "git %s:\n%s", strings.Join(args, " "), strings.TrimSpace(stderrBuf.String()))
+	}
+	return string(out), nil
 }
 
 // parseGitURL extracts the host and path from a git URL (HTTPS or SSH).

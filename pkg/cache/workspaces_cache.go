@@ -65,6 +65,7 @@ func (c *WorkspaceCacheImpl) Update() error {
 			logger.Log().Error("config not found for workspace", "name", name, "path", path)
 			continue
 		}
+		filesystem.ApplyGitSource(wsCfg, cfg, name)
 		cacheData.Workspaces[name] = wsCfg
 		cacheData.WorkspaceLocations[name] = path
 	}

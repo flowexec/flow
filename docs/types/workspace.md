@@ -22,9 +22,9 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `displayName` | `string` |  |  | The display name of the workspace. This is used in the interactive UI. |
 | `envFiles` | `array` (`string`) | [] |  | A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables. By default, the `.env` file in the workspace root is loaded if it exists.  |
 | `executables` | [ExecutableFilter](#executablefilter) |  |  |  |
-| `gitRef` | `string` |  |  | The git ref (branch or tag name) that was specified when the workspace was added from a git URL. Used by `flow workspace update` to checkout the correct ref after pulling.  |
+| `gitRef` | `string` |  |  | The git ref (branch or tag name) that was specified when the workspace was added from a git URL. Used by `flow workspace update` to checkout the correct ref after pulling. See `gitRemote` for where it is stored.  |
 | `gitRefType` | `string` |  |  | The type of git ref specified when the workspace was added. Either "branch" or "tag". Empty if no ref was specified.  |
-| `gitRemote` | `string` |  |  | The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL. Used by `flow workspace update` to pull the latest changes.  |
+| `gitRemote` | `string` |  |  | The git remote URL for the workspace. Used by `flow workspace update` to pull the latest changes. Workspaces added from a git URL have this recorded in the user config instead of this file; flow reports it here when reading the workspace.  |
 | `tags` | [CommonTags](#commontags) | [] |  |  |
 | `templates` | [ExecutableFilter](#executablefilter) |  |  | Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered within the workspace during `flow sync`. Uses the same include/exclude semantics as the executables filter. When unset, the entire workspace is scanned (minus the default exclusions like node_modules/, vendor/, and .git/).  |
 | `verbAliases` | [VerbAliases](#verbaliases) |  |  |  |

@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/flowexec/flow/v2/types/config"
 	"github.com/flowexec/flow/v2/types/workspace"
 )
 
@@ -110,4 +111,16 @@ func ReadWorkspaceConfig(workspaceName, workspacePath string) (*workspace.Worksp
 
 	wsCfg.SetContext(workspaceName, workspacePath)
 	return wsCfg, nil
+}
+
+// ApplyGitSource sets a workspace's git fields from the source recorded for it in the user config.
+// A workspace without one keeps whatever its flow.yaml says.
+func ApplyGitSource(wsCfg *workspace.Workspace, cfg *config.Config, workspaceName string) {
+	source, found := cfg.GitWorkspaces[workspaceName]
+	if !found {
+		return
+	}
+	wsCfg.GitRemote = source.Remote
+	wsCfg.GitRef = source.Ref
+	wsCfg.GitRefType = workspace.WorkspaceGitRefType(source.RefType)
 }

@@ -83,7 +83,7 @@
       "$ref": "#/definitions/ExecutableFilter"
     },
     "gitRef": {
-      "description": "The git ref (branch or tag name) that was specified when the workspace was added from a git URL.\nUsed by `flow workspace update` to checkout the correct ref after pulling.\n",
+      "description": "The git ref (branch or tag name) that was specified when the workspace was added from a git URL.\nUsed by `flow workspace update` to checkout the correct ref after pulling. See `gitRemote` for where it is stored.\n",
       "type": "string",
       "default": ""
     },
@@ -98,7 +98,7 @@
       ]
     },
     "gitRemote": {
-      "description": "The git remote URL for the workspace. This is set automatically when a workspace is added from a git URL.\nUsed by `flow workspace update` to pull the latest changes.\n",
+      "description": "The git remote URL for the workspace. Used by `flow workspace update` to pull the latest changes.\nWorkspaces added from a git URL have this recorded in the user config instead of this file; flow reports it\nhere when reading the workspace.\n",
       "type": "string",
       "default": ""
     },

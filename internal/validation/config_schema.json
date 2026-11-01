@@ -58,6 +58,34 @@
         }
       }
     },
+    "GitSource": {
+      "description": "Where a workspace added from a git URL pulls from.",
+      "type": "object",
+      "required": [
+        "remote"
+      ],
+      "properties": {
+        "ref": {
+          "description": "The branch or tag name specified when the workspace was added.",
+          "type": "string",
+          "default": ""
+        },
+        "refType": {
+          "description": "The type of ref. Empty if no ref was specified.",
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "branch",
+            "tag"
+          ]
+        },
+        "remote": {
+          "description": "The git remote URL the workspace was cloned from.",
+          "type": "string"
+        }
+      }
+    },
     "Interactive": {
       "description": "Configurations for the interactive UI.",
       "type": "object",
@@ -119,6 +147,13 @@
       "description": "The default timeout to use when running executables.\nThis should be a valid duration string.\n",
       "type": "string",
       "default": "30m"
+    },
+    "gitWorkspaces": {
+      "description": "Map of workspace names to their git source, for workspaces added from a git URL. This is set automatically\nand kept here because the workspace's own flow.yaml is a tracked file that belongs to the upstream repository.\n",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/GitSource"
+      }
     },
     "interactive": {
       "$ref": "#/definitions/Interactive"

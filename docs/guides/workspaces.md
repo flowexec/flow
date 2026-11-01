@@ -168,10 +168,13 @@ executables:
 - `verbAliases`: Customize which verb synonyms are available
 - `envFiles`: List of environment files to load for all executables (the root `.env` is loaded by default)
 
-**Git Workspace Fields** (set automatically when adding from a Git URL):
+**Git Workspace Fields** (reported by `flow workspace get`):
 - `gitRemote`: The git remote URL for the workspace
 - `gitRef`: The branch or tag name specified at registration
 - `gitRefType`: Either `branch` or `tag`
+
+Adding a workspace from a Git URL records these under `gitWorkspaces` in your flow config, not in the clone, so
+its `flow.yaml` stays exactly as upstream wrote it and `flow sync --git` can pull changes to it.
 
 > **Complete reference**: See the [workspace configuration schema](../types/workspace.md) for all available options.
 
