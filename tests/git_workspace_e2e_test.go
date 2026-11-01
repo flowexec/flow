@@ -157,6 +157,27 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 		})
 	})
 
+	When("a clone lost its git source to a force update from an earlier version of flow", func() {
+		It("recovers the source from the clone and pulls", func() {
+			name := "git-lost-source-ws"
+			bare := initBareRepo(GinkgoTB())
+			DeferCleanup(os.RemoveAll, bare)
+			gitCmd(GinkgoTB(), bare, "branch", "feature", "main")
+
+			Expect(run.Run(ctx.Context, "workspace", "add", name, localFileURL(bare), "--branch", "feature")).To(Succeed())
+			clone := ctx.Config.Workspaces[name]
+			delete(ctx.Config.GitWorkspaces, name)
+			Expect(filesystem.WriteConfig(ctx.Config)).To(Succeed())
+
+			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
+			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+
+			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Changed Upstream"))
+			Expect(ctx.Config.GitWorkspaces[name].Remote).To(Equal(localFileURL(bare)))
+			Expect(ctx.Config.GitWorkspaces[name].Ref).To(Equal("feature"))
+		})
+	})
+
 	When("adding a workspace from a repository without a flow.yaml", func() {
 		It("keeps the clone clean and lets upstream add one later", func() {
 			name := "git-no-config-ws"

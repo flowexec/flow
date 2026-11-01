@@ -19,6 +19,8 @@ import (
 	"github.com/flowexec/flow/v2/types/workspace"
 )
 
+const refTypeTag = string(workspace.WorkspaceGitRefTypeTag)
+
 var sshURLPattern = regexp.MustCompile(`^[\w.-]+@[\w.-]+:[\w./-]+$`)
 
 // IsGitURL returns true if the given string looks like a Git remote URL (HTTPS or SSH).
@@ -60,6 +62,24 @@ func clonesDir() string {
 func IsManagedClone(repoDir string) bool {
 	rel, err := filepath.Rel(filesystem.NormalizePath(clonesDir()), filesystem.NormalizePath(repoDir))
 	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// DetectSource reads a clone's remote and what it has checked out: its branch, or the tag at a
+// detached HEAD. Earlier versions of flow could lose this metadata, leaving the clone as the only
+// record of it.
+func DetectSource(repoDir string) (remote, ref, refType string, err error) {
+	remote, err = gitOutput(repoDir, "remote", "get-url", "origin")
+	if err != nil {
+		return "", "", "", err
+	}
+	remote = strings.TrimSpace(remote)
+	if branch, err := gitOutput(repoDir, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
+		return remote, strings.TrimSpace(branch), "branch", nil
+	}
+	if tag, err := gitOutput(repoDir, "describe", "--tags", "--exact-match"); err == nil {
+		return remote, strings.TrimSpace(tag), refTypeTag, nil
+	}
+	return remote, "", "", nil
 }
 
 // RepairWorkspaceConfig undoes what earlier versions of flow did to flow.yaml in a managed clone, so
@@ -186,7 +206,7 @@ func Pull(repoDir, ref, refType string) error {
 		return fmt.Errorf("git repo %s is not a directory", repoDir)
 	}
 
-	if refType == "tag" {
+	if refType == refTypeTag {
 		if err := runGit(repoDir, "fetch", "--tags", "--progress"); err != nil {
 			return err
 		}
@@ -212,7 +232,7 @@ func ResetPull(repoDir, ref, refType string) error {
 		return fmt.Errorf("git repo %s is not a directory", repoDir)
 	}
 
-	if refType == "tag" {
+	if refType == refTypeTag {
 		if err := runGit(repoDir, "fetch", "--tags", "--force", "--progress"); err != nil {
 			return err
 		}

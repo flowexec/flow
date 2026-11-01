@@ -28,6 +28,55 @@ var _ = Describe("IsManagedClone", func() {
 	})
 })
 
+var _ = Describe("DetectSource", func() {
+	var repo string
+
+	run := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo
+		out, err := cmd.CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), string(out))
+	}
+
+	BeforeEach(func() {
+		repo = GinkgoT().TempDir()
+		run("init", "-b", "feature")
+		run("config", "user.email", "test@test.com")
+		run("config", "user.name", "Test")
+		run("remote", "add", "origin", "https://example.com/org/repo.git")
+		run("commit", "--allow-empty", "-m", "initial")
+	})
+
+	expectSource := func(wantRef, wantRefType string) {
+		remote, ref, refType, err := git.DetectSource(repo)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(remote).To(Equal("https://example.com/org/repo.git"))
+		Expect(ref).To(Equal(wantRef))
+		Expect(refType).To(Equal(wantRefType))
+	}
+
+	It("reports the checked out branch", func() {
+		expectSource("feature", "branch")
+	})
+
+	It("reports the tag at a detached HEAD", func() {
+		run("tag", "v1.0.0")
+		run("checkout", "--detach", "v1.0.0")
+		expectSource("v1.0.0", "tag")
+	})
+
+	It("reports no ref at a detached HEAD without a tag", func() {
+		run("checkout", "--detach")
+		expectSource("", "")
+	})
+
+	It("fails without an origin remote", func() {
+		run("remote", "remove", "origin")
+		_, _, _, err := git.DetectSource(repo)
+		Expect(err).To(HaveOccurred())
+	})
+})
+
 var _ = Describe("RepairWorkspaceConfig", func() {
 	const upstream = "displayName: Upstream # kept\ntags: [a]\nnotInSchema: true\n"
 	const rewritten = "displayName: Upstream\ngitRef: feat\ngitRefType: branch\n" +

@@ -185,6 +185,13 @@ func prepareGitWorkspacePull(ctx *context.Context, name, path string) (*workspac
 		return nil, err
 	}
 	filesystem.ApplyGitSource(wsCfg, ctx.Config, name)
+	if wsCfg.GitRemote == "" && git.IsManagedClone(path) {
+		remote, ref, refType, err := git.DetectSource(path)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to detect git source of clone")
+		}
+		wsCfg.GitRemote, wsCfg.GitRef, wsCfg.GitRefType = remote, ref, workspace.WorkspaceGitRefType(refType)
+	}
 	if wsCfg.GitRemote == "" {
 		return wsCfg, nil
 	}
