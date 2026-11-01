@@ -49,7 +49,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	listExecutables := mcp.NewTool("list_executables",
 		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
 			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
-			"already handles it. Returns names, verbs, descriptions, and tags."),
+			"already handles it. Returns names, verbs, descriptions, and tags; use get_executable for an "+
+			"executable's full definition."),
 		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
 		mcp.WithString("verb", mcp.Description("Verb filter (optional)")),
@@ -190,6 +191,9 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		page, nextCursor, totalCount, err := paginate(cliOutput.Executables, cursor, defaultPageSize)
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
+		for i := range page {
+			page[i].FullDescription = ""
 		}
 
 		result := ExecutableListOutput{

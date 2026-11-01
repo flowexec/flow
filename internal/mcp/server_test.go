@@ -235,6 +235,33 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
 			})
+
+			It("should leave full descriptions to get_workspace", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "list", "--output", "json").
+					Return(`{"workspaces":[{"name":"a","path":"/a","description":"short",`+
+						`"fullDescription":"very long readme"}]}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_workspaces", nil))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring(`"description":"short"`))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("fullDescription"))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("very long readme"))
+			})
+
+			It("should keep the full description on get_workspace", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "get", "a", "--output", "json").
+					Return(`{"name":"a","path":"/a","fullDescription":"very long readme"}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+					"workspace_name": "a",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("very long readme"))
+			})
 		})
 
 		Context("switch_workspace tool", func() {
@@ -293,6 +320,20 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
+			})
+
+			It("should leave full descriptions to get_executable", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					Return(`{"executables":[{"id":"a","ref":"run a","name":"a","verb":"run","description":"short",`+
+						`"fullDescription":"very long markdown"}]}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring(`"description":"short"`))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("fullDescription"))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("very long markdown"))
 			})
 		})
 

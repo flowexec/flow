@@ -25,7 +25,8 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getWorkspace, getWorkspaceHandler(executor))
 
 	listWorkspaces := mcp.NewTool("list_workspaces",
-		mcp.WithDescription("List all registered flow workspaces"),
+		mcp.WithDescription("List all registered flow workspaces as compact summaries. "+
+			"Use get_workspace for a workspace's full description."),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
 	)
 	listWorkspaces.Annotations = mcp.ToolAnnotation{
@@ -100,6 +101,9 @@ func listWorkspacesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		page, nextCursor, totalCount, err := paginate(cliOutput.Workspaces, cursor, defaultPageSize)
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
+		for i := range page {
+			page[i].FullDescription = ""
 		}
 
 		result := WorkspaceListOutput{
