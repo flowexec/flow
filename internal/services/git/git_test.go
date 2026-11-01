@@ -30,7 +30,8 @@ var _ = Describe("IsManagedClone", func() {
 
 var _ = Describe("RepairWorkspaceConfig", func() {
 	const upstream = "displayName: Upstream # kept\ntags: [a]\nnotInSchema: true\n"
-	const rewritten = "displayName: Upstream\ngitRef: feat\ngitRefType: branch\ngitRemote: https://x/y.git\ntags:\n    - a\n"
+	const rewritten = "displayName: Upstream\ngitRef: feat\ngitRefType: branch\n" +
+		"gitRemote: https://x/y.git\ntags:\n    - a\n"
 
 	var repo string
 

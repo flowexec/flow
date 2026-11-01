@@ -161,10 +161,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
 
-	var execArgs []string
-	if len(args) >= 2 {
-		execArgs = args[1:]
-	}
+	execArgs := executableInputArgs(args)
 	if err := checkExecutableFlags(e, execArgs); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 		return
@@ -218,6 +215,14 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// executableInputArgs returns the args for the executable itself; the first is its ID.
+func executableInputArgs(args []string) []string {
+	if len(args) < 2 {
+		return nil
+	}
+	return args[1:]
 }
 
 // checkExecutableFlags rejects flags the executable doesn't define, before anything runs.
