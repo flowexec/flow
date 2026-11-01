@@ -334,6 +334,39 @@ var _ = Describe("MCP Server", func() {
 				Entry("flow's --background", "--background", "--", "--background"),
 			)
 
+			It("should forward params as sorted --param flags ahead of the args", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", "test:test-flow",
+						"--param", "A=1=2", "--param", "B=two words", "--", "pos").
+					Return("ok", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+					"args":            "pos",
+					"params":          map[string]interface{}{"B": "two words", "A": "1=2"},
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+			})
+
+			DescribeTable("should reject invalid params without running anything",
+				func(params interface{}) {
+					result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+						"executable_verb": "test",
+						"executable_id":   "test:test-flow",
+						"params":          params,
+					}))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.IsError).To(BeTrue())
+					Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
+				},
+				Entry("not a map", "K=v"),
+				Entry("non-string value", map[string]interface{}{"K": 1}),
+				Entry("key with an equals sign", map[string]interface{}{"K=X": "v"}),
+				Entry("empty key", map[string]interface{}{"": "v"}),
+			)
+
 			It("should target the nameless executable when args come without an ID", func() {
 				mockExecutor.EXPECT().
 					ExecuteContext(gomock.Any(), "test", ":", "--", "--node", "workbox").

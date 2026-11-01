@@ -23,6 +23,9 @@ By default `get_execution_logs` returns only run **metadata** (ref, status, exit
 
 ## Notes
 
-- `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands. If the executable defines `args`, pass them in `args`; if it defines prompt `params`, pass them in `params` as an EnvKey→value map.
+- `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands.
+- If the executable defines `args`, pass them in `args` as you would on a command line: `--node workbox 'uname -a'`. Shell-style quotes group words and nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is optional. Flags the executable doesn't define are silently ignored, so check `get_executable` when unsure.
+- If the executable defines `params`, pass values in `params` as an EnvKey→value map of strings. Don't pass secrets this way.
+- A failed run returns `isError: true`; `output` and `exitCode` are in the structured result. `exitCode` is flow's own status and is 1 for any failed run, so read the failing command's status from `get_execution_logs`.
 - Confirm before running anything destructive.
 - The current workspace affects results. Filter `list_executables` (workspace/verb/keyword/tag) rather than listing everything. Prefer summarizing tool JSON over dumping it raw.

@@ -82,6 +82,11 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
 				"nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is "+
 				"optional. Flags the executable does not define are ignored.")),
+		mcp.WithObject("params",
+			mcp.AdditionalProperties(map[string]any{"type": "string"}),
+			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. Use this for "+
+				"params that would otherwise prompt. Values are passed on flow's command line, so don't put "+
+				"secrets here; reference them from a vault in the executable instead.")),
 		mcp.WithString("dir", mcp.Description(
 			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
 				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
@@ -212,6 +217,10 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, fmt.Sprintf("invalid args: %s", err)), nil
 		}
+		paramFlags, err := paramOverrideArgs(request.GetArguments()["params"])
+		if err != nil {
+			return toolError(ErrCodeInvalidInput, fmt.Sprintf("invalid params: %s", err)), nil
+		}
 
 		cmdArgs := []string{executableVerb}
 		if executableID != "" {
@@ -225,6 +234,7 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		if syncFlag {
 			cmdArgs = append(cmdArgs, "--sync")
 		}
+		cmdArgs = append(cmdArgs, paramFlags...)
 		if len(execArgs) > 0 {
 			// Past the separator nothing can be taken for one of flow's own flags.
 			cmdArgs = append(cmdArgs, "--")

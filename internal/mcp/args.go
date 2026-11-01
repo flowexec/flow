@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"errors"
+	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -70,6 +72,30 @@ func isEscapable(r, quote rune) bool {
 
 func isArgSpace(r rune) bool {
 	return r == ' ' || r == '\t' || r == '\n' || r == '\r'
+}
+
+// paramOverrideArgs converts the execute tool's params map into --param flags, sorted by key so the
+// command line is deterministic.
+func paramOverrideArgs(params any) ([]string, error) {
+	if params == nil {
+		return nil, nil
+	}
+	values, ok := params.(map[string]any)
+	if !ok {
+		return nil, errors.New("must be a map of EnvKey to string value")
+	}
+	flags := make([]string, 0, 2*len(values))
+	for _, key := range slices.Sorted(maps.Keys(values)) {
+		value, ok := values[key].(string)
+		if !ok {
+			return nil, fmt.Errorf("value for %q must be a string", key)
+		}
+		if key == "" || strings.Contains(key, "=") {
+			return nil, fmt.Errorf("%q is not a valid EnvKey", key)
+		}
+		flags = append(flags, "--param", key+"="+value)
+	}
+	return flags, nil
 }
 
 // executableArgs converts the execute tool's args string into the words handed to the executable.
