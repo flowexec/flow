@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -77,6 +78,11 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return mcp.NewToolResultText(output), nil
 		}
 
+		ws.GitRemote = redactRemote(ws.GitRemote)
+		if strings.Contains(ws.FullDescription, strings.TrimSpace(ws.Description)) {
+			ws.Description = ""
+		}
+
 		jsonData, _ := json.Marshal(ws)
 		return mcp.NewToolResultStructured(ws, string(jsonData)), nil
 	}
@@ -104,6 +110,8 @@ func listWorkspacesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		}
 		for i := range page {
 			page[i].FullDescription = ""
+			page[i].Description = summarizeDescription(page[i].Description)
+			page[i].GitRemote, page[i].GitRef, page[i].GitRefType = "", "", ""
 		}
 
 		result := WorkspaceListOutput{

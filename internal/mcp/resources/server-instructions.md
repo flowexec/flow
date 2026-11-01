@@ -25,8 +25,8 @@ By default `get_execution_logs` returns only run **metadata** (ref, status, exit
 
 - `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands.
 - `list_executables` doesn't return an executable's `args` or `params`. Call `get_executable` to find out what it accepts.
-- If the executable defines `args`, pass them in `args` as you would on a command line: `--node workbox 'uname -a'`. Shell-style quotes group words and nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is optional. A flag the executable doesn't define fails the run before anything executes, and the error lists the flags it does define.
-- If the executable defines `params`, pass values in `params` as an EnvKey→value map of strings. Don't pass secrets this way.
-- A failed run returns `isError: true`; `output` and `exitCode` are in the structured result. `exitCode` is flow's own status and is 1 for any failed run, so read the failing command's status from `get_execution_logs`.
+- If the executable defines `args`, pass them in `args` as you would on a command line: `--node workbox 'uname -a'`. Shell-style quotes group words and nothing is expanded. Everything goes to the executable, never to flow itself. A leading `--` is optional; a later one makes the words after it positional. Anything the executable doesn't define fails the call before it runs, and the error lists what it accepts.
+- If the executable defines `params`, pass values in `params` as an EnvKey→value map of strings. A prompt param without a value fails the call before it runs. Keys are set whether or not the executable declares them, and beat `args` with the same EnvKey. Don't pass secrets this way.
+- A failed call returns `isError: true`, with `output`, `exitCode`, and `started` in the structured result. `started: false` means nothing ran, so fix the call rather than checking for side effects. Otherwise `exitCode` is the failing command's own status.
 - Confirm before running anything destructive.
 - The current workspace affects results. Filter `list_executables` (workspace/verb/keyword/tag) rather than listing everything. Prefer summarizing tool JSON over dumping it raw.

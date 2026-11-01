@@ -49,7 +49,7 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	listExecutables := mcp.NewTool("list_executables",
 		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
 			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
-			"already handles it. Returns names, verbs, descriptions, and tags; use get_executable for an "+
+			"already handles it. Returns names, verbs, short descriptions, and tags; use get_executable for an "+
 			"executable's full definition, including its args and params."),
 		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
@@ -111,13 +111,16 @@ func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithString("args", mcp.Description(
 			"Arguments for the executable, written as on a command line: positionals and flags as the "+
 				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
-				"nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is "+
-				"optional. A flag the executable does not define fails the run before anything executes.")),
+				"nothing is expanded. Everything goes to the executable, never to flow itself. A leading `--` "+
+				"is optional; a later one makes the words after it positional. Anything the executable does "+
+				"not define fails the call before it runs.")),
 		mcp.WithObject("params",
 			mcp.AdditionalProperties(map[string]any{"type": "string"}),
-			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. Use this for "+
-				"params that would otherwise prompt. Values are passed on flow's command line, so don't put "+
-				"secrets here; reference them from a vault in the executable instead.")),
+			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. A prompt param "+
+				"without a value fails the call before it runs. Keys are set as environment variables whether "+
+				"or not the executable declares them, and beat `args` with the same EnvKey. Values are passed "+
+				"on flow's command line, so don't put secrets here; reference them from a vault in the "+
+				"executable instead.")),
 		mcp.WithString("dir", mcp.Description(
 			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
 				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
@@ -143,6 +146,9 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, "executable_verb is required"), nil
 		}
 		executableID := request.GetString("executable_id", "")
+		if err := validateExecutableRef(executableVerb, executableID); err != nil {
+			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
 
 		cmdArgs := []string{"browse", "--output", "json", executableVerb}
 		if executableID != "" {
@@ -155,7 +161,7 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeNotFound, fmt.Sprintf("Failed to get executable %s: %s", ref, output)), nil
 		}
 
-		return mcp.NewToolResultText(output), nil
+		return mcp.NewToolResultText(dedupeExecutableDescription(output)), nil
 	}
 }
 
@@ -197,6 +203,7 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		}
 		for i := range page {
 			page[i].FullDescription = ""
+			page[i].Description = summarizeDescription(page[i].Description)
 		}
 
 		result := ExecutableListOutput{
@@ -222,6 +229,10 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		var progressToken any
 		if request.Params.Meta != nil {
 			progressToken = request.Params.Meta.ProgressToken
+		}
+
+		if err := validateExecutableRef(executableVerb, executableID); err != nil {
+			return toolError(ErrCodeInvalidInput, err.Error()), nil
 		}
 
 		execArgs, err := executableArgs(args)

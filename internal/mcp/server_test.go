@@ -211,7 +211,7 @@ var _ = Describe("MCP Server", func() {
 			It("should return the workspace's git source", func() {
 				mockExecutor.EXPECT().
 					Execute("workspace", "get", "git-workspace", "--output", "json").
-					Return(`{"name":"git-workspace","path":"/ws","gitRemote":"https://example.com/r.git",`+
+					Return(`{"name":"git-workspace","path":"/ws","gitRemote":"https://tok:s3cret@example.com/r.git",`+
 						`"gitRef":"main","gitRefType":"branch"}`, nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
@@ -502,7 +502,7 @@ var _ = Describe("MCP Server", func() {
 			func(tool string, args map[string]interface{}, cliArgs []any) {
 				mockExecutor.EXPECT().
 					ExecuteContext(gomock.Any(), cliArgs...).
-					Return("step output\nboom\n", &flowMcp.CLIExitError{Code: 2})
+					Return("step output\nboom\n", &flowMcp.CLIExitError{Code: 2, Started: true})
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest(tool, args))
 				Expect(err).ToNot(HaveOccurred())
@@ -515,6 +515,7 @@ var _ = Describe("MCP Server", func() {
 				var out flowMcp.ExecutionOutput
 				Expect(json.Unmarshal(structured, &out)).To(Succeed())
 				Expect(out.ExitCode).To(Equal(2))
+				Expect(out.Started).To(BeTrue())
 				Expect(out.Output).To(Equal("step output\nboom\n"))
 			},
 			Entry("execute", "execute",
@@ -530,6 +531,41 @@ var _ = Describe("MCP Server", func() {
 				map[string]interface{}{"spec": "verb: run"},
 				[]any{"exec", "--spec", "verb: run", "--log-mode", "text"}),
 		)
+
+		It("should report a failure before anything ran as not started", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "run", "x", "--log-mode", "text", "--", "--typo").
+				Return("does not accept --typo", &flowMcp.CLIExitError{Code: 2})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+				"executable_verb": "run", "executable_id": "x", "args": "--typo",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeNotStarted))
+		})
+
+		It("should repeat only the end of a large failure in the message", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "exec", "--cmd", "big", "--log-mode", "text").
+				Return(strings.Repeat("x", 100_000)+"boom", &flowMcp.CLIExitError{Code: 1, Started: true})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+				"command": "big",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(getTextContent(result)).To(ContainSubstring("boom"))
+			Expect(len(getTextContent(result))).To(BeNumerically("<", 3000))
+		})
+
+		It("should reject a verb or ID flow would read as its own flag", func() {
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+				"executable_verb": "run", "executable_id": "--background",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
+		})
 
 		It("should report -1 when flow could not be started", func() {
 			mockExecutor.EXPECT().
