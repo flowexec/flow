@@ -261,6 +261,24 @@ TEST_ENV_VAR3=value3`
 				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for $NOPE"))
 			})
 
+			DescribeTable("UnknownFlags",
+				func(execArgs, want []string) {
+					args := executable.ArgumentList{
+						{EnvKey: "KNOWN", Flag: "known"},
+						{EnvKey: "ENABLED", Flag: "enabled", Type: executable.ArgumentTypeBool},
+					}
+					Expect(env.UnknownFlags(args, execArgs)).To(Equal(want))
+				},
+				Entry("defined flags", []string{"--known", "v", "--enabled", "--known=v"}, nil),
+				Entry("positional values and a separator", []string{"value", "-x", "--"}, nil),
+				Entry("a mistyped flag", []string{"--knwon", "v"}, []string{"--knwon"}),
+				Entry("a mistyped flag with a value", []string{"--knwon=v", "--known=v"}, []string{"--knwon=v"}),
+			)
+
+			It("should treat every flag as unknown when no args are defined", func() {
+				Expect(env.UnknownFlags(nil, []string{"--x=1", "value"})).To(Equal([]string{"--x=1"}))
+			})
+
 			It("should not modify the input args slice", func() {
 				pos := 1
 				exec := &executable.ExecutableEnvironment{

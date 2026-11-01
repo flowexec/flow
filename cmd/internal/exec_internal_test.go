@@ -4,9 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"mvdan.cc/sh/v3/interp"
+
+	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func TestBackgroundChildArgs_StripsBackgroundFlag(t *testing.T) {
@@ -49,6 +53,40 @@ func TestBackgroundChildArgs_StripsBackgroundFlag(t *testing.T) {
 				t.Fatalf("backgroundChildArgs(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestCheckExecutableFlags(t *testing.T) {
+	pos := 1
+	e := &executable.Executable{
+		Verb: "run",
+		Name: "with-flag",
+		Exec: &executable.ExecExecutableType{
+			Cmd: "true",
+			Args: executable.ArgumentList{
+				{EnvKey: "POS", Pos: &pos},
+				{EnvKey: "NODE", Flag: "node"},
+			},
+		},
+	}
+	if err := checkExecutableFlags(e, []string{"value", "--node", "workbox"}); err != nil {
+		t.Errorf("defined flag rejected: %v", err)
+	}
+
+	err := checkExecutableFlags(e, []string{"--nodee", "workbox"})
+	var usageErr flowErrors.UsageError
+	if !errors.As(err, &usageErr) {
+		t.Fatalf("got %v, want a usage error", err)
+	}
+	for _, want := range []string{"--nodee", "--node"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("%q does not mention %q", err, want)
+		}
+	}
+
+	noArgs := &executable.Executable{Verb: "run", Name: "plain", Exec: &executable.ExecExecutableType{Cmd: "true"}}
+	if err := checkExecutableFlags(noArgs, []string{"--x"}); err == nil || !strings.Contains(err.Error(), "no flags") {
+		t.Errorf("got %v, want an error saying no flags are defined", err)
 	}
 }
 

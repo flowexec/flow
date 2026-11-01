@@ -50,7 +50,7 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
 			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
 			"already handles it. Returns names, verbs, descriptions, and tags; use get_executable for an "+
-			"executable's full definition."),
+			"executable's full definition, including its args and params."),
 		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
 		mcp.WithString("verb", mcp.Description("Verb filter (optional)")),
@@ -112,7 +112,7 @@ func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 			"Arguments for the executable, written as on a command line: positionals and flags as the "+
 				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
 				"nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is "+
-				"optional. Flags the executable does not define are ignored.")),
+				"optional. A flag the executable does not define fails the run before anything executes.")),
 		mcp.WithObject("params",
 			mcp.AdditionalProperties(map[string]any{"type": "string"}),
 			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. Use this for "+

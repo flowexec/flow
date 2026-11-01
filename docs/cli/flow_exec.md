@@ -14,7 +14,7 @@ The flow subcommand used should match the target executable's verb or one of its
 
 If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.
 Flag arguments use standard '--flag=value' or '--flag value' syntax. Boolean flags can omit the value (e.g. '--verbose' implies true).
-Positional arguments are specified as values without any prefix.
+Positional arguments are specified as values without any prefix. A flag the executable doesn't define is an error.
 
 See https://flowexec.io/types/flowfile#executableverb for more information on executable verbs.
 See https://flowexec.io/types/flowfile#executableref for more information on executable IDs.

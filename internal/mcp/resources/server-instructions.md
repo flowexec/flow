@@ -24,7 +24,8 @@ By default `get_execution_logs` returns only run **metadata** (ref, status, exit
 ## Notes
 
 - `execute` runs a defined executable, not a raw command — use `run_command` for arbitrary commands.
-- If the executable defines `args`, pass them in `args` as you would on a command line: `--node workbox 'uname -a'`. Shell-style quotes group words and nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is optional. Flags the executable doesn't define are silently ignored, so check `get_executable` when unsure.
+- `list_executables` doesn't return an executable's `args` or `params`. Call `get_executable` to find out what it accepts.
+- If the executable defines `args`, pass them in `args` as you would on a command line: `--node workbox 'uname -a'`. Shell-style quotes group words and nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is optional. A flag the executable doesn't define fails the run before anything executes, and the error lists the flags it does define.
 - If the executable defines `params`, pass values in `params` as an EnvKey→value map of strings. Don't pass secrets this way.
 - A failed run returns `isError: true`; `output` and `exitCode` are in the structured result. `exitCode` is flow's own status and is 1 for any failed run, so read the failing command's status from `get_execution_logs`.
 - Confirm before running anything destructive.

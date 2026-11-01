@@ -72,6 +72,22 @@ func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[st
 	return flagArgs, posArgs
 }
 
+// UnknownFlags returns the --flag words in execArgs that args does not define. The parser drops
+// these, and a dropped word can leave an executable running on defaults the caller meant to
+// override, such as a mistyped --dry-run.
+func UnknownFlags(args executable.ArgumentList, execArgs []string) []string {
+	var unknown []string
+	knownFlags := args.Flags()
+	for _, arg := range execArgs {
+		flagStr, isFlag := strings.CutPrefix(arg, "--")
+		name, _, _ := strings.Cut(flagStr, "=")
+		if isFlag && name != "" && !slices.Contains(knownFlags, name) {
+			unknown = append(unknown, arg)
+		}
+	}
+	return unknown
+}
+
 func resolveArgValues(
 	args executable.ArgumentList,
 	execArgs []string,

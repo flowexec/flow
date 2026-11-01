@@ -161,6 +161,15 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 
 	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
 
+	var execArgs []string
+	if len(args) >= 2 {
+		execArgs = args[1:]
+	}
+	if err := checkExecutableFlags(e, execArgs); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+
 	// Handle --background: spawn a detached child process and return immediately.
 	if maybeLaunchBackground(ctx, cmd, ref) {
 		return
@@ -181,11 +190,6 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	envMap := buildExecEnv(ctx, cmd, e)
-
-	var execArgs []string
-	if len(args) >= 2 {
-		execArgs = args[1:]
-	}
 
 	startTime := time.Now()
 	prov := runProvenanceFromEnv()
@@ -214,6 +218,25 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// checkExecutableFlags rejects flags the executable doesn't define, before anything runs.
+func checkExecutableFlags(e *executable.Executable, execArgs []string) error {
+	var defined executable.ArgumentList
+	if execEnv := e.Env(); execEnv != nil {
+		defined = execEnv.Args
+	}
+	unknown := env.UnknownFlags(defined, execArgs)
+	if len(unknown) == 0 {
+		return nil
+	}
+	accepted := "it defines no flags"
+	if flagNames := defined.Flags(); len(flagNames) > 0 {
+		accepted = "it defines --" + strings.Join(flagNames, ", --")
+	}
+	return flowErrors.NewUsageError(
+		"%s does not accept %s; %s", e.Ref(), strings.Join(unknown, ", "), accepted,
+	)
 }
 
 // resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
@@ -1096,7 +1119,8 @@ var execLong = fmt.Sprintf(
 		"If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.\n"+
 		"Flag arguments use standard '--flag=value' or '--flag value' syntax. "+
 		"Boolean flags can omit the value (e.g. '--verbose' implies true).\n"+
-		"Positional arguments are specified as values without any prefix.\n\n"+
+		"Positional arguments are specified as values without any prefix. "+
+		"A flag the executable doesn't define is an error.\n\n"+
 		"See %s for more information on executable verbs.\n"+
 		"See %s for more information on executable IDs.",
 	io.TypesDocsURL("flowfile", "executableverb"),
