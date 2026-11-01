@@ -5,9 +5,9 @@ description: "Breaking changes between flow releases, and what to do about each 
 
 # Breaking Changes
 
-This page documents changes that require you to update existing flow files, config, or scripts when upgrading between major versions.
+This page documents changes that require you to update existing flow files, config, or scripts when upgrading between releases.
 
-## Next release
+## v2.4.0
 
 ### Undefined Executable Flags Are Errors
 
@@ -24,6 +24,33 @@ or parallel executable are not checked.
 flow was started in, so `default: "$HOME/.kube/config"` is no longer passed as literal text.
 
 **How to migrate:** Write `$$` where a default needs a literal `$`.
+
+### Git Workspace Fields Moved Out of `flow.yaml`
+
+**What changed:** `flow workspace add` with a Git URL no longer writes `gitRemote`, `gitRef`, or
+`gitRefType` to the clone's `flow.yaml`. They are recorded under `gitWorkspaces` in your flow
+config. Existing clones migrate on the next `flow sync --git` or `flow workspace update`, and a
+`flow.yaml` that differs from upstream only by those fields is restored.
+
+**How to migrate:** Read these fields from `flow workspace get` instead of the clone's `flow.yaml`.
+
+### MCP Tool Behavior
+
+**What changed:**
+
+- A failed run from `execute`, `run_command`, `run_python`, or `run_executable` now returns
+  `isError: true`, with `output` and `exitCode` in the structured result. `exitCode` is flow's own
+  status, so it is 1 for any failed run.
+- `get_workspace` returns an error for an unknown name instead of an empty workspace.
+- `execute` `args` are split shell-style and always go to the executable, so they can no longer
+  set flow's own flags such as `--param` or `--background`.
+- `execute` `args` without an `executable_id` target the nameless executable, rather than reading
+  the first word as the ID.
+- Run output is plain text, without timestamps, log levels, or color.
+- `list_workspaces` and `list_executables` no longer return `fullDescription`.
+
+**How to migrate:** Check `isError` rather than parsing output for failures, pass prompt values in
+`execute`'s `params`, and call `get_workspace` or `get_executable` for full descriptions.
 
 ## v2.3.0
 
