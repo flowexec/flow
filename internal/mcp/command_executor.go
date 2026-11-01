@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -151,6 +152,15 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
 	cmd.Dir = runDirFromContext(ctx)
 	cmd.Env = noColorEnv(os.Environ())
+
+	markerDir, err := os.MkdirTemp("", "flow-mcp-run-*")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(markerDir)
+	startedFile := filepath.Join(markerDir, "started")
+	cmd.Env = append(cmd.Env, store.RunStartedFileEnv+"="+startedFile)
+
 	if p, ok := provenanceFromContext(ctx); ok {
 		cmd.Env = append(cmd.Env,
 			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),
@@ -167,7 +177,8 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		// waiting on a request that never got a response.
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			return string(output), &CLIExitError{Code: exitErr.ExitCode()}
+			_, statErr := os.Stat(startedFile)
+			return string(output), &CLIExitError{Code: exitErr.ExitCode(), Started: statErr == nil}
 		}
 		return string(output), err
 	}
@@ -185,11 +196,12 @@ func noColorEnv(environ []string) []string {
 	return append(env, "NO_COLOR=1")
 }
 
-// CLIExitError reports that the flow subprocess ran and exited non-zero. The detail is in the
-// captured output returned alongside it. Code is flow's own exit status, not the status of the
-// command flow ran; that one is recorded in the run's history entry.
+// CLIExitError reports that the flow subprocess exited non-zero. The detail is in the captured
+// output returned alongside it. Code is the failing command's status when Started is true. When it
+// is false flow failed before running anything, so retrying is safe but won't help unchanged.
 type CLIExitError struct {
-	Code int
+	Code    int
+	Started bool
 }
 
 func (e *CLIExitError) Error() string {

@@ -211,7 +211,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	if runErr != nil {
-		errhandler.HandleFatal(ctx, cmd, runErr)
+		errhandler.HandleRunFailure(ctx, cmd, runErr, exitCode(runErr))
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
@@ -566,7 +566,7 @@ func runTransientExecutable(
 	recordExecution(ctx, ref, startTime, dur, runErr, prov, meta)
 
 	if runErr != nil {
-		errhandler.HandleFatal(ctx, cmd, runErr)
+		errhandler.HandleRunFailure(ctx, cmd, runErr, exitCode(runErr))
 	}
 	logger.Log().Debug(fmt.Sprintf("transient executable completed: %s", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
@@ -853,6 +853,7 @@ type transientMeta struct {
 func recordRunStart(
 	ctx *context.Context, ref executable.Ref, startTime time.Time, prov provenance, meta transientMeta,
 ) {
+	store.MarkRunStarted()
 	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
 		return
 	}
@@ -1141,7 +1142,8 @@ var execLong = fmt.Sprintf(
 		"Flag arguments use standard '--flag=value' or '--flag value' syntax. "+
 		"Boolean flags can omit the value (e.g. '--verbose' implies true).\n"+
 		"Positional arguments are specified as values without any prefix. "+
-		"A flag the executable doesn't define is an error.\n\n"+
+		"Input the executable doesn't define is an error and nothing runs.\n\n"+
+		"flow exits with the failing command's own status, or 2 if it rejected the input.\n\n"+
 		"See %s for more information on executable verbs.\n"+
 		"See %s for more information on executable IDs.",
 	io.TypesDocsURL("flowfile", "executableverb"),

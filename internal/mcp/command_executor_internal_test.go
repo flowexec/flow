@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // fakeFlowBinary writes a script that echoes to both streams and exits with the
@@ -98,5 +100,28 @@ func TestExecuteContext_MissingBinaryReturnsError(t *testing.T) {
 
 	if _, err := (&FlowCLIExecutor{}).ExecuteContext(context.Background(), "anything"); err == nil {
 		t.Error("err = nil, want an error when the binary cannot be run")
+	}
+}
+
+func TestExecuteContext_ReportsWhetherARunStarted(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stand-in is not portable to Windows")
+	}
+	script := "#!/bin/sh\n[ \"$1\" = started ] && : > \"$" + store.RunStartedFileEnv + "\"\nexit 7\n"
+	path := filepath.Join(t.TempDir(), "fake-flow")
+	if err := os.WriteFile(path, []byte(script), 0700); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+	t.Setenv(cliBinaryEnvKey, path)
+
+	for arg, wantStarted := range map[string]bool{"started": true, "rejected": false} {
+		_, err := (&FlowCLIExecutor{}).ExecuteContext(context.Background(), arg)
+		var exitErr *CLIExitError
+		if !errors.As(err, &exitErr) {
+			t.Fatalf("%s: got %v, want a CLIExitError", arg, err)
+		}
+		if exitErr.Code != 7 || exitErr.Started != wantStarted {
+			t.Errorf("%s: got %+v, want code 7 and started %v", arg, *exitErr, wantStarted)
+		}
 	}
 }

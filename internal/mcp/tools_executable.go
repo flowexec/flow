@@ -276,7 +276,7 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
 		capped, truncated := capOutput(output)
-		result := ExecutionOutput{Output: capped, Truncated: truncated}
+		result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
 		jsonData, _ := json.Marshal(result)
 		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
@@ -486,7 +486,7 @@ func runTransientTool(
 	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
 	capped, truncated := capOutput(output)
-	result := ExecutionOutput{Output: capped, Truncated: truncated}
+	result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
 	jsonData, _ := json.Marshal(result)
 	return mcp.NewToolResultStructured(result, string(jsonData)), nil
 }

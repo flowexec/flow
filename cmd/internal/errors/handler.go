@@ -36,8 +36,29 @@ func HandleFatal(ctx *context.Context, cmd *cobra.Command, err error) {
 		flowerrors.ExitFunc(exitCodeFor(err))
 		return
 	default:
-		logger.Log().FatalErr(err)
+		exitText(err, exitCodeFor(err))
 	}
+}
+
+// HandleRunFailure reports a failed run and terminates the process with the failing command's status.
+func HandleRunFailure(ctx *context.Context, cmd *cobra.Command, err error, code int) {
+	format := outputFormat(cmd)
+	switch format {
+	case "json", "yaml", "yml":
+		writeEnvelope(ctx, format, err)
+		flowerrors.ExitFunc(code)
+	default:
+		exitText(err, code)
+	}
+}
+
+func exitText(err error, code int) {
+	if code == 1 {
+		logger.Log().FatalErr(err)
+		return
+	}
+	logger.Log().Error(err.Error())
+	flowerrors.ExitMessageFunc(code, err.Error())
 }
 
 // HandleUsage is a convenience wrapper for invalid flag/argument conditions.

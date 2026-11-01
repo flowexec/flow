@@ -109,10 +109,12 @@ type ExecutableListOutput struct {
 // ExecutionOutput is the output of the execute, run_command, run_python, and run_executable tools.
 type ExecutionOutput struct {
 	Output string `json:"output"`
-	// ExitCode is the flow process's exit status: 0 on success, non-zero when the run failed (the
-	// result then also has isError set), or -1 if flow could not be started. Flow reports any
-	// failed run as 1, so the failing command's own status comes from get_execution_logs.
+	// ExitCode is the failing command's status when Started is true, and 0 on success. When Started
+	// is false nothing ran: it is 2 for rejected input and 1 for other failures inside flow. It is
+	// -1 if flow could not be launched or was killed by a signal.
 	ExitCode int `json:"exitCode"`
+	// Started reports whether flow got as far as running anything.
+	Started bool `json:"started"`
 	// Truncated is true when Output was cut to protect the context window. The run itself
 	// completed in full; the untruncated output remains available via get_execution_logs.
 	Truncated bool `json:"truncated,omitempty"`

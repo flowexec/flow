@@ -22,6 +22,8 @@ const (
 	ErrCodeValidationFailed = flowerrors.ErrCodeValidationFailed
 	ErrCodeInternal         = flowerrors.ErrCodeInternal
 	ErrCodePermissionDenied = flowerrors.ErrCodePermissionDenied
+	// ErrCodeNotStarted reports that flow failed before running anything.
+	ErrCodeNotStarted = "NOT_STARTED"
 )
 
 // toolError returns a CallToolResult with IsError set and a structured JSON error payload.
@@ -39,20 +41,35 @@ func toolErrorWithDetails(code, message string, details map[string]any) *mcp.Cal
 	return mcp.NewToolResultError(string(data))
 }
 
-// executionFailure returns the error result for a run that failed, keeping its output and exit
-// code in the structured result so a client doesn't have to parse them out of the error text.
+// maxFailureMessageBytes limits the output repeated in a failure's message.
+const maxFailureMessageBytes = 2048
+
+// executionFailure returns the error result for a run that failed. The structured result holds the
+// output; the message keeps only the end of it, where errors surface, so a large failure isn't sent twice.
 func executionFailure(message, output string, err error) *mcp.CallToolResult {
 	exitCode := -1
+	started := false
+	code := ErrCodeExecutionFailed
 	var exitErr *CLIExitError
 	if errors.As(err, &exitErr) {
 		exitCode = exitErr.Code
+		started = exitErr.Started
+	}
+	if !started {
+		code = ErrCodeNotStarted
 	}
 	capped, truncated := capOutput(output)
+	tail := strings.TrimSpace(capped)
+	if len(tail) > maxFailureMessageBytes {
+		tail = tail[len(tail)-maxFailureMessageBytes:]
+	}
 	result := toolErrorWithDetails(
-		ErrCodeExecutionFailed,
-		fmt.Sprintf("%s: %s", message, strings.TrimSpace(capped)),
-		map[string]any{"exitCode": exitCode},
+		code,
+		fmt.Sprintf("%s: %s", message, tail),
+		map[string]any{"exitCode": exitCode, "started": started, "truncated": truncated},
 	)
-	result.StructuredContent = ExecutionOutput{Output: capped, ExitCode: exitCode, Truncated: truncated}
+	result.StructuredContent = ExecutionOutput{
+		Output: capped, ExitCode: exitCode, Started: started, Truncated: truncated,
+	}
 	return result
 }

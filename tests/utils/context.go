@@ -126,6 +126,11 @@ func (r *ExitRecorder) exitOnCode(code int) {
 	r.exit("process exit (code %d)", code)
 }
 
+// exitWithMessage wraps exit for the pkg/errors.ExitMessageFunc hook.
+func (r *ExitRecorder) exitWithMessage(_ int, msg string) {
+	r.exit("%s", msg)
+}
+
 // NewContext creates a new context for testing runners. It initializes the context with
 // a real logger that writes it's output to a temporary file.
 // It also creates a temporary testing directory for the test workspace, user configs, and caches.
@@ -141,6 +146,7 @@ func NewContext(ctx stdCtx.Context, tb testing.TB) *Context {
 	)
 	logger.Init(logger.InitOptions{Logger: tempLogger, TestingTB: tb})
 	flowerrors.ExitFunc = recorder.exitOnCode
+	flowerrors.ExitMessageFunc = recorder.exitWithMessage
 	ctxx, configDir, cacheDir, wsDir := newTestContext(ctx, tb, stdIn, stdOut)
 	// Route stderr to the same file as stdout so tests can assert on the
 	// structured envelope emitted by HandleFatal in JSON/YAML mode.
@@ -224,6 +230,7 @@ func ResetTestContext(ctx *Context, tb testing.TB) {
 	)
 	logger.Init(logger.InitOptions{Logger: newLogger, TestingTB: tb})
 	flowerrors.ExitFunc = ctx.exit.exitOnCode
+	flowerrors.ExitMessageFunc = ctx.exit.exitWithMessage
 }
 
 func createTempIOFiles(tb testing.TB) (stdIn *os.File, stdOut *os.File) {

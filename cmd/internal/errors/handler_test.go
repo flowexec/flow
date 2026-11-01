@@ -131,6 +131,23 @@ func TestHandleFatal_ExitCodeForUsage(t *testing.T) {
 	}
 }
 
+func TestHandleRunFailure_ExitsWithCommandStatus(t *testing.T) {
+	ctx, _ := newCtxWithStderr(t)
+	cmd := newCmdWithOutput("json")
+	withExitCapture(t)
+
+	defer func() {
+		call, ok := recover().(*exitCall)
+		if !ok {
+			t.Fatalf("expected ExitFunc to be invoked")
+		}
+		if call.code != 7 {
+			t.Fatalf("want exit code 7, got %d", call.code)
+		}
+	}()
+	errhandler.HandleRunFailure(ctx, cmd, errors.New("boom"), 7)
+}
+
 func TestHandleFatal_ClassifiesUnknownAsInternal(t *testing.T) {
 	ctx, stderr := newCtxWithStderr(t)
 	cmd := newCmdWithOutput("json")

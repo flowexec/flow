@@ -13,6 +13,10 @@ import (
 // observe the exit code (and message) without actually exiting.
 var ExitFunc = os.Exit
 
+// ExitMessageFunc is ExitFunc for text output, where the error has already been logged. It also
+// receives that message, for tests to observe.
+var ExitMessageFunc = func(code int, _ string) { ExitFunc(code) }
+
 // Machine-readable error codes for structured error responses across the CLI and MCP surfaces.
 const (
 	ErrCodeInvalidInput     = "INVALID_INPUT"

@@ -829,3 +829,14 @@ func isNotFound(err error) bool {
 func isNotExist(err error) bool {
 	return os.IsNotExist(err)
 }
+
+// RunStartedFileEnv names a file to create once a run starts, which tells the process that launched
+// flow whether a failure happened before anything ran.
+const RunStartedFileEnv = "FLOW_RUN_STARTED_FILE"
+
+// MarkRunStarted creates the file named by RunStartedFileEnv, if any.
+func MarkRunStarted() {
+	if path := os.Getenv(RunStartedFileEnv); path != "" {
+		_ = os.WriteFile(filepath.Clean(path), nil, 0600)
+	}
+}
