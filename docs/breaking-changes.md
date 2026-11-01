@@ -7,6 +7,24 @@ description: "Breaking changes between flow releases, and what to do about each 
 
 This page documents changes that require you to update existing flow files, config, or scripts when upgrading between major versions.
 
+## Next release
+
+### Undefined Executable Flags Are Errors
+
+**What changed:** `flow build app -- --relase` used to drop the unknown flag and run anyway, on
+the executable's defaults. It now fails before anything runs and lists the flags the executable
+defines. This also applies to an executable that defines no flags. A step's `args:` in a serial
+or parallel executable are not checked.
+
+**How to migrate:** Remove the flag, correct its name, or define it under the executable's `args`.
+
+### Argument Defaults See the Shell Environment
+
+**What changed:** A `$VAR` in an argument's `default` now also resolves against the environment
+flow was started in, so `default: "$HOME/.kube/config"` is no longer passed as literal text.
+
+**How to migrate:** Write `$$` where a default needs a literal `$`.
+
 ## v2.3.0
 
 ### Argument Values Are Literals
