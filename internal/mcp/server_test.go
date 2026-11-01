@@ -299,7 +299,7 @@ var _ = Describe("MCP Server", func() {
 		Context("execute tool", func() {
 			It("should call executor with provided arguments", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "test", "test:test-flow", "arg1", "arg2").
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "--", "arg1", "arg2").
 					Return("execution result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
@@ -310,6 +310,51 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(ContainSubstring("execution result"))
+			})
+
+			DescribeTable("should keep args away from flow's own flags",
+				func(args string, cliArgs ...any) {
+					want := append([]any{"test", "test:test-flow", "--workspace", "ws", "--sync"}, cliArgs...)
+					mockExecutor.EXPECT().ExecuteContext(gomock.Any(), want...).Return("ok", nil)
+
+					result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+						"executable_verb": "test",
+						"executable_id":   "test:test-flow",
+						"workspace":       "ws",
+						"sync":            true,
+						"args":            args,
+					}))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.IsError).To(BeFalse())
+				},
+				Entry("flag without a separator", "--node workbox", "--", "--node", "workbox"),
+				Entry("flag with a separator", "-- --node workbox", "--", "--node", "workbox"),
+				Entry("quoted value", "devbox 'uname -a'", "--", "devbox", "uname -a"),
+				Entry("flow's --param", "--param K=v", "--", "--param", "K=v"),
+				Entry("flow's --background", "--background", "--", "--background"),
+			)
+
+			It("should target the nameless executable when args come without an ID", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", ":", "--", "--node", "workbox").
+					Return("ok", nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"args":            "--node workbox",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should reject args with an unterminated quote without running anything", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+					"args":            "don't",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
 			})
 
 			It("should handle no args", func() {

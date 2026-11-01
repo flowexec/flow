@@ -18,6 +18,10 @@ import (
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
+// currentExecutableID names the nameless executable in the current workspace and namespace. The CLI
+// reads its first positional as the executable ID, so args given without an ID need this in front.
+const currentExecutableID = ":"
+
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	getExecutable := mcp.NewTool("get_executable",
 		mcp.WithDescription("Get the full definition of a specific flow workflow — what command it runs, "+
@@ -73,7 +77,11 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
 					"both (`ws/ns:`) or neither if the current workspace/namespace should be used. "+
 					"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
-		mcp.WithString("args", mcp.Description("Arguments to pass")),
+		mcp.WithString("args", mcp.Description(
+			"Arguments for the executable, written as on a command line: positionals and flags as the "+
+				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
+				"nothing is expanded. Everything goes to the executable, never to flow itself, and a `--` is "+
+				"optional. Flags the executable does not define are ignored.")),
 		mcp.WithString("dir", mcp.Description(
 			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
 				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
@@ -200,18 +208,27 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 			progressToken = request.Params.Meta.ProgressToken
 		}
 
+		execArgs, err := executableArgs(args)
+		if err != nil {
+			return toolError(ErrCodeInvalidInput, fmt.Sprintf("invalid args: %s", err)), nil
+		}
+
 		cmdArgs := []string{executableVerb}
 		if executableID != "" {
 			cmdArgs = append(cmdArgs, executableID)
-		}
-		if args != "" {
-			cmdArgs = append(cmdArgs, strings.Fields(args)...)
+		} else if len(execArgs) > 0 {
+			cmdArgs = append(cmdArgs, currentExecutableID)
 		}
 		if ws := request.GetString("workspace", ""); ws != "" {
 			cmdArgs = append(cmdArgs, "--workspace", ws)
 		}
 		if syncFlag {
 			cmdArgs = append(cmdArgs, "--sync")
+		}
+		if len(execArgs) > 0 {
+			// Past the separator nothing can be taken for one of flow's own flags.
+			cmdArgs = append(cmdArgs, "--")
+			cmdArgs = append(cmdArgs, execArgs...)
 		}
 
 		// Capture the MCP caller's identity so the resulting execution record records who ran it.
