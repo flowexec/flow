@@ -15,6 +15,7 @@ import (
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/tests/utils"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
 
 var _ = Describe("git workspace e2e", Ordered, func() {
@@ -143,9 +144,11 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 
 			delete(ctx.Config.GitWorkspaces, name)
 			Expect(filesystem.WriteConfig(ctx.Config)).To(Succeed())
-			legacy := "description: A test workspace from git\ndisplayName: Git Test Workspace\n" +
-				"gitRef: feature\ngitRefType: branch\ngitRemote: " + localFileURL(bare) + "\ntags:\n    - test\n    - git\n"
-			Expect(os.WriteFile(filepath.Join(clone, "flow.yaml"), []byte(legacy), 0600)).To(Succeed())
+			legacy, err := filesystem.ReadWorkspaceConfig(name, clone)
+			Expect(err).NotTo(HaveOccurred())
+			legacy.GitRemote, legacy.GitRef = localFileURL(bare), "feature"
+			legacy.GitRefType = workspace.WorkspaceGitRefTypeBranch
+			Expect(filesystem.WriteWorkspaceConfig(clone, legacy)).To(Succeed())
 			Expect(gitStatus(clone)).To(ContainSubstring("flow.yaml"))
 
 			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
@@ -179,7 +182,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 	})
 
 	When("adding a workspace from a repository without a flow.yaml", func() {
-		It("keeps the clone clean and lets upstream add one later", func() {
+		It("lets upstream add one later", func() {
 			name := "git-no-config-ws"
 			bare := initBareRepo(GinkgoTB())
 			DeferCleanup(os.RemoveAll, bare)
@@ -188,11 +191,82 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			Expect(run.Run(ctx.Context, "workspace", "add", name, localFileURL(bare))).To(Succeed())
 			clone := ctx.Config.Workspaces[name]
 			Expect(filesystem.WorkspaceConfigExists(clone)).To(BeTrue())
-			Expect(gitStatus(clone)).To(BeEmpty())
 
 			pushFlowYAML(GinkgoTB(), bare, "main", "displayName: Added Upstream\n")
 			Expect(run.Run(ctx.Context, "workspace", "update", name)).To(Succeed())
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Added Upstream"))
+		})
+
+		It("keeps an edited generated flow.yaml and reports the failed pull", func() {
+			name := "git-edited-config-ws"
+			bare := initBareRepo(GinkgoTB())
+			DeferCleanup(os.RemoveAll, bare)
+			removeFlowYAML(GinkgoTB(), bare)
+
+			Expect(run.Run(ctx.Context, "workspace", "add", name, localFileURL(bare))).To(Succeed())
+			clone := ctx.Config.Workspaces[name]
+			edited := "displayName: Mine\n"
+			Expect(os.WriteFile(filepath.Join(clone, "flow.yaml"), []byte(edited), 0600)).To(Succeed())
+
+			pushFlowYAML(GinkgoTB(), bare, "main", "displayName: Added Upstream\n")
+			utils.ResetTestContext(ctx, GinkgoTB())
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(readFileContent(stdOut)).To(MatchRegexp("git pull failed for: .*" + name))
+			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(BeEquivalentTo(edited))
+		})
+	})
+
+	When("a clone's directory is gone and the cache sits inside another repository", func() {
+		It("reports the failure instead of resetting the enclosing repository", func() {
+			name := "git-missing-clone-ws"
+			bare := initBareRepo(GinkgoTB())
+			DeferCleanup(os.RemoveAll, bare)
+
+			Expect(run.Run(ctx.Context, "workspace", "add", name, localFileURL(bare))).To(Succeed())
+			clone := ctx.Config.Workspaces[name]
+			Expect(os.RemoveAll(clone)).To(Succeed())
+
+			parent := filepath.Dir(clone)
+			gitCmd(GinkgoTB(), parent, "init", "-b", "main")
+			DeferCleanup(os.RemoveAll, filepath.Join(parent, ".git"))
+			gitCmd(GinkgoTB(), parent, "config", "user.email", "test@test.com")
+			gitCmd(GinkgoTB(), parent, "config", "user.name", "Test")
+			precious := filepath.Join(parent, "precious.txt")
+			Expect(os.WriteFile(precious, []byte("committed\n"), 0600)).To(Succeed())
+			gitCmd(GinkgoTB(), parent, "add", "precious.txt")
+			gitCmd(GinkgoTB(), parent, "commit", "-m", "base")
+			Expect(os.WriteFile(precious, []byte("uncommitted\n"), 0600)).To(Succeed())
+
+			utils.ResetTestContext(ctx, GinkgoTB())
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+			Expect(readFileContent(stdOut)).To(MatchRegexp("git pull failed for: .*" + name))
+			Expect(os.ReadFile(precious)).To(BeEquivalentTo("uncommitted\n"))
+		})
+	})
+
+	When("a checkout the user owns had a gitRemote in its flow.yaml", func() {
+		It("stops treating it as git-sourced once the field is removed", func() {
+			name := "git-local-checkout-ws"
+			bare := initBareRepo(GinkgoTB())
+			DeferCleanup(os.RemoveAll, bare)
+			checkout := GinkgoT().TempDir()
+			gitCmd(GinkgoTB(), checkout, "clone", bare, ".")
+			config := "displayName: Local\ngitRemote: " + localFileURL(bare) + "\n"
+			Expect(os.WriteFile(filepath.Join(checkout, "flow.yaml"), []byte(config), 0600)).To(Succeed())
+
+			Expect(run.Run(ctx.Context, "workspace", "add", name, checkout)).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+			Expect(ctx.Config.GitWorkspaces).NotTo(HaveKey(name))
+
+			Expect(os.WriteFile(filepath.Join(checkout, "flow.yaml"), []byte("displayName: Local\n"), 0600)).To(Succeed())
+			wip := filepath.Join(checkout, "wip.txt")
+			Expect(os.WriteFile(wip, []byte("work in progress\n"), 0600)).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+
+			Expect(wip).To(BeAnExistingFile())
+			Expect(os.ReadFile(filepath.Join(checkout, "flow.yaml"))).To(BeEquivalentTo("displayName: Local\n"))
 		})
 	})
 

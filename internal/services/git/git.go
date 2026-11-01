@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -76,37 +75,68 @@ func DetectSource(repoDir string) (remote, ref, refType string, err error) {
 	if branch, err := gitOutput(repoDir, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 		return remote, strings.TrimSpace(branch), "branch", nil
 	}
-	if tag, err := gitOutput(repoDir, "describe", "--tags", "--exact-match"); err == nil {
-		return remote, strings.TrimSpace(tag), refTypeTag, nil
+	// A commit can carry several tags, and picking one would have a force update follow a guess.
+	tags, err := gitOutput(repoDir, "tag", "--points-at", "HEAD")
+	if err == nil && len(strings.Fields(tags)) == 1 {
+		return remote, strings.TrimSpace(tags), refTypeTag, nil
 	}
 	return remote, "", "", nil
 }
 
-// RepairWorkspaceConfig undoes what earlier versions of flow did to flow.yaml in a managed clone, so
-// that it can't block a pull. A tracked file that differs from HEAD only by flow's rewrite is
-// restored; one with any other change is the user's and stays as it is. It reports whether it
-// restored the file.
-func RepairWorkspaceConfig(repoDir string) (bool, error) {
+// IsRepoRoot reports whether dir is the top level of its own git repository. Git walks up from a
+// directory that isn't, so a pull or hard reset there would act on whichever repository encloses it.
+func IsRepoRoot(dir string) bool {
+	top, err := gitOutput(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return false
+	}
+	resolvedDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return false
+	}
+	resolvedTop, err := filepath.EvalSymlinks(strings.TrimSpace(top))
+	if err != nil {
+		return false
+	}
+	return filesystem.NormalizePath(resolvedDir) == filesystem.NormalizePath(resolvedTop)
+}
+
+// RepairWorkspaceConfig undoes what flow did to flow.yaml in a managed clone, so that it can't block
+// a pull. A tracked file that is exactly flow's old rewrite of HEAD is restored. An untracked file
+// that is exactly what flow generated is removed, leaving room for upstream to add its own; flow
+// generates it again if upstream hasn't. Any other content is the user's and stays as it is, and
+// git refuses a pull that would overwrite it. It reports whether it restored a tracked file.
+func RepairWorkspaceConfig(repoDir, workspaceName string) (bool, error) {
 	status, err := gitOutput(repoDir, "status", "--porcelain", "--", filesystem.WorkspaceConfigFileName)
 	if err != nil {
 		return false, err
 	}
-	switch {
-	case strings.HasPrefix(status, "??"):
-		return false, ExcludeWorkspaceConfig(repoDir)
-	case !strings.HasPrefix(status, " M"):
+	untracked := strings.HasPrefix(status, "??")
+	if !untracked && !strings.HasPrefix(status, " M") {
 		return false, nil
 	}
 
-	current, err := os.ReadFile(filepath.Clean(filepath.Join(repoDir, filesystem.WorkspaceConfigFileName)))
+	configFile := filepath.Clean(filepath.Join(repoDir, filesystem.WorkspaceConfigFileName))
+	current, err := os.ReadFile(configFile)
 	if err != nil {
 		return false, err
 	}
+	if untracked {
+		if isGeneratedConfig(current, workspaceName) {
+			return false, os.Remove(configFile)
+		}
+		return false, nil
+	}
+
 	committed, err := gitOutput(repoDir, "show", "HEAD:"+filesystem.WorkspaceConfigFileName)
 	if err != nil {
 		return false, err
 	}
-	if !isGitFieldRewrite(current, []byte(committed)) {
+	var committedCfg workspace.Workspace
+	if err := yaml.Unmarshal([]byte(committed), &committedCfg); err != nil {
+		return false, nil //nolint:nilerr // A file flow can't read can't be one flow rewrote.
+	}
+	if !isEncodingWithGitFields(current, &committedCfg) {
 		return false, nil
 	}
 	if err := runGit(repoDir, "checkout", "HEAD", "--", filesystem.WorkspaceConfigFileName); err != nil {
@@ -115,55 +145,30 @@ func RepairWorkspaceConfig(repoDir string) (bool, error) {
 	return true, nil
 }
 
-// isGitFieldRewrite reports whether current is committed as flow used to rewrite it: decoded into
-// the workspace type, which loses comments, formatting, and unknown keys, then re-encoded with the
-// git fields added.
-func isGitFieldRewrite(current, committed []byte) bool {
-	var currentCfg, committedCfg workspace.Workspace
+func isGeneratedConfig(current []byte, workspaceName string) bool {
+	return isEncodingWithGitFields(current, workspace.DefaultWorkspaceConfig(workspaceName)) ||
+		bytes.Equal(current, encodeWorkspace(workspace.DefaultWorkspaceConfig(workspaceName)))
+}
+
+// isEncodingWithGitFields reports whether current is byte for byte what flow writes for base plus
+// the git fields current holds. Comparing bytes rather than decoded values means a comment or an
+// unknown key the user added counts as an edit.
+func isEncodingWithGitFields(current []byte, base *workspace.Workspace) bool {
+	var currentCfg workspace.Workspace
 	if err := yaml.Unmarshal(current, &currentCfg); err != nil || currentCfg.GitRemote == "" {
 		return false
 	}
-	if err := yaml.Unmarshal(committed, &committedCfg); err != nil {
-		return false
-	}
-	for _, cfg := range []*workspace.Workspace{&currentCfg, &committedCfg} {
-		cfg.GitRemote, cfg.GitRef, cfg.GitRefType = "", "", workspace.WorkspaceGitRefTypeBlank
-	}
-	currentYAML, err := yaml.Marshal(&currentCfg)
-	if err != nil {
-		return false
-	}
-	committedYAML, err := yaml.Marshal(&committedCfg)
-	if err != nil {
-		return false
-	}
-	return bytes.Equal(currentYAML, committedYAML)
+	expected := *base
+	expected.GitRemote, expected.GitRef, expected.GitRefType = currentCfg.GitRemote, currentCfg.GitRef, currentCfg.GitRefType
+	return bytes.Equal(current, encodeWorkspace(&expected))
 }
 
-// ExcludeWorkspaceConfig has git ignore a flow.yaml that flow generated in a clone of a repository
-// without one. The clone stays clean, and git overwrites an ignored file, so upstream can still add
-// its own flow.yaml later.
-func ExcludeWorkspaceConfig(repoDir string) error {
-	excludeFile := filepath.Clean(filepath.Join(repoDir, ".git", "info", "exclude"))
-	const pattern = "/" + filesystem.WorkspaceConfigFileName
-
-	existing, err := os.ReadFile(excludeFile)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	if slices.Contains(strings.Split(string(existing), "\n"), pattern) {
+func encodeWorkspace(cfg *workspace.Workspace) []byte {
+	encoded, err := yaml.Marshal(cfg)
+	if err != nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(excludeFile), 0750); err != nil {
-		return err
-	}
-	file, err := os.OpenFile(excludeFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.WriteString("\n" + pattern + "\n")
-	return err
+	return encoded
 }
 
 // Clone clones a git repository to the target directory.

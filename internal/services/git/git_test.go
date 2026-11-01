@@ -65,6 +65,13 @@ var _ = Describe("DetectSource", func() {
 		expectSource("v1.0.0", "tag")
 	})
 
+	It("reports no ref when several tags point at a detached HEAD", func() {
+		run("tag", "a-other")
+		run("tag", "v1.0.0")
+		run("checkout", "--detach", "v1.0.0")
+		expectSource("", "")
+	})
+
 	It("reports no ref at a detached HEAD without a tag", func() {
 		run("checkout", "--detach")
 		expectSource("", "")
@@ -74,6 +81,22 @@ var _ = Describe("DetectSource", func() {
 		run("remote", "remove", "origin")
 		_, _, _, err := git.DetectSource(repo)
 		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("IsRepoRoot", func() {
+	It("is true only at the top level of a repository", func() {
+		repo := GinkgoT().TempDir()
+		cmd := exec.Command("git", "init")
+		cmd.Dir = repo
+		Expect(cmd.Run()).To(Succeed())
+		sub := filepath.Join(repo, "cache", "clone")
+		Expect(os.MkdirAll(sub, 0750)).To(Succeed())
+
+		Expect(git.IsRepoRoot(repo)).To(BeTrue())
+		Expect(git.IsRepoRoot(sub)).To(BeFalse())
+		Expect(git.IsRepoRoot(filepath.Join(repo, "missing"))).To(BeFalse())
+		Expect(git.IsRepoRoot(GinkgoT().TempDir())).To(BeFalse())
 	})
 })
 
@@ -105,44 +128,53 @@ var _ = Describe("RepairWorkspaceConfig", func() {
 		run("commit", "-m", "initial")
 	})
 
-	It("restores a file that differs from HEAD only by flow's rewrite", func() {
+	repair := func() (bool, error) { return git.RepairWorkspaceConfig(repo, "ws") }
+
+	It("restores a file that is exactly flow's rewrite of HEAD", func() {
 		writeConfig(rewritten)
-		Expect(git.RepairWorkspaceConfig(repo)).To(BeTrue())
+		Expect(repair()).To(BeTrue())
 		Expect(run("status", "--porcelain")).To(BeEmpty())
 		Expect(os.ReadFile(filepath.Join(repo, "flow.yaml"))).To(BeEquivalentTo(upstream))
 	})
 
-	It("leaves a file with other edits alone", func() {
-		edited := "displayName: My Own Name\ngitRemote: https://x/y.git\ntags:\n    - a\n"
-		writeConfig(edited)
-		Expect(git.RepairWorkspaceConfig(repo)).To(BeFalse())
-		Expect(os.ReadFile(filepath.Join(repo, "flow.yaml"))).To(BeEquivalentTo(edited))
-	})
-
-	It("leaves a reformatted file without git fields alone", func() {
-		reformatted := "displayName: Upstream\ntags:\n    - a\n"
-		writeConfig(reformatted)
-		Expect(git.RepairWorkspaceConfig(repo)).To(BeFalse())
-		Expect(os.ReadFile(filepath.Join(repo, "flow.yaml"))).To(BeEquivalentTo(reformatted))
-	})
+	DescribeTable("leaves other changes alone",
+		func(content string) {
+			writeConfig(content)
+			Expect(repair()).To(BeFalse())
+			Expect(os.ReadFile(filepath.Join(repo, "flow.yaml"))).To(BeEquivalentTo(content))
+		},
+		Entry("an edited field", "displayName: My Own Name\ngitRemote: https://x/y.git\ntags:\n    - a\n"),
+		Entry("a comment added to the rewrite", "# my note\n"+rewritten),
+		Entry("an unknown key added to the rewrite", rewritten+"futureSetting: 42\n"),
+		Entry("a reformat without git fields", "displayName: Upstream\ntags:\n    - a\n"),
+	)
 
 	It("does nothing to a clean clone", func() {
-		Expect(git.RepairWorkspaceConfig(repo)).To(BeFalse())
+		Expect(repair()).To(BeFalse())
 		Expect(run("status", "--porcelain")).To(BeEmpty())
 	})
 
-	It("excludes an untracked file flow generated, once", func() {
-		run("rm", "-q", "flow.yaml")
-		run("commit", "-m", "remove")
-		writeConfig(rewritten)
+	Context("when flow.yaml is untracked", func() {
+		BeforeEach(func() {
+			run("rm", "-q", "flow.yaml")
+			run("commit", "-m", "remove")
+		})
 
-		Expect(git.RepairWorkspaceConfig(repo)).To(BeFalse())
-		Expect(git.ExcludeWorkspaceConfig(repo)).To(Succeed())
-		Expect(run("status", "--porcelain")).To(BeEmpty())
+		DescribeTable("removes a file flow generated",
+			func(content string) {
+				writeConfig(content)
+				Expect(repair()).To(BeFalse())
+				Expect(filepath.Join(repo, "flow.yaml")).NotTo(BeAnExistingFile())
+			},
+			Entry("the current form", "displayName: ws\n"),
+			Entry("the form with git fields", "displayName: ws\ngitRemote: https://x/y.git\n"),
+		)
 
-		exclude, err := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(exclude)).To(HaveSuffix("\n/flow.yaml\n"))
-		Expect(string(exclude)).NotTo(ContainSubstring("/flow.yaml\n\n/flow.yaml"))
+		It("keeps a generated file the user edited", func() {
+			edited := "displayName: ws\nenvFiles:\n    - .env.local\n"
+			writeConfig(edited)
+			Expect(repair()).To(BeFalse())
+			Expect(os.ReadFile(filepath.Join(repo, "flow.yaml"))).To(BeEquivalentTo(edited))
+		})
 	})
 })

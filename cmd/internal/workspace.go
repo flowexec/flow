@@ -170,30 +170,33 @@ func cloneGitWorkspace(name, gitURL, branch, tag string, depth int) (string, con
 	if err := filesystem.InitWorkspaceConfig(name, clonePath); err != nil {
 		return "", source, errors.Wrap(err, "unable to write default workspace config")
 	}
-	if err := git.ExcludeWorkspaceConfig(clonePath); err != nil {
-		return "", source, errors.Wrap(err, "unable to exclude workspace config from the clone")
-	}
 	return clonePath, source, nil
 }
 
-// prepareGitWorkspacePull returns a workspace's config with its git source applied, ready to pull if
-// GitRemote is set. A clone from an earlier version of flow has its source moved out of flow.yaml
-// and into the user config, then flow.yaml repaired, since either could otherwise be lost or block the pull.
+// prepareGitWorkspacePull returns a workspace's config, ready to pull if GitRemote is set. For a
+// clone flow manages, it also applies the recorded git source, moving it out of flow.yaml or
+// recovering it from the clone if an earlier version of flow left it there or lost it, and repairs
+// flow.yaml. A checkout the user owns is left alone: its flow.yaml is the only source of truth.
 func prepareGitWorkspacePull(ctx *context.Context, name, path string) (*workspace.Workspace, error) {
-	wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
-	if err != nil {
-		return nil, err
+	managed := git.IsManagedClone(path)
+	if managed && !git.IsRepoRoot(path) {
+		return nil, fmt.Errorf(
+			"clone at %s is missing or is not a git repository; delete it, "+
+				"run 'flow workspace remove %s', and add the workspace again", path, name)
 	}
+
+	wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
+	if err != nil || !managed {
+		return wsCfg, err
+	}
+
 	filesystem.ApplyGitSource(wsCfg, ctx.Config, name)
-	if wsCfg.GitRemote == "" && git.IsManagedClone(path) {
+	if wsCfg.GitRemote == "" {
 		remote, ref, refType, err := git.DetectSource(path)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to detect git source of clone")
 		}
 		wsCfg.GitRemote, wsCfg.GitRef, wsCfg.GitRefType = remote, ref, workspace.WorkspaceGitRefType(refType)
-	}
-	if wsCfg.GitRemote == "" {
-		return wsCfg, nil
 	}
 
 	if _, found := ctx.Config.GitWorkspaces[name]; !found {
@@ -210,14 +213,12 @@ func prepareGitWorkspacePull(ctx *context.Context, name, path string) (*workspac
 		}
 	}
 
-	if git.IsManagedClone(path) {
-		restored, err := git.RepairWorkspaceConfig(path)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to repair flow.yaml in clone")
-		}
-		if restored {
-			logger.Log().Infof("Restored the upstream %s in workspace '%s'", filesystem.WorkspaceConfigFileName, name)
-		}
+	restored, err := git.RepairWorkspaceConfig(path, name)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to repair flow.yaml in clone")
+	}
+	if restored {
+		logger.Log().Infof("Restored the upstream %s in workspace '%s'", filesystem.WorkspaceConfigFileName, name)
 	}
 	return wsCfg, nil
 }
@@ -557,6 +558,11 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 			logger.Log().Infof(
 				"workspace '%s' was discovered at %s and is not registered", workspaceName, wsPath)
 		}
+	}
+
+	if wsPath == "" {
+		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: workspaceName})
+		return
 	}
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(workspaceName, wsPath)

@@ -78,7 +78,8 @@ func pullGitWorkspaces(ctx *context.Context, force bool) []string {
 	for name, path := range cfg.Workspaces {
 		wsCfg, err := prepareGitWorkspacePull(ctx, name, path)
 		if err != nil {
-			logger.Log().Warnf("Skipping workspace '%s': %v", name, err)
+			logger.Log().Errorf("Skipping workspace '%s': %v", name, err)
+			failed = append(failed, name)
 			continue
 		}
 		if wsCfg.GitRemote == "" {
