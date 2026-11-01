@@ -9,14 +9,28 @@ This page documents changes that require you to update existing flow files, conf
 
 ## v2.4.0
 
-### Undefined Executable Flags Are Errors
+### Undefined Executable Input Is an Error
 
-**What changed:** `flow build app -- --relase` used to drop the unknown flag and run anyway, on
-the executable's defaults. It now fails before anything runs and lists the flags the executable
-defines. This also applies to an executable that defines no flags. A step's `args:` in a serial
-or parallel executable are not checked.
+**What changed:** Input an executable doesn't define used to be dropped, and the executable ran
+anyway on its defaults. `flow build app -- --relase` now fails before anything runs, as does a
+positional past those it defines, a non-boolean flag without a value, and any of these for an
+executable that defines no arguments. A step's `args:` in a serial or parallel executable are not
+checked.
 
-**How to migrate:** Remove the flag, correct its name, or define it under the executable's `args`.
+`--dry false` on a boolean flag now sets it to `false`, where it used to set `true` and drop the
+word. A `--` after the first one makes the words after it positional. An omitted optional argument
+with a `type` no longer fails type validation.
+
+**How to migrate:** Remove the input, correct it, or define it under the executable's `args`.
+
+### Exit Codes
+
+**What changed:** A failed run used to exit 1. flow now exits with the failing command's own status.
+Input flow rejects exits 2 in every output mode, where it used to exit 2 only with `--output json`
+or `yaml`. Other failures inside flow still exit 1.
+
+**How to migrate:** Scripts testing for a non-zero exit need no change. Update any that test for
+exactly `1`.
 
 ### Argument Defaults See the Shell Environment
 
@@ -39,15 +53,19 @@ config. Existing clones migrate on the next `flow sync --git` or `flow workspace
 **What changed:**
 
 - A failed run from `execute`, `run_command`, `run_python`, or `run_executable` now returns
-  `isError: true`, with `output` and `exitCode` in the structured result. `exitCode` is flow's own
-  status, so it is 1 for any failed run.
+  `isError: true`, with `output` and `exitCode` in the structured result.
 - `get_workspace` returns an error for an unknown name instead of an empty workspace.
+- A failed call has a `started` field. When it is `false` nothing ran and the error code is
+  `NOT_STARTED`. `exitCode` is otherwise the failing command's own status.
+- A prompt param without a value in `params` fails the call. It used to run with an empty value.
 - `execute` `args` are split shell-style and always go to the executable, so they can no longer
-  set flow's own flags such as `--param` or `--background`.
+  set flow's own flags such as `--param` or `--background`. A verb or ID starting with `-` is rejected.
 - `execute` `args` without an `executable_id` target the nameless executable, rather than reading
   the first word as the ID.
-- Run output is plain text, without timestamps, log levels, or color.
-- `list_workspaces` and `list_executables` no longer return `fullDescription`.
+- Run output is plain text, without timestamps, log levels, or color. Commands run with `NO_COLOR=1`
+  and without `FORCE_COLOR`, `CLICOLOR_FORCE`, or `TTY_FORCE`.
+- `list_workspaces` and `list_executables` no longer return `fullDescription`, and cut `description`
+  to its first line, up to 160 characters.
 
 **How to migrate:** Check `isError` rather than parsing output for failures, pass prompt values in
 `execute`'s `params`, and call `get_workspace` or `get_executable` for full descriptions.
