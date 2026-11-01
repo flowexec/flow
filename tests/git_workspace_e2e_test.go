@@ -117,15 +117,17 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			clone := ctx.Config.Workspaces[name]
 			Expect(gitStatus(clone)).To(BeEmpty())
 
-			stdOut := ctx.StdOut()
-			Expect(run.Run(ctx.Context, "workspace", "get", name, "--output", "yaml")).To(Succeed())
-			Expect(readFileContent(stdOut)).To(And(ContainSubstring("gitRef: feature"), ContainSubstring("gitRemote: ")))
-
 			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
 			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
 
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Changed Upstream"))
 			Expect(gitStatus(clone)).To(BeEmpty())
+		})
+
+		It("still reports the git source", func() {
+			stdOut := ctx.StdOut()
+			Expect(run.Run(ctx.Context, "workspace", "get", "git-branch-ws", "--output", "yaml")).To(Succeed())
+			Expect(readFileContent(stdOut)).To(And(ContainSubstring("gitRef: feature"), ContainSubstring("gitRemote: ")))
 		})
 	})
 
