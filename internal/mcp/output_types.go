@@ -64,6 +64,9 @@ type WorkspaceOutput struct {
 	Executables     *ExecutableFilter   `json:"executables,omitempty"`
 	VerbAliases     map[string][]string `json:"verbAliases,omitempty"`
 	Annotations     map[string]string   `json:"annotations,omitempty"`
+	GitRemote       string              `json:"gitRemote,omitempty"`
+	GitRef          string              `json:"gitRef,omitempty"`
+	GitRefType      string              `json:"gitRefType,omitempty"`
 }
 
 type ExecutableFilter struct {

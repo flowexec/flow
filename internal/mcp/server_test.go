@@ -208,6 +208,24 @@ var _ = Describe("MCP Server", func() {
 		})
 
 		Context("get_workspace tool", func() {
+			It("should return the workspace's git source", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "get", "git-workspace", "--output", "json").
+					Return(`{"name":"git-workspace","path":"/ws","gitRemote":"https://example.com/r.git",`+
+						`"gitRef":"main","gitRefType":"branch"}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+					"workspace_name": "git-workspace",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+				structured, ok := result.StructuredContent.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				Expect(structured).To(HaveKeyWithValue("gitRemote", "https://example.com/r.git"))
+				Expect(structured).To(HaveKeyWithValue("gitRef", "main"))
+				Expect(structured).To(HaveKeyWithValue("gitRefType", "branch"))
+			})
+
 			It("should call executor with correct arguments", func() {
 				expectedOutput := "get ws execution results"
 				mockExecutor.EXPECT().
