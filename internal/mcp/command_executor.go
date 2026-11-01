@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -148,8 +150,9 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	}
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
 	cmd.Dir = runDirFromContext(ctx)
+	cmd.Env = noColorEnv(os.Environ())
 	if p, ok := provenanceFromContext(ctx); ok {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),
 			fmt.Sprintf("%s=%s", store.RunClientEnv, p.Client),
 			fmt.Sprintf("%s=%s", store.RunSessionEnv, p.Session),
@@ -169,6 +172,17 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		return string(output), err
 	}
 	return string(output), nil
+}
+
+// noColorEnv returns environ set up for colorless output, for flow's logger and the commands it
+// runs: the output goes to an MCP client, where color codes only cost tokens. The force variables
+// have to go too, because they beat NO_COLOR when output isn't a terminal.
+func noColorEnv(environ []string) []string {
+	env := slices.DeleteFunc(slices.Clone(environ), func(entry string) bool {
+		name, _, _ := strings.Cut(entry, "=")
+		return name == "CLICOLOR_FORCE" || name == "FORCE_COLOR" || name == "TTY_FORCE"
+	})
+	return append(env, "NO_COLOR=1")
 }
 
 // CLIExitError reports that the flow subprocess ran and exited non-zero. The detail is in the

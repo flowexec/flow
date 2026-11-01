@@ -65,6 +65,32 @@ func TestExecuteContext_SuccessReturnsOutput(t *testing.T) {
 	}
 }
 
+func TestExecuteContext_DisablesColor(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stand-in is not portable to Windows")
+	}
+	path := filepath.Join(t.TempDir(), "fake-flow")
+	script := "#!/bin/sh\necho \"no=$NO_COLOR clicolor=${CLICOLOR_FORCE-unset} force=${FORCE_COLOR-unset} " +
+		"tty=${TTY_FORCE-unset} other=$KEEP_ME\"\n"
+	if err := os.WriteFile(path, []byte(script), 0700); err != nil {
+		t.Fatalf("writing fake binary: %v", err)
+	}
+	t.Setenv(cliBinaryEnvKey, path)
+	t.Setenv("CLICOLOR_FORCE", "1")
+	t.Setenv("FORCE_COLOR", "1")
+	t.Setenv("TTY_FORCE", "1")
+	t.Setenv("KEEP_ME", "kept")
+
+	out, err := (&FlowCLIExecutor{}).ExecuteContext(context.Background(), "anything")
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	want := "no=1 clicolor=unset force=unset tty=unset other=kept"
+	if strings.TrimSpace(out) != want {
+		t.Errorf("output = %q, want %q", out, want)
+	}
+}
+
 // A missing binary is a real failure, not an exit status, so it must surface as
 // an error rather than being swallowed alongside exit codes.
 func TestExecuteContext_MissingBinaryReturnsError(t *testing.T) {

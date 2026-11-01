@@ -22,6 +22,10 @@ import (
 // reads its first positional as the executable ID, so args given without an ID need this in front.
 const currentExecutableID = ":"
 
+// plainLogArgs makes a run's output the command's own, without flow's timestamp and level prefixes.
+// An executable that sets its own logMode still gets it.
+var plainLogArgs = []string{"--log-mode", "text"}
+
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	getExecutable := mcp.NewTool("get_executable",
 		mcp.WithDescription("Get the full definition of a specific flow workflow — what command it runs, "+
@@ -235,6 +239,7 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 			cmdArgs = append(cmdArgs, "--sync")
 		}
 		cmdArgs = append(cmdArgs, paramFlags...)
+		cmdArgs = append(cmdArgs, plainLogArgs...)
 		if len(execArgs) > 0 {
 			// Past the separator nothing can be taken for one of flow's own flags.
 			cmdArgs = append(cmdArgs, "--")
@@ -459,7 +464,7 @@ func runTransientTool(
 	ctx = withRunDir(ctx, request.GetString("dir", ""))
 
 	sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
-	output, err := executor.ExecuteContext(ctx, cmdArgs...)
+	output, err := executor.ExecuteContext(ctx, append(cmdArgs, plainLogArgs...)...)
 
 	if ctx.Err() != nil {
 		return toolError(ErrCodeCancelled, "execution was cancelled"), nil
