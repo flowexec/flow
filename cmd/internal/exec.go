@@ -162,7 +162,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
 
 	execArgs := executableInputArgs(args)
-	if err := checkExecutableFlags(e, execArgs); err != nil {
+	if err := checkExecutableInput(e, execArgs); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 		return
 	}
@@ -225,23 +225,35 @@ func executableInputArgs(args []string) []string {
 	return args[1:]
 }
 
-// checkExecutableFlags rejects flags the executable doesn't define, before anything runs.
-func checkExecutableFlags(e *executable.Executable, execArgs []string) error {
+// checkExecutableInput rejects input the executable wouldn't receive, before anything runs.
+func checkExecutableInput(e *executable.Executable, execArgs []string) error {
 	var defined executable.ArgumentList
 	if execEnv := e.Env(); execEnv != nil {
 		defined = execEnv.Args
 	}
-	unknown := env.UnknownFlags(defined, execArgs)
-	if len(unknown) == 0 {
+	problems := env.InputArgProblems(defined, execArgs)
+	if len(problems) == 0 {
 		return nil
 	}
-	accepted := "it defines no flags"
+
+	accepted := "it takes no flags"
 	if flagNames := defined.Flags(); len(flagNames) > 0 {
-		accepted = "it defines --" + strings.Join(flagNames, ", --")
+		accepted = "it takes --" + strings.Join(flagNames, ", --")
 	}
-	return flowErrors.NewUsageError(
-		"%s does not accept %s; %s", e.Ref(), strings.Join(unknown, ", "), accepted,
-	)
+	return flowErrors.NewUsageError("%s: %s; %s", e.Ref(), strings.Join(problems, "; "), accepted)
+}
+
+// unanswerablePrompts returns an error for prompts in a run launched by an MCP client. Nothing can
+// answer one there, and the form would otherwise finish empty and run on empty values.
+func unanswerablePrompts(source string, fields []*views.FormField) error {
+	if source != store.RunSourceMCP || len(fields) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(fields))
+	for _, field := range fields {
+		keys = append(keys, field.Key)
+	}
+	return flowErrors.NewUsageError("missing values for prompt params: %s", strings.Join(keys, ", "))
 }
 
 // resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
@@ -773,6 +785,10 @@ func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Execut
 	applyParameterOverrides(paramOverrides, envMap)
 
 	textInputs := pendingFormFields(ctx, e, envMap)
+	if err := unanswerablePrompts(runProvenanceFromEnv().source, textInputs); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return envMap
+	}
 	if len(textInputs) > 0 {
 		form, err := views.NewForm(logger.Theme(ctx.Config.Theme.String()), ctx.StdIn(), ctx.StdOut(), textInputs...)
 		if err != nil {

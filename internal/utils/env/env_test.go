@@ -261,22 +261,54 @@ TEST_ENV_VAR3=value3`
 				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for $NOPE"))
 			})
 
-			DescribeTable("UnknownFlags",
+			DescribeTable("InputArgProblems",
 				func(execArgs, want []string) {
+					pos := 1
 					args := executable.ArgumentList{
 						{EnvKey: "KNOWN", Flag: "known"},
 						{EnvKey: "ENABLED", Flag: "enabled", Type: executable.ArgumentTypeBool},
+						{EnvKey: "FIRST", Pos: &pos},
 					}
-					Expect(env.UnknownFlags(args, execArgs)).To(Equal(want))
+					Expect(env.InputArgProblems(args, execArgs)).To(Equal(want))
 				},
-				Entry("defined flags", []string{"--known", "v", "--enabled", "--known=v"}, nil),
-				Entry("positional values and a separator", []string{"value", "-x", "--"}, nil),
-				Entry("a mistyped flag", []string{"--knwon", "v"}, []string{"--knwon"}),
-				Entry("a mistyped flag with a value", []string{"--knwon=v", "--known=v"}, []string{"--knwon=v"}),
+				Entry("defined input", []string{"value", "--known", "v", "--enabled", "--known=v"}, nil),
+				Entry("a bool flag with a value", []string{"--enabled", "false"}, nil),
+				Entry("a word after a separator", []string{"--", "--known"}, nil),
+				Entry("a mistyped flag", []string{"--knwon=v"}, []string{"unknown flag --knwon=v"}),
+				Entry("a flag at the end without a value", []string{"--known"}, []string{"--known needs a value"}),
+				Entry("a flag followed by a flag", []string{"--known", "--enabled"}, []string{"--known needs a value"}),
+				Entry("excess positionals", []string{"a", "b", "c"}, []string{"unexpected argument b c"}),
+				Entry("a single-dash flag and its value", []string{"-known", "v"}, []string{"unexpected argument v"}),
 			)
 
-			It("should treat every flag as unknown when no args are defined", func() {
-				Expect(env.UnknownFlags(nil, []string{"--x=1", "value"})).To(Equal([]string{"--x=1"}))
+			It("should treat all input as unexpected when no args are defined", func() {
+				Expect(env.InputArgProblems(nil, []string{"--x=1", "value"})).To(
+					Equal([]string{"unknown flag --x=1", "unexpected argument value"}))
+			})
+
+			It("should read a value after a bool flag and treat a word after a separator as positional", func() {
+				pos := 1
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{
+						{EnvKey: "TEST_BOOL_VALUE", Flag: "dry", Type: executable.ArgumentTypeBool},
+						{EnvKey: "TEST_AFTER_SEPARATOR", Pos: &pos},
+					},
+				}
+				_, err := env.SetEnv("", exec, []string{"--dry", "false", "--", "--literal"}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_BOOL_VALUE")).To(Equal("false"))
+				Expect(os.Getenv("TEST_AFTER_SEPARATOR")).To(Equal("--literal"))
+			})
+
+			It("should not type check an omitted optional arg", func() {
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{
+						{EnvKey: "TEST_OMITTED_BOOL", Flag: "dry", Type: executable.ArgumentTypeBool, Default: "false"},
+					},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_OMITTED_BOOL")).To(Equal("false"))
 			})
 
 			It("should not modify the input args slice", func() {
