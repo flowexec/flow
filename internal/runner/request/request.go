@@ -164,7 +164,11 @@ func writeResponseToFile(resp, responseFile string, format executable.RequestRes
 		logger.Log().WrapError(conversionErr, "unable to convert response")
 	}
 
-	file, err := os.Create(filepath.Clean(responseFile))
+	responseFile = filepath.Clean(responseFile)
+	if err := os.MkdirAll(filepath.Dir(responseFile), 0750); err != nil {
+		return err
+	}
+	file, err := os.Create(responseFile)
 	if err != nil {
 		return err
 	}
