@@ -541,7 +541,8 @@ var _ = Describe("MCP Server", func() {
 		Context("run_command tool", func() {
 			It("should run an ad-hoc command via flow exec --cmd with label and dir", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--label", "greet", "--dir", "/tmp", "--log-mode", "text").
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--label", "greet", "--dir", "/tmp",
+						"--log-mode", "text").
 					Return("command result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
@@ -556,7 +557,8 @@ var _ = Describe("MCP Server", func() {
 
 			It("should run multiple commands in one call with a mode", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo a", "--cmd", "echo b", "--mode", "parallel", "--log-mode", "text").
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo a", "--cmd", "echo b", "--mode", "parallel",
+						"--log-mode", "text").
 					Return("batch result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{

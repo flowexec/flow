@@ -68,6 +68,32 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	}
 	srv.AddTool(listExecutables, listExecutablesHandler(executor))
 
+	addExecuteTool(srv, executor)
+	addRunCommandTool(srv, executor)
+	addRunPythonTool(srv, executor)
+	addRunExecutableTool(srv, executor)
+
+	writeFlowfile := mcp.NewTool("write_flowfile",
+		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
+			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
+			"writing, then refreshes flow's executable cache so the change is immediately visible to "+
+			"list_executables/get_executable. Prefer this over writing YAML files directly."),
+		mcp.WithString("path", mcp.Required(),
+			mcp.Description("Absolute or workspace-relative path for the flowfile (must end in .flow or .flow.yaml)")),
+		mcp.WithString("content", mcp.Required(),
+			mcp.Description("Full YAML content of the flowfile")),
+		mcp.WithBoolean("overwrite",
+			mcp.Description("Whether to overwrite an existing file (default: false)")),
+	)
+	writeFlowfile.Annotations = mcp.ToolAnnotation{
+		Title:           "Write a flow file",
+		DestructiveHint: boolPtr(true), ReadOnlyHint: boolPtr(false),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false),
+	}
+	srv.AddTool(writeFlowfile, writeFlowfileHandler(srv, executor))
+}
+
+func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 	executeFlow := mcp.NewTool("execute",
 		mcp.WithDescription("Run a flow workflow by verb and optional ID. Prefer this over direct shell commands "+
 			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
@@ -108,29 +134,6 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
 	}
 	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
-
-	addRunCommandTool(srv, executor)
-	addRunPythonTool(srv, executor)
-	addRunExecutableTool(srv, executor)
-
-	writeFlowfile := mcp.NewTool("write_flowfile",
-		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
-			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
-			"writing, then refreshes flow's executable cache so the change is immediately visible to "+
-			"list_executables/get_executable. Prefer this over writing YAML files directly."),
-		mcp.WithString("path", mcp.Required(),
-			mcp.Description("Absolute or workspace-relative path for the flowfile (must end in .flow or .flow.yaml)")),
-		mcp.WithString("content", mcp.Required(),
-			mcp.Description("Full YAML content of the flowfile")),
-		mcp.WithBoolean("overwrite",
-			mcp.Description("Whether to overwrite an existing file (default: false)")),
-	)
-	writeFlowfile.Annotations = mcp.ToolAnnotation{
-		Title:           "Write a flow file",
-		DestructiveHint: boolPtr(true), ReadOnlyHint: boolPtr(false),
-		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false),
-	}
-	srv.AddTool(writeFlowfile, writeFlowfileHandler(srv, executor))
 }
 
 func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
