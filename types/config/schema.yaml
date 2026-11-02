@@ -34,6 +34,24 @@ definitions:
           Shift (Option on iTerm2) to select text.
     required: [ enabled ]
 
+  GitSource:
+    type: object
+    description: Where a workspace added from a git URL pulls from.
+    properties:
+      remote:
+        type: string
+        description: The git remote URL the workspace was cloned from.
+      ref:
+        type: string
+        description: The branch or tag name specified when the workspace was added.
+        default: ""
+      refType:
+        type: string
+        enum: ["", "branch", "tag"]
+        description: The type of ref. Empty if no ref was specified.
+        default: ""
+    required: [ remote ]
+
   ColorPalette:
     type: object
     description: |
@@ -81,6 +99,13 @@ properties:
       type: string
     description: |
       Map of workspace names to their paths. The path should be a valid absolute path to the workspace directory.
+  gitWorkspaces:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/GitSource'
+    description: |
+      Map of workspace names to their git source, for workspaces added from a git URL. This is set automatically
+      and kept here because the workspace's own flow.yaml is a tracked file that belongs to the upstream repository.
 #  remoteWorkspaces:
 #    type: object
 #    additionalProperties:

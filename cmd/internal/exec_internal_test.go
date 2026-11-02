@@ -4,9 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/flowexec/tuikit/views"
 	"mvdan.cc/sh/v3/interp"
+
+	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 func TestBackgroundChildArgs_StripsBackgroundFlag(t *testing.T) {
@@ -49,6 +55,54 @@ func TestBackgroundChildArgs_StripsBackgroundFlag(t *testing.T) {
 				t.Fatalf("backgroundChildArgs(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestCheckExecutableInput(t *testing.T) {
+	pos := 1
+	e := &executable.Executable{
+		Verb: "run",
+		Name: "with-flag",
+		Exec: &executable.ExecExecutableType{
+			Cmd: "true",
+			Args: executable.ArgumentList{
+				{EnvKey: "POS", Pos: &pos},
+				{EnvKey: "NODE", Flag: "node"},
+			},
+		},
+	}
+	if err := checkExecutableInput(e, []string{"value", "--node", "workbox"}); err != nil {
+		t.Errorf("defined input rejected: %v", err)
+	}
+
+	err := checkExecutableInput(e, []string{"--nodee", "workbox"})
+	var usageErr flowErrors.UsageError
+	if !errors.As(err, &usageErr) {
+		t.Fatalf("got %v, want a usage error", err)
+	}
+	for _, want := range []string{"--nodee", "--node"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("%q does not mention %q", err, want)
+		}
+	}
+
+	noArgs := &executable.Executable{Verb: "run", Name: "plain", Exec: &executable.ExecExecutableType{Cmd: "true"}}
+	if err := checkExecutableInput(noArgs, []string{"--x"}); err == nil || !strings.Contains(err.Error(), "no flags") {
+		t.Errorf("got %v, want an error saying no flags are defined", err)
+	}
+}
+
+func TestUnanswerablePrompts(t *testing.T) {
+	fields := []*views.FormField{{Key: "TARGET"}, {Key: "REGION"}}
+	if err := unanswerablePrompts(store.RunSourceCLI, fields); err != nil {
+		t.Errorf("cli run rejected: %v", err)
+	}
+	if err := unanswerablePrompts(store.RunSourceMCP, nil); err != nil {
+		t.Errorf("mcp run without prompts rejected: %v", err)
+	}
+	err := unanswerablePrompts(store.RunSourceMCP, fields)
+	if err == nil || !strings.Contains(err.Error(), "TARGET, REGION") {
+		t.Errorf("got %v, want an error naming the params", err)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	stdio "io"
+	"maps"
 	"os"
 	osExec "os/exec"
 	"os/signal"
@@ -144,22 +145,17 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	// Ad-hoc / transient modes: run something not resolved from the executable cache.
-	adhocCmds := flags.ValueFor[[]string](cmd, *flags.CmdFlag, false)
-	spec := flags.ValueFor[string](cmd, *flags.SpecFlag, false)
-	switch {
-	case len(adhocCmds) > 0 && spec != "":
-		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
-		return
-	case len(adhocCmds) > 0:
-		execAdHoc(ctx, cmd, verb, adhocCmds)
-		return
-	case spec != "":
-		execTransientSpec(ctx, cmd, verb, spec)
+	if execTransient(ctx, cmd, verb, args) {
 		return
 	}
 
 	e, ref := resolveExecutableForRun(ctx, cmd, verb, args)
+
+	execArgs := executableInputArgs(args)
+	if err := checkExecutableInput(e, execArgs); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
 
 	// Handle --background: spawn a detached child process and return immediately.
 	if maybeLaunchBackground(ctx, cmd, ref) {
@@ -181,11 +177,6 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	envMap := buildExecEnv(ctx, cmd, e)
-
-	var execArgs []string
-	if len(args) >= 2 {
-		execArgs = args[1:]
-	}
 
 	startTime := time.Now()
 	prov := runProvenanceFromEnv()
@@ -210,10 +201,71 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 
 	if runErr != nil {
-		errhandler.HandleFatal(ctx, cmd, runErr)
+		errhandler.HandleRunFailure(ctx, cmd, runErr, exitCode(runErr))
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// execTransient runs something not resolved from the executable cache, if --cmd or --spec asks for
+// it, and reports whether it did. Neither mode receives args, so any given would be dropped.
+func execTransient(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, args []string) bool {
+	adhocCmds := flags.ValueFor[[]string](cmd, *flags.CmdFlag, false)
+	spec := flags.ValueFor[string](cmd, *flags.SpecFlag, false)
+	if len(adhocCmds) == 0 && spec == "" {
+		return false
+	}
+
+	switch {
+	case len(adhocCmds) > 0 && spec != "":
+		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
+	case len(args) > 0:
+		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec don't take arguments, got: %s", strings.Join(args, " "))
+	case len(adhocCmds) > 0:
+		execAdHoc(ctx, cmd, verb, adhocCmds)
+	default:
+		execTransientSpec(ctx, cmd, verb, spec)
+	}
+	return true
+}
+
+// executableInputArgs returns the args for the executable itself; the first is its ID.
+func executableInputArgs(args []string) []string {
+	if len(args) < 2 {
+		return nil
+	}
+	return args[1:]
+}
+
+// checkExecutableInput rejects input the executable wouldn't receive, before anything runs.
+func checkExecutableInput(e *executable.Executable, execArgs []string) error {
+	var defined executable.ArgumentList
+	if execEnv := e.Env(); execEnv != nil {
+		defined = execEnv.Args
+	}
+	problems := env.InputArgProblems(defined, execArgs)
+	if len(problems) == 0 {
+		return nil
+	}
+
+	accepted := "it takes no flags"
+	if flagNames := defined.Flags(); len(flagNames) > 0 {
+		accepted = "it takes --" + strings.Join(flagNames, ", --")
+	}
+	return flowErrors.NewUsageError("%s: %s; %s", e.Ref(), strings.Join(problems, "; "), accepted)
+}
+
+// unanswerablePrompts returns an error for prompts in a run launched by an MCP client. Nothing can
+// answer one there, and the form would otherwise finish empty and run on empty values.
+func unanswerablePrompts(source string, fields []*views.FormField) error {
+	if source != store.RunSourceMCP || len(fields) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(fields))
+	for _, field := range fields {
+		keys = append(keys, field.Key)
+	}
+	return flowErrors.NewUsageError("missing values for prompt params: %s", strings.Join(keys, ", "))
 }
 
 // resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
@@ -526,7 +578,7 @@ func runTransientExecutable(
 	recordExecution(ctx, ref, startTime, dur, runErr, prov, meta)
 
 	if runErr != nil {
-		errhandler.HandleFatal(ctx, cmd, runErr)
+		errhandler.HandleRunFailure(ctx, cmd, runErr, exitCode(runErr))
 	}
 	logger.Log().Debug(fmt.Sprintf("transient executable completed: %s", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
@@ -745,6 +797,10 @@ func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Execut
 	applyParameterOverrides(paramOverrides, envMap)
 
 	textInputs := pendingFormFields(ctx, e, envMap)
+	if err := unanswerablePrompts(runProvenanceFromEnv().source, textInputs); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+		return envMap
+	}
 	if len(textInputs) > 0 {
 		form, err := views.NewForm(logger.Theme(ctx.Config.Theme.String()), ctx.StdIn(), ctx.StdOut(), textInputs...)
 		if err != nil {
@@ -990,30 +1046,58 @@ func pendingFormFields(
 		pending = append(pending, pendingFieldsFromParams(env.Params, envMap)...)
 	}
 
-	var childRefs []executable.Ref
+	var steps []composedStep
 	switch {
 	case rootExec.Serial != nil:
 		for _, child := range rootExec.Serial.Execs {
-			if child.Ref != "" {
-				childRefs = append(childRefs, child.Ref)
-			}
+			steps = append(steps, composedStep{ref: child.Ref, args: child.Args})
 		}
 	case rootExec.Parallel != nil:
 		for _, child := range rootExec.Parallel.Execs {
-			if child.Ref != "" {
-				childRefs = append(childRefs, child.Ref)
-			}
+			steps = append(steps, composedStep{ref: child.Ref, args: child.Args})
 		}
 	}
-	for _, ref := range childRefs {
-		childExec, err := ctx.ExecutableCache.GetExecutableByRef(ref)
+	for _, step := range steps {
+		if step.ref == "" {
+			continue
+		}
+		childExec, err := ctx.ExecutableCache.GetExecutableByRef(context.ExpandRefFromParent(rootExec, step.ref))
 		if err != nil {
 			continue
 		}
-		pending = append(pending, pendingFormFields(ctx, childExec, envMap)...)
+		pending = append(pending, pendingFormFields(ctx, childExec, childSuppliedEnv(rootExec, childExec, step, envMap))...)
 	}
 
 	return pending
+}
+
+// composedStep is what pendingFormFields needs from a serial or parallel step.
+type composedStep struct {
+	ref  executable.Ref
+	args []string
+}
+
+// childSuppliedEnv returns envMap plus the keys a child step receives without being asked: the
+// parent's params that hold a value, and the args written on the step. Only the keys matter.
+func childSuppliedEnv(
+	parent, child *executable.Executable, step composedStep, envMap map[string]string,
+) map[string]string {
+	supplied := maps.Clone(envMap)
+	if parentEnv := parent.Env(); parentEnv != nil {
+		for _, param := range parentEnv.Params {
+			if param.Prompt == "" && param.EnvKey != "" {
+				supplied[param.EnvKey] = ""
+			}
+		}
+	}
+	if childEnv := child.Env(); childEnv != nil && len(step.args) > 0 {
+		// Parsing sets values on the list it is given, so hand it a copy.
+		argEnv, err := env.BuildChildArgsEnvMap(slices.Clone(childEnv.Args), step.args, supplied)
+		if err == nil {
+			maps.Copy(supplied, argEnv)
+		}
+	}
+	return supplied
 }
 
 func pendingFieldsFromParams(params executable.ParameterList, envMap map[string]string) []*views.FormField {
@@ -1096,7 +1180,9 @@ var execLong = fmt.Sprintf(
 		"If the target executable accepts arguments, use '--' to separate flow flags from executable arguments.\n"+
 		"Flag arguments use standard '--flag=value' or '--flag value' syntax. "+
 		"Boolean flags can omit the value (e.g. '--verbose' implies true).\n"+
-		"Positional arguments are specified as values without any prefix.\n\n"+
+		"Positional arguments are specified as values without any prefix. "+
+		"Input the executable doesn't define is an error and nothing runs.\n\n"+
+		"flow exits with the failing command's own status, or 2 if it rejected the input.\n\n"+
 		"See %s for more information on executable verbs.\n"+
 		"See %s for more information on executable IDs.",
 	io.TypesDocsURL("flowfile", "executableverb"),

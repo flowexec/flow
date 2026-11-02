@@ -44,6 +44,11 @@ func (a *Argument) ValidateValue() error {
 		return fmt.Errorf("required argument not set")
 	}
 
+	// An omitted arg falls back to its default, which may hold a $VAR that has yet to expand.
+	if a.value == "" {
+		return nil
+	}
+
 	switch a.Type {
 	case ArgumentTypeInt:
 		if _, err := strconv.Atoi(a.value); err != nil {

@@ -97,7 +97,7 @@ Executables are the building blocks of workflows and are used to define the acti
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
-| `default` | `string` |  |  | The default value to use if the argument is not provided. If the argument is required and no default is provided, the executable will fail.  |
+| `default` | `string` |  |  | The default value to use if the argument is not provided. If the argument is required and no default is provided, the executable will fail.  `$VAR` and `${VAR}` are expanded against the executable's environment, then the environment flow was started in. A variable that does not resolve is left as written. Use `$$` for a literal `$`.  |
 | `envKey` | `string` |  |  | The name of the environment variable that will be assigned the value. |
 | `flag` | `string` |  |  | The flag to use when setting the argument from the command line. Either `flag` or `pos` must be set, but not both.  |
 | `outputFile` | `string` |  |  | A path where the argument value will be temporarily written to disk. The file will be created before execution and cleaned up afterwards.  |

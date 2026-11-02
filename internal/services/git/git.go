@@ -12,9 +12,13 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/types/workspace"
 )
+
+const refTypeTag = string(workspace.WorkspaceGitRefTypeTag)
 
 var sshURLPattern = regexp.MustCompile(`^[\w.-]+@[\w.-]+:[\w./-]+$`)
 
@@ -45,7 +49,153 @@ func ClonePath(gitURL string) (string, error) {
 	repoPath = strings.TrimSuffix(repoPath, ".git")
 	repoPath = strings.TrimPrefix(repoPath, "/")
 	repoPath = strings.ReplaceAll(repoPath, ":", "_") // sanitize Windows drive-letter colons
-	return filepath.Join(filesystem.CachedDataDirPath(), "git-workspaces", host, repoPath), nil
+	return filepath.Join(clonesDir(), host, repoPath), nil
+}
+
+func clonesDir() string {
+	return filepath.Join(filesystem.CachedDataDirPath(), "git-workspaces")
+}
+
+// IsManagedClone reports whether repoDir is a clone flow made under its cache directory, as opposed
+// to a checkout the user owns.
+func IsManagedClone(repoDir string) bool {
+	rel, err := filepath.Rel(resolvePath(clonesDir()), resolvePath(repoDir))
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// IsCloneOf reports whether repoDir is the root of a repository whose origin is remote. It
+// recognizes a managed clone after the cache directory's path has changed.
+func IsCloneOf(repoDir, remote string) bool {
+	return IsRepoRoot(repoDir) && originURL(repoDir) == remote
+}
+
+// originURL returns origin as configured, not with url.insteadOf applied, which could add
+// credentials that shouldn't be recorded.
+func originURL(repoDir string) string {
+	remote, err := gitOutput(repoDir, "config", "--get", "remote.origin.url")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(remote)
+}
+
+// resolvePath resolves symlinks in the part of path that exists, so that a deleted clone still
+// compares equal to the location it was cloned to.
+func resolvePath(path string) string {
+	path = filepath.Clean(path)
+	missing := ""
+	for current := path; ; {
+		if resolved, err := filepath.EvalSymlinks(current); err == nil {
+			return filesystem.NormalizePath(filepath.Join(resolved, missing))
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return filesystem.NormalizePath(path)
+		}
+		missing = filepath.Join(filepath.Base(current), missing)
+		current = parent
+	}
+}
+
+// DetectSource reads a clone's remote and what it has checked out: its branch, or the tag at a
+// detached HEAD. Earlier versions of flow could lose this metadata, leaving the clone as the only
+// record of it.
+func DetectSource(repoDir string) (remote, ref, refType string, err error) {
+	remote = originURL(repoDir)
+	if remote == "" {
+		return "", "", "", fmt.Errorf("%s has no origin remote", repoDir)
+	}
+	if branch, err := gitOutput(repoDir, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
+		return remote, strings.TrimSpace(branch), "branch", nil
+	}
+	// A commit can carry several tags, and picking one would have a force update follow a guess.
+	tags, err := gitOutput(repoDir, "tag", "--points-at", "HEAD")
+	if err == nil && len(strings.Fields(tags)) == 1 {
+		return remote, strings.TrimSpace(tags), refTypeTag, nil
+	}
+	return remote, "", "", nil
+}
+
+// IsRepoRoot reports whether dir is the top level of its own git repository. Git walks up from a
+// directory that isn't, so a pull or hard reset there would act on whichever repository encloses it.
+func IsRepoRoot(dir string) bool {
+	top, err := gitOutput(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return false
+	}
+	return resolvePath(dir) == resolvePath(strings.TrimSpace(top))
+}
+
+// RepairWorkspaceConfig undoes what flow did to flow.yaml in a managed clone, so that it can't block
+// a pull. A tracked file that is exactly flow's old rewrite of HEAD is restored. An untracked file
+// that is exactly what flow generated is removed, leaving room for upstream to add its own; flow
+// generates it again if upstream hasn't. Any other content is the user's and stays as it is, and
+// git refuses a pull that would overwrite it. It reports whether it restored a tracked file.
+func RepairWorkspaceConfig(repoDir, workspaceName string) (bool, error) {
+	status, err := gitOutput(repoDir, "status", "--porcelain", "--", filesystem.WorkspaceConfigFileName)
+	if err != nil {
+		return false, err
+	}
+	untracked := strings.HasPrefix(status, "??")
+	if !untracked && !strings.HasPrefix(status, " M") {
+		return false, nil
+	}
+
+	configFile := filepath.Clean(filepath.Join(repoDir, filesystem.WorkspaceConfigFileName))
+	current, err := os.ReadFile(configFile)
+	if err != nil {
+		return false, err
+	}
+	if untracked {
+		if isGeneratedConfig(current, workspaceName) {
+			return false, os.Remove(configFile)
+		}
+		return false, nil
+	}
+
+	committed, err := gitOutput(repoDir, "show", "HEAD:"+filesystem.WorkspaceConfigFileName)
+	if err != nil {
+		return false, err
+	}
+	var committedCfg workspace.Workspace
+	if err := yaml.Unmarshal([]byte(committed), &committedCfg); err != nil {
+		return false, nil //nolint:nilerr // A file flow can't read can't be one flow rewrote.
+	}
+	if !isEncodingWithGitFields(current, &committedCfg) {
+		return false, nil
+	}
+	if err := runGit(repoDir, "checkout", "HEAD", "--", filesystem.WorkspaceConfigFileName); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func isGeneratedConfig(current []byte, workspaceName string) bool {
+	return isEncodingWithGitFields(current, workspace.DefaultWorkspaceConfig(workspaceName)) ||
+		bytes.Equal(current, encodeWorkspace(workspace.DefaultWorkspaceConfig(workspaceName)))
+}
+
+// isEncodingWithGitFields reports whether current is byte for byte what flow writes for base plus
+// the git fields current holds. Comparing bytes rather than decoded values means a comment or an
+// unknown key the user added counts as an edit.
+func isEncodingWithGitFields(current []byte, base *workspace.Workspace) bool {
+	var currentCfg workspace.Workspace
+	if err := yaml.Unmarshal(current, &currentCfg); err != nil || currentCfg.GitRemote == "" {
+		return false
+	}
+	expected := *base
+	expected.GitRemote = currentCfg.GitRemote
+	expected.GitRef = currentCfg.GitRef
+	expected.GitRefType = currentCfg.GitRefType
+	return bytes.Equal(current, encodeWorkspace(&expected))
+}
+
+func encodeWorkspace(cfg *workspace.Workspace) []byte {
+	encoded, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil
+	}
+	return encoded
 }
 
 // Clone clones a git repository to the target directory.
@@ -88,7 +238,7 @@ func Pull(repoDir, ref, refType string) error {
 		return fmt.Errorf("git repo %s is not a directory", repoDir)
 	}
 
-	if refType == "tag" {
+	if refType == refTypeTag {
 		if err := runGit(repoDir, "fetch", "--tags", "--progress"); err != nil {
 			return err
 		}
@@ -114,7 +264,11 @@ func ResetPull(repoDir, ref, refType string) error {
 		return fmt.Errorf("git repo %s is not a directory", repoDir)
 	}
 
-	if refType == "tag" {
+	if !IsRepoRoot(repoDir) {
+		return fmt.Errorf("%s is not the root of a git repository; refusing to reset the repository enclosing it", repoDir)
+	}
+
+	if refType == refTypeTag {
 		if err := runGit(repoDir, "fetch", "--tags", "--force", "--progress"); err != nil {
 			return err
 		}
@@ -175,6 +329,23 @@ func runGit(dir string, args ...string) error {
 		return errors.Wrap(err, cmdStr)
 	}
 	return nil
+}
+
+// gitOutput executes a git command and returns its stdout.
+func gitOutput(dir string, args ...string) (string, error) {
+	if err := EnsureInstalled(); err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
+	out, err := cmd.Output()
+	if err != nil {
+		return "", errors.Wrapf(err, "git %s:\n%s", strings.Join(args, " "), strings.TrimSpace(stderrBuf.String()))
+	}
+	return string(out), nil
 }
 
 // parseGitURL extracts the host and path from a git URL (HTTPS or SSH).

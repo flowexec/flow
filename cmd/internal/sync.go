@@ -13,7 +13,6 @@ import (
 	"github.com/flowexec/flow/v2/internal/services/git"
 	"github.com/flowexec/flow/v2/pkg/cache"
 	"github.com/flowexec/flow/v2/pkg/context"
-	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
 )
 
@@ -77,9 +76,10 @@ func pullGitWorkspaces(ctx *context.Context, force bool) []string {
 	var failed []string
 	cfg := ctx.Config
 	for name, path := range cfg.Workspaces {
-		wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
+		wsCfg, err := prepareGitWorkspacePull(ctx, name, path)
 		if err != nil {
-			logger.Log().Warnf("Skipping workspace '%s': %v", name, err)
+			logger.Log().Errorf("Skipping workspace '%s': %v", name, err)
+			failed = append(failed, name)
 			continue
 		}
 		if wsCfg.GitRemote == "" {

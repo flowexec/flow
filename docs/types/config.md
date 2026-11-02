@@ -29,6 +29,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | `customVerbs` | `array` (`string`) | [] |  | Additional executable verbs registered by the user. Verbs must be lowercase words made up of letters, numbers, and hyphens. Manage them with `flow config add verb` and `flow config remove verb`.  |
 | `defaultLogMode` | `string` | logfmt |  | The default log mode to use when running executables. This can either be `hidden`, `json`, `logfmt` or `text`  `hidden` will not display any logs. `json` will display logs in JSON format. `logfmt` will display logs with a log level, timestamp, and message. `text` will just display the log message.  |
 | `defaultTimeout` | `string` | 30m |  | The default timeout to use when running executables. This should be a valid duration string.  |
+| `gitWorkspaces` | `map` (`string` -> [GitSource](#gitsource)) |  |  | Map of workspace names to their git source, for workspaces added from a git URL. This is set automatically and kept here because the workspace's own flow.yaml is a tracked file that belongs to the upstream repository.  |
 | `interactive` | [Interactive](#interactive) |  |  |  |
 | `templates` | `map` (`string` -> `string`) | map[] |  | A map of flowfile template names to their paths. |
 | `theme` | `string` | default |  | The theme of the interactive UI. |
@@ -63,6 +64,17 @@ If unset, the default color for the current theme will be used.
 | `tertiary` | `string` |  |  |  |
 | `warning` | `string` |  |  |  |
 | `white` | `string` |  |  |  |
+
+### GitSource
+
+Where a workspace added from a git URL pulls from.
+**Type:** `object`
+
+| Field | Type | Default | Required | Description |
+| ----- | ---- | ------- | :------: | ----------- |
+| `ref` | `string` |  |  | The branch or tag name specified when the workspace was added. |
+| `refType` | `string` |  |  | The type of ref. Empty if no ref was specified. |
+| `remote` | `string` |  | Yes | The git remote URL the workspace was cloned from. |
 
 ### Interactive
 

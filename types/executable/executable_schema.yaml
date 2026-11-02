@@ -289,6 +289,9 @@ definitions:
         description: |
           The default value to use if the argument is not provided.
           If the argument is required and no default is provided, the executable will fail.
+
+          `$VAR` and `${VAR}` are expanded against the executable's environment, then the environment
+          flow was started in. A variable that does not resolve is left as written. Use `$$` for a literal `$`.
         default: ""
       required:
         type: boolean

@@ -15,7 +15,7 @@ func SerialExecByRefConfig(opts ...Option) *executable.Executable {
 		Serial: &executable.SerialExecutableType{
 			Execs: []executable.SerialRefConfig{
 				{Ref: e1.Ref()},
-				{Ref: e2.Ref(), Args: []string{"hello", "x=123"}},
+				{Ref: e2.Ref(), Args: []string{"hello", "--x=123"}},
 				{Cmd: "echo 'hello from serial command'"},
 			},
 		},

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -148,8 +151,16 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	}
 	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
 	cmd.Dir = runDirFromContext(ctx)
+	cmd.Env = noColorEnv(os.Environ())
+
+	startedFile, removeMarker := newRunMarker()
+	defer removeMarker()
+	if startedFile != "" {
+		cmd.Env = append(cmd.Env, store.RunStartedFileEnv+"="+startedFile)
+	}
+
 	if p, ok := provenanceFromContext(ctx); ok {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(cmd.Env,
 			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),
 			fmt.Sprintf("%s=%s", store.RunClientEnv, p.Client),
 			fmt.Sprintf("%s=%s", store.RunSessionEnv, p.Session),
@@ -157,18 +168,59 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Only return an error if it's not an exit error: a non-zero exit is a
-		// normal outcome whose detail is already in the captured output.
-		//
 		// The target must be *exec.ExitError, not exec.ExitError. ExitError's
 		// Error method has a pointer receiver, so the value type does not
 		// implement error and errors.As panics on it - which killed the tool
 		// handler's goroutine before it could reply, leaving the MCP client
 		// waiting on a request that never got a response.
 		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
-			return string(output), err
+		if errors.As(err, &exitErr) {
+			return string(output), &CLIExitError{Code: exitErr.ExitCode(), Started: runStarted(startedFile)}
 		}
+		return string(output), err
 	}
 	return string(output), nil
+}
+
+// noColorEnv returns environ set up for colorless output, for flow's logger and the commands it
+// runs: the output goes to an MCP client, where color codes only cost tokens. The force variables
+// have to go too, because they beat NO_COLOR when output isn't a terminal.
+func noColorEnv(environ []string) []string {
+	env := slices.DeleteFunc(slices.Clone(environ), func(entry string) bool {
+		name, _, _ := strings.Cut(entry, "=")
+		return name == "CLICOLOR_FORCE" || name == "FORCE_COLOR" || name == "TTY_FORCE"
+	})
+	return append(env, "NO_COLOR=1")
+}
+
+// newRunMarker returns a path for the CLI to create when a run starts, and a function to clean it
+// up. The path is empty if no temp directory is available, which shouldn't cost the call its run.
+func newRunMarker() (string, func()) {
+	dir, err := os.MkdirTemp("", "flow-mcp-run-*")
+	if err != nil {
+		return "", func() {}
+	}
+	return filepath.Join(dir, "started"), func() { _ = os.RemoveAll(dir) }
+}
+
+// runStarted reports whether the marker exists. Without a marker it can't tell, and says a run
+// started, since telling an agent nothing ran when something did is the costlier mistake.
+func runStarted(startedFile string) bool {
+	if startedFile == "" {
+		return true
+	}
+	_, err := os.Stat(startedFile)
+	return err == nil
+}
+
+// CLIExitError reports that the flow subprocess exited non-zero. The detail is in the captured
+// output returned alongside it. Code is the failing command's status when Started is true. When it
+// is false flow failed before running anything, so retrying is safe but won't help unchanged.
+type CLIExitError struct {
+	Code    int
+	Started bool
+}
+
+func (e *CLIExitError) Error() string {
+	return fmt.Sprintf("flow exited with status %d", e.Code)
 }

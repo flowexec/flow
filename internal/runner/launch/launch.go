@@ -12,6 +12,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/utils"
 	"github.com/flowexec/flow/v2/internal/utils/env"
 	"github.com/flowexec/flow/v2/pkg/context"
+	"github.com/flowexec/flow/v2/pkg/store"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -85,6 +86,7 @@ func (r *launchRunner) Exec(
 		)
 	}
 
+	store.MarkRunStarted()
 	if launchSpec.App != "" {
 		return openWithFn(launchSpec.App, targetURI)
 	}

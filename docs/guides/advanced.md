@@ -458,6 +458,10 @@ They are **not** expanded in values a *user* supplies — a command-line argumen
 response, or a `text` param. Those are literals, so `flow run notify 'costs $5'` sends
 `costs $5`.
 
+An argument's `default` also resolves against the environment flow was started in, so
+`default: "$HOME/.kube/config"` works as it reads. The executable's own params and earlier
+environment take precedence.
+
 Two rules apply everywhere expansion happens:
 
 - `$$` produces a literal `$`.

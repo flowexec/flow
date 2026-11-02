@@ -18,6 +18,14 @@ import (
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
+// currentExecutableID names the nameless executable in the current workspace and namespace. The CLI
+// reads its first positional as the executable ID, so args given without an ID need this in front.
+const currentExecutableID = ":"
+
+// plainLogArgs makes a run's output the command's own, without flow's timestamp and level prefixes.
+// An executable that sets its own logMode still gets it.
+var plainLogArgs = []string{"--log-mode", "text"}
+
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	getExecutable := mcp.NewTool("get_executable",
 		mcp.WithDescription("Get the full definition of a specific flow workflow — what command it runs, "+
@@ -41,7 +49,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	listExecutables := mcp.NewTool("list_executables",
 		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
 			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
-			"already handles it. Returns names, verbs, descriptions, and tags."),
+			"already handles it. Returns names, verbs, short descriptions, and tags; use get_executable for an "+
+			"executable's full definition, including its args and params."),
 		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
 		mcp.WithString("verb", mcp.Description("Verb filter (optional)")),
@@ -59,38 +68,7 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	}
 	srv.AddTool(listExecutables, listExecutablesHandler(executor))
 
-	executeFlow := mcp.NewTool("execute",
-		mcp.WithDescription("Run a flow workflow by verb and optional ID. Prefer this over direct shell commands "+
-			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
-			"secret injection, retries, and logging automatically."),
-		mcp.WithString("executable_verb", mcp.Required(),
-			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
-				"Validated server-side; see the flow docs for the full verb list.")),
-		mcp.WithString("executable_id",
-			mcp.Pattern(executable.ExecutableIDPattern),
-			mcp.Description(
-				"Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
-					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
-					"both (`ws/ns:`) or neither if the current workspace/namespace should be used. "+
-					"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
-		mcp.WithString("args", mcp.Description("Arguments to pass")),
-		mcp.WithString("dir", mcp.Description(
-			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
-				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
-				"registered or not. Defaults to the server's own directory, which is often not yours.")),
-		mcp.WithString("workspace", mcp.Description(
-			"Workspace to run in, by registered name or by path. Overrides `dir` resolution. Does not change "+
-				"the global current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync executable changes before execution")),
-		mcp.WithOutputSchema[ExecutionOutput](),
-	)
-	executeFlow.Annotations = mcp.ToolAnnotation{
-		Title:        "Execute executable",
-		ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true),
-		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
-	}
-	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
-
+	addExecuteTool(srv, executor)
 	addRunCommandTool(srv, executor)
 	addRunPythonTool(srv, executor)
 	addRunExecutableTool(srv, executor)
@@ -115,6 +93,52 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(writeFlowfile, writeFlowfileHandler(srv, executor))
 }
 
+func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
+	executeFlow := mcp.NewTool("execute",
+		mcp.WithDescription("Run a flow workflow by verb and optional ID. Prefer this over direct shell commands "+
+			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
+			"secret injection, retries, and logging automatically."),
+		mcp.WithString("executable_verb", mcp.Required(),
+			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
+				"Validated server-side; see the flow docs for the full verb list.")),
+		mcp.WithString("executable_id",
+			mcp.Pattern(executable.ExecutableIDPattern),
+			mcp.Description(
+				"Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
+					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
+					"both (`ws/ns:`) or neither if the current workspace/namespace should be used. "+
+					"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
+		mcp.WithString("args", mcp.Description(
+			"Arguments for the executable, written as on a command line: positionals and flags as the "+
+				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
+				"nothing is expanded. Everything goes to the executable, never to flow itself. A leading `--` "+
+				"is optional; a later one makes the words after it positional. Anything the executable does "+
+				"not define fails the call before it runs.")),
+		mcp.WithObject("params",
+			mcp.AdditionalProperties(map[string]any{"type": "string"}),
+			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. A prompt param "+
+				"without a value fails the call before it runs. Keys are set as environment variables whether "+
+				"or not the executable declares them, and beat `args` with the same EnvKey. Values are passed "+
+				"on flow's command line, so don't put secrets here; reference them from a vault in the "+
+				"executable instead.")),
+		mcp.WithString("dir", mcp.Description(
+			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
+				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
+				"registered or not. Defaults to the server's own directory, which is often not yours.")),
+		mcp.WithString("workspace", mcp.Description(
+			"Workspace to run in, by registered name or by path. Overrides `dir` resolution. Does not change "+
+				"the global current workspace.")),
+		mcp.WithBoolean("sync", mcp.Description("Sync executable changes before execution")),
+		mcp.WithOutputSchema[ExecutionOutput](),
+	)
+	executeFlow.Annotations = mcp.ToolAnnotation{
+		Title:        "Execute executable",
+		ReadOnlyHint: boolPtr(false), DestructiveHint: boolPtr(true),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(true),
+	}
+	srv.AddTool(executeFlow, executeFlowHandler(srv, executor))
+}
+
 func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		executableVerb, err := request.RequireString("executable_verb")
@@ -122,6 +146,9 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, "executable_verb is required"), nil
 		}
 		executableID := request.GetString("executable_id", "")
+		if err := validateExecutableRef(executableVerb, executableID); err != nil {
+			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
 
 		cmdArgs := []string{"browse", "--output", "json", executableVerb}
 		if executableID != "" {
@@ -134,7 +161,7 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeNotFound, fmt.Sprintf("Failed to get executable %s: %s", ref, output)), nil
 		}
 
-		return mcp.NewToolResultText(output), nil
+		return mcp.NewToolResultText(dedupeExecutableDescription(output)), nil
 	}
 }
 
@@ -174,6 +201,10 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
 		}
+		for i := range page {
+			page[i].FullDescription = ""
+			page[i].Description = summarizeDescription(page[i].Description)
+		}
 
 		result := ExecutableListOutput{
 			Executables: page,
@@ -200,18 +231,37 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 			progressToken = request.Params.Meta.ProgressToken
 		}
 
+		if err := validateExecutableRef(executableVerb, executableID); err != nil {
+			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
+
+		execArgs, err := executableArgs(args)
+		if err != nil {
+			return toolError(ErrCodeInvalidInput, fmt.Sprintf("invalid args: %s", err)), nil
+		}
+		paramFlags, err := paramOverrideArgs(request.GetArguments()["params"])
+		if err != nil {
+			return toolError(ErrCodeInvalidInput, fmt.Sprintf("invalid params: %s", err)), nil
+		}
+
 		cmdArgs := []string{executableVerb}
 		if executableID != "" {
 			cmdArgs = append(cmdArgs, executableID)
-		}
-		if args != "" {
-			cmdArgs = append(cmdArgs, strings.Fields(args)...)
+		} else if len(execArgs) > 0 {
+			cmdArgs = append(cmdArgs, currentExecutableID)
 		}
 		if ws := request.GetString("workspace", ""); ws != "" {
 			cmdArgs = append(cmdArgs, "--workspace", ws)
 		}
 		if syncFlag {
 			cmdArgs = append(cmdArgs, "--sync")
+		}
+		cmdArgs = append(cmdArgs, paramFlags...)
+		cmdArgs = append(cmdArgs, plainLogArgs...)
+		if len(execArgs) > 0 {
+			// Past the separator nothing can be taken for one of flow's own flags.
+			cmdArgs = append(cmdArgs, "--")
+			cmdArgs = append(cmdArgs, execArgs...)
 		}
 
 		// Capture the MCP caller's identity so the resulting execution record records who ran it.
@@ -231,14 +281,13 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		if err != nil {
 			ref := strings.Join([]string{executableVerb, executableID}, " ")
-			capped, _ := capOutput(output)
-			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s execution failed: %s", ref, capped)), nil
+			return executionFailure(ref+" execution failed", output, err), nil
 		}
 
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
 		capped, truncated := capOutput(output)
-		result := ExecutionOutput{Output: capped, Truncated: truncated}
+		result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
 		jsonData, _ := json.Marshal(result)
 		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
@@ -433,7 +482,7 @@ func runTransientTool(
 	ctx = withRunDir(ctx, request.GetString("dir", ""))
 
 	sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
-	output, err := executor.ExecuteContext(ctx, cmdArgs...)
+	output, err := executor.ExecuteContext(ctx, append(cmdArgs, plainLogArgs...)...)
 
 	if ctx.Err() != nil {
 		return toolError(ErrCodeCancelled, "execution was cancelled"), nil
@@ -442,14 +491,13 @@ func runTransientTool(
 	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
 
 	if err != nil {
-		capped, _ := capOutput(output)
-		return toolError(ErrCodeExecutionFailed, fmt.Sprintf("%s: %s", failMsg, capped)), nil
+		return executionFailure(failMsg, output, err), nil
 	}
 
 	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 
 	capped, truncated := capOutput(output)
-	result := ExecutionOutput{Output: capped, Truncated: truncated}
+	result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
 	jsonData, _ := json.Marshal(result)
 	return mcp.NewToolResultStructured(result, string(jsonData)), nil
 }

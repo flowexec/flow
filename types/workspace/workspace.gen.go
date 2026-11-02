@@ -60,7 +60,8 @@ type Workspace struct {
 
 	// The git ref (branch or tag name) that was specified when the workspace was
 	// added from a git URL.
-	// Used by `flow workspace update` to checkout the correct ref after pulling.
+	// Used by `flow workspace update` to checkout the correct ref after pulling. See
+	// `gitRemote` for where it is stored.
 	//
 	GitRef string `json:"gitRef,omitempty" yaml:"gitRef,omitempty" mapstructure:"gitRef,omitempty"`
 
@@ -69,9 +70,11 @@ type Workspace struct {
 	//
 	GitRefType WorkspaceGitRefType `json:"gitRefType,omitempty" yaml:"gitRefType,omitempty" mapstructure:"gitRefType,omitempty"`
 
-	// The git remote URL for the workspace. This is set automatically when a
-	// workspace is added from a git URL.
-	// Used by `flow workspace update` to pull the latest changes.
+	// The git remote URL for the workspace. Used by `flow workspace update` to pull
+	// the latest changes.
+	// Workspaces added from a git URL have this recorded in the user config instead
+	// of this file; flow reports it
+	// here when reading the workspace.
 	//
 	GitRemote string `json:"gitRemote,omitempty" yaml:"gitRemote,omitempty" mapstructure:"gitRemote,omitempty"`
 

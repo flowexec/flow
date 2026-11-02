@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -25,7 +26,8 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getWorkspace, getWorkspaceHandler(executor))
 
 	listWorkspaces := mcp.NewTool("list_workspaces",
-		mcp.WithDescription("List all registered flow workspaces"),
+		mcp.WithDescription("List all registered flow workspaces as compact summaries. "+
+			"Use get_workspace for a workspace's full description."),
 		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
 	)
 	listWorkspaces.Annotations = mcp.ToolAnnotation{
@@ -76,6 +78,11 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return mcp.NewToolResultText(output), nil
 		}
 
+		ws.GitRemote = redactRemote(ws.GitRemote)
+		if strings.Contains(ws.FullDescription, strings.TrimSpace(ws.Description)) {
+			ws.Description = ""
+		}
+
 		jsonData, _ := json.Marshal(ws)
 		return mcp.NewToolResultStructured(ws, string(jsonData)), nil
 	}
@@ -100,6 +107,11 @@ func listWorkspacesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		page, nextCursor, totalCount, err := paginate(cliOutput.Workspaces, cursor, defaultPageSize)
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
+		}
+		for i := range page {
+			page[i].FullDescription = ""
+			page[i].Description = summarizeDescription(page[i].Description)
+			page[i].GitRemote, page[i].GitRef, page[i].GitRefType = "", "", ""
 		}
 
 		result := WorkspaceListOutput{

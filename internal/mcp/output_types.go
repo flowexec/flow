@@ -64,6 +64,9 @@ type WorkspaceOutput struct {
 	Executables     *ExecutableFilter   `json:"executables,omitempty"`
 	VerbAliases     map[string][]string `json:"verbAliases,omitempty"`
 	Annotations     map[string]string   `json:"annotations,omitempty"`
+	GitRemote       string              `json:"gitRemote,omitempty"`
+	GitRef          string              `json:"gitRef,omitempty"`
+	GitRefType      string              `json:"gitRefType,omitempty"`
 }
 
 type ExecutableFilter struct {
@@ -103,9 +106,15 @@ type ExecutableListOutput struct {
 	TotalCount  int                `json:"totalCount"`
 }
 
-// ExecutionOutput is the output of the execute tool.
+// ExecutionOutput is the output of the execute, run_command, run_python, and run_executable tools.
 type ExecutionOutput struct {
 	Output string `json:"output"`
+	// ExitCode is 0 on success. When Started is true it is the failing command's status, or 1 if flow
+	// ended the run itself, as on a timeout. When Started is false nothing ran: it is 2 for rejected
+	// input and 1 for other failures inside flow. It is -1 if flow could not be launched or was killed.
+	ExitCode int `json:"exitCode"`
+	// Started reports whether flow got as far as running a command, request, or other action.
+	Started bool `json:"started"`
 	// Truncated is true when Output was cut to protect the context window. The run itself
 	// completed in full; the untruncated output remains available via get_execution_logs.
 	Truncated bool `json:"truncated,omitempty"`

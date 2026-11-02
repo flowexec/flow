@@ -183,6 +183,29 @@ var _ = Describe("Request Runner", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should create missing parent directories for the response file", func() {
+			exec := &executable.Executable{
+				Request: &executable.RequestExecutableType{
+					URL:    testServer.URL,
+					Method: executable.RequestExecutableTypeMethodGET,
+					ResponseFile: &executable.RequestResponseFile{
+						Filename: filepath.Join(".data", "nested", "response.json"),
+						Dir:      executable.Directory("//"),
+						SaveAs:   executable.RequestResponseFileSaveAsJson,
+					},
+				},
+			}
+			exec.SetContext(ctx.Ctx.CurrentWorkspace.AssignedName(), ctx.Ctx.CurrentWorkspace.Location(), "", "")
+
+			ctx.Logger.EXPECT().Infof(gomock.Any(), gomock.Any()).Times(2)
+			err := requestRnr.Exec(ctx.Ctx, exec, mockEngine, make(map[string]string), nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			path := filepath.Join(ctx.Ctx.CurrentWorkspace.Location(), ".data", "nested", "response.json")
+			_, err = os.Stat(filepath.Clean(path))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("should transform the response when specified", func() {
 			exec := &executable.Executable{
 				Request: &executable.RequestExecutableType{

@@ -208,6 +208,24 @@ var _ = Describe("MCP Server", func() {
 		})
 
 		Context("get_workspace tool", func() {
+			It("should return the workspace's git source", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "get", "git-workspace", "--output", "json").
+					Return(`{"name":"git-workspace","path":"/ws","gitRemote":"https://tok:s3cret@example.com/r.git",`+
+						`"gitRef":"main","gitRefType":"branch"}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+					"workspace_name": "git-workspace",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+				structured, ok := result.StructuredContent.(map[string]interface{})
+				Expect(ok).To(BeTrue())
+				Expect(structured).To(HaveKeyWithValue("gitRemote", "https://example.com/r.git"))
+				Expect(structured).To(HaveKeyWithValue("gitRef", "main"))
+				Expect(structured).To(HaveKeyWithValue("gitRefType", "branch"))
+			})
+
 			It("should call executor with correct arguments", func() {
 				expectedOutput := "get ws execution results"
 				mockExecutor.EXPECT().
@@ -234,6 +252,33 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
+			})
+
+			It("should leave full descriptions to get_workspace", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "list", "--output", "json").
+					Return(`{"workspaces":[{"name":"a","path":"/a","description":"short",`+
+						`"fullDescription":"very long readme"}]}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_workspaces", nil))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring(`"description":"short"`))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("fullDescription"))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("very long readme"))
+			})
+
+			It("should keep the full description on get_workspace", func() {
+				mockExecutor.EXPECT().
+					Execute("workspace", "get", "a", "--output", "json").
+					Return(`{"name":"a","path":"/a","fullDescription":"very long readme"}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+					"workspace_name": "a",
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring("very long readme"))
 			})
 		})
 
@@ -294,12 +339,26 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(getTextContent(result)).To(Equal(expectedOutput))
 			})
+
+			It("should leave full descriptions to get_executable", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					Return(`{"executables":[{"id":"a","ref":"run a","name":"a","verb":"run","description":"short",`+
+						`"fullDescription":"very long markdown"}]}`, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).To(ContainSubstring(`"description":"short"`))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("fullDescription"))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("very long markdown"))
+			})
 		})
 
 		Context("execute tool", func() {
 			It("should call executor with provided arguments", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "test", "test:test-flow", "arg1", "arg2").
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "--log-mode", "text", "--", "arg1", "arg2").
 					Return("execution result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
@@ -312,9 +371,87 @@ var _ = Describe("MCP Server", func() {
 				Expect(getTextContent(result)).To(ContainSubstring("execution result"))
 			})
 
+			DescribeTable("should keep args away from flow's own flags",
+				func(args string, cliArgs ...any) {
+					want := append([]any{"test", "test:test-flow", "--workspace", "ws", "--sync", "--log-mode", "text"}, cliArgs...)
+					mockExecutor.EXPECT().ExecuteContext(gomock.Any(), want...).Return("ok", nil)
+
+					result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+						"executable_verb": "test",
+						"executable_id":   "test:test-flow",
+						"workspace":       "ws",
+						"sync":            true,
+						"args":            args,
+					}))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.IsError).To(BeFalse())
+				},
+				Entry("flag without a separator", "--node workbox", "--", "--node", "workbox"),
+				Entry("flag with a separator", "-- --node workbox", "--", "--node", "workbox"),
+				Entry("quoted value", "devbox 'uname -a'", "--", "devbox", "uname -a"),
+				Entry("flow's --param", "--param K=v", "--", "--param", "K=v"),
+				Entry("flow's --background", "--background", "--", "--background"),
+			)
+
+			It("should forward params as sorted --param flags ahead of the args", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", "test:test-flow",
+						"--param", "A=1=2", "--param", "B=two words", "--log-mode", "text", "--", "pos").
+					Return("ok", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+					"args":            "pos",
+					"params":          map[string]interface{}{"B": "two words", "A": "1=2"},
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+			})
+
+			DescribeTable("should reject invalid params without running anything",
+				func(params interface{}) {
+					result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+						"executable_verb": "test",
+						"executable_id":   "test:test-flow",
+						"params":          params,
+					}))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(result.IsError).To(BeTrue())
+					Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
+				},
+				Entry("not a map", "K=v"),
+				Entry("non-string value", map[string]interface{}{"K": 1}),
+				Entry("key with an equals sign", map[string]interface{}{"K=X": "v"}),
+				Entry("empty key", map[string]interface{}{"": "v"}),
+			)
+
+			It("should target the nameless executable when args come without an ID", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", ":", "--log-mode", "text", "--", "--node", "workbox").
+					Return("ok", nil)
+
+				_, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"args":            "--node workbox",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should reject args with an unterminated quote without running anything", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+					"args":            "don't",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
+			})
+
 			It("should handle no args", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "test", "test:test-flow").
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "--log-mode", "text").
 					Return("execution result with no args", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
@@ -329,7 +466,7 @@ var _ = Describe("MCP Server", func() {
 			It("should cap oversized output and report truncation", func() {
 				huge := strings.Repeat("x", 300_000)
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "test", "test:test-flow").
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "--log-mode", "text").
 					Return(huge, nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
@@ -345,12 +482,121 @@ var _ = Describe("MCP Server", func() {
 				// The tail is kept, since errors typically surface at the end of a run's output.
 				Expect(out.Output).To(HaveSuffix(strings.Repeat("x", 100)))
 			})
+
+			It("should report exit code 0 on success", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "test", "test:test-flow", "--log-mode", "text").
+					Return("ok", nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+					"executable_verb": "test",
+					"executable_id":   "test:test-flow",
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+				Expect(getTextContent(result)).To(ContainSubstring(`"exitCode":0`))
+			})
+		})
+
+		DescribeTable("failed runs",
+			func(tool string, args map[string]interface{}, cliArgs []any) {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), cliArgs...).
+					Return("step output\nboom\n", &flowMcp.CLIExitError{Code: 2, Started: true})
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest(tool, args))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring("boom"))
+				Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeExecutionFailed))
+
+				structured, marshalErr := json.Marshal(result.StructuredContent)
+				Expect(marshalErr).ToNot(HaveOccurred())
+				var out flowMcp.ExecutionOutput
+				Expect(json.Unmarshal(structured, &out)).To(Succeed())
+				Expect(out.ExitCode).To(Equal(2))
+				Expect(out.Started).To(BeTrue())
+				Expect(out.Output).To(Equal("step output\nboom\n"))
+			},
+			Entry("execute", "execute",
+				map[string]interface{}{"executable_verb": "test", "executable_id": "test:flow"},
+				[]any{"test", "test:flow", "--log-mode", "text"}),
+			Entry("run_command", "run_command",
+				map[string]interface{}{"command": "false"},
+				[]any{"exec", "--cmd", "false", "--log-mode", "text"}),
+			Entry("run_python", "run_python",
+				map[string]interface{}{"code": "raise SystemExit(1)"},
+				[]any{"exec", "--interpreter", "python", "--cmd", "raise SystemExit(1)", "--log-mode", "text"}),
+			Entry("run_executable", "run_executable",
+				map[string]interface{}{"spec": "verb: run"},
+				[]any{"exec", "--spec", "verb: run", "--log-mode", "text"}),
+		)
+
+		It("should report a failure before anything ran as not started", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "run", "x", "--log-mode", "text", "--", "--typo").
+				Return("does not accept --typo", &flowMcp.CLIExitError{Code: 2})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+				"executable_verb": "run", "executable_id": "x", "args": "--typo",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeNotStarted))
+		})
+
+		It("should repeat only the end of a large failure in the message", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "exec", "--cmd", "big", "--log-mode", "text").
+				Return(strings.Repeat("x", 100_000)+"boom", &flowMcp.CLIExitError{Code: 1, Started: true})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+				"command": "big",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(getTextContent(result)).To(ContainSubstring("boom"))
+			Expect(len(getTextContent(result))).To(BeNumerically("<", 3000))
+		})
+
+		It("should reject a verb or ID flow would read as its own flag", func() {
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("execute", map[string]interface{}{
+				"executable_verb": "run", "executable_id": "--background",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeInvalidInput))
+		})
+
+		It("should report -1 when flow could not be started", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "exec", "--cmd", "true", "--log-mode", "text").
+				Return("", errors.New("flow not found"))
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+				"command": "true",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
+			Expect(getTextContent(result)).To(ContainSubstring(`"exitCode":-1`))
+		})
+
+		It("should report a missing workspace as an error", func() {
+			mockExecutor.EXPECT().
+				Execute("workspace", "get", "missing", "--output", "json").
+				Return(`{"error":{"code":"NOT_FOUND"}}`, &flowMcp.CLIExitError{Code: 1})
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_workspace", map[string]interface{}{
+				"workspace_name": "missing",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
 		})
 
 		Context("run_command tool", func() {
 			It("should run an ad-hoc command via flow exec --cmd with label and dir", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--label", "greet", "--dir", "/tmp").
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--label", "greet", "--dir", "/tmp",
+						"--log-mode", "text").
 					Return("command result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
@@ -365,7 +611,8 @@ var _ = Describe("MCP Server", func() {
 
 			It("should run multiple commands in one call with a mode", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo a", "--cmd", "echo b", "--mode", "parallel").
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo a", "--cmd", "echo b", "--mode", "parallel",
+						"--log-mode", "text").
 					Return("batch result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
@@ -386,7 +633,7 @@ var _ = Describe("MCP Server", func() {
 			It("should cap oversized output and report truncation", func() {
 				huge := strings.Repeat("y", 300_000)
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi").
+					ExecuteContext(gomock.Any(), "exec", "--cmd", "echo hi", "--log-mode", "text").
 					Return(huge, nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
@@ -405,7 +652,7 @@ var _ = Describe("MCP Server", func() {
 			It("should run python via flow exec --interpreter python --cmd", func() {
 				mockExecutor.EXPECT().
 					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", "print(1)",
-						"--label", "compute", "--dir", "/tmp").
+						"--label", "compute", "--dir", "/tmp", "--log-mode", "text").
 					Return("1", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
@@ -421,7 +668,7 @@ var _ = Describe("MCP Server", func() {
 			It("should forward workspace and sync", func() {
 				mockExecutor.EXPECT().
 					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", "print(2)",
-						"--workspace", "other", "--sync").
+						"--workspace", "other", "--sync", "--log-mode", "text").
 					Return("2", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
@@ -439,7 +686,7 @@ var _ = Describe("MCP Server", func() {
 				// wrong line.
 				code := "import sys\nif True:\n    print(sys.version)\n"
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", code).
+					ExecuteContext(gomock.Any(), "exec", "--interpreter", "python", "--cmd", code, "--log-mode", "text").
 					Return("ok", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_python", map[string]interface{}{
@@ -469,7 +716,7 @@ var _ = Describe("MCP Server", func() {
 			It("should run a transient executable from an inline spec", func() {
 				spec := `{"verb":"run","serial":{"execs":[{"cmd":"echo one"}]}}`
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "exec", "--spec", spec, "--label", "batch").
+					ExecuteContext(gomock.Any(), "exec", "--spec", spec, "--label", "batch", "--log-mode", "text").
 					Return("spec result", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_executable", map[string]interface{}{

@@ -13,6 +13,7 @@ import (
 	"github.com/flowexec/tuikit/io"
 
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 // Mount is a single bind mount passed to the container runtime.
@@ -121,6 +122,7 @@ func RunContainer(
 	cmd.Stderr = stdErrWriter(logMode, logger, task, flattenedFields...)
 	cmd.WaitDelay = 5 * time.Second
 
+	store.MarkRunStarted()
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("container execution failed - %w", err)
 	}

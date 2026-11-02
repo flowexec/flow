@@ -14,6 +14,8 @@ import (
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
+
+	"github.com/flowexec/flow/v2/pkg/store"
 )
 
 func init() {
@@ -63,6 +65,7 @@ func RunCmd(
 		return fmt.Errorf("unable to create runner - %w", err)
 	}
 
+	store.MarkRunStarted()
 	err = runner.Run(ctx, prog)
 	if err != nil {
 		var exitStatus interp.ExitStatus
@@ -151,6 +154,7 @@ func runNativeFile(
 	cmd.Stdout = stdOutWriter(logMode, logger, task, flattenedFields...)
 	cmd.Stderr = stdErrWriter(logMode, logger, task, flattenedFields...)
 
+	store.MarkRunStarted()
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("file execution failed - %w", err)
 	}
@@ -202,6 +206,7 @@ func runShellFile(
 		return fmt.Errorf("unable to create runner - %w", err)
 	}
 
+	store.MarkRunStarted()
 	err = runner.Run(ctx, prog)
 	if err != nil {
 		var exitStatus interp.ExitStatus

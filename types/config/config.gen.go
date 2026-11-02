@@ -110,6 +110,13 @@ type Config struct {
 	//
 	DefaultTimeout time.Duration `json:"defaultTimeout,omitempty" yaml:"defaultTimeout,omitempty" mapstructure:"defaultTimeout,omitempty"`
 
+	// Map of workspace names to their git source, for workspaces added from a git
+	// URL. This is set automatically
+	// and kept here because the workspace's own flow.yaml is a tracked file that
+	// belongs to the upstream repository.
+	//
+	GitWorkspaces ConfigGitWorkspaces `json:"gitWorkspaces,omitempty" yaml:"gitWorkspaces,omitempty" mapstructure:"gitWorkspaces,omitempty"`
+
 	// Interactive corresponds to the JSON schema field "interactive".
 	Interactive *Interactive `json:"interactive,omitempty" yaml:"interactive,omitempty" mapstructure:"interactive,omitempty"`
 
@@ -149,6 +156,12 @@ type Config struct {
 	Workspaces ConfigWorkspaces `json:"workspaces" yaml:"workspaces" mapstructure:"workspaces"`
 }
 
+// Map of workspace names to their git source, for workspaces added from a git URL.
+// This is set automatically
+// and kept here because the workspace's own flow.yaml is a tracked file that
+// belongs to the upstream repository.
+type ConfigGitWorkspaces map[string]GitSource
+
 // A map of flowfile template names to their paths.
 type ConfigTemplates map[string]string
 
@@ -176,6 +189,24 @@ const ConfigWorkspaceModeFixed ConfigWorkspaceMode = "fixed"
 // Map of workspace names to their paths. The path should be a valid absolute path
 // to the workspace directory.
 type ConfigWorkspaces map[string]string
+
+// Where a workspace added from a git URL pulls from.
+type GitSource struct {
+	// The branch or tag name specified when the workspace was added.
+	Ref string `json:"ref,omitempty" yaml:"ref,omitempty" mapstructure:"ref,omitempty"`
+
+	// The type of ref. Empty if no ref was specified.
+	RefType GitSourceRefType `json:"refType,omitempty" yaml:"refType,omitempty" mapstructure:"refType,omitempty"`
+
+	// The git remote URL the workspace was cloned from.
+	Remote string `json:"remote" yaml:"remote" mapstructure:"remote"`
+}
+
+type GitSourceRefType string
+
+const GitSourceRefTypeBlank GitSourceRefType = ""
+const GitSourceRefTypeBranch GitSourceRefType = "branch"
+const GitSourceRefTypeTag GitSourceRefType = "tag"
 
 // Configurations for the interactive UI.
 type Interactive struct {

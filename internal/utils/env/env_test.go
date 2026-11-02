@@ -228,6 +228,29 @@ TEST_ENV_VAR3=value3`
 				Expect(os.Getenv("TEST_DEFAULT")).To(Equal("hello world"))
 			})
 
+			It("should expand a default against flow's own process environment", func() {
+				pos := 1
+				GinkgoT().Setenv("TEST_PROCESS_VAR", "/from/process")
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{{EnvKey: "TEST_PROCESS_DEFAULT", Pos: &pos, Default: "$TEST_PROCESS_VAR/x"}},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_PROCESS_DEFAULT")).To(Equal("/from/process/x"))
+			})
+
+			It("should prefer the executable's env over the process environment in a default", func() {
+				pos := 1
+				GinkgoT().Setenv("TEST_SHADOWED_VAR", "from-process")
+				exec := &executable.ExecutableEnvironment{
+					Params: []executable.Parameter{{EnvKey: "TEST_SHADOWED_VAR", Text: "from-param"}},
+					Args:   []executable.Argument{{EnvKey: "TEST_SHADOW_DEFAULT", Pos: &pos, Default: "$TEST_SHADOWED_VAR"}},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_SHADOW_DEFAULT")).To(Equal("from-param"))
+			})
+
 			It("should leave an unresolved variable in a default as written and unescape $$", func() {
 				pos := 1
 				exec := &executable.ExecutableEnvironment{
@@ -236,6 +259,58 @@ TEST_ENV_VAR3=value3`
 				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for $NOPE"))
+			})
+
+			DescribeTable("InputArgProblems",
+				func(execArgs, want []string) {
+					pos := 1
+					args := executable.ArgumentList{
+						{EnvKey: "KNOWN", Flag: "known"},
+						{EnvKey: "ENABLED", Flag: "enabled", Type: executable.ArgumentTypeBool},
+						{EnvKey: "FIRST", Pos: &pos},
+					}
+					Expect(env.InputArgProblems(args, execArgs)).To(Equal(want))
+				},
+				Entry("defined input", []string{"value", "--known", "v", "--enabled", "--known=v"}, nil),
+				Entry("a bool flag with a value", []string{"--enabled", "false"}, nil),
+				Entry("a bool flag with an ambiguous word", []string{"--enabled", "0"},
+					[]string{"--enabled 0 is ambiguous; write --enabled=0, or put the positional first"}),
+				Entry("a word after a separator", []string{"--", "--known"}, nil),
+				Entry("a mistyped flag", []string{"--knwon=v"}, []string{"unknown flag --knwon=v"}),
+				Entry("a flag at the end without a value", []string{"--known"}, []string{"--known needs a value"}),
+				Entry("a flag followed by a flag", []string{"--known", "--enabled"}, []string{"--known needs a value"}),
+				Entry("excess positionals", []string{"a", "b", "c"}, []string{"unexpected argument b c"}),
+				Entry("a single-dash flag and its value", []string{"-known", "v"}, []string{"unexpected argument v"}),
+			)
+
+			It("should treat all input as unexpected when no args are defined", func() {
+				Expect(env.InputArgProblems(nil, []string{"--x=1", "value"})).To(
+					Equal([]string{"unknown flag --x=1", "unexpected argument value"}))
+			})
+
+			It("should read a value after a bool flag and treat a word after a separator as positional", func() {
+				pos := 1
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{
+						{EnvKey: "TEST_BOOL_VALUE", Flag: "dry", Type: executable.ArgumentTypeBool},
+						{EnvKey: "TEST_AFTER_SEPARATOR", Pos: &pos},
+					},
+				}
+				_, err := env.SetEnv("", exec, []string{"--dry", "false", "--", "--literal"}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_BOOL_VALUE")).To(Equal("false"))
+				Expect(os.Getenv("TEST_AFTER_SEPARATOR")).To(Equal("--literal"))
+			})
+
+			It("should not type check an omitted optional arg", func() {
+				exec := &executable.ExecutableEnvironment{
+					Args: []executable.Argument{
+						{EnvKey: "TEST_OMITTED_BOOL", Flag: "dry", Type: executable.ArgumentTypeBool, Default: "false"},
+					},
+				}
+				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(os.Getenv("TEST_OMITTED_BOOL")).To(Equal("false"))
 			})
 
 			It("should not modify the input args slice", func() {

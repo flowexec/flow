@@ -111,7 +111,7 @@
       "type": "object",
       "properties": {
         "default": {
-          "description": "The default value to use if the argument is not provided.\nIf the argument is required and no default is provided, the executable will fail.\n",
+          "description": "The default value to use if the argument is not provided.\nIf the argument is required and no default is provided, the executable will fail.\n\n`$VAR` and `${VAR}` are expanded against the executable's environment, then the environment\nflow was started in. A variable that does not resolve is left as written. Use `$$` for a literal `$`.\n",
           "type": "string",
           "default": ""
         },

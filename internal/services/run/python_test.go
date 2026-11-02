@@ -42,6 +42,11 @@ var _ = Describe("Python", func() {
 	})
 
 	Describe("pythonEnv", func() {
+		BeforeEach(func() {
+			GinkgoT().Setenv("PYTHONUNBUFFERED", "")
+			GinkgoT().Setenv("PYTHONDONTWRITEBYTECODE", "")
+		})
+
 		It("adds unbuffered and no-bytecode defaults", func() {
 			out := strings.Join(run.PythonEnvForTest([]string{"A=1"}), "\n")
 			Expect(out).To(ContainSubstring("PYTHONUNBUFFERED=1"))

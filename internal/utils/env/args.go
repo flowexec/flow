@@ -1,6 +1,7 @@
 package env
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strconv"
@@ -37,11 +38,25 @@ func BuildChildArgsEnvMap(
 }
 
 func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[string]string, posArgs []string) {
+	flagArgs, posArgs, _ = scanArgs(args, execArgs)
+	return flagArgs, posArgs
+}
+
+// scanArgs is the one parser for an executable's input. problems describes every word it could not
+// assign; parseArgs ignores them, since the exec command has already rejected any at the top level.
+func scanArgs(
+	args executable.ArgumentList,
+	execArgs []string,
+) (flagArgs map[string]string, posArgs []string, problems []string) {
 	flagArgs = make(map[string]string)
 	posArgs = make([]string, 0)
 	knownFlags := args.Flags()
 	for i := 0; i < len(execArgs); i++ {
 		arg := execArgs[i]
+		if arg == "--" {
+			posArgs = append(posArgs, execArgs[i+1:]...)
+			break
+		}
 		if !strings.HasPrefix(arg, "--") {
 			posArgs = append(posArgs, arg)
 			continue
@@ -49,27 +64,61 @@ func parseArgs(args executable.ArgumentList, execArgs []string) (flagArgs map[st
 
 		// Strip the -- prefix
 		flagStr := strings.TrimPrefix(arg, "--")
+		name, value, hasValue := strings.Cut(flagStr, "=")
+		if !slices.Contains(knownFlags, name) {
+			problems = append(problems, "unknown flag "+arg)
+			continue
+		}
 
-		// Handle --flag=value
-		if name, value, ok := strings.Cut(flagStr, "="); ok {
-			if slices.Contains(knownFlags, name) {
-				flagArgs[name] = value
+		switch {
+		case hasValue:
+			flagArgs[name] = value
+		case args.FlagType(name) == executable.ArgumentTypeBool:
+			flagArgs[name] = strconv.FormatBool(true)
+			if i+1 < len(execArgs) && isBoolWord(execArgs[i+1]) {
+				i++
+				flagArgs[name] = execArgs[i]
+			} else if i+1 < len(execArgs) && isAmbiguousBoolWord(execArgs[i+1]) {
+				problems = append(problems, fmt.Sprintf(
+					"--%s %s is ambiguous; write --%s=%s, or put the positional first", name, execArgs[i+1], name, execArgs[i+1]))
 			}
-			continue
-		}
-
-		// Handle --flag (no value)
-		if !slices.Contains(knownFlags, flagStr) {
-			continue
-		}
-		if args.FlagType(flagStr) == executable.ArgumentTypeBool {
-			flagArgs[flagStr] = strconv.FormatBool(true)
-		} else if i+1 < len(execArgs) && !strings.HasPrefix(execArgs[i+1], "--") {
+		case i+1 < len(execArgs) && !strings.HasPrefix(execArgs[i+1], "--"):
 			i++
-			flagArgs[flagStr] = execArgs[i]
+			flagArgs[name] = execArgs[i]
+		default:
+			problems = append(problems, "--"+name+" needs a value")
 		}
 	}
-	return flagArgs, posArgs
+
+	maxPos := 0
+	for _, arg := range args {
+		if arg.Pos != nil && *arg.Pos > maxPos {
+			maxPos = *arg.Pos
+		}
+	}
+	if len(posArgs) > maxPos {
+		problems = append(problems, "unexpected argument "+strings.Join(posArgs[maxPos:], " "))
+	}
+	return flagArgs, posArgs, problems
+}
+
+func isBoolWord(word string) bool {
+	return word == strconv.FormatBool(true) || word == strconv.FormatBool(false)
+}
+
+// isAmbiguousBoolWord reports whether a word after a bare bool flag reads as its value in a form
+// other than true or false, such as False or 0, where it could also be a positional.
+func isAmbiguousBoolWord(word string) bool {
+	_, err := strconv.ParseBool(word)
+	return err == nil && !isBoolWord(word)
+}
+
+// InputArgProblems describes the words in execArgs an executable would not receive: an undefined
+// flag, a flag missing its value, or a positional past those it defines. Dropping these can leave
+// it running on defaults the caller meant to override, such as a mistyped --dry-run.
+func InputArgProblems(args executable.ArgumentList, execArgs []string) []string {
+	_, _, problems := scanArgs(args, execArgs)
+	return problems
 }
 
 func resolveArgValues(
@@ -148,7 +197,7 @@ func argValue(arg executable.Argument, env map[string]string) string {
 	if arg.IsSet() {
 		return arg.Value()
 	}
-	return ExpandAuthored(arg.Default, env)
+	return expandDefault(arg.Default, env)
 }
 
 func filterArgsWithOutputFile(args executable.ArgumentList) executable.ArgumentList {
