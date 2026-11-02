@@ -36,6 +36,10 @@ var _ = Describe("IsManagedClone", func() {
 		}
 		GinkgoT().Setenv(filesystem.FlowCacheDirEnvVar, filepath.Join(base, "link"))
 		Expect(git.IsManagedClone(clone)).To(BeTrue())
+
+		Expect(os.RemoveAll(clone)).To(Succeed())
+		deleted := filepath.Join(base, "link", "git-workspaces", "host", "repo")
+		Expect(git.IsManagedClone(deleted)).To(BeTrue(), "a deleted clone is still managed")
 	})
 })
 

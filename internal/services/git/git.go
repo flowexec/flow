@@ -79,11 +79,22 @@ func originURL(repoDir string) string {
 	return strings.TrimSpace(remote)
 }
 
+// resolvePath resolves symlinks in the part of path that exists, so that a deleted clone still
+// compares equal to the location it was cloned to.
 func resolvePath(path string) string {
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		path = resolved
+	path = filepath.Clean(path)
+	missing := ""
+	for current := path; ; {
+		if resolved, err := filepath.EvalSymlinks(current); err == nil {
+			return filesystem.NormalizePath(filepath.Join(resolved, missing))
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return filesystem.NormalizePath(path)
+		}
+		missing = filepath.Join(filepath.Base(current), missing)
+		current = parent
 	}
-	return filesystem.NormalizePath(path)
 }
 
 // DetectSource reads a clone's remote and what it has checked out: its branch, or the tag at a
