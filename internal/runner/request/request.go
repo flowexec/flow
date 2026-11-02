@@ -17,6 +17,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/utils/env"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/pkg/store"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -71,6 +72,7 @@ func (r *requestRunner) Exec(
 		Body:    body,
 		Timeout: requestSpec.Timeout,
 	}
+	store.MarkRunStarted()
 	resp, err := rest.SendRequest(&restRequest, requestSpec.ValidStatusCodes)
 	if err != nil {
 		return errors.Wrap(err, "request failed")

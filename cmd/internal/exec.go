@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	stdio "io"
+	"maps"
 	"os"
 	osExec "os/exec"
 	"os/signal"
@@ -853,7 +854,6 @@ type transientMeta struct {
 func recordRunStart(
 	ctx *context.Context, ref executable.Ref, startTime time.Time, prov provenance, meta transientMeta,
 ) {
-	store.MarkRunStarted()
 	if ctx.DataStore == nil || ctx.LogArchiveID == "" {
 		return
 	}
@@ -1035,30 +1035,58 @@ func pendingFormFields(
 		pending = append(pending, pendingFieldsFromParams(env.Params, envMap)...)
 	}
 
-	var childRefs []executable.Ref
+	var steps []composedStep
 	switch {
 	case rootExec.Serial != nil:
 		for _, child := range rootExec.Serial.Execs {
-			if child.Ref != "" {
-				childRefs = append(childRefs, child.Ref)
-			}
+			steps = append(steps, composedStep{ref: child.Ref, args: child.Args})
 		}
 	case rootExec.Parallel != nil:
 		for _, child := range rootExec.Parallel.Execs {
-			if child.Ref != "" {
-				childRefs = append(childRefs, child.Ref)
-			}
+			steps = append(steps, composedStep{ref: child.Ref, args: child.Args})
 		}
 	}
-	for _, ref := range childRefs {
-		childExec, err := ctx.ExecutableCache.GetExecutableByRef(ref)
+	for _, step := range steps {
+		if step.ref == "" {
+			continue
+		}
+		childExec, err := ctx.ExecutableCache.GetExecutableByRef(context.ExpandRefFromParent(rootExec, step.ref))
 		if err != nil {
 			continue
 		}
-		pending = append(pending, pendingFormFields(ctx, childExec, envMap)...)
+		pending = append(pending, pendingFormFields(ctx, childExec, childSuppliedEnv(rootExec, childExec, step, envMap))...)
 	}
 
 	return pending
+}
+
+// composedStep is what pendingFormFields needs from a serial or parallel step.
+type composedStep struct {
+	ref  executable.Ref
+	args []string
+}
+
+// childSuppliedEnv returns envMap plus the keys a child step receives without being asked: the
+// parent's params that hold a value, and the args written on the step. Only the keys matter.
+func childSuppliedEnv(
+	parent, child *executable.Executable, step composedStep, envMap map[string]string,
+) map[string]string {
+	supplied := maps.Clone(envMap)
+	if parentEnv := parent.Env(); parentEnv != nil {
+		for _, param := range parentEnv.Params {
+			if param.Prompt == "" && param.EnvKey != "" {
+				supplied[param.EnvKey] = ""
+			}
+		}
+	}
+	if childEnv := child.Env(); childEnv != nil && len(step.args) > 0 {
+		// Parsing sets values on the list it is given, so hand it a copy.
+		argEnv, err := env.BuildChildArgsEnvMap(slices.Clone(childEnv.Args), step.args, supplied)
+		if err == nil {
+			maps.Copy(supplied, argEnv)
+		}
+	}
+	return supplied
 }
 
 func pendingFieldsFromParams(params executable.ParameterList, envMap map[string]string) []*views.FormField {

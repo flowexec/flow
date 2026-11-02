@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 
+	tuikitIO "github.com/flowexec/tuikit/io"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -28,20 +29,15 @@ func HandleFatal(ctx *context.Context, cmd *cobra.Command, err error) {
 		return
 	}
 
-	format := outputFormat(cmd)
-
-	switch format {
-	case "json", "yaml", "yml":
-		writeEnvelope(ctx, format, err)
-		flowerrors.ExitFunc(exitCodeFor(err))
-		return
-	default:
-		exitText(err, exitCodeFor(err))
-	}
+	exitWith(ctx, cmd, err, exitCodeFor(err))
 }
 
 // HandleRunFailure reports a failed run and terminates the process with the failing command's status.
 func HandleRunFailure(ctx *context.Context, cmd *cobra.Command, err error, code int) {
+	exitWith(ctx, cmd, err, code)
+}
+
+func exitWith(ctx *context.Context, cmd *cobra.Command, err error, code int) {
 	format := outputFormat(cmd)
 	switch format {
 	case "json", "yaml", "yml":
@@ -55,9 +51,15 @@ func HandleRunFailure(ctx *context.Context, cmd *cobra.Command, err error, code 
 func exitText(err error, code int) {
 	if code == 1 {
 		logger.Log().FatalErr(err)
+		// FatalErr returns without exiting in hidden log mode.
+		flowerrors.ExitFunc(code)
 		return
 	}
-	logger.Log().Error(err.Error())
+	if logger.Log().LogMode() == tuikitIO.Text {
+		logger.Log().PlainTextError(err.Error())
+	} else {
+		logger.Log().Error(err.Error())
+	}
 	flowerrors.ExitMessageFunc(code, err.Error())
 }
 

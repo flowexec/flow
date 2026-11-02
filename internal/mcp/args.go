@@ -164,13 +164,18 @@ func dedupeExecutableDescription(output string) string {
 	return string(deduped)
 }
 
-// redactRemote strips credentials from a git remote URL before it reaches a client. SSH remotes and
-// scp-like addresses only hold a login name, so they pass through.
+// redactRemote strips credentials from a git remote URL before it reaches a client. An SSH remote
+// keeps its login name, and a scp-like address, which holds only that, passes through.
 func redactRemote(remote string) string {
 	parsed, err := url.Parse(remote)
-	if err != nil || parsed.User == nil || parsed.Scheme == "ssh" {
+	if err != nil || parsed.User == nil {
 		return remote
 	}
-	parsed.User = nil
+	if parsed.Scheme == "ssh" {
+		parsed.User = url.User(parsed.User.Username())
+	} else {
+		parsed.User = nil
+	}
+	parsed.RawQuery = ""
 	return parsed.String()
 }

@@ -273,6 +273,8 @@ TEST_ENV_VAR3=value3`
 				},
 				Entry("defined input", []string{"value", "--known", "v", "--enabled", "--known=v"}, nil),
 				Entry("a bool flag with a value", []string{"--enabled", "false"}, nil),
+				Entry("a bool flag with an ambiguous word", []string{"--enabled", "0"},
+					[]string{"--enabled 0 is ambiguous; write --enabled=0, or put the positional first"}),
 				Entry("a word after a separator", []string{"--", "--known"}, nil),
 				Entry("a mistyped flag", []string{"--knwon=v"}, []string{"unknown flag --knwon=v"}),
 				Entry("a flag at the end without a value", []string{"--known"}, []string{"--known needs a value"}),

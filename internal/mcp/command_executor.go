@@ -153,13 +153,11 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 	cmd.Dir = runDirFromContext(ctx)
 	cmd.Env = noColorEnv(os.Environ())
 
-	markerDir, err := os.MkdirTemp("", "flow-mcp-run-*")
-	if err != nil {
-		return "", err
+	startedFile, removeMarker := newRunMarker()
+	defer removeMarker()
+	if startedFile != "" {
+		cmd.Env = append(cmd.Env, store.RunStartedFileEnv+"="+startedFile)
 	}
-	defer os.RemoveAll(markerDir)
-	startedFile := filepath.Join(markerDir, "started")
-	cmd.Env = append(cmd.Env, store.RunStartedFileEnv+"="+startedFile)
 
 	if p, ok := provenanceFromContext(ctx); ok {
 		cmd.Env = append(cmd.Env,
@@ -177,8 +175,7 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		// waiting on a request that never got a response.
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			_, statErr := os.Stat(startedFile)
-			return string(output), &CLIExitError{Code: exitErr.ExitCode(), Started: statErr == nil}
+			return string(output), &CLIExitError{Code: exitErr.ExitCode(), Started: runStarted(startedFile)}
 		}
 		return string(output), err
 	}
@@ -194,6 +191,26 @@ func noColorEnv(environ []string) []string {
 		return name == "CLICOLOR_FORCE" || name == "FORCE_COLOR" || name == "TTY_FORCE"
 	})
 	return append(env, "NO_COLOR=1")
+}
+
+// newRunMarker returns a path for the CLI to create when a run starts, and a function to clean it
+// up. The path is empty if no temp directory is available, which shouldn't cost the call its run.
+func newRunMarker() (string, func()) {
+	dir, err := os.MkdirTemp("", "flow-mcp-run-*")
+	if err != nil {
+		return "", func() {}
+	}
+	return filepath.Join(dir, "started"), func() { _ = os.RemoveAll(dir) }
+}
+
+// runStarted reports whether the marker exists. Without a marker it can't tell, and says a run
+// started, since telling an agent nothing ran when something did is the costlier mistake.
+func runStarted(startedFile string) bool {
+	if startedFile == "" {
+		return true
+	}
+	_, err := os.Stat(startedFile)
+	return err == nil
 }
 
 // CLIExitError reports that the flow subprocess exited non-zero. The detail is in the captured

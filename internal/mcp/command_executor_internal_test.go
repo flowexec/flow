@@ -109,7 +109,7 @@ func TestExecuteContext_ReportsWhetherARunStarted(t *testing.T) {
 	}
 	script := "#!/bin/sh\n[ \"$1\" = started ] && : > \"$" + store.RunStartedFileEnv + "\"\nexit 7\n"
 	path := filepath.Join(t.TempDir(), "fake-flow")
-	if err := os.WriteFile(path, []byte(script), 0700); err != nil { //nolint:gosec
+	if err := os.WriteFile(path, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv(cliBinaryEnvKey, path)
@@ -123,5 +123,23 @@ func TestExecuteContext_ReportsWhetherARunStarted(t *testing.T) {
 		if exitErr.Code != 7 || exitErr.Started != wantStarted {
 			t.Errorf("%s: got %+v, want code 7 and started %v", arg, *exitErr, wantStarted)
 		}
+	}
+}
+
+func TestExecuteContext_RunsWithoutATempDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stand-in is not portable to Windows")
+	}
+	path := filepath.Join(t.TempDir(), "fake-flow")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho ran\nexit 3\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(cliBinaryEnvKey, path)
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "missing"))
+
+	out, err := (&FlowCLIExecutor{}).ExecuteContext(context.Background())
+	var exitErr *CLIExitError
+	if !errors.As(err, &exitErr) || !exitErr.Started || !strings.Contains(out, "ran") {
+		t.Errorf("got output %q and error %v, want the run to happen and report started", out, err)
 	}
 }

@@ -1,6 +1,7 @@
 package env
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strconv"
@@ -74,9 +75,12 @@ func scanArgs(
 			flagArgs[name] = value
 		case args.FlagType(name) == executable.ArgumentTypeBool:
 			flagArgs[name] = strconv.FormatBool(true)
-			if i+1 < len(execArgs) && (execArgs[i+1] == "true" || execArgs[i+1] == "false") {
+			if i+1 < len(execArgs) && isBoolWord(execArgs[i+1]) {
 				i++
 				flagArgs[name] = execArgs[i]
+			} else if i+1 < len(execArgs) && isAmbiguousBoolWord(execArgs[i+1]) {
+				problems = append(problems, fmt.Sprintf(
+					"--%s %s is ambiguous; write --%s=%s, or put the positional first", name, execArgs[i+1], name, execArgs[i+1]))
 			}
 		case i+1 < len(execArgs) && !strings.HasPrefix(execArgs[i+1], "--"):
 			i++
@@ -96,6 +100,17 @@ func scanArgs(
 		problems = append(problems, "unexpected argument "+strings.Join(posArgs[maxPos:], " "))
 	}
 	return flagArgs, posArgs, problems
+}
+
+func isBoolWord(word string) bool {
+	return word == strconv.FormatBool(true) || word == strconv.FormatBool(false)
+}
+
+// isAmbiguousBoolWord reports whether a word after a bare bool flag reads as its value in a form
+// other than true or false, such as False or 0, where it could also be a positional.
+func isAmbiguousBoolWord(word string) bool {
+	_, err := strconv.ParseBool(word)
+	return err == nil && !isBoolWord(word)
 }
 
 // InputArgProblems describes the words in execArgs an executable would not receive: an undefined

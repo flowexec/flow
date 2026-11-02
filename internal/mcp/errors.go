@@ -60,6 +60,9 @@ func executionFailure(message, output string, err error) *mcp.CallToolResult {
 	}
 	capped, truncated := capOutput(output)
 	tail := strings.TrimSpace(capped)
+	if tail == "" && exitErr == nil {
+		tail = err.Error()
+	}
 	if len(tail) > maxFailureMessageBytes {
 		tail = tail[len(tail)-maxFailureMessageBytes:]
 	}

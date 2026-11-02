@@ -114,6 +114,7 @@ func TestRedactRemote(t *testing.T) {
 		"https://ghp_token@example.com/r.git":  "https://example.com/r.git",
 		"https://example.com/r.git":            "https://example.com/r.git",
 		"ssh://git@example.com/r.git":          "ssh://git@example.com/r.git",
+		"ssh://git:pw@example.com/r.git":       "ssh://git@example.com/r.git",
 		"git@example.com:org/r.git":            "git@example.com:org/r.git",
 	}
 	for input, want := range tests {

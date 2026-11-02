@@ -18,7 +18,8 @@ executable that defines no arguments. A step's `args:` in a serial or parallel e
 checked.
 
 `--dry false` on a boolean flag now sets it to `false`, where it used to set `true` and drop the
-word. A `--` after the first one makes the words after it positional. An omitted optional argument
+word. Other spellings such as `--dry 0` are errors, since they could be a positional; write
+`--dry=0`. An empty value such as `--target=` still falls back to the default. A `--` after the first one makes the words after it positional. An omitted optional argument
 with a `type` no longer fails type validation.
 
 **How to migrate:** Remove the input, correct it, or define it under the executable's `args`.
@@ -26,8 +27,9 @@ with a `type` no longer fails type validation.
 ### Exit Codes
 
 **What changed:** A failed run used to exit 1. flow now exits with the failing command's own status.
-Input flow rejects exits 2 in every output mode, where it used to exit 2 only with `--output json`
-or `yaml`. Other failures inside flow still exit 1.
+Input flow rejects before looking at values exits 2 in every output mode, where it used to exit 2
+only with `--output json` or `yaml`. Other failures inside flow, such as a missing required argument
+or secret, still exit 1.
 
 **How to migrate:** Scripts testing for a non-zero exit need no change. Update any that test for
 exactly `1`.
@@ -55,8 +57,8 @@ config. Existing clones migrate on the next `flow sync --git` or `flow workspace
 - A failed run from `execute`, `run_command`, `run_python`, or `run_executable` now returns
   `isError: true`, with `output` and `exitCode` in the structured result.
 - `get_workspace` returns an error for an unknown name instead of an empty workspace.
-- A failed call has a `started` field. When it is `false` nothing ran and the error code is
-  `NOT_STARTED`. `exitCode` is otherwise the failing command's own status.
+- A failed call has a `started` field. When it is `false` no command ran and the error code is
+  `NOT_STARTED`. `exitCode` is otherwise the failing command's own status, or 1 for a timeout.
 - A prompt param without a value in `params` fails the call. It used to run with an empty value.
 - `execute` `args` are split shell-style and always go to the executable, so they can no longer
   set flow's own flags such as `--param` or `--background`. A verb or ID starting with `-` is rejected.
