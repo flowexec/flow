@@ -31,7 +31,9 @@ var _ = Describe("IsManagedClone", func() {
 		base := GinkgoT().TempDir()
 		clone := filepath.Join(base, "real", "git-workspaces", "host", "repo")
 		Expect(os.MkdirAll(clone, 0750)).To(Succeed())
-		Expect(os.Symlink(filepath.Join(base, "real"), filepath.Join(base, "link"))).To(Succeed())
+		if err := os.Symlink(filepath.Join(base, "real"), filepath.Join(base, "link")); err != nil {
+			Skip("symlinks are unavailable: " + err.Error())
+		}
 		GinkgoT().Setenv(filesystem.FlowCacheDirEnvVar, filepath.Join(base, "link"))
 		Expect(git.IsManagedClone(clone)).To(BeTrue())
 	})
@@ -138,6 +140,8 @@ var _ = Describe("RepairWorkspaceConfig", func() {
 		run("init", "-b", "main")
 		run("config", "user.email", "test@test.com")
 		run("config", "user.name", "Test")
+		// The specs compare bytes, which a Windows checkout would otherwise convert to CRLF.
+		run("config", "core.autocrlf", "false")
 		writeConfig(upstream)
 		run("add", "flow.yaml")
 		run("commit", "-m", "initial")
