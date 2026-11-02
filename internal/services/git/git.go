@@ -59,19 +59,41 @@ func clonesDir() string {
 // IsManagedClone reports whether repoDir is a clone flow made under its cache directory, as opposed
 // to a checkout the user owns.
 func IsManagedClone(repoDir string) bool {
-	rel, err := filepath.Rel(filesystem.NormalizePath(clonesDir()), filesystem.NormalizePath(repoDir))
+	rel, err := filepath.Rel(resolvePath(clonesDir()), resolvePath(repoDir))
 	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// IsCloneOf reports whether repoDir is the root of a repository whose origin is remote. It
+// recognizes a managed clone after the cache directory's path has changed.
+func IsCloneOf(repoDir, remote string) bool {
+	return IsRepoRoot(repoDir) && originURL(repoDir) == remote
+}
+
+// originURL returns origin as configured, not with url.insteadOf applied, which could add
+// credentials that shouldn't be recorded.
+func originURL(repoDir string) string {
+	remote, err := gitOutput(repoDir, "config", "--get", "remote.origin.url")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(remote)
+}
+
+func resolvePath(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
+	return filesystem.NormalizePath(path)
 }
 
 // DetectSource reads a clone's remote and what it has checked out: its branch, or the tag at a
 // detached HEAD. Earlier versions of flow could lose this metadata, leaving the clone as the only
 // record of it.
 func DetectSource(repoDir string) (remote, ref, refType string, err error) {
-	remote, err = gitOutput(repoDir, "remote", "get-url", "origin")
-	if err != nil {
-		return "", "", "", err
+	remote = originURL(repoDir)
+	if remote == "" {
+		return "", "", "", fmt.Errorf("%s has no origin remote", repoDir)
 	}
-	remote = strings.TrimSpace(remote)
 	if branch, err := gitOutput(repoDir, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 		return remote, strings.TrimSpace(branch), "branch", nil
 	}
@@ -90,15 +112,7 @@ func IsRepoRoot(dir string) bool {
 	if err != nil {
 		return false
 	}
-	resolvedDir, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return false
-	}
-	resolvedTop, err := filepath.EvalSymlinks(strings.TrimSpace(top))
-	if err != nil {
-		return false
-	}
-	return filesystem.NormalizePath(resolvedDir) == filesystem.NormalizePath(resolvedTop)
+	return resolvePath(dir) == resolvePath(strings.TrimSpace(top))
 }
 
 // RepairWorkspaceConfig undoes what flow did to flow.yaml in a managed clone, so that it can't block
@@ -159,7 +173,9 @@ func isEncodingWithGitFields(current []byte, base *workspace.Workspace) bool {
 		return false
 	}
 	expected := *base
-	expected.GitRemote, expected.GitRef, expected.GitRefType = currentCfg.GitRemote, currentCfg.GitRef, currentCfg.GitRefType
+	expected.GitRemote = currentCfg.GitRemote
+	expected.GitRef = currentCfg.GitRef
+	expected.GitRefType = currentCfg.GitRefType
 	return bytes.Equal(current, encodeWorkspace(&expected))
 }
 
@@ -235,6 +251,10 @@ func ResetPull(repoDir, ref, refType string) error {
 		return fmt.Errorf("git repo %s does not exist: %w", repoDir, err)
 	} else if !info.IsDir() {
 		return fmt.Errorf("git repo %s is not a directory", repoDir)
+	}
+
+	if !IsRepoRoot(repoDir) {
+		return fmt.Errorf("%s is not the root of a git repository; refusing to reset the repository enclosing it", repoDir)
 	}
 
 	if refType == refTypeTag {

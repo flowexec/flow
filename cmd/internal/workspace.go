@@ -178,11 +178,12 @@ func cloneGitWorkspace(name, gitURL, branch, tag string, depth int) (string, con
 // recovering it from the clone if an earlier version of flow left it there or lost it, and repairs
 // flow.yaml. A checkout the user owns is left alone: its flow.yaml is the only source of truth.
 func prepareGitWorkspacePull(ctx *context.Context, name, path string) (*workspace.Workspace, error) {
-	managed := git.IsManagedClone(path)
+	source, recorded := ctx.Config.GitWorkspaces[name]
+	managed := git.IsManagedClone(path) || (recorded && git.IsCloneOf(path, source.Remote))
 	if managed && !git.IsRepoRoot(path) {
 		return nil, fmt.Errorf(
-			"clone at %s is missing or is not a git repository; delete it, "+
-				"run 'flow workspace remove %s', and add the workspace again", path, name)
+			"clone at %s is missing or is not a git repository; delete it, switch away if it is the "+
+				"current workspace, run 'flow workspace remove %s', and add the workspace again", path, name)
 	}
 
 	wsCfg, err := filesystem.LoadWorkspaceConfig(name, path)
@@ -195,6 +196,11 @@ func prepareGitWorkspacePull(ctx *context.Context, name, path string) (*workspac
 		remote, ref, refType, err := git.DetectSource(path)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to detect git source of clone")
+		}
+		if ref == "" {
+			return nil, fmt.Errorf(
+				"clone at %s has a detached HEAD and no recorded branch or tag; remove the workspace "+
+					"and add it again with --branch or --tag", path)
 		}
 		wsCfg.GitRemote, wsCfg.GitRef, wsCfg.GitRefType = remote, ref, workspace.WorkspaceGitRefType(refType)
 	}

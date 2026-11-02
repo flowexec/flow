@@ -26,6 +26,15 @@ var _ = Describe("IsManagedClone", func() {
 		Expect(git.IsManagedClone("/cache/flow/git-workspaces-other/repo")).To(BeFalse())
 		Expect(git.IsManagedClone("/home/me/repo")).To(BeFalse())
 	})
+
+	It("sees through a symlinked cache directory", func() {
+		base := GinkgoT().TempDir()
+		clone := filepath.Join(base, "real", "git-workspaces", "host", "repo")
+		Expect(os.MkdirAll(clone, 0750)).To(Succeed())
+		Expect(os.Symlink(filepath.Join(base, "real"), filepath.Join(base, "link"))).To(Succeed())
+		GinkgoT().Setenv(filesystem.FlowCacheDirEnvVar, filepath.Join(base, "link"))
+		Expect(git.IsManagedClone(clone)).To(BeTrue())
+	})
 })
 
 var _ = Describe("DetectSource", func() {
@@ -77,6 +86,11 @@ var _ = Describe("DetectSource", func() {
 		expectSource("", "")
 	})
 
+	It("recognizes its clone by the configured origin", func() {
+		Expect(git.IsCloneOf(repo, "https://example.com/org/repo.git")).To(BeTrue())
+		Expect(git.IsCloneOf(repo, "https://example.com/org/other.git")).To(BeFalse())
+	})
+
 	It("fails without an origin remote", func() {
 		run("remote", "remove", "origin")
 		_, _, _, err := git.DetectSource(repo)
@@ -97,6 +111,7 @@ var _ = Describe("IsRepoRoot", func() {
 		Expect(git.IsRepoRoot(sub)).To(BeFalse())
 		Expect(git.IsRepoRoot(filepath.Join(repo, "missing"))).To(BeFalse())
 		Expect(git.IsRepoRoot(GinkgoT().TempDir())).To(BeFalse())
+		Expect(git.ResetPull(sub, "", "")).To(MatchError(ContainSubstring("refusing to reset")))
 	})
 })
 
