@@ -44,6 +44,10 @@ func ChildEnvAndArgs(
 			childArgs = append(childArgs, envUtils.ExpandAuthored(arg, childEnv))
 		}
 		buildEnvMap = envUtils.BuildChildArgsEnvMap
+		// Only a warning: an error here could stop a flow that works today, partway through.
+		for _, problem := range envUtils.InputArgProblems(execEnv.Args, childArgs) {
+			logger.Log().Warnf("%s step args: %s", child.Ref().String(), problem)
+		}
 	} else {
 		childArgs = envUtils.BuildArgsFromEnv(execEnv.Args, childEnv)
 	}

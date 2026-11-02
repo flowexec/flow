@@ -98,6 +98,18 @@ var _ = Describe("python exec e2e", func() {
 		})
 	})
 
+	DescribeTable("rejects arguments that a transient run can't receive",
+		func(flag, value string) {
+			runner := utils.NewE2ECommandRunner()
+			ctx.ExpectFailure()
+			err := runner.Run(ctx.Context, "exec", flag, value, "--", "--typo")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("don't take arguments, got: --typo")))
+		},
+		Entry("--cmd", "--cmd", "echo should-not-run"),
+		Entry("--spec", "--spec", `{"verb":"run","exec":{"cmd":"echo should-not-run"}}`),
+	)
+
 	When("running an ad-hoc command with --interpreter", func() {
 		It("runs the command as python", func() {
 			runner := utils.NewE2ECommandRunner()

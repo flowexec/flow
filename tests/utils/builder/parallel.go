@@ -15,7 +15,7 @@ func ParallelExecByRefConfig(opts ...Option) *executable.Executable {
 		Parallel: &executable.ParallelExecutableType{
 			Execs: []executable.ParallelRefConfig{
 				{Ref: e1.Ref()},
-				{Ref: e2.Ref(), Args: []string{"hello", "x=123"}},
+				{Ref: e2.Ref(), Args: []string{"hello", "--x=123"}},
 				{Cmd: "echo 'hello from serial command'"},
 			},
 		},

@@ -279,6 +279,36 @@ var _ = Describe("SerialRunner", func() {
 			)).To(Succeed())
 		})
 
+		It("should warn about step args the child does not define and still run it", func() {
+			parentExec := &executable.Executable{
+				Serial: &executable.SerialExecutableType{
+					Execs: []executable.SerialRefConfig{{
+						Ref:  "test:child",
+						Args: []string{"--vra=value"},
+					}},
+				},
+			}
+			parentExec.SetContext("test", "/test", "test", "/test/parent.flow")
+
+			childExec := &executable.Executable{
+				Exec: &executable.ExecExecutableType{
+					Cmd:  "echo $OUTER",
+					Args: executable.ArgumentList{{EnvKey: "OUTER", Flag: "var", Default: "fallback"}},
+				},
+			}
+			childExec.SetContext("test", "/test", "test", "/test/child.flow")
+			ctx.ExecutableCache.EXPECT().GetExecutableByRef(gomock.Any()).Return(childExec, nil).Times(1)
+
+			ctx.Logger.EXPECT().Warnf(gomock.Any(), gomock.Any(), "unknown flag --vra=value").Times(1)
+			ctx.RunnerMock.EXPECT().IsCompatible(gomock.Any()).Return(true).Times(1)
+			ctx.RunnerMock.EXPECT().
+				Exec(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).Times(1)
+
+			expectEngineRun(mockEngine)
+			Expect(serialRnr.Exec(ctx.Ctx, parentExec, mockEngine, make(map[string]string), nil)).To(Succeed())
+		})
+
 		It("should pass environment args from parent to child executables", func() {
 			pos1 := 1
 			parentExec := &executable.Executable{

@@ -171,7 +171,7 @@ flow build container -- v1.2.3 --publish=true --registry=my-registry.com
 > The previous `flag=value` format (e.g., `flow build container v1.2.3 publish=true`) is no longer supported.
 > Use `--` to separate flow flags from executable arguments, and prefix flag names with `--`.
 
-Input the executable doesn't define is an error, and nothing runs. A failed run exits with the failing
+Input the executable doesn't define is an error, and nothing runs. In a step's `args:` it logs a warning instead. A failed run exits with the failing
 command's own status, and rejected input exits 2.
 
 **Argument types:**

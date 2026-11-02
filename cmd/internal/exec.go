@@ -145,18 +145,7 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 
-	// Ad-hoc / transient modes: run something not resolved from the executable cache.
-	adhocCmds := flags.ValueFor[[]string](cmd, *flags.CmdFlag, false)
-	spec := flags.ValueFor[string](cmd, *flags.SpecFlag, false)
-	switch {
-	case len(adhocCmds) > 0 && spec != "":
-		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
-		return
-	case len(adhocCmds) > 0:
-		execAdHoc(ctx, cmd, verb, adhocCmds)
-		return
-	case spec != "":
-		execTransientSpec(ctx, cmd, verb, spec)
+	if execTransient(ctx, cmd, verb, args) {
 		return
 	}
 
@@ -216,6 +205,28 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	}
 	logger.Log().Debug(fmt.Sprintf("%s flow completed", ref), "Elapsed", dur.Round(time.Millisecond))
 	sendCompletionNotifications(ctx, cmd, dur)
+}
+
+// execTransient runs something not resolved from the executable cache, if --cmd or --spec asks for
+// it, and reports whether it did. Neither mode receives args, so any given would be dropped.
+func execTransient(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, args []string) bool {
+	adhocCmds := flags.ValueFor[[]string](cmd, *flags.CmdFlag, false)
+	spec := flags.ValueFor[string](cmd, *flags.SpecFlag, false)
+	if len(adhocCmds) == 0 && spec == "" {
+		return false
+	}
+
+	switch {
+	case len(adhocCmds) > 0 && spec != "":
+		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
+	case len(args) > 0:
+		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec don't take arguments, got: %s", strings.Join(args, " "))
+	case len(adhocCmds) > 0:
+		execAdHoc(ctx, cmd, verb, adhocCmds)
+	default:
+		execTransientSpec(ctx, cmd, verb, spec)
+	}
+	return true
 }
 
 // executableInputArgs returns the args for the executable itself; the first is its ID.

@@ -14,8 +14,8 @@ This page documents changes that require you to update existing flow files, conf
 **What changed:** Input an executable doesn't define used to be dropped, and the executable ran
 anyway on its defaults. `flow build app -- --relase` now fails before anything runs, as does a
 positional past those it defines, a non-boolean flag without a value, and any of these for an
-executable that defines no arguments. A step's `args:` in a serial or parallel executable are not
-checked.
+executable that defines no arguments, or any arguments given with `--cmd` or `--spec`. A step's
+`args:` in a serial or parallel executable log a warning instead, so existing flows keep working.
 
 `--dry false` on a boolean flag now sets it to `false`, where it used to set `true` and drop the
 word. Other spellings such as `--dry 0` are errors, since they could be a positional; write
