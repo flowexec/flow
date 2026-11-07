@@ -17,7 +17,7 @@ flow logs
 
 This shows a table of recent executions with the executable reference, time, duration, status, and origin (which client launched the run). Press `Enter` to view full details and log output for any entry.
 
-Each record is **lifecycle-aware**: it appears as `running` the moment a run starts and updates to `completed` or `failed` when it finishes, or `cancelled` when flow is interrupted or terminated (Ctrl-C, `SIGTERM`, `flow logs kill`) — so an in-progress foreground run is visible from another terminal, not just after it exits. (A run whose process dies without recording its outcome, such as on `SIGKILL`, is reconciled to `failed` the next time you view history.)
+Each record is **lifecycle-aware**: it appears as `running` the moment a run starts and updates to `completed` or `failed` when it finishes, or `cancelled` when flow is interrupted or terminated (Ctrl-C, `SIGTERM`, `flow logs kill`). An in-progress foreground run is visible from another terminal, not just after it exits. (A run whose process dies without recording its outcome, such as on `SIGKILL`, is reconciled to `failed` the next time you view history.)
 
 **TUI keyboard shortcuts:**
 
@@ -74,7 +74,7 @@ Filters work with all output modes (`--last`, `-o yaml`, TUI, etc.).
 
 ### By Origin (Provenance)
 
-Every run records **where it came from**: `cli` for a run you started, or `mcp` for one launched by an AI assistant through the [MCP server](ai-tools.md) — along with the client name and session ID for MCP runs. This turns history into an audit trail of what an assistant did on your behalf.
+Every run records **where it came from**: `cli` for a run you started, or `mcp` for one launched by an AI assistant through the [MCP server](ai-tools.md), along with the client name and session ID for MCP runs. This turns history into an audit trail of what an assistant did on your behalf.
 
 ```shell
 flow logs --source mcp               # only runs launched by an AI client
@@ -83,12 +83,12 @@ flow logs --client cursor            # runs launched by a specific client
 flow logs --source mcp --status failed
 ```
 
-An assistant connected over MCP can review its own runs the same way — see [AI Tools → Observability](ai-tools.md#observability).
+An assistant connected over MCP can review its own runs the same way. See [AI Tools → Observability](ai-tools.md#observability).
 
 ## Background Execution
 
 Run any executable in the background to free up your terminal for other work. The process is detached and tracked
-automatically — you can check on it, read its output, or terminate it at any time.
+automatically. You can check on it, read its output, or terminate it at any time.
 
 ### Starting a Background Run
 
@@ -147,6 +147,12 @@ flow logs clear verb ws/ns:name
 
 > [!NOTE]
 > Clearing history also removes the associated log archive files.
+
+<MochiRef placement="history" title="Search your history, and ask why a run failed">
+
+Mochi, the desktop app built on flow, reads this same history. It adds search ranked by what you run most, stats on what fails and where the time goes, and an explanation of a failed run from its log.
+
+</MochiRef>
 
 ## What's Next?
 

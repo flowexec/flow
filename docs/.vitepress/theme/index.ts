@@ -9,6 +9,7 @@ import NumberedSection from './NumberedSection.vue'
 import CardGrid from './CardGrid.vue'
 import Card from './Card.vue'
 import NowStrip from './NowStrip.vue'
+import MochiRef from './MochiRef.vue'
 import './custom.css'
 
 export default {
@@ -23,5 +24,6 @@ export default {
         app.component('CardGrid', CardGrid)
         app.component('Card', Card)
         app.component('NowStrip', NowStrip)
+        app.component('MochiRef', MochiRef)
     },
 } satisfies Theme

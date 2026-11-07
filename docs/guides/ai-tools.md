@@ -166,6 +166,12 @@ The assistant can review its own activity too: `get_execution_logs` accepts the 
 
 How flow decides which session a run belongs to — including how an application embedding the server can name it per tool call — is covered in [Run Provenance](run-provenance.md#what-a-session-is).
 
+<MochiRef placement="ai-tools" title="Decide which repos an agent may run tasks in">
+
+Mochi, the desktop app built on flow, adds workspace trust on top of this server: an agent runs tasks only in workspaces you have vouched for, and its runs sit next to yours in one history.
+
+</MochiRef>
+
 ## llms.txt
 
 flow publishes an [`llms.txt`](https://flowexec.io/llms.txt) index following the [llmstxt.org](https://llmstxt.org) standard — a plain-text map of all documentation pages and schemas. Tools that support it can pull the full docs in one request.
