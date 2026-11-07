@@ -16,7 +16,7 @@ import (
 func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	getWorkspace := mcp.NewTool("get_workspace",
 		mcp.WithString("workspace_name", mcp.Required(), mcp.Description("Registered workspace name")),
-		mcp.WithDescription("Get details about a registered flow workspaces"),
+		mcp.WithDescription("Get a registered workspace's details, including its full description"),
 	)
 	getWorkspace.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a specific workspace by name",
@@ -28,7 +28,7 @@ func addWorkspaceTools(srv *server.MCPServer, executor CommandExecutor) {
 	listWorkspaces := mcp.NewTool("list_workspaces",
 		mcp.WithDescription("List all registered flow workspaces as compact summaries. "+
 			"Use get_workspace for a workspace's full description."),
-		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
+		mcp.WithString("cursor", mcp.Description("Next-page cursor")),
 	)
 	listWorkspaces.Annotations = mcp.ToolAnnotation{
 		Title:           "List workspaces",
