@@ -194,6 +194,7 @@ var _ = Describe("config e2e", Ordered, func() {
 		It("sets the given limits and keeps the rest", func() {
 			Expect(run.Run(ctx.Context, "config", "set", "log-retention", "--max-age", "168h", "--max-count", "0")).
 				To(Succeed())
+			utils.ResetTestContext(ctx, GinkgoTB())
 			Expect(run.Run(ctx.Context, "config", "set", "log-retention", "--max-size-mb", "100")).To(Succeed())
 			out, err := readFileContent(ctx.StdOut())
 			Expect(err).NotTo(HaveOccurred())
