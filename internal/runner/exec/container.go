@@ -16,6 +16,7 @@ import (
 
 	"github.com/flowexec/flow/v2/internal/services/run"
 	"github.com/flowexec/flow/v2/pkg/logger"
+	"github.com/flowexec/flow/v2/types/config"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -43,11 +44,12 @@ func buildContainerSpec(
 	e *executable.Executable,
 	targetDir string,
 	envMap map[string]string,
+	cfg *config.Config,
 ) (spec run.ContainerSpec, cleanup func(), err error) {
 	cleanup = func() {}
 	c := e.Exec.Container
 
-	rt, err := resolveRuntimeFn(string(c.Runtime))
+	rt, err := resolveRuntimeFn(string(c.Runtime), cfg)
 	if err != nil {
 		return run.ContainerSpec{}, cleanup, err
 	}

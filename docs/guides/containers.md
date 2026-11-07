@@ -38,7 +38,7 @@ executable changes — it still composes, still takes parameters, still appears 
 | Field | Default | What it does |
 |-------|---------|--------------|
 | `image` | *required* | Image to run in, e.g. `golang:1.26-alpine` |
-| `runtime` | `auto` | `docker` or `podman`; `auto` prefers Docker and falls back to Podman |
+| `runtime` | `auto` | `docker` or `podman`; `auto` uses [this machine's choice](#choosing-the-runtime-on-your-machine) |
 | `workdir` | the executable's `dir` | Working directory inside the container |
 | `mountWorkspace` | `/workspace` | Where the workspace root is mounted |
 | `volumes` | `[]` | Extra bind mounts, `host:container` or `host:container:options` |
@@ -111,6 +111,30 @@ image work with no further configuration.
 
 Setting `entrypoint: ""` hands execution to the image's own `ENTRYPOINT`; with Python that only
 works if the image's entrypoint is itself an interpreter.
+
+### Choosing the runtime on your machine
+
+A flow file says which runtime a step expects, and stays the same on every machine. Which engine
+actually runs it is a machine setting, kept in your flow config:
+
+```shell
+# What `runtime: auto` uses here. Left on auto, flow picks docker, else podman, and when both
+# are installed it prefers the one whose engine is running.
+flow config set container-runtime podman
+
+# Run docker with global flags, e.g. a Colima context, or Podman against a remote machine
+flow config set container-command docker docker -- --context colima
+flow config set container-command podman podman -- --connection build-vm
+
+# Run a different command for a runtime; it must accept that runtime's `run` and `rm` flags
+flow config set container-command docker /opt/homebrew/bin/docker
+
+# Back to the default
+flow config set container-command docker docker
+```
+
+Colima, OrbStack and Rancher Desktop (with the moby engine) all work as `docker`, and the docker CLI
+also follows `DOCKER_HOST` and your current Docker context without any setting here.
 
 > [!TIP]
 > Reach for a container when the *toolchain* is the problem — a pinned compiler, a linter you do not

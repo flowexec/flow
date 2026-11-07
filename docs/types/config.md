@@ -23,6 +23,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
 | `colorOverride` | [ColorPalette](#colorpalette) |  |  | Override the default color palette for the interactive UI. This can be used to customize the colors of the UI.  |
+| `container` | [Container](#container) |  |  | How container executables run on this machine: the runtime `auto` uses, and the command and global flags for each runtime. Manage it with `flow config set container-runtime` and `flow config set container-command`.  |
 | `currentNamespace` | `string` |  |  | The name of the current namespace.  Namespaces are used to reference executables in the CLI using the format `workspace/namespace:name`. If the namespace is not set, only executables defined without a namespace will be discovered.  |
 | `currentVault` | `string` |  |  | The name of the currently active vault. |
 | `currentWorkspace` | `string` |  |  | The name of the current workspace. This should match a key in the `workspaces` or `remoteWorkspaces` map. |
@@ -65,6 +66,40 @@ If unset, the default color for the current theme will be used.
 | `tertiary` | `string` |  |  |  |
 | `warning` | `string` |  |  |  |
 | `white` | `string` |  |  |  |
+
+### Container
+
+How this machine runs container executables. A flow file's `container.runtime` says which
+runtime an executable expects; this says what that means here, so flow files stay portable.
+
+**Type:** `object`
+
+| Field | Type | Default | Required | Description |
+| ----- | ---- | ------- | :------: | ----------- |
+| `runtime` | `string` | auto |  | The runtime an executable set to `auto` uses on this machine. `auto` detects one: docker, else podman, preferring an engine that is running when both are installed.  |
+| `runtimes` | [ContainerRuntimes](#containerruntimes) |  |  |  |
+
+### ContainerRuntimeCommand
+
+The command this machine runs for one container runtime family, in place of the default
+`docker` or `podman` on the PATH. Use it for a Docker-compatible CLI or a specific engine.
+
+**Type:** `object`
+
+| Field | Type | Default | Required | Description |
+| ----- | ---- | ------- | :------: | ----------- |
+| `args` | `array` (`string`) | [] |  | Global flags placed before every subcommand, e.g. `["--context", "colima"]` for docker or `["--connection", "remote"]` for podman.  |
+| `command` | `string` |  |  | The command or path to run, e.g. `/opt/homebrew/bin/docker` or `finch`. Defaults to the family name. Any replacement must accept the same `run` and `rm` flags as that runtime.  |
+
+### ContainerRuntimes
+
+Per-family commands for container runtimes on this machine.
+**Type:** `object`
+
+| Field | Type | Default | Required | Description |
+| ----- | ---- | ------- | :------: | ----------- |
+| `docker` | [ContainerRuntimeCommand](#containerruntimecommand) |  |  |  |
+| `podman` | [ContainerRuntimeCommand](#containerruntimecommand) |  |  |  |
 
 ### GitSource
 

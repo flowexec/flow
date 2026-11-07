@@ -31,7 +31,14 @@ func SetLookPathForTest(fn func(string) (string, error)) func() {
 func ResetRuntimeCacheForTest() {
 	autoRuntimeMu.Lock()
 	defer autoRuntimeMu.Unlock()
-	autoRuntime = ""
+	autoRuntime = map[string]Runtime{}
+}
+
+// SetEngineRunningForTest swaps the engine probe seam and returns a restore func.
+func SetEngineRunningForTest(fn func(command string, args []string) bool) func() {
+	prev := engineRunning
+	engineRunning = fn
+	return func() { engineRunning = prev }
 }
 
 // EnvValueForTest exposes envValue.

@@ -36,6 +36,9 @@ func (c *Config) Validate() error {
 	if err := c.LogRetention.validate(); err != nil {
 		return err
 	}
+	if err := c.Container.validate(); err != nil {
+		return err
+	}
 	for i, v := range c.CustomVerbs {
 		if err := executable.ValidateCustomVerbName(v); err != nil {
 			return fmt.Errorf("invalid custom verb: %w", err)
@@ -216,6 +219,9 @@ func (c *Config) Markdown() string {
 		general += fmt.Sprintf("**Log Mode:** %s\n\n", c.DefaultLogMode)
 	}
 	general += fmt.Sprintf("**Log Retention:** %s\n\n", c.LogRetentionSummary())
+	if c.Container != nil {
+		general += fmt.Sprintf("**Containers:** %s\n\n", c.ContainerSummary())
+	}
 	if len(c.CustomVerbs) > 0 {
 		general += fmt.Sprintf("**Custom Verbs:** %s\n\n", strings.Join(c.CustomVerbs, ", "))
 	}

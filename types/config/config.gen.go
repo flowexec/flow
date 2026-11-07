@@ -73,6 +73,14 @@ type Config struct {
 	//
 	ColorOverride *ColorPalette `json:"colorOverride,omitempty" yaml:"colorOverride,omitempty" mapstructure:"colorOverride,omitempty"`
 
+	// How container executables run on this machine: the runtime `auto` uses, and the
+	// command and
+	// global flags for each runtime. Manage it with `flow config set
+	// container-runtime` and
+	// `flow config set container-command`.
+	//
+	Container *Container `json:"container,omitempty" yaml:"container,omitempty" mapstructure:"container,omitempty"`
+
 	// The name of the current namespace.
 	//
 	// Namespaces are used to reference executables in the CLI using the format
@@ -194,6 +202,56 @@ const ConfigWorkspaceModeFixed ConfigWorkspaceMode = "fixed"
 // Map of workspace names to their paths. The path should be a valid absolute path
 // to the workspace directory.
 type ConfigWorkspaces map[string]string
+
+// How this machine runs container executables. A flow file's `container.runtime`
+// says which
+// runtime an executable expects; this says what that means here, so flow files
+// stay portable.
+type Container struct {
+	// The runtime an executable set to `auto` uses on this machine. `auto` detects
+	// one: docker,
+	// else podman, preferring an engine that is running when both are installed.
+	//
+	Runtime ContainerRuntime `json:"runtime,omitempty" yaml:"runtime,omitempty" mapstructure:"runtime,omitempty"`
+
+	// Runtimes corresponds to the JSON schema field "runtimes".
+	Runtimes *ContainerRuntimes `json:"runtimes,omitempty" yaml:"runtimes,omitempty" mapstructure:"runtimes,omitempty"`
+}
+
+type ContainerRuntime string
+
+const ContainerRuntimeAuto ContainerRuntime = "auto"
+
+// The command this machine runs for one container runtime family, in place of the
+// default
+// `docker` or `podman` on the PATH. Use it for a Docker-compatible CLI or a
+// specific engine.
+type ContainerRuntimeCommand struct {
+	// Global flags placed before every subcommand, e.g. `["--context", "colima"]` for
+	// docker or
+	// `["--connection", "remote"]` for podman.
+	//
+	Args []string `json:"args,omitempty" yaml:"args,omitempty" mapstructure:"args,omitempty"`
+
+	// The command or path to run, e.g. `/opt/homebrew/bin/docker` or `finch`.
+	// Defaults to the
+	// family name. Any replacement must accept the same `run` and `rm` flags as that
+	// runtime.
+	//
+	Command string `json:"command,omitempty" yaml:"command,omitempty" mapstructure:"command,omitempty"`
+}
+
+const ContainerRuntimeDocker ContainerRuntime = "docker"
+const ContainerRuntimePodman ContainerRuntime = "podman"
+
+// Per-family commands for container runtimes on this machine.
+type ContainerRuntimes struct {
+	// Docker corresponds to the JSON schema field "docker".
+	Docker *ContainerRuntimeCommand `json:"docker,omitempty" yaml:"docker,omitempty" mapstructure:"docker,omitempty"`
+
+	// Podman corresponds to the JSON schema field "podman".
+	Podman *ContainerRuntimeCommand `json:"podman,omitempty" yaml:"podman,omitempty" mapstructure:"podman,omitempty"`
+}
 
 // Where a workspace added from a git URL pulls from.
 type GitSource struct {

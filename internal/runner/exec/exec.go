@@ -97,7 +97,7 @@ func (r *execRunner) Exec(
 	}
 
 	if execSpec.Container != nil {
-		spec, cleanupScript, err := buildContainerSpec(e, targetDir, envMap)
+		spec, cleanupScript, err := buildContainerSpec(e, targetDir, envMap, ctx.Config)
 		if err != nil {
 			return err
 		}
