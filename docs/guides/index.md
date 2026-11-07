@@ -5,50 +5,39 @@ description: "Guides for flow, from core concepts and your first workflow throug
 
 # User Guides
 
-Welcome to the flow user guides! These guides will help you master flow automation, from basic concepts to advanced workflows.
+From the core ideas to advanced workflows and integrations.
 
 ## Getting Started
 
-New to flow? Start here to understand the fundamentals:
+- **[What is flow?](/introduction/what-is-flow)**: what flow does and why
+- **[Coming From…](coming-from.md)**: bringing Make, npm, just, Task or scripts into flow
 
-- **[What is flow?](/introduction/what-is-flow)** - What flow does and why
-- **[Coming From…](coming-from.md)** - Bringing Make, npm, just, Task, or scripts into flow
-- **[Core Concepts](concepts.md)** - Learn about workspaces, executables, and vaults
-- **[Your First Workflow](first-workflow.md)** - Build a complete automation from scratch
+## Using flow
 
-## Essential Guides
+- **[Concepts](concepts.md)**: workspaces, executables and vaults
+- **[Your First Workflow](first-workflow.md)**: build a complete workflow from scratch
+- **[Executables](executables.md)**: every executable type and option
+- **[Workspaces](workspaces.md)**: organize tasks across projects
+- **[Secrets](secrets.md)**: encrypted vaults for keys and tokens
+- **[History & Logs](execution-history.md)**: view, filter and manage past runs
+- **[Interactive UI](interactive.md)**: the terminal interface
 
-Master the core features of flow:
+## Going Further
 
-- **[Workspaces](workspaces.md)** - Organize your automation across projects
-- **[Executables](executables.md)** - Complete reference for all executable types and configuration
-- **[Working with Secrets](secrets.md)** - Secure your workflows with encrypted vaults
-- **[Execution History & Logs](execution-history.md)** - View, filter, and manage your execution history
+- **[Expression Language](expressions.md)**: conditionals and dynamic values in flow files
+- **[Advanced Workflows](advanced.md)**: conditionals, state and composition
+- **[Imported Executables](generated-config.md)**: comment syntax for imported scripts and Makefiles
+- **[Templates & Workflow Generation](templating.md)**: generate workflows and project scaffolding
 
-## Advanced Topics
+## AI & Integrations
 
-Take your automation to the next level:
+- **[AI Tools & MCP](ai-tools.md)**: give a coding agent your workflows over MCP
+- **[Run Provenance](run-provenance.md)**: trace who or what started every run
+- **[Containers](containers.md)**: run a single step in an image, or the whole CLI in one
+- **[GitHub Actions](github-actions.md)**: call your executables from CI
 
-- **[Expression Language](expressions.md)** - Conditionals and dynamic values in flow files
-- **[Advanced Workflows](advanced.md)** - Complex automation with conditionals, state, and composition
-- **[Imported Executables](generated-config.md)** - Pull in Makefiles, npm scripts, and other existing automation
-- **[Templates & Code Generation](templating.md)** - Generate workflows and project scaffolding
+## Reference
 
-## Interfaces
-
-- **[Interactive UI](interactive.md)** - Customize and use the terminal interface
-- **[Run Provenance](run-provenance.md)** - Trace who or what launched every run
-
-## Integrations
-
-- **[AI Tools & MCP](ai-tools.md)** - Give a coding assistant your workflows over MCP
-- **[Containers](containers.md)** - Run a single step in an image, or the whole CLI in one
-- **[GitHub Actions](github-actions.md)** - Call your executables from a CI pipeline
-
-## Other Resources
-
-- **[CLI Reference](../cli/index.md)** - Complete command documentation
-- **[Configuration Reference](../types/index.md)** - YAML file schemas and options
-- **[Examples Gallery](/examples)** - Real-world workflow patterns covering Go projects, Docker, Kubernetes, Git automation, API calls, and more.
-
-Ready to get started? Begin with [Core Concepts](concepts.md) to understand how flow works, then build your first automation with [Your First Workflow](first-workflow.md)!
+- **[CLI Reference](../cli/index.md)**: every command and flag
+- **[Configuration Reference](../types/index.md)**: flow file, workspace and config schemas
+- **[Examples](/examples)**: flow files for Go, Docker, Kubernetes, Git and HTTP APIs

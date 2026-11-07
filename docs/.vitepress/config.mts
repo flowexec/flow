@@ -6,7 +6,7 @@ import flowfileGrammar from './flowfile.tmLanguage.json'
 const SITE = 'https://flowexec.io'
 const SITE_NAME = 'flow'
 const SITE_DESCRIPTION =
-  'Write your workflows down, then run them from any project on your machine — with the right secrets, the right environment, and a record of what happened.'
+  'Write your workflows down, then run them from any project on your machine, with the right secrets and a record of every run.'
 const OG_IMAGE = `${SITE}/og-default.png`
 
 export default defineConfig({
@@ -317,12 +317,12 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Open source under the <a href="https://github.com/flowexec/flow/blob/main/LICENSE">Apache 2.0 License</a>. <a href="https://mochiexec.io/?utm_source=flowexec.io&amp;utm_medium=docs&amp;utm_content=footer">Mochi</a>, the desktop app, is built on it.',
-      copyright: [
-        `&copy; ${new Date().getFullYear()} <a href="https://jahvon.dev">Dockery Labs</a>`,
+      message: [
+        '<a href="https://mochiexec.io/?utm_source=flowexec.io&amp;utm_medium=docs&amp;utm_content=footer">Mochi</a>',
         '<a href="https://jahvon.dev/architecture/flow/">Architecture</a>',
-        '<a href="https://docs.mochiexec.io">Mochi docs</a>',
-      ].join(' &middot; ')
+        '<a href="https://github.com/flowexec/flow/blob/main/LICENSE">License</a>',
+      ].join(' &middot; '),
+      copyright: `&copy; ${new Date().getFullYear()} <a href="https://jahvon.dev">Dockery Labs</a>. Free and open source.`
     },
 
     outline: {

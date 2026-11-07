@@ -132,7 +132,7 @@ flow secret list --output yaml
 
 ### Disabling the TUI
 
-flow drops to plain output on its own when stdin or stdout isn't a terminal — in CI, in a
+flow drops to plain output on its own when stdin or stdout isn't a terminal: in CI, in a
 script, or when piped into another command. To disable the TUI while attached to a terminal:
 
 ```shell

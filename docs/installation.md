@@ -5,12 +5,9 @@ description: "Install the flow CLI on macOS, Linux, or Windows with a one-line s
 
 # Installation
 
-> [!NOTE] System requirements
-> Flow supports Linux, macOS, and Windows systems.
-> - Linux: requires `xclip` for clipboard features and `notify-send` (from `libnotify`) for desktop notifications.
-> - Optional: [Git](https://git-scm.com/) is required for [git workspace features](guides/workspaces.md#git-workspaces).
+flow is a single binary for macOS, Linux and Windows.
 
-## Quick Install
+## Install
 
 ::: code-group
 ```shell [macOS / Linux]
@@ -22,99 +19,57 @@ irm https://install.flowexec.io/win | iex
 ```
 :::
 
-## Alternative Install Methods
-
-### Homebrew (macOS/Linux)
-
-```shell
-brew install flowexec/tap/flow
-```
-
-### Go Install
-
-```bash
-go install github.com/flowexec/flow/v2@latest
-```
-
-### Manual Download
-
-Download the latest release from the [releases page](https://github.com/flowexec/flow/releases) and add the binary to your `PATH`.
-Each release includes checksums for verification.
-
-::: tip Windows
-Download the `.zip` archive for your architecture, extract `flow.exe`, and add its directory to your `PATH` environment variable.
-:::
-
-## Upgrading
-
-### Using the built-in update command
-
-flow can check for and install updates itself:
-
-```shell
-# Check for an update and prompt before installing
-flow cli update
-
-# Install the latest version without confirmation
-flow cli update --yes
-
-# Install a specific version
-flow cli update --version v2.1.0
-```
-
-`flow cli update` replaces the running binary in-place — no additional steps needed.
-
-#### Automatic update notifications
-
-flow can check for new releases in the background and print a notice after your next command completes. This is disabled by default and opt-in:
-
-```shell
-# Enable background update checks
-flow config set update-check true
-
-# Disable them again
-flow config set update-check false
-```
-
-When a newer version is available, you'll see a one-line notice at the end of your next command's output. Run `flow cli update` to act on it.
-
-### Using your original install method
-
-Re-run the same command you used to install — see [Quick Install](#quick-install) and [Alternative Install Methods](#alternative-install-methods) above. Homebrew uses `brew upgrade flowexec/tap/flow`.
-
-> [!NOTE]
-> Review the [Breaking Changes guide](breaking-changes) before upgrading.
-
-## Verify Installation
-
-Check that flow is installed correctly:
+Then check it's on your `PATH`:
 
 ```shell
 flow --version
 ```
 
-## Shell Completion
+On Linux, clipboard support needs `xclip` and desktop notifications need `notify-send` (from
+`libnotify`). [Git workspaces](guides/workspaces.md#git-workspaces) need
+[Git](https://git-scm.com/).
 
-Enable tab completion for your shell:
+### Other ways to install
 
-```bash
-# Bash
-flow completion bash > /etc/bash_completion.d/flow
-
-# Zsh (oh-my-zsh)
-flow completion zsh > ~/.oh-my-zsh/completions/_flow
-
-# Fish
-flow completion fish > ~/.config/fish/completions/flow.fish
-
-# PowerShell
-flow completion powershell | Out-String | Invoke-Expression
+```shell
+brew install flowexec/tap/flow               # Homebrew
+go install github.com/flowexec/flow/v2@latest # Go
 ```
 
-## Next Steps
+Or download a binary from the [releases page](https://github.com/flowexec/flow/releases),
+with checksums, and put it on your `PATH`. On Windows, extract `flow.exe` from the `.zip`
+for your architecture.
 
-Ready to start automating? → [Quick start guide](quickstart.md)
+## Shell completion
 
-## CI/CD & Containers
+```bash
+flow completion bash > /etc/bash_completion.d/flow                  # Bash
+flow completion zsh > ~/.oh-my-zsh/completions/_flow                # Zsh (oh-my-zsh)
+flow completion fish > ~/.config/fish/completions/flow.fish         # Fish
+flow completion powershell | Out-String | Invoke-Expression         # PowerShell
+```
 
-To run flow in CI, see [GitHub Actions](guides/github-actions.md) or [Containers](guides/containers.md).
+## Updating
+
+```shell
+flow cli update                     # check, then confirm before installing
+flow cli update --yes               # install the latest without asking
+flow cli update --version v2.1.0    # install a specific version
+```
+
+The update replaces the binary in place. If you installed with Homebrew, run
+`brew upgrade flowexec/tap/flow` instead.
+
+To get a one-line notice after a command when a new release is out, turn on update checks.
+They're off by default.
+
+```shell
+flow config set update-check true
+```
+
+Read [Breaking Changes](breaking-changes) before a major upgrade.
+
+## Next
+
+- [Quickstart](quickstart.md)
+- [GitHub Actions](guides/github-actions.md) and [Containers](guides/containers.md), to run flow in CI
