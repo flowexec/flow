@@ -7,12 +7,14 @@ Flow organizes automation into **workspaces** (projects/domains), each rooted at
 ## Getting Started
 
 - [Home](https://flowexec.io/): Landing page with feature overview
+- [What is flow?](https://flowexec.io/introduction/what-is-flow): What flow does, who it's for, and how it works with coding agents
 - [Installation](https://flowexec.io/installation): Install flow on macOS, Linux, or Windows
 - [Quick Start](https://flowexec.io/quickstart): Five-minute walkthrough from install to first executable
 
 ## Core Guides
 
 - [Guides Overview](https://flowexec.io/guides/): Index of all user guides
+- [Coming From…](https://flowexec.io/guides/coming-from): Bringing Make, npm scripts, Compose, just, Task, and shell scripts into flow
 - [Concepts](https://flowexec.io/guides/concepts): Executables, verbs, workspaces, namespaces, templates, vaults, execution model
 - [Your First Workflow](https://flowexec.io/guides/first-workflow): End-to-end tutorial for building a workflow
 - [Executables](https://flowexec.io/guides/executables): Full reference for executable types (exec, serial, parallel, request, launch, render)

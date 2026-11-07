@@ -64,14 +64,17 @@ Register a repo as a workspace and its workflows are reachable from anywhere —
 
 - **[Install flow](/installation)** — one line on macOS, Linux, or Windows
 - **[Quickstart](/quickstart)** — a working workflow in about five minutes
+- **[What is flow?](/introduction/what-is-flow)** — what it does, and how it works with coding agents
+- **[Coming from Make, npm, just or Task](/guides/coming-from)** — what changes and what doesn't
 - **[Core concepts](/guides/concepts)** — workspaces, executables, and vaults, and how they fit together
 - **[Examples](/examples)** — real flow files for Go, Docker, Kubernetes, Git, and HTTP APIs
 - **[flow's own automation](https://github.com/flowexec/flow/tree/main/.execs)** — this project builds, tests, and releases itself with flow
 - **[How flow is built](https://jahvon.dev/architecture/flow/)** — an architecture deep dive from Dockery Labs, the workshop behind flow
 
-::: tip Mochi: your workflows, neatly wrapped
-Want a desktop dashboard, workflow auto-discovery, and AI enrichment on top of flow?
-[Sign up for early access →](https://mochiexec.io)
-:::
+<MochiRef placement="home" eyebrow="New · Mochi" title="Mochi is out: the desktop app for flow">
+
+Your workspaces, flow files and vaults open in Mochi as they are, alongside the Makefiles and npm scripts in your other repos, with searchable run history and controls over what coding agents may run. Free 7-day trial, no card. flow stays free and open source.
+
+</MochiRef>
 
 <p class="home-closer">A short path to everything you run.</p>

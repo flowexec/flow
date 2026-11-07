@@ -148,6 +148,12 @@ flow logs clear verb ws/ns:name
 > [!NOTE]
 > Clearing history also removes the associated log archive files.
 
+<MochiRef placement="history" title="Search your history, and ask why a run failed">
+
+Mochi, the desktop app built on flow, reads this same history. It adds search ranked by what you run most, stats on what fails and where the time goes, and an explanation of a failed run from its log.
+
+</MochiRef>
+
 ## What's Next?
 
 - **Customize your interface** → [Interactive UI](interactive.md)

@@ -8,10 +8,11 @@ description: "Browse, search, filter, and run every workflow across every worksp
 flow provides both a powerful terminal user interface (TUI) and flexible command-line options to fit your workflow.
 This guide covers using the interactive browser, customizing the experience, and working with different output formats.
 
-::: tip Looking for a native desktop experience?
-Mochi is a desktop app built on Flow with a full GUI for browsing, running, and managing your workflows.
-[Join the waitlist →](https://mochiexec.io)
-:::
+<MochiRef placement="interactive" title="Prefer a window to a terminal?">
+
+Mochi is a desktop app built on flow: a command palette over every workspace, tabs with live output, and runs that keep going in the background.
+
+</MochiRef>
 
 ## Using the TUI Browser
 

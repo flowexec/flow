@@ -1,0 +1,18 @@
+/* Mochi's plum, for the callouts and header mark that hand off to mochiexec.io. */
+:root {
+  --mochi-accent: #955D79;
+}
+
+.dark {
+  --mochi-accent: #D699B6;
+}
+
+/* The Mochi mark is an image, so it can't take the icon color; it fades in instead. */
+.VPSocialLink .mochi-mark {
+  opacity: 0.6;
+  transition: opacity 0.18s ease;
+}
+
+.VPSocialLink:hover .mochi-mark {
+  opacity: 1;
+}

@@ -11,6 +11,8 @@ Welcome to the flow user guides! These guides will help you master flow automati
 
 New to flow? Start here to understand the fundamentals:
 
+- **[What is flow?](/introduction/what-is-flow)** - What flow does and why
+- **[Coming From…](coming-from.md)** - Bringing Make, npm, just, Task, or scripts into flow
 - **[Core Concepts](concepts.md)** - Learn about workspaces, executables, and vaults
 - **[Your First Workflow](first-workflow.md)** - Build a complete automation from scratch
 

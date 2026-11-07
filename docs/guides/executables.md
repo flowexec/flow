@@ -670,6 +670,12 @@ imports:
 
 All imported executables are automatically tagged with `generated` and their file type (e.g., `docker-compose`, `makefile`, `package.json`).
 
+<MochiRef placement="imports" title="Find tasks without listing imports">
+
+Mochi, the desktop app built on flow, scans a repo for you: Makefiles, npm scripts, Justfiles, Taskfiles, Compose files and scripts, with nothing written into the repo.
+
+</MochiRef>
+
 #### **Script Files**
 
 Script files (`.sh`, `.bat`, `.cmd`, `.ps1`, `.py`) are imported as single executables with the script's filename as the name and `exec` as the default verb. Each script type is executed with its native interpreter:
