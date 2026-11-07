@@ -29,12 +29,9 @@ const (
 func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	getFlowInfo := mcp.NewTool("get_info",
 		mcp.WithDescription(
-			"Bootstrap context about the flow environment. Returns the current workspace, this "+
-				"connection's session ID, schema URLs for authoring .flow files, and the docs index "+
-				"(llms.txt). Call this at the start of a session to understand the project's automation "+
-				"setup, or whenever you need schema URLs to author or validate flow configuration. "+
-				"The session ID tags every run this connection launches — keep it to group them later "+
-				"via `flow logs --session`."),
+			"The flow environment: the current workspace, this connection's session ID, schema URLs for "+
+				"authoring .flow files, and the docs index (llms.txt). Call it first in a session. The session "+
+				"ID tags every run this connection launches (`flow logs --session`)."),
 	)
 	getFlowInfo.Annotations = mcp.ToolAnnotation{
 		Title:           "Get flow information and current context",
@@ -44,30 +41,25 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getFlowInfo, getInfoHandler)
 
 	getExecutionLogs := mcp.NewTool("get_execution_logs",
-		mcp.WithDescription("Retrieve metadata and output from recent flow executions. "+
-			"Use when debugging a failed run or when the user asks about the results of a previous task. "+
-			"By default only run metadata is returned (ref, status, exitCode, error) — set `tail`, `grep`, "+
-			"or `content` to include the captured log output. Output is read live, so it works on "+
-			"still-running executions too (you get a snapshot of what has been written so far). "+
-			"Set `mine` to see only what this session has run so far."),
-		mcp.WithBoolean("last", mcp.Description("Get only the last execution logs")),
-		mcp.WithString("id", mcp.Description("Return only the run with this ID, as given by a run's "+
-			"`id` here or in `flow logs`. Add `tail` or `grep` to include its output.")),
-		mcp.WithBoolean("mine", mcp.Description("Only return runs launched by this MCP session "+
-			"(useful for reviewing what you have run so far).")),
-		mcp.WithString("source", mcp.Description("Filter by run origin: 'cli' or 'mcp'.")),
-		mcp.WithString("session", mcp.Description("Filter to a single provenance session ID.")),
-		mcp.WithString("status", mcp.Description("Filter by status: running, completed, failed, or cancelled.")),
-		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
-		mcp.WithBoolean("content", mcp.Description("Include each run's captured log output. Implied by "+
-			"`tail` or `grep`. Output is always capped (see `max_bytes`) to protect the context window.")),
-		mcp.WithNumber("tail", mcp.Description("Include only the last N lines of log output. Recommended "+
-			"for debugging since errors surface at the end of a log. Implies `content`.")),
-		mcp.WithString("grep", mcp.Description("Include only log lines matching this regular expression "+
-			"(applied before `tail`). Use to pull just the error lines out of a large log. Implies `content`.")),
+		mcp.WithDescription("Recent runs' metadata and output, for debugging a failure or reporting on a past "+
+			"task. Returns metadata only (ref, status, exitCode, error) unless `tail`, `grep` or `content` asks "+
+			"for output. Works on running executions too, as a snapshot so far."),
+		mcp.WithBoolean("last", mcp.Description("Only the latest run")),
+		mcp.WithString("id", mcp.Description("Only this run, by an `id` from here or `flow logs`")),
+		mcp.WithBoolean("mine", mcp.Description("Only runs this MCP session launched")),
+		mcp.WithString("source", mcp.Description("Run origin: cli or mcp")),
+		mcp.WithString("session", mcp.Description("Only runs from this provenance session ID")),
+		mcp.WithString("status", mcp.Description("running, completed, failed or cancelled")),
+		mcp.WithString("cursor", mcp.Description("Next-page cursor")),
+		mcp.WithBoolean("content", mcp.Description("Include log output, capped by `max_bytes`. Implied by "+
+			"`tail` and `grep`.")),
+		mcp.WithNumber("tail", mcp.Description("Only the last N log lines; best for debugging, since errors "+
+			"come last. Implies `content`.")),
+		mcp.WithString("grep", mcp.Description("Only log lines matching this regex, applied before `tail`. "+
+			"Implies `content`.")),
 		mcp.WithNumber("max_bytes", mcp.Description(fmt.Sprintf(
-			"Cap the log output returned per run to the last N bytes. Defaults to %d and is hard-capped "+
-				"at %d to protect the context window.", defaultLogContentMaxBytes, maxLogContentMaxBytes))),
+			"Keep the last N bytes of output per run (default %d, max %d)",
+			defaultLogContentMaxBytes, maxLogContentMaxBytes))),
 	)
 	getExecutionLogs.Annotations = mcp.ToolAnnotation{
 		Title:           "Get execution logs",
@@ -77,8 +69,8 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getExecutionLogs, getExecutionLogsHandler(executor))
 
 	sync := mcp.NewTool("sync_executables",
-		mcp.WithDescription("Refresh the cached workspace and executable state. "+
-			"Use when executables seem out of date or after adding new .flow files."),
+		mcp.WithDescription("Refresh cached workspaces and executables, e.g. after .flow files change outside "+
+			"write_flowfile."),
 	)
 	sync.Annotations = mcp.ToolAnnotation{
 		Title:           "Sync executable and workspace state",

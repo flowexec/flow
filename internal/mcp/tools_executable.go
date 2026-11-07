@@ -26,18 +26,19 @@ const currentExecutableID = ":"
 // An executable that sets its own logMode still gets it.
 var plainLogArgs = []string{"--log-mode", "text"}
 
+const runWorkspaceDescription = "Workspace whose environment to use. Default: the one containing the " +
+	"working directory, else the current one. Doesn't change the current workspace."
+
 func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	getExecutable := mcp.NewTool("get_executable",
-		mcp.WithDescription("Get the full definition of a specific flow workflow — what command it runs, "+
-			"what parameters it accepts, and what secrets it requires. "+
-			"Use before executing an unfamiliar executable or when debugging a failure."),
+		mcp.WithDescription("Get one executable's full definition: what it runs, its args, params and secrets. "+
+			"Use before running an unfamiliar executable or when debugging a failure."),
 		mcp.WithString("executable_verb", mcp.Required(),
-			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
-				"Validated server-side; see the flow docs for the full verb list.")),
+			mcp.Description("Executable verb, e.g. run, build, test, deploy.")),
 		mcp.WithString("executable_id",
 			mcp.Pattern(executable.ExecutableIDPattern),
-			mcp.Description("Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
-				"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
+			mcp.Description("Executable ID: `ws/ns:name`, or `name` in the current workspace and namespace. "+
+				"Nested namespaces need the workspace: `ws/parent/child:name` (`./` for the current one).")),
 	)
 	getExecutable.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a specific executable by reference",
@@ -47,19 +48,18 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	srv.AddTool(getExecutable, getExecutableHandler(executor))
 
 	listExecutables := mcp.NewTool("list_executables",
-		mcp.WithDescription("Discover available workflows across all workspaces. Call this before running shell "+
-			"commands for build, test, deploy, lint, or any dev task — to check whether a flow executable "+
-			"already handles it. Returns names, verbs, short descriptions, and tags; use get_executable for an "+
-			"executable's full definition, including its args and params."),
-		mcp.WithString("workspace", mcp.Description("Workspace name (optional)")),
-		mcp.WithString("namespace", mcp.Description("Namespace filter (optional)")),
-		mcp.WithString("verb", mcp.Description("Verb filter (optional)")),
-		mcp.WithString("keyword", mcp.Description("Keyword filter (optional)")),
-		mcp.WithString("tag", mcp.Description("Tag filter (optional)")),
-		mcp.WithString("cursor", mcp.Description("Pagination cursor for next page of results")),
+		mcp.WithDescription("List executables across workspaces. Check here before running a shell command for "+
+			"a dev task (build, test, lint, deploy): flow may already have one. Returns names, verbs, short "+
+			"descriptions and tags; get_executable has an executable's args and params."),
+		mcp.WithString("workspace", mcp.Description("Workspace name")),
+		mcp.WithString("namespace", mcp.Description("Namespace filter")),
+		mcp.WithString("verb", mcp.Description("Verb filter")),
+		mcp.WithString("keyword", mcp.Description("Keyword filter")),
+		mcp.WithString("tag", mcp.Description("Tag filter")),
+		mcp.WithString("cursor", mcp.Description("Next-page cursor")),
 		mcp.WithString("dir", mcp.Description(
-			"Directory to resolve the workspace from. Set this to the directory you are working in to see the "+
-				"executables of the nearest workspace at or above it, even one that is not registered.")),
+			"List the nearest workspace at or above this directory, registered or not. Set it to your "+
+				"working directory.")),
 	)
 	listExecutables.Annotations = mcp.ToolAnnotation{
 		Title:           "List executables",
@@ -74,16 +74,15 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	addRunExecutableTool(srv, executor)
 
 	writeFlowfile := mcp.NewTool("write_flowfile",
-		mcp.WithDescription("Create or update a .flow workflow file. Use when the user wants to add or modify "+
-			"automation — builds, tests, deploys, scripts. Validates the YAML against the schema before "+
-			"writing, then refreshes flow's executable cache so the change is immediately visible to "+
-			"list_executables/get_executable. Prefer this over writing YAML files directly."),
+		mcp.WithDescription("Create or update a .flow file. Validates it against the schema before writing, then "+
+			"syncs so list_executables and get_executable see the change. Prefer this over writing flow YAML "+
+			"directly."),
 		mcp.WithString("path", mcp.Required(),
-			mcp.Description("Absolute or workspace-relative path for the flowfile (must end in .flow or .flow.yaml)")),
+			mcp.Description("Absolute or workspace-relative path ending in .flow or .flow.yaml")),
 		mcp.WithString("content", mcp.Required(),
-			mcp.Description("Full YAML content of the flowfile")),
+			mcp.Description("The flowfile's full YAML")),
 		mcp.WithBoolean("overwrite",
-			mcp.Description("Whether to overwrite an existing file (default: false)")),
+			mcp.Description("Replace an existing file (default false)")),
 	)
 	writeFlowfile.Annotations = mcp.ToolAnnotation{
 		Title:           "Write a flow file",
@@ -95,40 +94,31 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 
 func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 	executeFlow := mcp.NewTool("execute",
-		mcp.WithDescription("Run a flow workflow by verb and optional ID. Prefer this over direct shell commands "+
-			"for build, test, deploy, lint, generate, and other dev tasks — flow handles environment setup, "+
-			"secret injection, retries, and logging automatically."),
+		mcp.WithDescription("Run an executable by verb and optional ID. Prefer it over raw shell commands for dev "+
+			"tasks: flow supplies the environment and secrets and records the run."),
 		mcp.WithString("executable_verb", mcp.Required(),
-			mcp.Description("Executable verb (e.g. run, exec, build, test, deploy). "+
-				"Validated server-side; see the flow docs for the full verb list.")),
+			mcp.Description("Executable verb, e.g. run, build, test, deploy.")),
 		mcp.WithString("executable_id",
 			mcp.Pattern(executable.ExecutableIDPattern),
 			mcp.Description(
-				"Executable ID (workspace/namespace:name or just name if using the current workspace/namespace). "+
-					"If the executable does not have a name, you can specify just the workspace (`ws/`), namespace (`ns:`) "+
-					"both (`ws/ns:`) or neither if the current workspace/namespace should be used. "+
-					"Nested namespaces require a workspace, e.g. `ws/parent/child:name` (`./` for the current workspace).")),
+				"Executable ID: `ws/ns:name`, or `name` in the current workspace and namespace. For a nameless "+
+					"executable give `ws/`, `ns:`, `ws/ns:` or nothing. Nested namespaces need the workspace: "+
+					"`ws/parent/child:name` (`./` for the current one).")),
 		mcp.WithString("args", mcp.Description(
-			"Arguments for the executable, written as on a command line: positionals and flags as the "+
-				"executable defines them (e.g. `--node workbox 'uname -a'`). Shell-style quoting groups words; "+
-				"nothing is expanded. Everything goes to the executable, never to flow itself. A leading `--` "+
-				"is optional; a later one makes the words after it positional. Anything the executable does "+
-				"not define fails the call before it runs.")),
+			"The executable's arguments as on a command line, e.g. `--node workbox 'uname -a'`. Shell-style "+
+				"quoting, no expansion. All go to the executable, never to flow. A leading `--` is optional; a "+
+				"later one makes the rest positional. Undefined arguments fail before anything runs.")),
 		mcp.WithObject("params",
 			mcp.AdditionalProperties(map[string]any{"type": "string"}),
-			mcp.Description("Values for the executable's `params` as an EnvKey-to-value map. A prompt param "+
-				"without a value fails the call before it runs. Keys are set as environment variables whether "+
-				"or not the executable declares them, and beat `args` with the same EnvKey. Values are passed "+
-				"on flow's command line, so don't put secrets here; reference them from a vault in the "+
-				"executable instead.")),
+			mcp.Description("The executable's `params` by EnvKey. Set as environment variables even if undeclared, "+
+				"and win over `args` with the same EnvKey. A prompt param without a value fails before anything "+
+				"runs. Passed on flow's command line, so never put secrets here; use a vault.")),
 		mcp.WithString("dir", mcp.Description(
-			"Directory to resolve the workspace from and run in. Set this to the directory you are working in "+
-				"— a git worktree or a freshly cloned repo — and flow uses the nearest workspace at or above it, "+
-				"registered or not. Defaults to the server's own directory, which is often not yours.")),
+			"Directory to run in; flow uses the nearest workspace at or above it, registered or not. Set it to "+
+				"your working directory (a worktree or fresh clone): the default is the server's own.")),
 		mcp.WithString("workspace", mcp.Description(
-			"Workspace to run in, by registered name or by path. Overrides `dir` resolution. Does not change "+
-				"the global current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync executable changes before execution")),
+			"Workspace to run in, by name or path. Overrides `dir`; doesn't change the current workspace.")),
+		mcp.WithBoolean("sync", mcp.Description("Sync executables before running")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	executeFlow.Annotations = mcp.ToolAnnotation{
@@ -295,26 +285,22 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 func addRunCommandTool(srv *server.MCPServer, executor CommandExecutor) {
 	runCommand := mcp.NewTool("run_command",
-		mcp.WithDescription("Run one or more shell commands through flow instead of a raw shell tool. Commands run "+
-			"with the current workspace's environment and secrets, output is captured to flow's logs, and each run "+
-			"is recorded in execution history with provenance (visible via get_execution_logs / `flow logs`). "+
-			"Prefer this for build, test, run, and one-off commands so the work is observable and reproducible. "+
-			"Pass `commands` (with `mode`) to run several commands in a single call."),
+		mcp.WithDescription("Run shell commands through flow instead of a raw shell: with the workspace's "+
+			"environment and secrets, and recorded in history (get_execution_logs, `flow logs`). Pass `commands` "+
+			"with `mode` to run several in one call."),
 		mcp.WithString("command",
-			mcp.Description("A single shell command to run. Provide this or `commands`.")),
+			mcp.Description("One shell command. Give this or `commands`.")),
 		mcp.WithArray("commands", mcp.WithStringItems(),
-			mcp.Description("Multiple shell commands to run in one call (as a serial or parallel batch — see `mode`). "+
-				"Provide this or `command`.")),
+			mcp.Description("Several shell commands, run as one batch per `mode`. Give this or `command`.")),
 		mcp.WithString("mode",
-			mcp.Description("How to run `commands`: 'serial' (default, stop on first failure) or 'parallel'.")),
+			mcp.Description("`serial` (default; stops at the first failure) or `parallel`")),
 		mcp.WithString("label",
-			mcp.Description("Short human-readable label describing what the command(s) do (recorded in history).")),
+			mcp.Description("Short label for the run's history entry")),
 		mcp.WithString("dir",
-			mcp.Description("Working directory for the command (defaults to the current directory).")),
+			mcp.Description("Working directory (default: the current directory)")),
 		mcp.WithString("workspace",
-			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
-				"the working directory, then the current workspace. Does not change the global current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+			mcp.Description(runWorkspaceDescription)),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runCommand.Annotations = mcp.ToolAnnotation{
@@ -362,24 +348,19 @@ func runCommandHandler(srv *server.MCPServer, executor CommandExecutor) server.T
 
 func addRunPythonTool(srv *server.MCPServer, executor CommandExecutor) {
 	runPython := mcp.NewTool("run_python",
-		mcp.WithDescription("Run Python code through flow instead of a raw shell tool or a scratch file. "+
-			"The script runs with the current workspace's environment and secrets, output is captured to "+
-			"flow's logs, and the run is recorded in execution history with provenance (visible via "+
-			"get_execution_logs / `flow logs`). Prefer this over shelling out to `python -c` or writing a "+
-			"temporary .py file. flow picks the workspace's virtualenv when there is one, so imports resolve "+
-			"against the project's installed dependencies."),
+		mcp.WithDescription("Run Python code through flow instead of `python -c` or a scratch file: with the "+
+			"workspace's environment and secrets, its virtualenv when there is one, and recorded in history."),
 		mcp.WithString("code", mcp.Required(),
-			mcp.Description("The Python source to run. Multi-line scripts are fine — the code runs from a "+
+			mcp.Description("Python source; multi-line is fine, and tracebacks show real line numbers. "+
 				"file, so tracebacks report real line numbers. Read parameters and secrets from os.environ.")),
 		mcp.WithString("label",
-			mcp.Description("Short human-readable label describing what the script does (recorded in history).")),
+			mcp.Description("Short label for the run's history entry")),
 		mcp.WithString("dir",
-			mcp.Description("Working directory for the script (defaults to the current directory). This also "+
-				"determines which workspace's environment and virtualenv are used.")),
+			mcp.Description("Working directory (default: the current directory); also picks the workspace "+
+				"environment and virtualenv")),
 		mcp.WithString("workspace",
-			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
-				"the working directory, then the current workspace. Does not change the global current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+			mcp.Description(runWorkspaceDescription)),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runPython.Annotations = mcp.ToolAnnotation{
@@ -417,23 +398,21 @@ func runPythonHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 
 func addRunExecutableTool(srv *server.MCPServer, executor CommandExecutor) {
 	runExecutable := mcp.NewTool("run_executable",
-		mcp.WithDescription("Run a transient executable of ANY type from an inline definition, without saving a "+
-			".flow file. Use this when a single command (run_command) isn't enough — e.g. a `serial`/`parallel` "+
-			"batch of steps, an HTTP `request`, or a `render`/`launch`. The spec is the same shape as one entry "+
-			"under a flowfile's `executables:` list. Runs with workspace env/secrets and is recorded in history. "+
-			"Author non-trivial specs against the flowfile schema (see get_info schemaUrls.flowFile)."),
+		mcp.WithDescription("Run a transient executable of any type from an inline spec, without saving a .flow "+
+			"file: a serial or parallel batch, an HTTP request, a render or a launch. Use it when one command "+
+			"isn't enough. The spec is one entry of a flowfile's `executables:`; author non-trivial ones against "+
+			"get_info's schemaUrls.flowFile. Runs with the workspace's environment and secrets, recorded in history."),
 		mcp.WithString("spec", mcp.Required(),
-			mcp.Description("A single executable definition as YAML or JSON (e.g. {\"verb\":\"run\",\"serial\":"+
-				"{\"execs\":[{\"cmd\":\"...\"},{\"cmd\":\"...\"}]}}).")),
+			mcp.Description("One executable definition as YAML or JSON, e.g. "+
+				"{\"verb\":\"run\",\"serial\":{\"execs\":[{\"cmd\":\"...\"}]}}")),
 		mcp.WithString("label",
-			mcp.Description("Short human-readable label recorded in history (defaults to the executable's name).")),
+			mcp.Description("Short label for the run's history entry (default: the executable's name)")),
 		mcp.WithString("dir",
-			mcp.Description("Directory to resolve the workspace from and run in (defaults to the server's directory). "+
-				"Set this to the directory you are working in — flow uses the nearest workspace at or above it.")),
+			mcp.Description("Directory to run in; flow uses the nearest workspace at or above it. Set it to your "+
+				"working directory: the default is the server's own.")),
 		mcp.WithString("workspace",
-			mcp.Description("Workspace whose environment to use for this run. Defaults to the workspace containing "+
-				"the working directory, then the current workspace. Does not change the global current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow cache and workspaces before running.")),
+			mcp.Description(runWorkspaceDescription)),
+		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runExecutable.Annotations = mcp.ToolAnnotation{
