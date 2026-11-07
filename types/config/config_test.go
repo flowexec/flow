@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -140,5 +141,30 @@ var _ = Describe("Validate custom verbs", func() {
 	It("rejects duplicate custom verbs", func() {
 		cfg := &config.Config{CustomVerbs: []string{"status", "status"}}
 		Expect(cfg.Validate()).To(MatchError(ContainSubstring("duplicate custom verb")))
+	})
+})
+
+var _ = Describe("LogRetentionPolicy", func() {
+	It("uses the defaults when unset", func() {
+		policy := (&config.Config{}).LogRetentionPolicy()
+		Expect(policy.MaxFiles).To(Equal(config.DefaultLogRetentionMaxCount))
+		Expect(policy.MaxAge).To(Equal(config.DefaultLogRetentionMaxAge))
+		Expect(policy.MaxTotalSize).To(Equal(int64(config.DefaultLogRetentionMaxSizeMB) * 1024 * 1024))
+	})
+
+	It("overrides only the fields that are set, keeping 0 as unlimited", func() {
+		maxAge, maxCount := 24*time.Hour, 0
+		cfg := &config.Config{LogRetention: &config.LogRetention{MaxAge: &maxAge, MaxCount: &maxCount}}
+		policy := cfg.LogRetentionPolicy()
+		Expect(policy.MaxAge).To(Equal(24 * time.Hour))
+		Expect(policy.MaxFiles).To(BeZero())
+		Expect(policy.MaxTotalSize).To(Equal(int64(config.DefaultLogRetentionMaxSizeMB) * 1024 * 1024))
+		Expect(cfg.LogRetentionSummary()).To(Equal("max age 24h0m0s, max size 500 MB, max count unlimited"))
+	})
+
+	It("rejects negative limits", func() {
+		size := -1
+		cfg := &config.Config{LogRetention: &config.LogRetention{MaxSizeMB: &size}}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("maxSizeMB must not be negative")))
 	})
 })

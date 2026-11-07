@@ -31,6 +31,7 @@ Alternatively, a custom path can be set using the `FLOW_CONFIG_PATH` environment
 | `defaultTimeout` | `string` | 30m |  | The default timeout to use when running executables. This should be a valid duration string.  |
 | `gitWorkspaces` | `map` (`string` -> [GitSource](#gitsource)) |  |  | Map of workspace names to their git source, for workspaces added from a git URL. This is set automatically and kept here because the workspace's own flow.yaml is a tracked file that belongs to the upstream repository.  |
 | `interactive` | [Interactive](#interactive) |  |  |  |
+| `logRetention` | [LogRetention](#logretention) |  |  | Limits on how many run logs flow keeps, by age, total size, and count. Manage them with `flow config set log-retention`.  |
 | `templates` | `map` (`string` -> `string`) | map[] |  | A map of flowfile template names to their paths. |
 | `theme` | `string` | default |  | The theme of the interactive UI. |
 | `updateCheck` | `boolean` | false |  | Whether to check for CLI updates in the background. When enabled, flow will periodically check GitHub for a newer version and display a notice if one is available after each command. Set `FLOW_NO_UPDATE_CHECK=1` to suppress checks regardless of this setting.  |
@@ -87,4 +88,17 @@ Configurations for the interactive UI.
 | `mouse` | `boolean` |  |  | Whether the interactive UI responds to the mouse: scrolling, clicking to select, and clicking breadcrumbs to go back. Defaults to `true`. While enabled, most terminals require holding Shift (Option on iTerm2) to select text.  |
 | `notifyOnCompletion` | `boolean` |  |  | Whether to send a desktop notification when a command completes. |
 | `soundOnCompletion` | `boolean` |  |  | Whether to play a sound when a command completes. |
+
+### LogRetention
+
+Limits on the run logs kept in flow's logs directory. Each time an executable runs, the oldest
+logs are removed until every limit is met. An unset field uses its default; `0` removes that limit.
+
+**Type:** `object`
+
+| Field | Type | Default | Required | Description |
+| ----- | ---- | ------- | :------: | ----------- |
+| `maxAge` | `string` |  |  | Remove logs older than this duration. Defaults to `720h` (30 days).  |
+| `maxCount` | `integer` |  |  | Keep at most this many logs. Defaults to `1000`. |
+| `maxSizeMB` | `integer` |  |  | Keep the total size of all logs under this many megabytes. Defaults to `500`. |
 

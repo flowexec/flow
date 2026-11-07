@@ -109,6 +109,24 @@
           "type": "boolean"
         }
       }
+    },
+    "LogRetention": {
+      "description": "Limits on the run logs kept in flow's logs directory. Each time an executable runs, the oldest\nlogs are removed until every limit is met. An unset field uses its default; `0` removes that limit.\n",
+      "type": "object",
+      "properties": {
+        "maxAge": {
+          "description": "Remove logs older than this duration. Defaults to `720h` (30 days).\n",
+          "type": "string"
+        },
+        "maxCount": {
+          "description": "Keep at most this many logs. Defaults to `1000`.",
+          "type": "integer"
+        },
+        "maxSizeMB": {
+          "description": "Keep the total size of all logs under this many megabytes. Defaults to `500`.",
+          "type": "integer"
+        }
+      }
     }
   },
   "properties": {
@@ -157,6 +175,10 @@
     },
     "interactive": {
       "$ref": "#/definitions/Interactive"
+    },
+    "logRetention": {
+      "$ref": "#/definitions/LogRetention",
+      "description": "Limits on how many run logs flow keeps, by age, total size, and count.\nManage them with `flow config set log-retention`.\n"
     },
     "templates": {
       "description": "A map of flowfile template names to their paths.",

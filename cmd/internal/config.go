@@ -106,6 +106,7 @@ func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
 	registerSetThemeCmd(ctx, setCmd)
 	registerSetTimeoutCmd(ctx, setCmd)
 	registerSetUpdateCheckCmd(ctx, setCmd)
+	registerSetLogRetentionCmd(ctx, setCmd)
 	configCmd.AddCommand(setCmd)
 }
 
@@ -365,6 +366,61 @@ func setTimeoutFunc(ctx *context.Context, _ *cobra.Command, args []string) {
 		logger.Log().FatalErr(err)
 	}
 	logger.Log().PlainTextSuccess("Default timeout set to " + timeoutStr)
+}
+
+func registerSetLogRetentionCmd(ctx *context.Context, setCmd *cobra.Command) {
+	retentionCmd := &cobra.Command{
+		Use:   "log-retention",
+		Short: "Set how many run logs are kept, by age, total size, and count.",
+		Long: "Set how many run logs flow keeps. Each time an executable runs, the oldest logs are removed " +
+			"until every limit is met. Only the flags passed are changed; 0 removes that limit.\n\n" +
+			fmt.Sprintf("Defaults: --max-age %s, --max-size-mb %d, --max-count %d.",
+				config.DefaultLogRetentionMaxAge, config.DefaultLogRetentionMaxSizeMB, config.DefaultLogRetentionMaxCount),
+		Example: "  flow config set log-retention --max-age 168h --max-count 200",
+		Args:    cobra.NoArgs,
+		Run:     func(cmd *cobra.Command, args []string) { setLogRetentionFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, retentionCmd, *flags.LogRetentionMaxAgeFlag)
+	RegisterFlag(ctx, retentionCmd, *flags.LogRetentionMaxSizeFlag)
+	RegisterFlag(ctx, retentionCmd, *flags.LogRetentionMaxCountFlag)
+	MarkOneFlagRequired(retentionCmd,
+		flags.LogRetentionMaxAgeFlag.Name, flags.LogRetentionMaxSizeFlag.Name, flags.LogRetentionMaxCountFlag.Name)
+	setCmd.AddCommand(retentionCmd)
+}
+
+func setLogRetentionFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
+	userConfig := ctx.Config
+	retention := config.LogRetention{}
+	if userConfig.LogRetention != nil {
+		retention = *userConfig.LogRetention
+	}
+
+	changed := cmd.Flags().Changed
+	if changed(flags.LogRetentionMaxAgeFlag.Name) {
+		raw := flags.ValueFor[string](cmd, *flags.LogRetentionMaxAgeFlag, false)
+		maxAge, err := time.ParseDuration(raw)
+		if err != nil {
+			errhandler.HandleUsage(ctx, cmd, "invalid --max-age %q: %v", raw, err)
+		}
+		retention.MaxAge = &maxAge
+	}
+	if changed(flags.LogRetentionMaxSizeFlag.Name) {
+		maxSize := flags.ValueFor[int](cmd, *flags.LogRetentionMaxSizeFlag, false)
+		retention.MaxSizeMB = &maxSize
+	}
+	if changed(flags.LogRetentionMaxCountFlag.Name) {
+		maxCount := flags.ValueFor[int](cmd, *flags.LogRetentionMaxCountFlag, false)
+		retention.MaxCount = &maxCount
+	}
+
+	userConfig.LogRetention = &retention
+	if err := userConfig.Validate(); err != nil {
+		errhandler.HandleUsage(ctx, cmd, "%v", err)
+	}
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	logger.Log().PlainTextSuccess("Log retention set: " + userConfig.LogRetentionSummary())
 }
 
 func registerAddConfigCmd(ctx *context.Context, configCmd *cobra.Command) {

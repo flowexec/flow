@@ -190,6 +190,32 @@ var _ = Describe("config e2e", Ordered, func() {
 		})
 	})
 
+	When("setting log retention (flow config set log-retention)", func() {
+		It("sets the given limits and keeps the rest", func() {
+			Expect(run.Run(ctx.Context, "config", "set", "log-retention", "--max-age", "168h", "--max-count", "0")).
+				To(Succeed())
+			Expect(run.Run(ctx.Context, "config", "set", "log-retention", "--max-size-mb", "100")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring(
+				"Log retention set: max age 168h0m0s, max size 100 MB, max count unlimited"))
+		})
+
+		It("fatals on an invalid duration", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "config", "set", "log-retention", "--max-age", "bogus")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid --max-age")))
+		})
+
+		It("fatals on a negative limit", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "config", "set", "log-retention", "--max-count", "-1")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("must not be negative")))
+		})
+	})
+
 	When("resetting configuration (flow config reset)", func() {
 		It("should prompt for confirmation and reset config", func() {
 			reader, writer, err := os.Pipe()

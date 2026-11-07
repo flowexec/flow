@@ -27,12 +27,14 @@ func main() {
 	executable.RegisterCustomVerbs(cfg.CustomVerbs...)
 
 	archiveDir, archiveID := initLogArchive()
+	retention := cfg.LogRetentionPolicy()
 	loggerOpts := logger.InitOptions{
 		StdOut:           loggerStdOut(),
 		LogMode:          cfg.DefaultLogMode,
 		Theme:            logger.Theme(cfg.Theme.String()),
 		ArchiveDirectory: archiveDir,
 		ArchiveID:        archiveID,
+		ArchiveRetention: &retention,
 	}
 	logger.Init(loggerOpts)
 	defer func() {
