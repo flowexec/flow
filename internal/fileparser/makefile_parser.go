@@ -42,7 +42,7 @@ func ExecutablesFromMakefile(wsPath, path string) (executable.ExecutableList, er
 			continue
 		}
 		if strings.HasPrefix(trim, "#") {
-			lastComment = appendComment(lastComment, strings.TrimSpace(strings.TrimPrefix(trim, "#")))
+			lastComment = appendComment(lastComment, strings.TrimLeft(trim, "# \t"))
 			continue
 		}
 		if m := targetLine.FindStringSubmatch(line); m != nil {
