@@ -146,6 +146,66 @@ actually uses, and tell the assistant to discover the rest rather than guess. fl
 at [`.claude/skills/flow-context/SKILL.md`](https://github.com/flowexec/flow/blob/main/.claude/skills/flow-context/SKILL.md)
 if you want a working reference.
 
+## Scaffolding a workspace with an agent
+
+Once the server is connected, an assistant can write a workspace's first executables for you. Paste
+this prompt into a session started at the repository root:
+
+```text
+Set up flow executables for this repository. Use the flow MCP tools throughout.
+
+1. Discover. Call get_info, then map the repository: its languages, services,
+   and where existing tasks live (Makefile, package.json scripts, shell
+   scripts, docker-compose files, CI workflows, README setup steps). If there
+   is no flow.yaml at the root, tell me before creating one.
+
+2. Find the work worth automating. List the tasks people run repeatedly or
+   that are fragile today: long command chains, steps copied from the README,
+   scripts that need env vars set by hand, CI steps nobody can run locally.
+   Show me the list with the executable you'd create for each, and wait for
+   my go-ahead before writing anything.
+
+3. Build with flow's primitives, not around them:
+   - Standard verbs (build, test, lint, run, deploy) and short names, so
+     refs read like `test unit` and `deploy staging`.
+   - serial / parallel with refs to compose steps, instead of one long
+     shell string.
+   - args for anything a caller varies; secretRef params for credentials,
+     never values hardcoded or read from an untracked file.
+   - imports for Makefiles and package.json scripts that are already fine
+     as they are, rather than rewriting them.
+   - dir when a task runs outside the flow file's directory; timeout for
+     anything that can hang.
+   - One flow file per area (e.g. .execs/build.flow) with a namespace when
+     the repo has several services.
+   Write files with write_flowfile so they are validated.
+
+4. Document for people and agents. Each description says what the
+   executable is for and when to use it, plus anything a caller must know
+   first (required args, secrets, side effects like a deploy or a data
+   reset). Don't restate the command; the definition already shows it.
+   Keep descriptions to a sentence or two. Prefer args over interactive
+   prompts so an agent can run the task without a TTY. Tag executables by
+   area so they can be filtered.
+
+5. Verify. Run each new executable with execute and fix what fails. Do not
+   run anything that deploys, deletes, or touches shared state; list those
+   for me to try instead.
+
+6. Finish with a flow-context skill (template at
+   https://flowexec.io/guides/ai-tools) whose "Key executables" section
+   names the handful of refs that matter most, then give me a short
+   summary of what you created and what you skipped.
+
+Write concisely throughout: plain sentences, no filler, nothing the code
+already says.
+```
+
+The prompt pauses after discovery so you approve the plan before any files are written; drop that
+line from step 2 if you'd rather let it run straight through. The `generate_project_executables`
+prompt the server exposes covers similar ground, but this version is yours to edit for your
+project's conventions.
+
 ## Observability
 
 Every run flow launches — whether a named `execute`, a `run_command`, a `run_python`, or a `run_executable` — is recorded as one lifecycle-aware history entry: written as `running` when it starts and updated to `completed` or `failed` when it finishes. Runs launched over MCP also capture **provenance**: which tool called (`claude`, `cursor`, …) and its session ID. That turns flow's history into an audit trail of what your assistant did.
