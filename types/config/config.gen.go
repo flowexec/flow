@@ -120,6 +120,11 @@ type Config struct {
 	// Interactive corresponds to the JSON schema field "interactive".
 	Interactive *Interactive `json:"interactive,omitempty" yaml:"interactive,omitempty" mapstructure:"interactive,omitempty"`
 
+	// Limits on how many run logs flow keeps, by age, total size, and count.
+	// Manage them with `flow config set log-retention`.
+	//
+	LogRetention *LogRetention `json:"logRetention,omitempty" yaml:"logRetention,omitempty" mapstructure:"logRetention,omitempty"`
+
 	// A map of flowfile template names to their paths.
 	Templates ConfigTemplates `json:"templates,omitempty" yaml:"templates,omitempty" mapstructure:"templates,omitempty"`
 
@@ -226,4 +231,20 @@ type Interactive struct {
 
 	// Whether to play a sound when a command completes.
 	SoundOnCompletion *bool `json:"soundOnCompletion,omitempty" yaml:"soundOnCompletion,omitempty" mapstructure:"soundOnCompletion,omitempty"`
+}
+
+// Limits on the run logs kept in flow's logs directory. Each time an executable
+// runs, the oldest
+// logs are removed until every limit is met. An unset field uses its default; `0`
+// removes that limit.
+type LogRetention struct {
+	// Remove logs older than this duration. Defaults to `720h` (30 days).
+	//
+	MaxAge *time.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty" mapstructure:"maxAge,omitempty"`
+
+	// Keep at most this many logs. Defaults to `1000`.
+	MaxCount *int `json:"maxCount,omitempty" yaml:"maxCount,omitempty" mapstructure:"maxCount,omitempty"`
+
+	// Keep the total size of all logs under this many megabytes. Defaults to `500`.
+	MaxSizeMB *int `json:"maxSizeMB,omitempty" yaml:"maxSizeMB,omitempty" mapstructure:"maxSizeMB,omitempty"`
 }

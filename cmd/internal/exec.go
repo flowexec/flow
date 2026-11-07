@@ -39,6 +39,7 @@ import (
 	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/pkg/logger"
 	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 	"github.com/flowexec/flow/v2/types/workspace"
 )
@@ -300,14 +301,23 @@ func resolveExecutableForRun(
 	}
 
 	if ctx.CurrentWorkspace != nil && !e.IsExecutableFromWorkspace(ctx.CurrentWorkspace.AssignedName()) {
-		errhandler.HandleFatal(ctx, cmd, fmt.Errorf(
-			"executable '%s' belongs to workspace '%s' and cannot be run from the current workspace '%s'",
-			ref,
-			e.Workspace(),
-			ctx.CurrentWorkspaceName(),
-		))
+		errhandler.HandleFatal(ctx, cmd, notRunnableHereError(e, ref, ctx.CurrentWorkspaceName()))
 	}
 	return e, ref
+}
+
+func notRunnableHereError(e *executable.Executable, ref executable.Ref, currentWs string) error {
+	if e.Visibility != nil && common.Visibility(*e.Visibility) == common.VisibilityHidden {
+		return fmt.Errorf(
+			"executable '%s' is hidden and cannot be run directly; change its visibility in its flow file to run it",
+			ref,
+		)
+	}
+	return fmt.Errorf(
+		"executable '%s' is private to workspace '%s' and cannot be run from workspace '%s'. "+
+			"Switch to it with 'flow workspace switch %s', or set 'visibility: public' in its flow file",
+		ref, e.Workspace(), currentWs, e.Workspace(),
+	)
 }
 
 // execAdHoc runs one or more arbitrary shell commands through flow as a transient, in-memory

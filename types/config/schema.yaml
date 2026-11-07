@@ -52,6 +52,26 @@ definitions:
         default: ""
     required: [ remote ]
 
+  LogRetention:
+    type: object
+    description: |
+      Limits on the run logs kept in flow's logs directory. Each time an executable runs, the oldest
+      logs are removed until every limit is met. An unset field uses its default; `0` removes that limit.
+    properties:
+      maxAge:
+        type: string
+        description: |
+          Remove logs older than this duration. Defaults to `720h` (30 days).
+        goJSONSchema:
+          type: time.Duration
+          imports: ["time"]
+      maxSizeMB:
+        type: integer
+        description: Keep the total size of all logs under this many megabytes. Defaults to `500`.
+      maxCount:
+        type: integer
+        description: Keep at most this many logs. Defaults to `1000`.
+
   ColorPalette:
     type: object
     description: |
@@ -177,6 +197,11 @@ properties:
       `logfmt` will display logs with a log level, timestamp, and message.
       `text` will just display the log message.
     default: logfmt
+  logRetention:
+    $ref: '#/definitions/LogRetention'
+    description: |
+      Limits on how many run logs flow keeps, by age, total size, and count.
+      Manage them with `flow config set log-retention`.
   vaults:
     type: object
     additionalProperties:

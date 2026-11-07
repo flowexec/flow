@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 	"gopkg.in/yaml.v3"
@@ -30,6 +31,9 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid workspace mode %s", c.WorkspaceMode)
 	}
 	if err := c.DefaultLogMode.Validate(); err != nil {
+		return err
+	}
+	if err := c.LogRetention.validate(); err != nil {
 		return err
 	}
 	for i, v := range c.CustomVerbs {
@@ -211,6 +215,7 @@ func (c *Config) Markdown() string {
 	if c.DefaultLogMode != "" {
 		general += fmt.Sprintf("**Log Mode:** %s\n\n", c.DefaultLogMode)
 	}
+	general += fmt.Sprintf("**Log Retention:** %s\n\n", c.LogRetentionSummary())
 	if len(c.CustomVerbs) > 0 {
 		general += fmt.Sprintf("**Custom Verbs:** %s\n\n", strings.Join(c.CustomVerbs, ", "))
 	}
@@ -249,6 +254,68 @@ func (c *Config) Markdown() string {
 	}
 
 	return strings.Join(sections, "\n")
+}
+
+const (
+	DefaultLogRetentionMaxAge    = 30 * 24 * time.Hour
+	DefaultLogRetentionMaxSizeMB = 500
+	DefaultLogRetentionMaxCount  = 1000
+)
+
+// LogRetentionPolicy returns the archive limits to apply to run logs, filling unset fields with
+// their defaults.
+func (c *Config) LogRetentionPolicy() tuikitIO.RetentionPolicy {
+	policy := tuikitIO.RetentionPolicy{
+		MaxFiles:     DefaultLogRetentionMaxCount,
+		MaxAge:       DefaultLogRetentionMaxAge,
+		MaxTotalSize: DefaultLogRetentionMaxSizeMB * bytesPerMB,
+	}
+	if c == nil || c.LogRetention == nil {
+		return policy
+	}
+	if r := c.LogRetention; r.MaxCount != nil {
+		policy.MaxFiles = *r.MaxCount
+	}
+	if r := c.LogRetention; r.MaxAge != nil {
+		policy.MaxAge = *r.MaxAge
+	}
+	if r := c.LogRetention; r.MaxSizeMB != nil {
+		policy.MaxTotalSize = int64(*r.MaxSizeMB) * bytesPerMB
+	}
+	return policy
+}
+
+const bytesPerMB = 1024 * 1024
+
+func (r *LogRetention) validate() error {
+	if r == nil {
+		return nil
+	}
+	if r.MaxAge != nil && *r.MaxAge < 0 {
+		return fmt.Errorf("log retention maxAge must not be negative")
+	}
+	if r.MaxSizeMB != nil && *r.MaxSizeMB < 0 {
+		return fmt.Errorf("log retention maxSizeMB must not be negative")
+	}
+	if r.MaxCount != nil && *r.MaxCount < 0 {
+		return fmt.Errorf("log retention maxCount must not be negative")
+	}
+	return nil
+}
+
+// LogRetentionSummary describes the effective log retention limits.
+func (c *Config) LogRetentionSummary() string {
+	p := c.LogRetentionPolicy()
+	limit := func(v int64, text string) string {
+		if v <= 0 {
+			return "unlimited"
+		}
+		return text
+	}
+	return fmt.Sprintf("max age %s, max size %s, max count %s",
+		limit(int64(p.MaxAge), p.MaxAge.String()),
+		limit(p.MaxTotalSize, fmt.Sprintf("%d MB", p.MaxTotalSize/bytesPerMB)),
+		limit(int64(p.MaxFiles), fmt.Sprintf("%d", p.MaxFiles)))
 }
 
 func (ct ConfigTheme) String() string {

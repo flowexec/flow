@@ -24,6 +24,7 @@ Set a global configuration value.
 
 - [flow config](flow_config.md) — View and update global flow configuration.
 - [flow config set log-mode](flow_config_set_log-mode.md) — Set the default log mode.
+- [flow config set log-retention](flow_config_set_log-retention.md) — Set how many run logs are kept, by age, total size, and count.
 - [flow config set mouse](flow_config_set_mouse.md) — Enable or disable mouse support in the interactive UI.
 - [flow config set namespace](flow_config_set_namespace.md) — Change the current namespace.
 - [flow config set notifications](flow_config_set_notifications.md) — Enable or disable notifications.

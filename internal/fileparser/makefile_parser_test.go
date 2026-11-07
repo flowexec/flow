@@ -2,6 +2,8 @@ package fileparser_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -45,5 +47,16 @@ var _ = Describe("ExecutablesFromMakefile", func() {
 		for ref, found := range found {
 			Expect(found).To(BeTrue(), "executable %s not found", ref)
 		}
+	})
+
+	It("strips every leading # from help comments", func() {
+		path := filepath.Join(GinkgoT().TempDir(), "Makefile")
+		content := "## Build the web and API images\n##\n# second line\ndocker-build:\n\techo\n"
+		Expect(os.WriteFile(path, []byte(content), 0600)).To(Succeed())
+
+		execs, err := fileparser.ExecutablesFromMakefile("", path)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(execs).To(HaveLen(1))
+		Expect(execs[0].Description).To(Equal("Build the web and API images\nsecond line"))
 	})
 })

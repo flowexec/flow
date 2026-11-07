@@ -12,6 +12,7 @@ import (
 
 	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
 	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -146,5 +147,37 @@ func TestExitCode_ReportsTheCommandsOwnStatus(t *testing.T) {
 				t.Errorf("exitCode() = %d, want %d", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestNotRunnableHereError(t *testing.T) {
+	ref := executable.Ref("build other/app:api")
+	newExec := func(vis common.Visibility) *executable.Executable {
+		e := &executable.Executable{Verb: "build", Name: "api"}
+		if vis != "" {
+			v := executable.ExecutableVisibility(vis)
+			e.Visibility = &v
+		}
+		e.SetContext("other", "/src/other", "app", "/src/other/app.flow")
+		return e
+	}
+
+	for _, vis := range []common.Visibility{"", common.VisibilityPrivate, common.VisibilityInternal} {
+		msg := notRunnableHereError(newExec(vis), ref, "mine").Error()
+		for _, want := range []string{
+			"is private to workspace 'other'",
+			"cannot be run from workspace 'mine'",
+			"flow workspace switch other",
+			"visibility: public",
+		} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("visibility %q: expected %q in %q", vis, want, msg)
+			}
+		}
+	}
+
+	msg := notRunnableHereError(newExec(common.VisibilityHidden), ref, "mine").Error()
+	if !strings.Contains(msg, "is hidden") || strings.Contains(msg, "private") {
+		t.Errorf("hidden: unexpected message %q", msg)
 	}
 }

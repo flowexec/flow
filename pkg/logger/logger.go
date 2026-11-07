@@ -43,6 +43,8 @@ type InitOptions struct {
 	StdOut           *os.File
 	ArchiveDirectory string
 	ArchiveID        string // Unique identifier embedded in the archive filename for reliable linking.
+	// ArchiveRetention limits the archived logs kept. Nil keeps tuikit's default.
+	ArchiveRetention *io.RetentionPolicy
 	LogMode          io.LogMode
 	Theme            themes.Theme
 
@@ -80,6 +82,9 @@ func Init(opts InitOptions) {
 			loggerOpts = append(loggerOpts, io.WithArchiveDirectory(opts.ArchiveDirectory))
 			if opts.ArchiveID != "" {
 				loggerOpts = append(loggerOpts, io.WithArchiveID(opts.ArchiveID))
+			}
+			if opts.ArchiveRetention != nil {
+				loggerOpts = append(loggerOpts, io.WithArchiveRetention(*opts.ArchiveRetention))
 			}
 		}
 

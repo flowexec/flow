@@ -321,6 +321,24 @@ var SetSoundNotificationFlag = &Metadata{
 	Default: false,
 }
 
+var LogRetentionMaxAgeFlag = &Metadata{
+	Name:    "max-age",
+	Usage:   "Remove run logs older than this duration (for example 720h). 0 removes the limit.",
+	Default: "",
+}
+
+var LogRetentionMaxSizeFlag = &Metadata{
+	Name:    "max-size-mb",
+	Usage:   "Keep the total size of run logs under this many megabytes. 0 removes the limit.",
+	Default: 0,
+}
+
+var LogRetentionMaxCountFlag = &Metadata{
+	Name:    "max-count",
+	Usage:   "Keep at most this many run logs. 0 removes the limit.",
+	Default: 0,
+}
+
 var StoreAllFlag = &Metadata{
 	Name:    "all",
 	Usage:   "Force clear all stored data",
