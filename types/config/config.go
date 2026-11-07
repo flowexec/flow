@@ -339,3 +339,31 @@ func (c *Config) interactiveMarkdown() string {
 	}
 	return interactive
 }
+
+// MarshalJSON writes durations the way the config file and its schema spell them ("5m0s"),
+// not as the nanosecond integers encoding/json gives a time.Duration.
+func (c Config) MarshalJSON() ([]byte, error) {
+	type plain Config
+	var timeout string
+	if c.DefaultTimeout != 0 {
+		timeout = c.DefaultTimeout.String()
+	}
+	return json.Marshal(struct {
+		plain
+		DefaultTimeout string `json:"defaultTimeout,omitempty"`
+	}{plain(c), timeout})
+}
+
+// MarshalJSON writes maxAge as a duration string; zero, meaning no limit, stays "0s".
+func (r LogRetention) MarshalJSON() ([]byte, error) {
+	type plain LogRetention
+	var maxAge *string
+	if r.MaxAge != nil {
+		s := r.MaxAge.String()
+		maxAge = &s
+	}
+	return json.Marshal(struct {
+		plain
+		MaxAge *string `json:"maxAge,omitempty"`
+	}{plain(r), maxAge})
+}

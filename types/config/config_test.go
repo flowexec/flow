@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -166,5 +167,28 @@ var _ = Describe("LogRetentionPolicy", func() {
 		size := -1
 		cfg := &config.Config{LogRetention: &config.LogRetention{MaxSizeMB: &size}}
 		Expect(cfg.Validate()).To(MatchError(ContainSubstring("maxSizeMB must not be negative")))
+	})
+})
+
+var _ = Describe("Config JSON", func() {
+	It("writes durations as the strings the config file and schema use", func() {
+		maxAge, noAge := 168*time.Hour, time.Duration(0)
+		cfg := config.Config{DefaultTimeout: 5 * time.Minute, LogRetention: &config.LogRetention{MaxAge: &maxAge}}
+		out, err := json.Marshal(&cfg)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(out)).To(ContainSubstring(`"defaultTimeout":"5m0s"`))
+		Expect(string(out)).To(ContainSubstring(`"maxAge":"168h0m0s"`))
+
+		cfg.LogRetention.MaxAge = &noAge
+		out, err = json.Marshal(cfg)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(out)).To(ContainSubstring(`"maxAge":"0s"`))
+	})
+
+	It("leaves unset durations out", func() {
+		out, err := json.Marshal(config.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(out)).NotTo(ContainSubstring("defaultTimeout"))
+		Expect(string(out)).NotTo(ContainSubstring("logRetention"))
 	})
 })
