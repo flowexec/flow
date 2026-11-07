@@ -415,10 +415,14 @@ func setLogRetentionFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		retention.MaxCount = &maxCount
 	}
 
-	userConfig.LogRetention = &retention
-	if err := userConfig.Validate(); err != nil {
+	// Validated before it is applied, so a rejected value never reaches ctx.Config.
+	candidate := *userConfig
+	candidate.LogRetention = &retention
+	if err := candidate.Validate(); err != nil {
 		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
 	}
+	userConfig.LogRetention = &retention
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
@@ -441,18 +445,13 @@ func registerSetContainerRuntimeCmd(ctx *context.Context, setCmd *cobra.Command)
 }
 
 func setContainerRuntimeFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	userConfig := ctx.Config
-	if userConfig.Container == nil {
-		userConfig.Container = &config.Container{}
-	}
-	userConfig.Container.Runtime = config.ContainerRuntime(strings.ToLower(args[0]))
-	if err := userConfig.Validate(); err != nil {
-		errhandler.HandleUsage(ctx, cmd, "%v", err)
-	}
-	if err := filesystem.WriteConfig(userConfig); err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	logger.Log().PlainTextSuccess("Containers set: " + userConfig.ContainerSummary())
+	setContainerConfig(ctx, cmd, func(c *config.Config) error {
+		if c.Container == nil {
+			c.Container = &config.Container{}
+		}
+		c.Container.Runtime = config.ContainerRuntime(strings.ToLower(args[0]))
+		return nil
+	})
 }
 
 func registerSetContainerCommandCmd(ctx *context.Context, setCmd *cobra.Command) {
@@ -476,6 +475,12 @@ func registerSetContainerCommandCmd(ctx *context.Context, setCmd *cobra.Command)
 		},
 		Run: func(cmd *cobra.Command, args []string) { setContainerCommandFunc(ctx, cmd, args) },
 	}
+	// A runtime flag given without `--` fails as one of flow's own flags before Run, so the hint
+	// has to ride on the parse error.
+	commandCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return fmt.Errorf("%w: put the runtime's flags after `--`, e.g. "+
+			"`flow config set container-command docker docker -- --context colima`", err)
+	})
 	setCmd.AddCommand(commandCmd)
 }
 
@@ -485,16 +490,35 @@ func setContainerCommandFunc(ctx *context.Context, cmd *cobra.Command, args []st
 	if dash := cmd.ArgsLenAtDash(); (dash == -1 && len(args) != 2) || (dash != -1 && dash != 2) {
 		errhandler.HandleUsage(ctx, cmd, "expected a runtime and a command, then `--` before any flags")
 	}
-	userConfig := ctx.Config
 	family := config.ContainerRuntime(strings.ToLower(args[0]))
-	if err := userConfig.SetContainerCommand(family, args[1], args[2:]); err != nil {
+	setContainerConfig(ctx, cmd, func(c *config.Config) error {
+		return c.SetContainerCommand(family, args[1], args[2:])
+	})
+}
+
+// setContainerConfig applies change to a copy of the config's container settings, and keeps it
+// only when the result is valid and written. A rejected value never reaches ctx.Config, which a
+// long-lived process (flow mcp, an embedder) goes on using.
+func setContainerConfig(ctx *context.Context, cmd *cobra.Command, change func(*config.Config) error) {
+	userConfig := ctx.Config
+	prev := userConfig.Container
+	userConfig.Container = prev.Clone()
+	restore := func() { userConfig.Container = prev }
+
+	if err := change(userConfig); err != nil {
+		restore()
 		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
 	}
 	if err := userConfig.Validate(); err != nil {
+		restore()
 		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
 	}
 	if err := filesystem.WriteConfig(userConfig); err != nil {
+		restore()
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
 	}
 	logger.Log().PlainTextSuccess("Containers set: " + userConfig.ContainerSummary())
 }

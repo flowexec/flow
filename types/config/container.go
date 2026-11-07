@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -84,6 +85,25 @@ func validateFamily(family ContainerRuntime) error {
 	default:
 		return fmt.Errorf("invalid container runtime %q (must be docker or podman)", family)
 	}
+}
+
+// Clone returns a deep copy, or nil for nil.
+func (c *Container) Clone() *Container {
+	if c == nil {
+		return nil
+	}
+	out := &Container{Runtime: c.Runtime}
+	if c.Runtimes != nil {
+		out.Runtimes = &ContainerRuntimes{Docker: c.Runtimes.Docker.clone(), Podman: c.Runtimes.Podman.clone()}
+	}
+	return out
+}
+
+func (c *ContainerRuntimeCommand) clone() *ContainerRuntimeCommand {
+	if c == nil {
+		return nil
+	}
+	return &ContainerRuntimeCommand{Command: c.Command, Args: slices.Clone(c.Args)}
 }
 
 func (c *Container) validate() error {

@@ -259,8 +259,38 @@ func TestCallbacksSurviveShallowCopy(t *testing.T) {
 
 var _ = ginkgo.Describe("ShallowCopy", func() {
 	ginkgo.It("keeps the container override, so parallel steps run in it too", func() {
-		override := &executable.ExecContainer{Image: "golang:1.26"}
-		root := &Context{callbacks: &callbackList{}, ContainerOverride: override}
-		Expect(root.ShallowCopy().ContainerOverride).To(BeIdenticalTo(override))
+		root := &Context{callbacks: &callbackList{}}
+		Expect(root.SetContainerOverride(&executable.ExecContainer{Image: "golang:1.26"})).To(Succeed())
+		Expect(root.ShallowCopy().ContainerOverride()).To(BeIdenticalTo(root.ContainerOverride()))
+	})
+})
+
+var _ = ginkgo.Describe("SetContainerOverride", func() {
+	ginkgo.It("stores a defaulted copy, so later changes to the input don't leak in", func() {
+		ctx := &Context{}
+		in := &executable.ExecContainer{Image: "golang:1.26", Volumes: []executable.ExecContainerVolume{"/a:/a"}}
+		Expect(ctx.SetContainerOverride(in)).To(Succeed())
+		in.Image = "alpine"
+		in.Volumes[0] = "/b:/b"
+
+		got := ctx.ContainerOverride()
+		Expect(got.Image).To(Equal("golang:1.26"))
+		Expect(got.Volumes).To(ConsistOf(executable.ExecContainerVolume("/a:/a")))
+		Expect(got.Runtime).To(Equal(executable.ExecContainerRuntimeAuto))
+		Expect(got.MountWorkspace).To(Equal(executable.DefaultContainerMount))
+	})
+
+	ginkgo.It("rejects an override flow would refuse in a flow file, before anything runs", func() {
+		ctx := &Context{}
+		err := ctx.SetContainerOverride(&executable.ExecContainer{Image: "golang", Workdir: "relative"})
+		Expect(err).To(MatchError(ContainSubstring("invalid container override")))
+		Expect(ctx.ContainerOverride()).To(BeNil())
+	})
+
+	ginkgo.It("clears the override with nil", func() {
+		ctx := &Context{}
+		Expect(ctx.SetContainerOverride(&executable.ExecContainer{Image: "golang"})).To(Succeed())
+		Expect(ctx.SetContainerOverride(nil)).To(Succeed())
+		Expect(ctx.ContainerOverride()).To(BeNil())
 	})
 })

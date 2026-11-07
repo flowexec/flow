@@ -54,10 +54,11 @@ type Runtime struct {
 	Args    []string
 }
 
-// runtime detection cache for the "auto" preference, keyed by the machine config it was
-// resolved with. Only a successful detection is memoized: a negative result must not be
-// cached, otherwise a long-lived process (e.g. `flow mcp`) that starts before the runtime is
-// available would keep failing even after the runtime comes up.
+// runtime detection cache for the "auto" preference, keyed by the runtimes installed and how
+// they are configured. Only a certain result is memoized: the one runtime installed, or the
+// first whose engine answered. Nothing is cached when no runtime is found, or when none of
+// several engines answered, otherwise a long-lived process (e.g. `flow mcp`) would keep
+// choosing as it did before an engine came up.
 var (
 	lookPath      = osexec.LookPath // test seam
 	engineRunning = probeEngine     // test seam
@@ -85,15 +86,17 @@ func probeEngine(command string, args []string) bool {
 // whose engine answers is chosen, so a stopped Docker Desktop doesn't hide a running Podman;
 // with neither answering, the first installed is used and its own error explains why.
 func ResolveRuntime(pref string, cfg *config.Config) (Runtime, error) {
+	fromConfig := false
 	if pref == "" || pref == string(executable.ExecContainerRuntimeAuto) {
 		pref = string(cfg.ContainerRuntimePreference())
+		fromConfig = pref != string(config.ContainerRuntimeAuto)
 	}
 	switch pref {
 	case "docker", "podman":
 		rt := runtimeFor(pref, cfg)
 		if _, err := lookPath(rt.Command); err != nil {
 			return Runtime{}, flowerrors.NewContainerRuntimeError(pref,
-				fmt.Errorf("%s is not installed or not in PATH", rt.Command))
+				fmt.Errorf("%s is not installed or not in PATH%s", rt.Command, configSource(pref, rt, fromConfig)))
 		}
 		return rt, nil
 	case "auto":
@@ -102,6 +105,22 @@ func ResolveRuntime(pref string, cfg *config.Config) (Runtime, error) {
 		return Runtime{}, flowerrors.NewContainerRuntimeError(pref,
 			fmt.Errorf("unknown container runtime %q", pref))
 	}
+}
+
+// configSource names the flow config setting behind a runtime that could not be found, since
+// neither the flow file nor the error would otherwise mention it.
+func configSource(family string, rt Runtime, fromConfig bool) string {
+	var settings []string
+	if fromConfig {
+		settings = append(settings, "`flow config set container-runtime`")
+	}
+	if rt.Command != family {
+		settings = append(settings, "`flow config set container-command "+family+"`")
+	}
+	if len(settings) == 0 {
+		return ""
+	}
+	return " (chosen by " + strings.Join(settings, " and ") + ")"
 }
 
 func runtimeFor(family string, cfg *config.Config) Runtime {
@@ -129,18 +148,20 @@ func detectRuntime(cfg *config.Config) (Runtime, error) {
 	if rt, ok := autoRuntime[key]; ok {
 		return rt, nil
 	}
-	chosen := installed[0]
 	// Probing costs an `info` round trip, so it's only worth it when there is a choice.
-	if len(installed) > 1 {
-		for _, rt := range installed {
-			if engineRunning(rt.Command, rt.Args) {
-				chosen = rt
-				break
-			}
+	if len(installed) == 1 {
+		autoRuntime[key] = installed[0]
+		return installed[0], nil
+	}
+	for _, rt := range installed {
+		if engineRunning(rt.Command, rt.Args) {
+			autoRuntime[key] = rt
+			return rt, nil
 		}
 	}
-	autoRuntime[key] = chosen
-	return chosen, nil
+	// No engine answered: use docker, whose own error explains the failure, but probe again
+	// next time, since one may have started by then.
+	return installed[0], nil
 }
 
 // RunContainer runs the command or script described by spec inside a container.

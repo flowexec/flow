@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -348,22 +347,15 @@ func resolveContainerEntrypoint(spec *executable.ExecExecutableType) (entrypoint
 
 // withContainerOverride returns e set to run inside override, replacing any container it
 // declares. e itself is left alone: it is usually the executable cache's copy, which other
-// lookups in the same process share. A nil override returns e unchanged.
-func withContainerOverride(
-	e *executable.Executable, override *executable.ExecContainer,
-) (*executable.Executable, error) {
+// lookups in the same process share. The override was validated and defaulted when it was set
+// (Context.SetContainerOverride). A nil override returns e unchanged.
+func withContainerOverride(e *executable.Executable, override *executable.ExecContainer) *executable.Executable {
 	if override == nil || e == nil || e.Exec == nil {
-		return e, nil
-	}
-	c := *override
-	c.Volumes = slices.Clone(override.Volumes)
-	c.SetDefaults()
-	if err := c.Validate(); err != nil {
-		return nil, errors.Wrap(err, "invalid container override")
+		return e
 	}
 	execCopy := *e.Exec
-	execCopy.Container = &c
+	execCopy.Container = override
 	out := *e
 	out.Exec = &execCopy
-	return &out, nil
+	return &out
 }

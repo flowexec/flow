@@ -314,6 +314,38 @@ var _ = Describe("Container backend", func() {
 				Expect(rt.Family).To(Equal("docker"))
 			})
 
+			It("chooses again once an engine starts, rather than keeping a fallback", func() {
+				DeferCleanup(run.SetLookPathForTest(both))
+				podmanUp := false
+				DeferCleanup(run.SetEngineRunningForTest(func(command string, _ []string) bool {
+					return podmanUp && command == "podman"
+				}))
+
+				rt, err := run.ResolveRuntime("auto", nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rt.Family).To(Equal("docker"), "nothing answers yet, so docker reports why")
+
+				podmanUp = true
+				rt, err = run.ResolveRuntime("auto", nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rt.Family).To(Equal("podman"))
+			})
+
+			It("names the config setting when a runtime it chose is missing", func() {
+				DeferCleanup(run.SetLookPathForTest(func(name string) (string, error) {
+					if name == "docker" {
+						return "/usr/bin/docker", nil
+					}
+					return "", errors.New("not found")
+				}))
+				cfg := &config.Config{Container: &config.Container{Runtime: config.ContainerRuntimePodman}}
+				_, err := run.ResolveRuntime("auto", cfg)
+				Expect(err).To(MatchError(ContainSubstring("chosen by `flow config set container-runtime`")))
+
+				_, err = run.ResolveRuntime("podman", nil)
+				Expect(err).NotTo(MatchError(ContainSubstring("chosen by")), "a flow file's own choice needs no pointer")
+			})
+
 			It("probes with the configured command and flags", func() {
 				DeferCleanup(run.SetLookPathForTest(both))
 				var probed [][]string

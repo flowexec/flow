@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -50,12 +51,9 @@ type Context struct {
 	// This will be nil if the context is not associated with an executable run.
 	RootExecutable *executable.Executable
 
-	// ContainerOverride, when set, runs every exec executable in this run inside this
-	// container, replacing any container an executable declares. It reaches every step of a
-	// serial or parallel executable, inline `cmd` steps included, so an embedder can run a whole
-	// executable in one image without changing its flow files. Nil runs each executable as its
-	// flow file says.
-	ContainerOverride *executable.ExecContainer
+	// containerOverride is set through SetContainerOverride, which validates it, so a run
+	// never starts with an override that would fail partway through.
+	containerOverride *executable.ExecContainer
 
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
@@ -150,6 +148,35 @@ func NewContext(ctx context.Context, cancelFunc context.CancelFunc, opts ...Opti
 	return c
 }
 
+// SetContainerOverride runs every exec executable in this run inside c, replacing any container
+// an executable declares. It reaches every step of a serial or parallel executable, inline `cmd`
+// steps included, so an embedder can run a whole executable in one image without changing its
+// flow files. Steps of other types (request, render, launch) still run on the host, and a
+// Windows script step (.bat, .cmd, .ps1) fails, since it can't run in a container.
+//
+// c is validated as a flow file's container block would be, and copied with defaults applied.
+// Nil clears the override.
+func (ctx *Context) SetContainerOverride(c *executable.ExecContainer) error {
+	if c == nil {
+		ctx.containerOverride = nil
+		return nil
+	}
+	override := *c
+	override.Volumes = slices.Clone(c.Volumes)
+	override.SetDefaults()
+	if err := override.Validate(); err != nil {
+		return fmt.Errorf("invalid container override: %w", err)
+	}
+	ctx.containerOverride = &override
+	return nil
+}
+
+// ContainerOverride is the container every exec executable in this run runs inside, or nil to
+// run each as its flow file says. See SetContainerOverride.
+func (ctx *Context) ContainerOverride() *executable.ExecContainer {
+	return ctx.containerOverride
+}
+
 // ShallowCopy returns a pointer to a new Context that shares all backing
 // state (config, caches, data store, TUI container) but has its own mutable
 // fields (CurrentTask, ProcessTmpDir, etc.)
@@ -173,7 +200,7 @@ func (ctx *Context) ShallowCopy() *Context {
 		TemplateCache:       ctx.TemplateCache,
 		DataStore:           ctx.DataStore,
 		RootExecutable:      ctx.RootExecutable,
-		ContainerOverride:   ctx.ContainerOverride,
+		containerOverride:   ctx.containerOverride,
 		ProcessTmpDir:       ctx.ProcessTmpDir,
 		LogArchiveID:        ctx.LogArchiveID,
 	}

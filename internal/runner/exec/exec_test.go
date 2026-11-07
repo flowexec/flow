@@ -349,10 +349,10 @@ var _ = Describe("Exec Runner", func() {
 		})
 
 		Context("with a container override on the context", func() {
-			AfterEach(func() { ctx.Ctx.ContainerOverride = nil })
+			AfterEach(func() { Expect(ctx.Ctx.SetContainerOverride(nil)).To(Succeed()) })
 
 			It("runs an executable without a container of its own in the override", func() {
-				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang:1.26"}
+				Expect(ctx.Ctx.SetContainerOverride(&executable.ExecContainer{Image: "golang:1.26"})).To(Succeed())
 				e := newContainerExec(nil, executable.Directory(wsPath))
 				Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 				Expect(cmdCalls).To(BeEmpty())
@@ -363,19 +363,21 @@ var _ = Describe("Exec Runner", func() {
 
 			It("replaces the executable's own container without changing the executable", func() {
 				own := &executable.ExecContainer{Image: "alpine:3"}
-				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang:1.26"}
+				Expect(ctx.Ctx.SetContainerOverride(&executable.ExecContainer{Image: "golang:1.26"})).To(Succeed())
 				e := newContainerExec(own, executable.Directory(wsPath))
 				Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
 				Expect(containerSpecs[0].Image).To(Equal("golang:1.26"))
 				Expect(e.Exec.Container).To(BeIdenticalTo(own))
 			})
 
-			It("rejects an override flow would refuse in a flow file", func() {
-				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang", Workdir: "relative"}
-				e := newContainerExec(nil, executable.Directory(wsPath))
-				err := execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)
-				Expect(err).To(MatchError(ContainSubstring("invalid container override")))
-				Expect(containerSpecs).To(BeEmpty())
+			It("runs inline python under the image's interpreter", func() {
+				Expect(ctx.Ctx.SetContainerOverride(&executable.ExecContainer{Image: "python:3.13"})).To(Succeed())
+				e := newPythonContainerExec(nil, executable.Directory(wsPath))
+				Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+				Expect(pythonCalls).To(BeEmpty())
+				Expect(containerSpecs).To(HaveLen(1))
+				Expect(containerSpecs[0].Entrypoint).To(Equal("python3"))
+				Expect(containerSpecs[0].Script).To(HaveSuffix(".py"))
 			})
 		})
 
