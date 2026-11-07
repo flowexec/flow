@@ -256,3 +256,11 @@ func TestCallbacksSurviveShallowCopy(t *testing.T) {
 		}
 	})
 }
+
+var _ = ginkgo.Describe("ShallowCopy", func() {
+	ginkgo.It("keeps the container override, so parallel steps run in it too", func() {
+		override := &executable.ExecContainer{Image: "golang:1.26"}
+		root := &Context{callbacks: &callbackList{}, ContainerOverride: override}
+		Expect(root.ShallowCopy().ContainerOverride).To(BeIdenticalTo(override))
+	})
+})

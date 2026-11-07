@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -341,4 +342,26 @@ func resolveContainerEntrypoint(spec *executable.ExecExecutableType) (entrypoint
 		return containerPythonBin, true
 	}
 	return spec.Container.ResolveEntrypoint()
+}
+
+// withContainerOverride returns e set to run inside override, replacing any container it
+// declares. e itself is left alone: it is usually the executable cache's copy, which other
+// lookups in the same process share. A nil override returns e unchanged.
+func withContainerOverride(
+	e *executable.Executable, override *executable.ExecContainer,
+) (*executable.Executable, error) {
+	if override == nil || e == nil || e.Exec == nil {
+		return e, nil
+	}
+	c := *override
+	c.Volumes = slices.Clone(override.Volumes)
+	c.SetDefaults()
+	if err := c.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid container override")
+	}
+	execCopy := *e.Exec
+	execCopy.Container = &c
+	out := *e
+	out.Exec = &execCopy
+	return &out, nil
 }

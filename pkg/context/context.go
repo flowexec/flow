@@ -50,6 +50,13 @@ type Context struct {
 	// This will be nil if the context is not associated with an executable run.
 	RootExecutable *executable.Executable
 
+	// ContainerOverride, when set, runs every exec executable in this run inside this
+	// container, replacing any container an executable declares. It reaches every step of a
+	// serial or parallel executable, inline `cmd` steps included, so an embedder can run a whole
+	// executable in one image without changing its flow files. Nil runs each executable as its
+	// flow file says.
+	ContainerOverride *executable.ExecContainer
+
 	// ProcessTmpDir is the temporary directory for the current process. If set, it will be
 	// used to store temporary files all executable runs when the tmpDir value is specified.
 	ProcessTmpDir string
@@ -166,6 +173,7 @@ func (ctx *Context) ShallowCopy() *Context {
 		TemplateCache:       ctx.TemplateCache,
 		DataStore:           ctx.DataStore,
 		RootExecutable:      ctx.RootExecutable,
+		ContainerOverride:   ctx.ContainerOverride,
 		ProcessTmpDir:       ctx.ProcessTmpDir,
 		LogArchiveID:        ctx.LogArchiveID,
 	}

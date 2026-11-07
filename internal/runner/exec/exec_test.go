@@ -348,6 +348,37 @@ var _ = Describe("Exec Runner", func() {
 			Expect(env).To(HaveKeyWithValue("PYTHONUNBUFFERED", "1"))
 		})
 
+		Context("with a container override on the context", func() {
+			AfterEach(func() { ctx.Ctx.ContainerOverride = nil })
+
+			It("runs an executable without a container of its own in the override", func() {
+				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang:1.26"}
+				e := newContainerExec(nil, executable.Directory(wsPath))
+				Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+				Expect(cmdCalls).To(BeEmpty())
+				Expect(containerSpecs).To(HaveLen(1))
+				Expect(containerSpecs[0].Image).To(Equal("golang:1.26"))
+				Expect(containerSpecs[0].Workdir).To(Equal("/workspace"))
+			})
+
+			It("replaces the executable's own container without changing the executable", func() {
+				own := &executable.ExecContainer{Image: "alpine:3"}
+				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang:1.26"}
+				e := newContainerExec(own, executable.Directory(wsPath))
+				Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
+				Expect(containerSpecs[0].Image).To(Equal("golang:1.26"))
+				Expect(e.Exec.Container).To(BeIdenticalTo(own))
+			})
+
+			It("rejects an override flow would refuse in a flow file", func() {
+				ctx.Ctx.ContainerOverride = &executable.ExecContainer{Image: "golang", Workdir: "relative"}
+				e := newContainerExec(nil, executable.Directory(wsPath))
+				err := execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)
+				Expect(err).To(MatchError(ContainSubstring("invalid container override")))
+				Expect(containerSpecs).To(BeEmpty())
+			})
+		})
+
 		It("routes to the container backend instead of runCmd", func() {
 			e := newContainerExec(&executable.ExecContainer{Image: "alpine:3"}, executable.Directory(wsPath))
 			Expect(execRnr.Exec(ctx.Ctx, e, mockEngine, map[string]string{}, nil)).To(Succeed())
