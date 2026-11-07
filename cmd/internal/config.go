@@ -107,6 +107,8 @@ func registerSetConfigCmd(ctx *context.Context, configCmd *cobra.Command) {
 	registerSetTimeoutCmd(ctx, setCmd)
 	registerSetUpdateCheckCmd(ctx, setCmd)
 	registerSetLogRetentionCmd(ctx, setCmd)
+	registerSetContainerRuntimeCmd(ctx, setCmd)
+	registerSetContainerCommandCmd(ctx, setCmd)
 	configCmd.AddCommand(setCmd)
 }
 
@@ -413,14 +415,112 @@ func setLogRetentionFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		retention.MaxCount = &maxCount
 	}
 
-	userConfig.LogRetention = &retention
-	if err := userConfig.Validate(); err != nil {
+	// Validated before it is applied, so a rejected value never reaches ctx.Config.
+	candidate := *userConfig
+	candidate.LogRetention = &retention
+	if err := candidate.Validate(); err != nil {
 		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
 	}
+	userConfig.LogRetention = &retention
 	if err := filesystem.WriteConfig(userConfig); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
 	}
 	logger.Log().PlainTextSuccess("Log retention set: " + userConfig.LogRetentionSummary())
+}
+
+func registerSetContainerRuntimeCmd(ctx *context.Context, setCmd *cobra.Command) {
+	runtimeCmd := &cobra.Command{
+		Use:   "container-runtime [auto|docker|podman]",
+		Short: "Set the container runtime that executables set to auto use on this machine.",
+		Long: "Set the runtime a container executable with `runtime: auto` (the default) runs with on " +
+			"this machine. `auto` detects one: docker, else podman, preferring an engine that is running " +
+			"when both are installed. An executable that names docker or podman keeps that runtime.",
+		Example:   "  flow config set container-runtime podman",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"auto", "docker", "podman"},
+		Run:       func(cmd *cobra.Command, args []string) { setContainerRuntimeFunc(ctx, cmd, args) },
+	}
+	setCmd.AddCommand(runtimeCmd)
+}
+
+func setContainerRuntimeFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	setContainerConfig(ctx, cmd, func(c *config.Config) error {
+		if c.Container == nil {
+			c.Container = &config.Container{}
+		}
+		c.Container.Runtime = config.ContainerRuntime(strings.ToLower(args[0]))
+		return nil
+	})
+}
+
+func registerSetContainerCommandCmd(ctx *context.Context, setCmd *cobra.Command) {
+	commandCmd := &cobra.Command{
+		Use:   "container-command [docker|podman] COMMAND [-- FLAG...]",
+		Short: "Set the command and global flags a container runtime runs with on this machine.",
+		Long: "Run COMMAND in place of docker or podman for container executables, with any flags after " +
+			"`--` placed before every subcommand. COMMAND must accept that runtime's `run` and `rm` flags, " +
+			"such as a Docker-compatible CLI for docker. Set a runtime's own name with no flags to go back " +
+			"to the default.",
+		Example: "  flow config set container-command docker docker -- --context colima\n" +
+			"  flow config set container-command podman podman -- --connection build-vm\n" +
+			"  flow config set container-command docker /opt/homebrew/bin/docker\n" +
+			"  flow config set container-command docker docker   # back to the default",
+		Args: cobra.MinimumNArgs(2),
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			if len(args) == 0 {
+				return []string{"docker", "podman"}, cobra.ShellCompDirectiveNoFileComp
+			}
+			return nil, cobra.ShellCompDirectiveDefault
+		},
+		Run: func(cmd *cobra.Command, args []string) { setContainerCommandFunc(ctx, cmd, args) },
+	}
+	// A runtime flag given without `--` fails as one of flow's own flags before Run, so the hint
+	// has to ride on the parse error.
+	commandCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return fmt.Errorf("%w: put the runtime's flags after `--`, e.g. "+
+			"`flow config set container-command docker docker -- --context colima`", err)
+	})
+	setCmd.AddCommand(commandCmd)
+}
+
+func setContainerCommandFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	// Anything past the command must follow `--`, so a flag meant for the runtime is never read
+	// as one of flow's own.
+	if dash := cmd.ArgsLenAtDash(); (dash == -1 && len(args) != 2) || (dash != -1 && dash != 2) {
+		errhandler.HandleUsage(ctx, cmd, "expected a runtime and a command, then `--` before any flags")
+	}
+	family := config.ContainerRuntime(strings.ToLower(args[0]))
+	setContainerConfig(ctx, cmd, func(c *config.Config) error {
+		return c.SetContainerCommand(family, args[1], args[2:])
+	})
+}
+
+// setContainerConfig applies change to a copy of the config's container settings, and keeps it
+// only when the result is valid and written. A rejected value never reaches ctx.Config, which a
+// long-lived process (flow mcp, an embedder) goes on using.
+func setContainerConfig(ctx *context.Context, cmd *cobra.Command, change func(*config.Config) error) {
+	userConfig := ctx.Config
+	prev := userConfig.Container
+	userConfig.Container = prev.Clone()
+	restore := func() { userConfig.Container = prev }
+
+	if err := change(userConfig); err != nil {
+		restore()
+		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
+	}
+	if err := userConfig.Validate(); err != nil {
+		restore()
+		errhandler.HandleUsage(ctx, cmd, "%v", err)
+		return
+	}
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		restore()
+		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+	logger.Log().PlainTextSuccess("Containers set: " + userConfig.ContainerSummary())
 }
 
 func registerAddConfigCmd(ctx *context.Context, configCmd *cobra.Command) {

@@ -48,6 +48,7 @@ func (r *execRunner) Exec(
 	inputEnv map[string]string,
 	inputArgs []string,
 ) error {
+	e = withContainerOverride(e, ctx.ContainerOverride())
 	execSpec := e.Exec
 	defaultEnv := env.DefaultEnv(ctx, e)
 	envMap, err := env.BuildEnvMap(ctx.Config.CurrentVaultName(), e.Env(), inputArgs, inputEnv, defaultEnv)
@@ -93,7 +94,7 @@ func (r *execRunner) Exec(
 	}
 
 	if execSpec.Container != nil {
-		spec, cleanupScript, err := buildContainerSpec(e, targetDir, envMap)
+		spec, cleanupScript, err := buildContainerSpec(e, targetDir, envMap, ctx.Config)
 		if err != nil {
 			return err
 		}

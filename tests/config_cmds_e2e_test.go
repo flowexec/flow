@@ -5,6 +5,7 @@ package tests_test
 import (
 	stdCtx "context"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -242,6 +243,56 @@ var _ = Describe("config e2e", Ordered, func() {
 			out, err := readFileContent(ctx.StdOut())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring("Aborting"))
+		})
+	})
+
+	When("setting the container runtime (flow config set container-runtime)", func() {
+		It("sets what auto uses on this machine", func() {
+			Expect(run.Run(ctx.Context, "config", "set", "container-runtime", "podman")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("Containers set: runtime podman"))
+		})
+
+		It("rejects an unknown runtime", func() {
+			ctx.ExpectFailure()
+			Expect(run.Run(ctx.Context, "config", "set", "container-runtime", "lxc")).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid container runtime")))
+		})
+	})
+
+	When("setting a runtime's command (flow config set container-command)", func() {
+		It("stores global flags given after --", func() {
+			Expect(run.Run(ctx.Context,
+				"config", "set", "container-command", "docker", "docker", "--", "--context", "colima")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(out).To(ContainSubstring("docker runs `docker --context colima`"))
+		})
+
+		// Runs after the spec above (the suite is Ordered), so it clears the flags set there; run
+		// alone it still checks the result, since each spec can run one command.
+		It("goes back to the default when set to the runtime's own name", func() {
+			Expect(run.Run(ctx.Context, "config", "set", "container-command", "docker", "docker")).To(Succeed())
+			out, err := readFileContent(ctx.StdOut())
+			Expect(err).NotTo(HaveOccurred())
+			lines := strings.Split(strings.TrimSpace(out), "\n")
+			last := lines[len(lines)-1]
+			Expect(last).To(ContainSubstring("Containers set:"))
+			Expect(last).NotTo(ContainSubstring("docker runs"))
+		})
+
+		It("points at -- when a runtime flag is given without it", func() {
+			ctx.ExpectFailure()
+			err := run.Run(ctx.Context, "config", "set", "container-command", "docker", "docker", "--context", "colima")
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("after `--`")))
+		})
+
+		It("rejects an unknown runtime family", func() {
+			ctx.ExpectFailure()
+			Expect(run.Run(ctx.Context, "config", "set", "container-command", "lxc", "lxc")).To(HaveOccurred())
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("invalid container runtime")))
 		})
 	})
 })

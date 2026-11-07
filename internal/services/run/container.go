@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	osexec "os/exec"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -14,6 +15,8 @@ import (
 
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/config"
+	"github.com/flowexec/flow/v2/types/executable"
 )
 
 // Mount is a single bind mount passed to the container runtime.
@@ -28,7 +31,7 @@ type Mount struct {
 // translation is expected to be done by the caller; this package only builds and
 // runs the runtime invocation.
 type ContainerSpec struct {
-	Runtime       string // "docker" or "podman"; already resolved (never "auto")
+	Runtime       Runtime // already resolved (never "auto")
 	Image         string
 	Name          string            // container name for cleanup/identification
 	Labels        map[string]string // emitted in sorted key order
@@ -43,45 +46,122 @@ type ContainerSpec struct {
 	Script        string // container-side path to a script; XOR Cmd
 }
 
-// runtime detection cache for the "auto" preference. Only a successful detection
-// is memoized: a negative result must not be cached, otherwise a long-lived
-// process (e.g. `flow mcp`) that starts before the runtime is available would
-// keep failing even after the runtime comes up.
+// Runtime is a resolved container runtime: the family a flow file names, and the command and
+// global flags this machine runs for it.
+type Runtime struct {
+	Family  string // "docker" or "podman"
+	Command string
+	Args    []string
+}
+
+// runtime detection cache for the "auto" preference, keyed by the runtimes installed and how
+// they are configured. Only a certain result is memoized: the one runtime installed, or the
+// first whose engine answered. Nothing is cached when no runtime is found, or when none of
+// several engines answered, otherwise a long-lived process (e.g. `flow mcp`) would keep
+// choosing as it did before an engine came up.
 var (
 	lookPath      = osexec.LookPath // test seam
+	engineRunning = probeEngine     // test seam
 	autoRuntimeMu sync.Mutex
-	autoRuntime   string
+	autoRuntime   = map[string]Runtime{}
 )
 
-// ResolveRuntime resolves a runtime preference ("auto", "docker", "podman", or
-// "") to a concrete runtime binary available on the PATH.
-func ResolveRuntime(pref string) (string, error) {
+// engineProbeTimeout bounds the `info` probe. A runtime whose engine is a VM (Docker Desktop,
+// Colima, a Podman machine) can hang while it starts.
+const engineProbeTimeout = 5 * time.Second
+
+// probeEngine reports whether the runtime's CLI reaches an engine: `info` fails when Docker
+// Desktop or Colima is stopped, no Podman machine is started, or DOCKER_HOST doesn't answer.
+func probeEngine(command string, args []string) bool {
+	ctx, cancel := stdctx.WithTimeout(stdctx.Background(), engineProbeTimeout)
+	defer cancel()
+	return osexec.CommandContext(ctx, command, append(slices.Clone(args), "info")...).Run() == nil
+}
+
+// ResolveRuntime resolves a flow file's runtime preference ("auto", "docker", "podman", or "")
+// to a runtime installed on this machine, using cfg's container settings: the runtime `auto`
+// means here, and the command and global flags for each family.
+//
+// When `auto` must detect, docker is preferred, then podman. If both are installed, the first
+// whose engine answers is chosen, so a stopped Docker Desktop doesn't hide a running Podman;
+// with neither answering, the first installed is used and its own error explains why.
+func ResolveRuntime(pref string, cfg *config.Config) (Runtime, error) {
+	fromConfig := false
+	if pref == "" || pref == string(executable.ExecContainerRuntimeAuto) {
+		pref = string(cfg.ContainerRuntimePreference())
+		fromConfig = pref != string(config.ContainerRuntimeAuto)
+	}
 	switch pref {
 	case "docker", "podman":
-		if _, err := lookPath(pref); err != nil {
-			return "", flowerrors.NewContainerRuntimeError(pref,
-				fmt.Errorf("%s is not installed or not in PATH", pref))
+		rt := runtimeFor(pref, cfg)
+		if _, err := lookPath(rt.Command); err != nil {
+			return Runtime{}, flowerrors.NewContainerRuntimeError(pref,
+				fmt.Errorf("%s is not installed or not in PATH%s", rt.Command, configSource(pref, rt, fromConfig)))
 		}
-		return pref, nil
-	case "", "auto":
-		autoRuntimeMu.Lock()
-		defer autoRuntimeMu.Unlock()
-		if autoRuntime != "" {
-			return autoRuntime, nil
-		}
-		for _, rt := range []string{"docker", "podman"} {
-			if _, err := lookPath(rt); err == nil {
-				autoRuntime = rt
-				return rt, nil
-			}
-		}
-		return "", flowerrors.NewContainerRuntimeError("",
-			fmt.Errorf("no container runtime found: install docker or podman, "+
-				"or set exec.container.runtime"))
+		return rt, nil
+	case "auto":
+		return detectRuntime(cfg)
 	default:
-		return "", flowerrors.NewContainerRuntimeError(pref,
+		return Runtime{}, flowerrors.NewContainerRuntimeError(pref,
 			fmt.Errorf("unknown container runtime %q", pref))
 	}
+}
+
+// configSource names the flow config setting behind a runtime that could not be found, since
+// neither the flow file nor the error would otherwise mention it.
+func configSource(family string, rt Runtime, fromConfig bool) string {
+	var settings []string
+	if fromConfig {
+		settings = append(settings, "`flow config set container-runtime`")
+	}
+	if rt.Command != family {
+		settings = append(settings, "`flow config set container-command "+family+"`")
+	}
+	if len(settings) == 0 {
+		return ""
+	}
+	return " (chosen by " + strings.Join(settings, " and ") + ")"
+}
+
+func runtimeFor(family string, cfg *config.Config) Runtime {
+	command, args := cfg.ContainerCommand(config.ContainerRuntime(family))
+	return Runtime{Family: family, Command: command, Args: args}
+}
+
+func detectRuntime(cfg *config.Config) (Runtime, error) {
+	installed := make([]Runtime, 0, 2)
+	for _, family := range []string{"docker", "podman"} {
+		rt := runtimeFor(family, cfg)
+		if _, err := lookPath(rt.Command); err == nil {
+			installed = append(installed, rt)
+		}
+	}
+	if len(installed) == 0 {
+		return Runtime{}, flowerrors.NewContainerRuntimeError("",
+			fmt.Errorf("no container runtime found: install docker or podman, "+
+				"or set exec.container.runtime"))
+	}
+
+	key := fmt.Sprint(installed)
+	autoRuntimeMu.Lock()
+	defer autoRuntimeMu.Unlock()
+	if rt, ok := autoRuntime[key]; ok {
+		return rt, nil
+	}
+	// Probing costs an `info` round trip, so it's only worth it when there is a choice.
+	if len(installed) == 1 {
+		autoRuntime[key] = installed[0]
+		return installed[0], nil
+	}
+	for _, rt := range installed {
+		if engineRunning(rt.Command, rt.Args) {
+			autoRuntime[key] = rt
+			return rt, nil
+		}
+	}
+	// No engine answered: use docker, whose own error explains the failure, but probe again
+	// next time, since one may have started by then.
+	return installed[0], nil
 }
 
 // RunContainer runs the command or script described by spec inside a container.
@@ -105,15 +185,16 @@ func RunContainer(
 	}
 
 	args := buildRunArgs(spec, envFile)
-	logger.Debugf("running container (%s):\n%s %s", spec.Image, spec.Runtime, strings.Join(args, " "))
+	args = append(slices.Clone(spec.Runtime.Args), args...)
+	logger.Debugf("running container (%s):\n%s %s", spec.Image, spec.Runtime.Command, strings.Join(args, " "))
 
 	flattenedFields := make([]interface{}, 0, len(logFields)*2)
 	for k, v := range logFields {
 		flattenedFields = append(flattenedFields, k, v)
 	}
 
-	//nolint:gosec // spec.Runtime is a validated runtime name (docker/podman)
-	cmd := osexec.CommandContext(ctx, spec.Runtime, args...)
+	//nolint:gosec // the runtime command comes from the user's own config or a runtime family name
+	cmd := osexec.CommandContext(ctx, spec.Runtime.Command, args...)
 	// Deliberately leave cmd.Env unset (nil) so the runtime client inherits the
 	// host process environment (DOCKER_HOST, HOME, PATH, ...) while the container
 	// receives its environment exclusively via --env-file.
@@ -135,11 +216,12 @@ func RunContainer(
 // time this runs, so a "no such container" result is the normal path - and the
 // exact wording differs between docker ("No such container") and podman
 // ("no such container"), so the match must be case-insensitive.
-func ForceRemoveContainer(runtime, name string) error {
-	if runtime == "" || name == "" {
+func ForceRemoveContainer(runtime Runtime, name string) error {
+	if runtime.Command == "" || name == "" {
 		return nil
 	}
-	out, err := osexec.Command(runtime, "rm", "-f", name).CombinedOutput()
+	//nolint:gosec // the runtime command comes from the user's own config or a runtime family name
+	out, err := osexec.Command(runtime.Command, append(slices.Clone(runtime.Args), "rm", "-f", name)...).CombinedOutput()
 	if err != nil {
 		if containerAlreadyGone(string(out)) {
 			return nil

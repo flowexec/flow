@@ -23,6 +23,8 @@ Set a global configuration value.
 ## See also
 
 - [flow config](flow_config.md) — View and update global flow configuration.
+- [flow config set container-command](flow_config_set_container-command.md) — Set the command and global flags a container runtime runs with on this machine.
+- [flow config set container-runtime](flow_config_set_container-runtime.md) — Set the container runtime that executables set to auto use on this machine.
 - [flow config set log-mode](flow_config_set_log-mode.md) — Set the default log mode.
 - [flow config set log-retention](flow_config_set_log-retention.md) — Set how many run logs are kept, by age, total size, and count.
 - [flow config set mouse](flow_config_set_mouse.md) — Enable or disable mouse support in the interactive UI.

@@ -72,6 +72,52 @@ definitions:
         type: integer
         description: Keep at most this many logs. Defaults to `1000`.
 
+  ContainerRuntimeCommand:
+    type: object
+    description: |
+      The command this machine runs for one container runtime family, in place of the default
+      `docker` or `podman` on the PATH. Use it for a Docker-compatible CLI or a specific engine.
+    properties:
+      command:
+        type: string
+        description: |
+          The command or path to run, e.g. `/opt/homebrew/bin/docker` or `finch`. Defaults to the
+          family name. Any replacement must accept the same `run` and `rm` flags as that runtime.
+        default: ""
+      args:
+        type: array
+        items:
+          type: string
+        description: |
+          Global flags placed before every subcommand, e.g. `["--context", "colima"]` for docker or
+          `["--connection", "remote"]` for podman.
+        default: []
+
+  ContainerRuntimes:
+    type: object
+    description: Per-family commands for container runtimes on this machine.
+    properties:
+      docker:
+        $ref: '#/definitions/ContainerRuntimeCommand'
+      podman:
+        $ref: '#/definitions/ContainerRuntimeCommand'
+
+  Container:
+    type: object
+    description: |
+      How this machine runs container executables. A flow file's `container.runtime` says which
+      runtime an executable expects; this says what that means here, so flow files stay portable.
+    properties:
+      runtime:
+        type: string
+        enum: [auto, docker, podman]
+        default: auto
+        description: |
+          The runtime an executable set to `auto` uses on this machine. `auto` detects one: docker,
+          else podman, preferring an engine that is running when both are installed.
+      runtimes:
+        $ref: '#/definitions/ContainerRuntimes'
+
   ColorPalette:
     type: object
     description: |
@@ -197,6 +243,12 @@ properties:
       `logfmt` will display logs with a log level, timestamp, and message.
       `text` will just display the log message.
     default: logfmt
+  container:
+    $ref: '#/definitions/Container'
+    description: |
+      How container executables run on this machine: the runtime `auto` uses, and the command and
+      global flags for each runtime. Manage it with `flow config set container-runtime` and
+      `flow config set container-command`.
   logRetention:
     $ref: '#/definitions/LogRetention'
     description: |

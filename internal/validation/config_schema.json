@@ -58,6 +58,56 @@
         }
       }
     },
+    "Container": {
+      "description": "How this machine runs container executables. A flow file's `container.runtime` says which\nruntime an executable expects; this says what that means here, so flow files stay portable.\n",
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "description": "The runtime an executable set to `auto` uses on this machine. `auto` detects one: docker,\nelse podman, preferring an engine that is running when both are installed.\n",
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "docker",
+            "podman"
+          ]
+        },
+        "runtimes": {
+          "$ref": "#/definitions/ContainerRuntimes"
+        }
+      }
+    },
+    "ContainerRuntimeCommand": {
+      "description": "The command this machine runs for one container runtime family, in place of the default\n`docker` or `podman` on the PATH. Use it for a Docker-compatible CLI or a specific engine.\n",
+      "type": "object",
+      "properties": {
+        "args": {
+          "description": "Global flags placed before every subcommand, e.g. `[\"--context\", \"colima\"]` for docker or\n`[\"--connection\", \"remote\"]` for podman.\n",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "description": "The command or path to run, e.g. `/opt/homebrew/bin/docker` or `finch`. Defaults to the\nfamily name. Any replacement must accept the same `run` and `rm` flags as that runtime.\n",
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
+    "ContainerRuntimes": {
+      "description": "Per-family commands for container runtimes on this machine.",
+      "type": "object",
+      "properties": {
+        "docker": {
+          "$ref": "#/definitions/ContainerRuntimeCommand"
+        },
+        "podman": {
+          "$ref": "#/definitions/ContainerRuntimeCommand"
+        }
+      }
+    },
     "GitSource": {
       "description": "Where a workspace added from a git URL pulls from.",
       "type": "object",
@@ -133,6 +183,10 @@
     "colorOverride": {
       "$ref": "#/definitions/ColorPalette",
       "description": "Override the default color palette for the interactive UI.\nThis can be used to customize the colors of the UI.\n"
+    },
+    "container": {
+      "$ref": "#/definitions/Container",
+      "description": "How container executables run on this machine: the runtime `auto` uses, and the command and\nglobal flags for each runtime. Manage it with `flow config set container-runtime` and\n`flow config set container-command`.\n"
     },
     "currentNamespace": {
       "description": "The name of the current namespace.\n\nNamespaces are used to reference executables in the CLI using the format `workspace/namespace:name`.\nIf the namespace is not set, only executables defined without a namespace will be discovered.\n",

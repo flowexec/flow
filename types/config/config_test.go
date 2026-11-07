@@ -192,3 +192,45 @@ var _ = Describe("Config JSON", func() {
 		Expect(string(out)).NotTo(ContainSubstring("logRetention"))
 	})
 })
+
+var _ = Describe("Container config", func() {
+	It("runs each runtime under its own name until configured", func() {
+		var cfg *config.Config
+		Expect(cfg.ContainerRuntimePreference()).To(Equal(config.ContainerRuntimeAuto))
+		cmd, args := cfg.ContainerCommand(config.ContainerRuntimePodman)
+		Expect(cmd).To(Equal("podman"))
+		Expect(args).To(BeEmpty())
+	})
+
+	It("stores a replacement command and flags, and removes them when set back", func() {
+		cfg := &config.Config{}
+		Expect(cfg.SetContainerCommand(config.ContainerRuntimeDocker, "finch", nil)).To(Succeed())
+		Expect(cfg.SetContainerCommand(config.ContainerRuntimePodman, "podman", []string{"--connection", "vm"})).
+			To(Succeed())
+
+		cmd, _ := cfg.ContainerCommand(config.ContainerRuntimeDocker)
+		Expect(cmd).To(Equal("finch"))
+		cmd, args := cfg.ContainerCommand(config.ContainerRuntimePodman)
+		Expect(cmd).To(Equal("podman"))
+		Expect(args).To(Equal([]string{"--connection", "vm"}))
+		Expect(cfg.Container.Runtimes.Podman.Command).To(BeEmpty(), "the family's own name isn't stored")
+
+		Expect(cfg.SetContainerCommand(config.ContainerRuntimeDocker, "docker", nil)).To(Succeed())
+		Expect(cfg.SetContainerCommand(config.ContainerRuntimePodman, "podman", nil)).To(Succeed())
+		Expect(cfg.Container.Runtimes).To(BeNil())
+	})
+
+	It("rejects an unknown runtime, an empty command and an empty flag", func() {
+		cfg := &config.Config{}
+		Expect(cfg.SetContainerCommand("containerd", "nerdctl", nil)).To(HaveOccurred())
+		Expect(cfg.SetContainerCommand(config.ContainerRuntimeDocker, " ", nil)).To(HaveOccurred())
+
+		cfg.Container = &config.Container{Runtime: "lxc"}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("invalid container runtime")))
+
+		cfg.Container = &config.Container{Runtimes: &config.ContainerRuntimes{
+			Docker: &config.ContainerRuntimeCommand{Args: []string{""}},
+		}}
+		Expect(cfg.Validate()).To(MatchError(ContainSubstring("empty flag")))
+	})
+})

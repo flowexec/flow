@@ -7,6 +7,7 @@ import (
 	"github.com/flowexec/tuikit/io"
 
 	"github.com/flowexec/flow/v2/internal/services/run"
+	"github.com/flowexec/flow/v2/types/config"
 )
 
 // RunFunc matches the signature of run.RunCmd / run.RunFile so tests can
@@ -73,7 +74,9 @@ func SetRunContainerFnForTest(fn ContainerRunFunc) func() {
 // restore func.
 func SetLookPathForContainerTest() func() {
 	prev := resolveRuntimeFn
-	resolveRuntimeFn = func(string) (string, error) { return "docker", nil }
+	resolveRuntimeFn = func(string, *config.Config) (run.Runtime, error) {
+		return run.Runtime{Family: "docker", Command: "docker"}, nil
+	}
 	return func() { resolveRuntimeFn = prev }
 }
 
