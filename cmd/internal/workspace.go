@@ -88,6 +88,9 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	}
 	checkout := ""
 	if raw := flags.ValueFor[string](cmd, *flags.CheckoutFlag, false); raw != "" {
+		if !git.IsGitURL(pathOrURL) {
+			errhandler.HandleUsage(ctx, cmd, "--checkout is only supported with Git URLs")
+		}
 		var err error
 		if checkout, err = checkoutPath(raw); err != nil {
 			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
@@ -105,17 +108,12 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 			errhandler.HandleFatal(ctx, cmd, err)
 			return
 		}
-		if checkout != "" {
-			source.Checkout = checkout
-		}
+		source.Checkout = checkout
 		if userConfig.GitWorkspaces == nil {
 			userConfig.GitWorkspaces = make(map[string]config.GitSource)
 		}
 		userConfig.GitWorkspaces[name] = source
 	} else {
-		if checkout != "" {
-			errhandler.HandleUsage(ctx, cmd, "--checkout is only supported with Git URLs")
-		}
 		path = initLocalWorkspace(name, pathOrURL, branch, tag)
 	}
 

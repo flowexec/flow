@@ -242,7 +242,7 @@ var _ = Describe("ResolveCheckout", func() {
 	})
 
 	It("prefers the caller's worktree of the same repository", func() {
-		got := git.ResolveCheckout("/ws", true, repo, filepath.Join(worktree))
+		got := git.ResolveCheckout("/ws", true, repo, worktree)
 		Expect(resolved(got)).To(Equal(resolved(worktree)))
 	})
 })

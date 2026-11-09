@@ -96,6 +96,8 @@ func printDryRun(
 	_, _ = ctx.StdOut().Write(out)
 }
 
+const dryRunTypeExec = "exec"
+
 func describeExecutableType(
 	ctx *context.Context, cmd *cobra.Command, e *executable.Executable, resolveEnv map[string]string, plan *dryRunPlan,
 ) {
@@ -112,7 +114,7 @@ func describeExecutableType(
 
 	switch {
 	case e.Exec != nil:
-		plan.Type = "exec"
+		plan.Type = dryRunTypeExec
 		plan.Dir = expandDir(e.Exec.Dir)
 		plan.Cmd = e.Exec.Cmd
 		plan.File = e.Exec.File
