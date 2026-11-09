@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -50,7 +51,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 	listExecutables := mcp.NewTool("list_executables",
 		mcp.WithDescription("List executables across workspaces. Check here before running a shell command for "+
 			"a dev task (build, test, lint, deploy): flow may already have one. Returns names, verbs, short "+
-			"descriptions and tags; get_executable has an executable's args and params."),
+			"descriptions and tags. Set include_args to also get each one's args and prompt params; "+
+			"get_executable has the full definition."),
 		mcp.WithString("workspace", mcp.Description("Workspace name")),
 		mcp.WithString("namespace", mcp.Description("Namespace filter")),
 		mcp.WithString("verb", mcp.Description("Verb filter")),
@@ -60,6 +62,9 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithString("dir", mcp.Description(
 			"List the nearest workspace at or above this directory, registered or not. Set it to your "+
 				"working directory.")),
+		mcp.WithBoolean("include_args", mcp.Description(
+			"Add each executable's `inputs`: positional args in order, flags with type and default, which "+
+				"are required, and prompt params to pass in execute's `params`. Default false.")),
 	)
 	listExecutables.Annotations = mcp.ToolAnnotation{
 		Title:           "List executables",
@@ -95,7 +100,8 @@ func addExecutableTools(srv *server.MCPServer, executor CommandExecutor) {
 func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 	executeFlow := mcp.NewTool("execute",
 		mcp.WithDescription("Run an executable by verb and optional ID. Prefer it over raw shell commands for dev "+
-			"tasks: flow supplies the environment and secrets and records the run."),
+			"tasks: flow supplies the environment and secrets and records the run. A run that finishes returns "+
+			"its output and exitCode, non-zero included; an error means it never started."),
 		mcp.WithString("executable_verb", mcp.Required(),
 			mcp.Description("Executable verb, e.g. run, build, test, deploy.")),
 		mcp.WithString("executable_id",
@@ -111,8 +117,9 @@ func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 		mcp.WithObject("params",
 			mcp.AdditionalProperties(map[string]any{"type": "string"}),
 			mcp.Description("The executable's `params` by EnvKey. Set as environment variables even if undeclared, "+
-				"and win over `args` with the same EnvKey. A prompt param without a value fails before anything "+
-				"runs. Passed on flow's command line, so never put secrets here; use a vault.")),
+				"and win over `args` with the same EnvKey. Answer prompt params here: a prompt without a value "+
+				"fails before anything runs (list_executables include_args lists them). Passed on flow's "+
+				"command line, so never put secrets here; use a vault.")),
 		mcp.WithString("dir", mcp.Description(
 			"Directory to run in; flow uses the nearest workspace at or above it, registered or not. Set it to "+
 				"your working directory (a worktree or fresh clone): the default is the server's own.")),
@@ -185,6 +192,9 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		}
 		if err := json.Unmarshal([]byte(output), &cliOutput); err != nil {
 			return mcp.NewToolResultText(output), nil
+		}
+		if request.GetBool("include_args", false) {
+			addExecutableInputs(cliOutput.Executables, output)
 		}
 
 		page, nextCursor, totalCount, err := paginate(cliOutput.Executables, cursor, defaultPageSize)
@@ -269,17 +279,9 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
 
-		if err != nil {
-			ref := strings.Join([]string{executableVerb, executableID}, " ")
-			return executionFailure(ref+" execution failed", output, err), nil
-		}
-
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
-
-		capped, truncated := capOutput(output)
-		result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
-		jsonData, _ := json.Marshal(result)
-		return mcp.NewToolResultStructured(result, string(jsonData)), nil
+		ref := strings.Join([]string{executableVerb, executableID}, " ")
+		return executionResult(ref+" execution failed", output, err), nil
 	}
 }
 
@@ -469,16 +471,8 @@ func runTransientTool(
 
 	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
 
-	if err != nil {
-		return executionFailure(failMsg, output, err), nil
-	}
-
 	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
-
-	capped, truncated := capOutput(output)
-	result := ExecutionOutput{Output: capped, Started: true, Truncated: truncated}
-	jsonData, _ := json.Marshal(result)
-	return mcp.NewToolResultStructured(result, string(jsonData)), nil
+	return executionResult(failMsg, output, err), nil
 }
 
 func writeFlowfileHandler(srv *server.MCPServer, executor CommandExecutor) server.ToolHandlerFunc {
@@ -594,4 +588,66 @@ func validateFlowfileContent(content string) *mcp.CallToolResult {
 			fmt.Sprintf("invalid flowfile: %s", strings.Join(issueStrs, "; ")))
 	}
 	return nil
+}
+
+// addExecutableInputs fills each executable's Inputs from the type definitions in the CLI's JSON,
+// which the summary fields don't carry.
+func addExecutableInputs(execs []ExecutableOutput, cliJSON string) {
+	type environment struct {
+		Args   executable.ArgumentList  `json:"args"`
+		Params executable.ParameterList `json:"params"`
+	}
+	var typed struct {
+		Executables []map[string]json.RawMessage `json:"executables"`
+	}
+	if err := json.Unmarshal([]byte(cliJSON), &typed); err != nil || len(typed.Executables) != len(execs) {
+		return
+	}
+	for i, raw := range typed.Executables {
+		for _, kind := range []string{"exec", "serial", "parallel", "launch", "request", "render"} {
+			body, ok := raw[kind]
+			if !ok {
+				continue
+			}
+			var env environment
+			if json.Unmarshal(body, &env) != nil {
+				break
+			}
+			execs[i].Inputs = summarizeInputs(env.Args, env.Params)
+			break
+		}
+	}
+}
+
+func summarizeInputs(args executable.ArgumentList, params executable.ParameterList) *ExecutableInputs {
+	inputs := &ExecutableInputs{}
+	for _, arg := range args {
+		if arg.Pos == nil && arg.Flag == "" {
+			continue
+		}
+		summary := ArgSummary{
+			Pos: arg.Pos, Flag: arg.Flag, EnvKey: arg.EnvKey, Default: arg.Default, Required: arg.Required,
+		}
+		if arg.Type != "" && arg.Type != executable.ArgumentTypeString {
+			summary.Type = string(arg.Type)
+		}
+		inputs.Args = append(inputs.Args, summary)
+	}
+	slices.SortStableFunc(inputs.Args, func(a, b ArgSummary) int {
+		switch {
+		case a.Pos != nil && b.Pos != nil:
+			return *a.Pos - *b.Pos
+		case a.Pos != nil:
+			return -1
+		case b.Pos != nil:
+			return 1
+		}
+		return 0
+	})
+	for _, param := range params {
+		if param.Prompt != "" && param.EnvKey != "" {
+			inputs.Prompts = append(inputs.Prompts, PromptSummary{EnvKey: param.EnvKey, Prompt: param.Prompt})
+		}
+	}
+	return inputs
 }

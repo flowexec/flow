@@ -353,6 +353,38 @@ var _ = Describe("MCP Server", func() {
 				Expect(getTextContent(result)).ToNot(ContainSubstring("fullDescription"))
 				Expect(getTextContent(result)).ToNot(ContainSubstring("very long markdown"))
 			})
+
+			It("should summarize args and prompt params only when include_args is set", func() {
+				cli := `{"executables":[{"id":"ws/cluster:pods","ref":"check ws/cluster:pods","name":"pods",` +
+					`"verb":"check","exec":{"cmd":"kubectl get pods","args":[` +
+					`{"flag":"problems","envKey":"PROBLEMS","type":"bool","default":"false"},` +
+					`{"pos":1,"envKey":"CLUSTER","required":true}],` +
+					`"params":[{"envKey":"REGION","prompt":"Which region?"},{"envKey":"X","text":"y"}]}}]}`
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "browse", "--output", "json", "--workspace", "*", "--namespace", "*").
+					Return(cli, nil).Times(2)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("list_executables", nil))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getTextContent(result)).ToNot(ContainSubstring(`"inputs"`))
+
+				result, err = mcpClient.CallTool(ctx, newCallToolRequest("list_executables", map[string]interface{}{
+					"include_args": true,
+				}))
+				Expect(err).ToNot(HaveOccurred())
+				var out flowMcp.ExecutableListOutput
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+				Expect(out.Executables).To(HaveLen(1))
+				inputs := out.Executables[0].Inputs
+				Expect(inputs).ToNot(BeNil())
+				Expect(inputs.Args).To(HaveLen(2))
+				Expect(inputs.Args[0].EnvKey).To(Equal("CLUSTER"))
+				Expect(inputs.Args[0].Required).To(BeTrue())
+				Expect(inputs.Args[1].Flag).To(Equal("problems"))
+				Expect(inputs.Args[1].Type).To(Equal("bool"))
+				Expect(inputs.Prompts).To(Equal([]flowMcp.PromptSummary{{EnvKey: "REGION", Prompt: "Which region?"}}))
+				Expect(getTextContent(result)).ToNot(ContainSubstring("kubectl"))
+			})
 		})
 
 		Context("execute tool", func() {
@@ -506,14 +538,12 @@ var _ = Describe("MCP Server", func() {
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest(tool, args))
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result.IsError).To(BeTrue())
-				Expect(getTextContent(result)).To(ContainSubstring("boom"))
-				Expect(getTextContent(result)).To(ContainSubstring(flowMcp.ErrCodeExecutionFailed))
+				// A run that finished is a result, not a tool error, whatever its exit code.
+				Expect(result.IsError).To(BeFalse())
+				Expect(getTextContent(result)).ToNot(ContainSubstring(flowMcp.ErrCodeExecutionFailed))
 
-				structured, marshalErr := json.Marshal(result.StructuredContent)
-				Expect(marshalErr).ToNot(HaveOccurred())
 				var out flowMcp.ExecutionOutput
-				Expect(json.Unmarshal(structured, &out)).To(Succeed())
+				Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
 				Expect(out.ExitCode).To(Equal(2))
 				Expect(out.Started).To(BeTrue())
 				Expect(out.Output).To(Equal("step output\nboom\n"))
@@ -548,14 +578,29 @@ var _ = Describe("MCP Server", func() {
 		It("should repeat only the end of a large failure in the message", func() {
 			mockExecutor.EXPECT().
 				ExecuteContext(gomock.Any(), "exec", "--cmd", "big", "--log-mode", "text").
-				Return(strings.Repeat("x", 100_000)+"boom", &flowMcp.CLIExitError{Code: 1, Started: true})
+				Return(strings.Repeat("x", 100_000)+"boom", &flowMcp.CLIExitError{Code: 1})
 
 			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
 				"command": "big",
 			}))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(result.IsError).To(BeTrue())
 			Expect(getTextContent(result)).To(ContainSubstring("boom"))
 			Expect(len(getTextContent(result))).To(BeNumerically("<", 3000))
+		})
+
+		It("should keep only the last frame of a carriage-return redrawn line", func() {
+			mockExecutor.EXPECT().
+				ExecuteContext(gomock.Any(), "exec", "--cmd", "progress", "--log-mode", "text").
+				Return("start\r\n10%\r50%\r100%\r\ndone\n", nil)
+
+			result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_command", map[string]interface{}{
+				"command": "progress",
+			}))
+			Expect(err).ToNot(HaveOccurred())
+			var out flowMcp.ExecutionOutput
+			Expect(json.Unmarshal([]byte(getTextContent(result)), &out)).To(Succeed())
+			Expect(out.Output).To(Equal("start\n100%\ndone\n"))
 		})
 
 		It("should reject a verb or ID flow would read as its own flag", func() {

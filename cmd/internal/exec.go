@@ -264,9 +264,12 @@ func unanswerablePrompts(source string, fields []*views.FormField) error {
 	}
 	keys := make([]string, 0, len(fields))
 	for _, field := range fields {
-		keys = append(keys, field.Key)
+		keys = append(keys, fmt.Sprintf("%s (%q)", field.Key, field.Title))
 	}
-	return flowErrors.NewUsageError("missing values for prompt params: %s", strings.Join(keys, ", "))
+	return flowErrors.NewUsageError(
+		"missing values for prompt params: %s; pass each in execute's params by its key",
+		strings.Join(keys, ", "),
+	)
 }
 
 // resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
