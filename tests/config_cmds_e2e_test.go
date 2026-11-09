@@ -232,6 +232,15 @@ var _ = Describe("config e2e", Ordered, func() {
 			Expect(out).To(ContainSubstring("Restored flow configurations"))
 		})
 
+		It("should fail without a confirmation when stdin has no answer", func() {
+			reader, writer, err := os.Pipe()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(writer.Close()).To(Succeed())
+
+			ctx.SetIO(reader, ctx.StdOut())
+			Expect(run.Run(ctx.Context, "config", "reset")).ToNot(Succeed())
+		})
+
 		It("should abort reset when confirmation is false", func() {
 			reader, writer, err := os.Pipe()
 			Expect(err).NotTo(HaveOccurred())

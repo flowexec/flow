@@ -34,4 +34,4 @@ flow cache remove KEY [flags]
 
 ## See also
 
-- [flow cache](flow_cache.md) — Manage temporary key-value data.
+- [flow cache](flow_cache.md) — Manage key-value data that persists across runs.

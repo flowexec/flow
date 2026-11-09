@@ -95,6 +95,9 @@ func executableLibrary(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		nsFilter = executable.WildcardNamespace
 	case nsFilter == ".":
 		nsFilter = ctx.Config.CurrentNamespace
+	case nsFilter == "" && wsFilter != "":
+		// Naming a workspace asks for what it holds, not just its root namespace.
+		nsFilter = executable.WildcardNamespace
 	}
 
 	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)
@@ -153,6 +156,9 @@ func listExecutables(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		nsFilter = executable.WildcardNamespace
 	case nsFilter == ".":
 		nsFilter = ctx.Config.CurrentNamespace
+	case nsFilter == "" && wsFilter != "":
+		// Naming a workspace asks for what it holds, not just its root namespace.
+		nsFilter = executable.WildcardNamespace
 	}
 
 	verbFilter := flags.ValueFor[string](cmd, *flags.FilterVerbFlag, false)

@@ -66,7 +66,7 @@ flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 | `--mode` | `string` | How to run multiple --cmd commands: 'serial' (default) or 'parallel'. (default "serial") |
 | `-p, --param` | `stringArray` | Set a parameter value by env key. (i.e. KEY=value) Use multiple times to set multiple parameters. This will override any existing parameter values defined for the executable. |
 | `--spec` | `string` | Run a transient executable from an inline definition (any type: exec, serial, parallel, request, render, launch). Accepts inline YAML/JSON, '@path' to read a file, or '-' to read stdin. The executable is not saved to disk but is recorded in flow logs. |
-| `--workspace` | `string` | Workspace whose environment the ad-hoc/transient run should use (only with --cmd or --spec). Defaults to the workspace containing the run directory, then the current workspace. Does not change the global current workspace. |
+| `--workspace` | `string` | Workspace to run in, by name or path: where a named executable is resolved, and whose environment an ad-hoc or transient run uses. Defaults to the workspace containing the run directory, then the current workspace. Does not change the global current workspace. |
 
 ## Options inherited from parent commands
 

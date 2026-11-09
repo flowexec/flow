@@ -3,10 +3,13 @@ package internal
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/flowexec/tuikit"
+	"github.com/flowexec/tuikit/views"
 	"github.com/spf13/cobra"
 
+	errhandler "github.com/flowexec/flow/v2/cmd/internal/errors"
 	"github.com/flowexec/flow/v2/cmd/internal/flags"
 	flowIO "github.com/flowexec/flow/v2/internal/io"
 	"github.com/flowexec/flow/v2/internal/version"
@@ -163,4 +166,35 @@ func loadTemplateFromPath(name, path string) *executable.Template {
 		return nil
 	}
 	return tmpl
+}
+
+// confirmed asks the user to confirm a destructive action unless --yes was passed. It returns false
+// when the user declines. Getting no answer at all - stdin closed or empty, as when an agent or
+// script runs the command - is a usage error, so a skipped action never looks like a success.
+func confirmed(ctx *context.Context, cmd *cobra.Command, title string) bool {
+	if flags.ValueFor[bool](cmd, *flags.YesFlag, false) {
+		return true
+	}
+	form, err := views.NewForm(
+		logger.Theme(ctx.Config.Theme.String()),
+		ctx.StdIn(),
+		ctx.StdOut(),
+		&views.FormField{Key: "confirm", Type: views.PromptTypeConfirm, Title: title},
+	)
+	if err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	if err := form.Run(ctx); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	resp := strings.TrimSpace(form.FindByKey("confirm").Value())
+	if resp == "" {
+		errhandler.HandleUsage(ctx, cmd, "no confirmation received; pass --yes to confirm")
+		return false
+	}
+	if truthy, _ := strconv.ParseBool(resp); !truthy {
+		logger.Log().Warnf("Aborting")
+		return false
+	}
+	return true
 }

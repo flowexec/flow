@@ -20,10 +20,10 @@ func RegisterCacheCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	subCmd := &cobra.Command{
 		Use:     "cache",
 		Aliases: []string{"store", "data"}, // TODO: deprecate "store" alias
-		Short:   "Manage temporary key-value data.",
-		Long: "Manage temporary key-value data. " +
-			"Values set outside executables runs persist globally, while values set within executables persist only for " +
-			"that execution scope.",
+		Short:   "Manage key-value data that persists across runs.",
+		Long: "Manage key-value data. Values set outside an executable, such as from a terminal, persist " +
+			"across runs until removed or cleared. Values set during a run are shared with its sub-executables " +
+			"and cleared when it completes; use --global to write to the persistent scope from inside a run.",
 		Args: cobra.NoArgs,
 	}
 	registerCacheSetCmd(ctx, subCmd)

@@ -51,7 +51,7 @@ var FilterWorkspaceFlag = &Metadata{
 var AllNamespacesFlag = &Metadata{
 	Name:      "all",
 	Shorthand: "a",
-	Usage:     "List from all namespaces.",
+	Usage:     "List from all namespaces. Implied when --workspace is set without --namespace.",
 	Default:   false,
 	Required:  false,
 }
@@ -386,9 +386,9 @@ var CmdModeFlag = &Metadata{
 
 var RunWorkspaceFlag = &Metadata{
 	Name: "workspace",
-	Usage: "Workspace whose environment the ad-hoc/transient run should use (only with --cmd or --spec). " +
-		"Defaults to the workspace containing the run directory, then the current workspace. " +
-		"Does not change the global current workspace.",
+	Usage: "Workspace to run in, by name or path: where a named executable is resolved, and whose " +
+		"environment an ad-hoc or transient run uses. Defaults to the workspace containing the run " +
+		"directory, then the current workspace. Does not change the global current workspace.",
 	Default:  "",
 	Required: false,
 }

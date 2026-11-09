@@ -315,7 +315,7 @@ func notRunnableHereError(e *executable.Executable, ref executable.Ref, currentW
 	}
 	return fmt.Errorf(
 		"executable '%s' is private to workspace '%s' and cannot be run from workspace '%s'. "+
-			"Switch to it with 'flow workspace switch %s', or set 'visibility: public' in its flow file",
+			"Run it in its workspace with '--workspace %s', or set 'visibility: public' in its flow file",
 		ref, e.Workspace(), currentWs, e.Workspace(),
 	)
 }

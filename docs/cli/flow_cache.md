@@ -1,15 +1,15 @@
 ---
 title: flow cache
-description: "Manage temporary key-value data."
+description: "Manage key-value data that persists across runs."
 ---
 
 # flow cache
 
-Manage temporary key-value data.
+Manage key-value data that persists across runs.
 
 ## Synopsis
 
-Manage temporary key-value data. Values set outside executables runs persist globally, while values set within executables persist only for that execution scope.
+Manage key-value data. Values set outside an executable, such as from a terminal, persist across runs until removed or cleared. Values set during a run are shared with its sub-executables and cleared when it completes; use --global to write to the persistent scope from inside a run.
 
 ## Options
 

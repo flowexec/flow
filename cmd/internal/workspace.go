@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	"github.com/flowexec/tuikit/views"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -407,36 +405,16 @@ func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 func removeWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
-	if !skipConfirm {
-		form, err := views.NewForm(
-			logger.Theme(ctx.Config.Theme.String()),
-			ctx.StdIn(),
-			ctx.StdOut(),
-			&views.FormField{
-				Key:   "confirm",
-				Type:  views.PromptTypeConfirm,
-				Title: fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name),
-			})
-		if err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		if err := form.Run(ctx); err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		resp := form.FindByKey("confirm").Value()
-		if truthy, _ := strconv.ParseBool(resp); !truthy {
-			logger.Log().Warnf("Aborting")
-			return
-		}
-	}
-
 	userConfig := ctx.Config
 	if name == userConfig.CurrentWorkspace {
 		errhandler.HandleUsage(ctx, cmd, "cannot remove the current workspace")
 	}
 	if _, found := userConfig.Workspaces[name]; !found {
 		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: name})
+	}
+
+	if !confirmed(ctx, cmd, fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name)) {
+		return
 	}
 
 	wsPath := userConfig.Workspaces[name]
