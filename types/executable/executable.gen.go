@@ -13,8 +13,8 @@ type Argument struct {
 	//
 	// `$VAR` and `${VAR}` are expanded against the executable's environment, then the
 	// environment
-	// flow was started in. A variable that does not resolve is left as written. Use
-	// `$$` for a literal `$`.
+	// flow was started in. A variable that is not set expands to an empty string, as
+	// in a shell. Use `$$` for a literal `$`.
 	//
 	Default string `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
@@ -373,6 +373,7 @@ type Parameter struct {
 	// A path to a file containing environment variables to be passed to the
 	// executable.
 	// The file should contain one variable per line in the format `KEY=VALUE`.
+	// A file that does not exist is skipped with a warning.
 	//
 	EnvFile string `json:"envFile,omitempty" yaml:"envFile,omitempty" mapstructure:"envFile,omitempty"`
 

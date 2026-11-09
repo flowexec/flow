@@ -97,7 +97,7 @@ Executables are the building blocks of workflows and are used to define the acti
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
-| `default` | `string` |  |  | The default value to use if the argument is not provided. If the argument is required and no default is provided, the executable will fail.  `$VAR` and `${VAR}` are expanded against the executable's environment, then the environment flow was started in. A variable that does not resolve is left as written. Use `$$` for a literal `$`.  |
+| `default` | `string` |  |  | The default value to use if the argument is not provided. If the argument is required and no default is provided, the executable will fail.  `$VAR` and `${VAR}` are expanded against the executable's environment, then the environment flow was started in. A variable that is not set expands to an empty string, as in a shell. Use `$$` for a literal `$`.  |
 | `envKey` | `string` |  |  | The name of the environment variable that will be assigned the value. |
 | `flag` | `string` |  |  | The flag to use when setting the argument from the command line. Either `flag` or `pos` must be set, but not both.  |
 | `outputFile` | `string` |  |  | A path where the argument value will be temporarily written to disk. The file will be created before execution and cleaned up afterwards.  |
@@ -219,7 +219,7 @@ Only one of `text`, `secretRef`, `prompt`, or `file` must be set. Specifying mor
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
-| `envFile` | `string` |  |  | A path to a file containing environment variables to be passed to the executable. The file should contain one variable per line in the format `KEY=VALUE`.  |
+| `envFile` | `string` |  |  | A path to a file containing environment variables to be passed to the executable. The file should contain one variable per line in the format `KEY=VALUE`. A file that does not exist is skipped with a warning.  |
 | `envKey` | `string` |  |  | The name of the environment variable that will be assigned the value.  When specified with `envFile`, only the environment variable with this name will be set.  |
 | `outputFile` | `string` |  |  | A path where the parameter value will be temporarily written to disk. The file will be created before execution and cleaned up afterwards.  |
 | `prompt` | `string` |  |  | A prompt to be displayed to the user when collecting an input value. |

@@ -18,13 +18,14 @@ func ExpandAuthored(value string, envMap map[string]string) string {
 }
 
 // expandDefault is ExpandAuthored for an argument's declared default, which may also reference
-// the environment flow itself was started in, such as $HOME. The executable's env wins.
+// the environment flow itself was started in, such as $HOME. The executable's env wins. Unlike
+// other authored strings, a variable that is not set expands to "", as it would in a shell.
 func expandDefault(value string, envMap map[string]string) string {
 	return expandAuthored(value, func(key string) (string, bool) {
 		if v, ok := envMap[key]; ok {
 			return v, true
 		}
-		return os.LookupEnv(key)
+		return os.Getenv(key), true
 	})
 }
 

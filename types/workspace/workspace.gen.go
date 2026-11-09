@@ -52,6 +52,7 @@ type Workspace struct {
 	// A list of environment variable files to load for the workspace. These files
 	// should contain key-value pairs of environment variables.
 	// By default, the `.env` file in the workspace root is loaded if it exists.
+	// A listed file that does not exist is skipped with a warning.
 	//
 	EnvFiles []string `json:"envFiles,omitempty" yaml:"envFiles,omitempty" mapstructure:"envFiles,omitempty"`
 

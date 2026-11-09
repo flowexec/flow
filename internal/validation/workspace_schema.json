@@ -72,7 +72,7 @@
       "default": ""
     },
     "envFiles": {
-      "description": "A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.\nBy default, the `.env` file in the workspace root is loaded if it exists.\n",
+      "description": "A list of environment variable files to load for the workspace. These files should contain key-value pairs of environment variables.\nBy default, the `.env` file in the workspace root is loaded if it exists.\nA listed file that does not exist is skipped with a warning.\n",
       "type": "array",
       "default": [],
       "items": {

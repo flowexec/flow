@@ -155,10 +155,10 @@ TEST_ENV_VAR3=value3`
 						{EnvFile: "/nonexistent/file.env"},
 					},
 				}
+				mockLogger.EXPECT().Warnf(gomock.Any(), gomock.Any()).Times(1)
 				promptedEnv := map[string]string{}
 				_, err := env.SetEnv("", exec, []string{}, promptedEnv)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to read .env file"))
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should set environment variables correctly from args", func() {
@@ -251,14 +251,14 @@ TEST_ENV_VAR3=value3`
 				Expect(os.Getenv("TEST_SHADOW_DEFAULT")).To(Equal("from-param"))
 			})
 
-			It("should leave an unresolved variable in a default as written and unescape $$", func() {
+			It("should expand an unset variable in a default to empty and unescape $$", func() {
 				pos := 1
 				exec := &executable.ExecutableEnvironment{
 					Args: []executable.Argument{{EnvKey: "TEST_UNRESOLVED", Pos: &pos, Default: "$$5 for $NOPE"}},
 				}
 				_, err := env.SetEnv("", exec, []string{}, map[string]string{})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for $NOPE"))
+				Expect(os.Getenv("TEST_UNRESOLVED")).To(Equal("$5 for "))
 			})
 
 			DescribeTable("InputArgProblems",
@@ -591,11 +591,24 @@ BUILD_ENV_VAR3=build_value3`
 					{EnvFile: "/nonexistent/build.env"},
 				},
 			}
+			mockLogger.EXPECT().Warnf(gomock.Any(), gomock.Any()).Times(1)
 			inputEnv := make(map[string]string)
 			defaultEnv := make(map[string]string)
 			_, err := env.BuildEnvMap("", exec, []string{}, inputEnv, defaultEnv)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to read .env file"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("LoadEnvFromFiles", func() {
+		It("skips a missing file and keeps the others", func() {
+			dir := GinkgoT().TempDir()
+			Expect(os.WriteFile(filepath.Join(dir, "a.env"), []byte("A=1\n"), 0600)).To(Succeed())
+			Expect(os.WriteFile(filepath.Join(dir, "b.env"), []byte("B=2\n"), 0600)).To(Succeed())
+			files := []string{filepath.Join(dir, "a.env"), filepath.Join(dir, "missing.env"), filepath.Join(dir, "b.env")}
+			mockLogger.EXPECT().Warnf(gomock.Any(), gomock.Any()).Times(1)
+			envMap, err := env.LoadEnvFromFiles(files, dir)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envMap).To(Equal(map[string]string{"A": "1", "B": "2"}))
 		})
 	})
 
