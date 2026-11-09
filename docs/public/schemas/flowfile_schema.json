@@ -159,7 +159,7 @@
       }
     },
     "ExecutableDirectory": {
-      "description": "The directory to execute the command in.\nIf unset, the directory of the flow file will be used.\nIf set to `f:tmp`, a temporary directory will be created for the process.\nIf prefixed with `./`, the path will be relative to the current working directory.\nIf prefixed with `//`, the path will be relative to the workspace root.\nEnvironment variables in the path will be expended at runtime.\n",
+      "description": "The directory to execute the command in.\nIf unset, the directory of the flow file will be used.\nIf set to `f:tmp`, a temporary directory will be created for the process.\nIf prefixed with `./`, the path will be relative to the current working directory.\nIf prefixed with `//`, the path will be relative to the workspace root.\nIf prefixed with `@/` (or set to `@`), the path will be relative to the workspace's local checkout: the\nrepository its executables operate on, bound with `flow workspace checkout`. Outside a git workspace this\nis the workspace root.\nEnvironment variables in the path will be expanded at runtime.\n",
       "type": "string",
       "default": ""
     },

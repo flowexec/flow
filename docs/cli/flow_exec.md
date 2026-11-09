@@ -73,7 +73,7 @@ flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 | Flag | Type | Description |
 |------|------|-------------|
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 

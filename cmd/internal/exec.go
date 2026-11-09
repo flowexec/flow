@@ -33,6 +33,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/runner/render"
 	"github.com/flowexec/flow/v2/internal/runner/request"
 	"github.com/flowexec/flow/v2/internal/runner/serial"
+	"github.com/flowexec/flow/v2/internal/services/git"
 	"github.com/flowexec/flow/v2/internal/utils/env"
 	"github.com/flowexec/flow/v2/pkg/context"
 	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
@@ -804,6 +805,11 @@ func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Execut
 		} else {
 			applyWorkspaceParameterOverrides(wsCfg, envMap)
 		}
+	}
+
+	// Serial and parallel steps resolve their dir against this env, so it needs the checkout too.
+	if checkout := env.CheckoutDir(ctx, e); checkout != "" {
+		envMap[git.CheckoutEnvKey] = checkout
 	}
 
 	paramOverrides := flags.ValueFor[[]string](cmd, *flags.ParameterValueFlag, false)

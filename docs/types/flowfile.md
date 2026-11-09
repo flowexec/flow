@@ -116,7 +116,10 @@ If unset, the directory of the flow file will be used.
 If set to `f:tmp`, a temporary directory will be created for the process.
 If prefixed with `./`, the path will be relative to the current working directory.
 If prefixed with `//`, the path will be relative to the workspace root.
-Environment variables in the path will be expended at runtime.
+If prefixed with `@/` (or set to `@`), the path will be relative to the workspace's local checkout: the
+repository its executables operate on, bound with `flow workspace checkout`. Outside a git workspace this
+is the workspace root.
+Environment variables in the path will be expanded at runtime.
 
 **Type:** `string`
 

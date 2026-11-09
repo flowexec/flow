@@ -140,6 +140,19 @@ var GitDepthFlag = &Metadata{
 	Default: 0,
 }
 
+var CheckoutFlag = &Metadata{
+	Name: "checkout",
+	Usage: "Local clone of the repository this git workspace's executables operate on. " +
+		"An executable's dir starting with '@/' resolves against it.",
+	Default: "",
+}
+
+var ClearCheckoutFlag = &Metadata{
+	Name:    "clear",
+	Usage:   "Remove the workspace's checkout binding.",
+	Default: false,
+}
+
 var GitPullFlag = &Metadata{
 	Name:      "git",
 	Shorthand: "g",

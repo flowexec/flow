@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/services/git"
 	"github.com/flowexec/flow/v2/internal/utils"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
@@ -250,6 +251,17 @@ func EnvListToEnvMap(envList []string) map[string]string {
 	return envMap
 }
 
+// CheckoutDir resolves the local checkout an executable operates on (see git.ResolveCheckout).
+func CheckoutDir(ctx *context.Context, e *executable.Executable) string {
+	if ctx == nil || ctx.Config == nil || e.WorkspacePath() == "" {
+		return ""
+	}
+	source, recorded := ctx.Config.GitWorkspaces[e.Workspace()]
+	gitSourced := recorded || git.IsManagedClone(e.WorkspacePath())
+	cwd, _ := os.Getwd()
+	return git.ResolveCheckout(e.WorkspacePath(), gitSourced, source.Checkout, cwd)
+}
+
 func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[string]string {
 	envMap := make(map[string]string)
 	envMap["FLOW_RUNNER"] = "true"
@@ -264,6 +276,9 @@ func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[str
 	envMap["FLOW_WORKSPACE_PATH"] = executable.WorkspacePath()
 	envMap["FLOW_CONFIG_PATH"] = filesystem.ConfigDirPath()
 	envMap["FLOW_CACHE_PATH"] = filesystem.CachedDataDirPath()
+	if checkout := CheckoutDir(ctx, executable); checkout != "" {
+		envMap[git.CheckoutEnvKey] = checkout
+	}
 	envMap[io.DisableInteractiveEnvKey] = "true"
 	if interactive := os.Getenv(io.DisableInteractiveEnvKey); interactive != "" {
 		envMap[io.DisableInteractiveEnvKey] = interactive

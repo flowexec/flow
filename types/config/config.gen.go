@@ -255,6 +255,16 @@ type ContainerRuntimes struct {
 
 // Where a workspace added from a git URL pulls from.
 type GitSource struct {
+	// A local clone of the repository this workspace's executables operate on, for a
+	// workspace that
+	// holds only flow files. An executable's `dir` starting with `@/` resolves
+	// against it, and runs get
+	// it as `FLOW_CHECKOUT_DIR`. When a run starts inside that repository or one of
+	// its worktrees, the
+	// caller's own checkout is used instead. Set with `flow workspace checkout`.
+	//
+	Checkout string `json:"checkout,omitempty" yaml:"checkout,omitempty" mapstructure:"checkout,omitempty"`
+
 	// The branch or tag name specified when the workspace was added.
 	Ref string `json:"ref,omitempty" yaml:"ref,omitempty" mapstructure:"ref,omitempty"`
 

@@ -201,3 +201,48 @@ var _ = Describe("RepairWorkspaceConfig", func() {
 		})
 	})
 })
+
+var _ = Describe("ResolveCheckout", func() {
+	run := func(dir string, args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		Expect(err).ToNot(HaveOccurred(), string(out))
+	}
+	resolved := func(path string) string {
+		p, err := filepath.EvalSymlinks(path)
+		Expect(err).ToNot(HaveOccurred())
+		return p
+	}
+
+	var repo, worktree, other string
+	BeforeEach(func() {
+		base := GinkgoT().TempDir()
+		repo = filepath.Join(base, "repo")
+		worktree = filepath.Join(base, "wt")
+		other = filepath.Join(base, "other")
+		Expect(os.MkdirAll(repo, 0750)).To(Succeed())
+		Expect(os.MkdirAll(other, 0750)).To(Succeed())
+		run(repo, "init", "-q")
+		run(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "init")
+		run(repo, "worktree", "add", "-q", worktree)
+		run(other, "init", "-q")
+	})
+
+	It("is the workspace itself when it is not git-sourced", func() {
+		Expect(git.ResolveCheckout("/ws", false, "", other)).To(Equal("/ws"))
+	})
+
+	It("is empty for a git workspace with nothing bound", func() {
+		Expect(git.ResolveCheckout("/ws", true, "", repo)).To(BeEmpty())
+	})
+
+	It("is the bound clone when the caller is elsewhere", func() {
+		Expect(git.ResolveCheckout("/ws", true, repo, other)).To(Equal(repo))
+	})
+
+	It("prefers the caller's worktree of the same repository", func() {
+		got := git.ResolveCheckout("/ws", true, repo, filepath.Join(worktree))
+		Expect(resolved(got)).To(Equal(resolved(worktree)))
+	})
+})

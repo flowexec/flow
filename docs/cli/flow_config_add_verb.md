@@ -37,7 +37,7 @@ flow config add verb status health
 | Flag | Type | Description |
 |------|------|-------------|
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 
