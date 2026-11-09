@@ -546,7 +546,7 @@ func writeFlowfileHandler(srv *server.MCPServer, executor CommandExecutor) serve
 		// Best-effort: the file is already written and valid, so a sync failure here doesn't
 		// invalidate the write itself.
 		syncFailed := false
-		if _, err := executor.ExecuteContext(ctx, "sync"); err != nil {
+		if _, err := executor.ExecuteContext(ctx, "sync", "--no-git"); err != nil {
 			syncFailed = true
 		}
 

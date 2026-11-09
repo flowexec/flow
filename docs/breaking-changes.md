@@ -31,10 +31,14 @@ string, as in a shell. It used to be left as written.
 with a warning. A missing param `envFile` used to fail the run, and one missing workspace file
 dropped every file in the list.
 
-### `--sync` Pulls Git Workspaces
+### Sync Pulls Git Workspaces
 
-**What changed:** The global `--sync` flag, and `sync` on MCP `execute`, pull git-sourced
-workspaces before rescanning. MCP `sync_executables` passes `--git`. A failed pull is a warning.
+**What changed:** `flow sync`, the global `--sync` flag, and `sync` on the MCP tools pull
+git-sourced workspaces (fast-forward only) before rescanning. A workspace that can't be pulled is
+named and skipped. `--git` is deprecated, since pulling is the default, and `--force` no longer
+needs it.
+
+**How to migrate:** Use `flow sync --no-git` where a sync must not touch the network.
 
 ### Listing a Workspace Lists Every Namespace
 

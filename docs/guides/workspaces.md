@@ -72,19 +72,22 @@ This respects the branch or tag originally specified when the workspace was adde
 
 If a pull fails due to merge conflicts or local changes, the error output from git is shown directly. Use `--force` to discard local changes and hard reset to the remote state.
 
-You can also update all git workspaces at once during a cache sync:
+`flow sync` updates every git workspace at once, then rescans:
 
 ```shell
-# Sync cache and pull all git workspaces
-flow sync --git
+# Pull all git workspaces, then rescan
+flow sync
+
+# Rescan only, without touching the network
+flow sync --no-git
 
 # Force pull all git workspaces (discards local changes)
-flow sync --git --force
+flow sync --force
 ```
 
-The global `--sync` flag on any command, and `sync` on the MCP `execute` tool, also pull git
-workspaces (without `--force`) before running. A workspace that can't be pulled is named in a
-warning, so a run never uses stale code without saying so.
+A pull only fast-forwards; a workspace that can't be pulled is named and skipped. The global
+`--sync` flag on any command, and `sync` on the MCP tools, pull the same way before running, so a
+run never uses stale code without saying so.
 
 ### Binding a Git Workspace to a Local Checkout
 
@@ -199,7 +202,7 @@ executables:
 - `gitRefType`: Either `branch` or `tag`
 
 Adding a workspace from a Git URL records these under `gitWorkspaces` in your flow config, not in the clone, so
-its `flow.yaml` stays exactly as upstream wrote it and `flow sync --git` can pull changes to it.
+its `flow.yaml` stays exactly as upstream wrote it and `flow sync` can pull changes to it.
 
 > **Complete reference**: See the [workspace configuration schema](../types/workspace.md) for all available options.
 

@@ -163,9 +163,16 @@ var ClearCheckoutFlag = &Metadata{
 var GitPullFlag = &Metadata{
 	Name:      "git",
 	Shorthand: "g",
-	Usage:     "Pull latest changes for all git-sourced workspaces before syncing",
+	Usage:     "Pull git-sourced workspaces before syncing (the default)",
 	Default:   false,
 	Required:  false,
+}
+
+var NoGitPullFlag = &Metadata{
+	Name:     "no-git",
+	Usage:    "Rescan without pulling git-sourced workspaces",
+	Default:  false,
+	Required: false,
 }
 
 var ForceFlag = &Metadata{

@@ -264,7 +264,7 @@ func syncStateHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 		}
 
 		sendProgress(srv, ctx, progressToken, 0, 1, "Syncing state")
-		output, err := executor.ExecuteContext(ctx, "sync", "--git")
+		output, err := executor.ExecuteContext(ctx, "sync")
 
 		if ctx.Err() != nil {
 			return toolError(ErrCodeCancelled, "sync was cancelled"), nil

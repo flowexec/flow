@@ -9,7 +9,7 @@ Refresh workspace cache and discover new executables.
 
 ## Synopsis
 
-Refresh the workspace cache and discover new executables. Use --git to also pull latest changes for all git-sourced workspaces before syncing. Use --force with --git to discard local changes and hard reset to the remote.
+Pull git-sourced workspaces from their remotes, then refresh the workspace cache and discover new executables. A pull only fast-forwards; a workspace that can't be pulled is named and skipped. Use --no-git to rescan without touching the network, and --force to discard local changes and hard reset git workspaces to their remotes.
 
 ```shell
 flow sync [flags]
@@ -18,9 +18,9 @@ flow sync [flags]
 ## Examples
 
 ```shell
-flow sync               # rescan all workspaces for new executables
-flow sync --git         # pull all git-sourced workspaces, then rescan
-flow sync --git --force # hard-reset git workspaces before rescan
+flow sync               # pull git-sourced workspaces, then rescan for executables
+flow sync --no-git      # rescan only, without touching the network
+flow sync --force       # hard-reset git workspaces to their remotes, then rescan
 ```
 
 ## Options
@@ -28,8 +28,8 @@ flow sync --git --force # hard-reset git workspaces before rescan
 | Flag | Type | Description |
 |------|------|-------------|
 | `--force` |  | Force update by discarding local changes (hard reset to remote) |
-| `-g, --git` |  | Pull latest changes for all git-sourced workspaces before syncing |
 | `-h, --help` |  | help for sync |
+| `--no-git` |  | Rescan without pulling git-sourced workspaces |
 | `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
 ## Options inherited from parent commands

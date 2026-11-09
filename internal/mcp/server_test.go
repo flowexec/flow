@@ -861,7 +861,7 @@ var _ = Describe("MCP Server", func() {
 		Context("sync_executables tool", func() {
 			It("should call executor with correct arguments", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "sync", "--git").
+					ExecuteContext(gomock.Any(), "sync").
 					Return("Synced executables", nil)
 
 				_, err := mcpClient.CallTool(ctx, newCallToolRequest("sync_executables", nil))
@@ -922,7 +922,7 @@ executables:
     exec:
       cmd: echo greet
 `
-				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("synced", nil)
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync", "--no-git").Return("synced", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
 					"path":    flowPath,
@@ -947,7 +947,7 @@ executables:
 				tmpDir := GinkgoTB().TempDir()
 				flowPath := filepath.Join(tmpDir, "sync-fail.flow")
 
-				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("", errors.New("sync exploded"))
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync", "--no-git").Return("", errors.New("sync exploded"))
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
 					"path":    flowPath,
@@ -1007,7 +1007,7 @@ executables:
 				flowPath := filepath.Join(tmpDir, "existing.flow")
 				Expect(os.WriteFile(flowPath, []byte("executables: []\n"), 0600)).To(Succeed())
 
-				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync").Return("synced", nil)
+				mockExecutor.EXPECT().ExecuteContext(gomock.Any(), "sync", "--no-git").Return("synced", nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("write_flowfile", map[string]interface{}{
 					"path":      flowPath,
