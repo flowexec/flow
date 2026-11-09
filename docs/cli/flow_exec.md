@@ -59,6 +59,7 @@ flow exec ws/ns:build -- --flag1=value1 --flag2=value2 value3 value4
 | `-b, --background` |  | Run the executable in the background and return a run ID immediately. |
 | `--cmd` | `stringArray` | Run an ad-hoc shell command through flow instead of a named executable. The command runs with the current workspace's environment and is recorded in flow logs. Repeat --cmd to run multiple commands in one invocation (see --mode). |
 | `--dir` | `string` | Working directory for an ad-hoc command (defaults to the current directory). Only valid with --cmd. |
+| `--dry-run` |  | Print what the run would do - resolved args, params, dir and command - without running it. Secrets and prompts are not resolved. |
 | `-h, --help` |  | help for exec |
 | `--interpreter` | `string` | The interpreter to run ad-hoc --cmd commands with: 'sh' (default) or 'python'. Applies to every --cmd in the invocation. |
 | `--label` | `string` | A short, human-readable label for an ad-hoc command (used in history). Only valid with --cmd. |

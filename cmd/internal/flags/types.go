@@ -140,6 +140,13 @@ var GitDepthFlag = &Metadata{
 	Default: 0,
 }
 
+var DryRunFlag = &Metadata{
+	Name: "dry-run",
+	Usage: "Print what the run would do - resolved args, params, dir and command - without running it. " +
+		"Secrets and prompts are not resolved.",
+	Default: false,
+}
+
 var CheckoutFlag = &Metadata{
 	Name: "checkout",
 	Usage: "Local clone of the repository this git workspace's executables operate on. " +

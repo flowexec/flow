@@ -127,6 +127,9 @@ func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 			"Workspace to run in, by name or path. Overrides `dir`; doesn't change the current workspace.")),
 		mcp.WithBoolean("sync", mcp.Description(
 			"Sync before running: rescan executables and pull git-sourced workspaces from their remotes.")),
+		mcp.WithBoolean("dry_run", mcp.Description(
+			"Resolve without running: output is the args, params, env, dir and command the run would use. "+
+				"Secrets and prompts are not resolved. Use it to check flag wiring.")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	executeFlow.Annotations = mcp.ToolAnnotation{
@@ -257,6 +260,10 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		if syncFlag {
 			cmdArgs = append(cmdArgs, "--sync")
 		}
+		dryRun := request.GetBool("dry_run", false)
+		if dryRun {
+			cmdArgs = append(cmdArgs, "--dry-run")
+		}
 		cmdArgs = append(cmdArgs, paramFlags...)
 		cmdArgs = append(cmdArgs, plainLogArgs...)
 		if len(execArgs) > 0 {
@@ -282,7 +289,16 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 		ref := strings.Join([]string{executableVerb, executableID}, " ")
-		return executionResult(ref+" execution failed", output, err), nil
+		result := executionResult(ref+" execution failed", output, err)
+		if dryRun && !result.IsError {
+			// Nothing ran; the output is the plan.
+			if out, ok := result.StructuredContent.(ExecutionOutput); ok {
+				out.Started = false
+				jsonData, _ := json.Marshal(out)
+				result = mcp.NewToolResultStructured(out, string(jsonData))
+			}
+		}
+		return result, nil
 	}
 }
 

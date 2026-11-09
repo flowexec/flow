@@ -113,6 +113,7 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.CmdDirFlag)
 	RegisterFlag(ctx, subCmd, *flags.SpecFlag)
 	RegisterFlag(ctx, subCmd, *flags.RunWorkspaceFlag)
+	RegisterFlag(ctx, subCmd, *flags.DryRunFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -156,6 +157,11 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	execArgs := executableInputArgs(args)
 	if err := checkExecutableInput(e, execArgs); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+
+	if flags.ValueFor[bool](cmd, *flags.DryRunFlag, false) {
+		printDryRun(ctx, cmd, e, ref, execArgs)
 		return
 	}
 
@@ -223,6 +229,8 @@ func execTransient(ctx *context.Context, cmd *cobra.Command, verb executable.Ver
 		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
 	case len(args) > 0:
 		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec don't take arguments, got: %s", strings.Join(args, " "))
+	case flags.ValueFor[bool](cmd, *flags.DryRunFlag, false):
+		errhandler.HandleUsage(ctx, cmd, "--dry-run applies to named executables, not --cmd or --spec")
 	case len(adhocCmds) > 0:
 		execAdHoc(ctx, cmd, verb, adhocCmds)
 	default:
