@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/flowexec/flow/v2/internal/io"
+	"github.com/flowexec/flow/v2/internal/services/git"
 	"github.com/flowexec/flow/v2/internal/utils"
 	"github.com/flowexec/flow/v2/pkg/context"
 	"github.com/flowexec/flow/v2/pkg/filesystem"
+	"github.com/flowexec/flow/v2/pkg/logger"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -39,7 +41,10 @@ func SetEnv(
 			continue
 		case param.EnvFile != "":
 			dotEnvMap, err := readDotEnvFile(param.EnvFile, envMap["FLOW_DEFINITION_DIR"])
-			if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				warnMissingEnvFile(param.EnvFile)
+				continue
+			} else if err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -179,7 +184,10 @@ func BuildEnvMap(
 			continue
 		case param.EnvFile != "":
 			dotEnvMap, err := readDotEnvFile(param.EnvFile, defaultEnv["FLOW_DEFINITION_DIR"])
-			if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				warnMissingEnvFile(param.EnvFile)
+				continue
+			} else if err != nil {
 				errs = append(errs, err)
 				continue
 			}
@@ -243,6 +251,17 @@ func EnvListToEnvMap(envList []string) map[string]string {
 	return envMap
 }
 
+// CheckoutDir resolves the local checkout an executable operates on (see git.ResolveCheckout).
+func CheckoutDir(ctx *context.Context, e *executable.Executable) string {
+	if ctx == nil || ctx.Config == nil || e.WorkspacePath() == "" {
+		return ""
+	}
+	source, recorded := ctx.Config.GitWorkspaces[e.Workspace()]
+	gitSourced := recorded || git.IsManagedClone(e.WorkspacePath())
+	cwd, _ := os.Getwd()
+	return git.ResolveCheckout(e.WorkspacePath(), gitSourced, source.Checkout, cwd)
+}
+
 func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[string]string {
 	envMap := make(map[string]string)
 	envMap["FLOW_RUNNER"] = "true"
@@ -257,6 +276,9 @@ func DefaultEnv(ctx *context.Context, executable *executable.Executable) map[str
 	envMap["FLOW_WORKSPACE_PATH"] = executable.WorkspacePath()
 	envMap["FLOW_CONFIG_PATH"] = filesystem.ConfigDirPath()
 	envMap["FLOW_CACHE_PATH"] = filesystem.CachedDataDirPath()
+	if checkout := CheckoutDir(ctx, executable); checkout != "" {
+		envMap[git.CheckoutEnvKey] = checkout
+	}
 	envMap[io.DisableInteractiveEnvKey] = "true"
 	if interactive := os.Getenv(io.DisableInteractiveEnvKey); interactive != "" {
 		envMap[io.DisableInteractiveEnvKey] = interactive
@@ -281,18 +303,27 @@ func createEnvValueFile(destination, content, wsPath, flowFileDir string, envMap
 	return dest, nil
 }
 
+// LoadEnvFromFiles merges the files in order, later files winning. A file that does not exist
+// is skipped with a warning; any other failure is returned alongside what did load.
 func LoadEnvFromFiles(files []string, expansionFallbackDir string) (map[string]string, error) {
 	envMap := make(map[string]string)
+	var errs []error
 	for _, file := range files {
 		dotEnvMap, err := readDotEnvFile(file, expansionFallbackDir)
-		if err != nil {
-			return nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			warnMissingEnvFile(file)
+			continue
+		} else if err != nil {
+			errs = append(errs, err)
+			continue
 		}
-		for k, v := range dotEnvMap {
-			envMap[k] = v
-		}
+		maps.Copy(envMap, dotEnvMap)
 	}
-	return envMap, nil
+	return envMap, errors.Join(errs...)
+}
+
+func warnMissingEnvFile(file string) {
+	logger.Log().Warnf("env file %s not found, skipping", file)
 }
 
 func readDotEnvFile(file, expansionFallbackDir string) (map[string]string, error) {

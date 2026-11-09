@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -43,6 +44,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			ctx.LogWorkspaceResolution()
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
+				internal.PullGitWorkspacesForSync(ctx)
 				if err := cache.UpdateAll(ctx.DataStore); err != nil {
 					errhandler.HandleFatal(ctx, cmd, err)
 				}
@@ -78,7 +80,7 @@ func Execute(ctx *context.Context, rootCmd *cobra.Command) error {
 		// Cobra-level errors (unknown command, bad flag, arg validation) surface
 		// here. Route them through the structured handler so --output=json
 		// produces an envelope instead of plain text.
-		errhandler.HandleFatal(ctx, rootCmd, flowerrors.NewUsageError("%s", err.Error()))
+		errhandler.HandleFatal(ctx, rootCmd, flowerrors.NewUsageError("%s", withJoinedArgsHint(rootCmd, err)))
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 	return nil
@@ -123,4 +125,23 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command, mcpOpts .
 	internal.RegisterMCPCmd(ctx, rootCmd, mcpOpts...)
 	internal.RegisterCliCmd(ctx, rootCmd)
 	internal.DropShadowedVerbAliases(rootCmd)
+}
+
+// withJoinedArgsHint suggests the split form when the verb and ref arrived as one quoted
+// argument ("apply ws/ns:name"), a common mistake when a caller builds the command line.
+func withJoinedArgsHint(rootCmd *cobra.Command, err error) string {
+	msg := err.Error()
+	const prefix = `unknown command "`
+	if !strings.HasPrefix(msg, prefix) {
+		return msg
+	}
+	quoted, _, ok := strings.Cut(strings.TrimPrefix(msg, prefix), `"`)
+	fields := strings.Fields(quoted)
+	if !ok || len(fields) < 2 {
+		return msg
+	}
+	if found, _, findErr := rootCmd.Find(fields[:1]); findErr != nil || found == rootCmd {
+		return msg
+	}
+	return fmt.Sprintf("%s; the verb and ref are separate arguments: %s %s", msg, rootCmd.Name(), quoted)
 }

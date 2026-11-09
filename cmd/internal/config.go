@@ -8,7 +8,6 @@ import (
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
-	"github.com/flowexec/tuikit/views"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -49,28 +48,8 @@ func registerConfigResetCmd(ctx *context.Context, configCmd *cobra.Command) {
 }
 
 func resetConfigFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
-	if !skipConfirm {
-		form, err := views.NewForm(
-			logger.Theme(ctx.Config.Theme.String()),
-			ctx.StdIn(),
-			ctx.StdOut(),
-			&views.FormField{
-				Key:   "confirm",
-				Type:  views.PromptTypeConfirm,
-				Title: "This will overwrite your current flow configurations. Are you sure you want to continue?",
-			})
-		if err != nil {
-			logger.Log().FatalErr(err)
-		}
-		if err := form.Run(ctx); err != nil {
-			logger.Log().FatalErr(err)
-		}
-		resp := form.FindByKey("confirm").Value()
-		if truthy, _ := strconv.ParseBool(resp); !truthy {
-			logger.Log().Warnf("Aborting")
-			return
-		}
+	if !confirmed(ctx, cmd, "This will overwrite your current flow configurations. Are you sure you want to continue?") {
+		return
 	}
 
 	resetCfg := &config.Config{

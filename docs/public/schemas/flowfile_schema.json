@@ -111,7 +111,7 @@
       "type": "object",
       "properties": {
         "default": {
-          "description": "The default value to use if the argument is not provided.\nIf the argument is required and no default is provided, the executable will fail.\n\n`$VAR` and `${VAR}` are expanded against the executable's environment, then the environment\nflow was started in. A variable that does not resolve is left as written. Use `$$` for a literal `$`.\n",
+          "description": "The default value to use if the argument is not provided.\nIf the argument is required and no default is provided, the executable will fail.\n\n`$VAR` and `${VAR}` are expanded against the executable's environment, then the environment\nflow was started in. A variable that is not set expands to an empty string, as in a shell. Use `$$` for a literal `$`.\n",
           "type": "string",
           "default": ""
         },
@@ -159,7 +159,7 @@
       }
     },
     "ExecutableDirectory": {
-      "description": "The directory to execute the command in.\nIf unset, the directory of the flow file will be used.\nIf set to `f:tmp`, a temporary directory will be created for the process.\nIf prefixed with `./`, the path will be relative to the current working directory.\nIf prefixed with `//`, the path will be relative to the workspace root.\nEnvironment variables in the path will be expended at runtime.\n",
+      "description": "The directory to execute the command in.\nIf unset, the directory of the flow file will be used.\nIf set to `f:tmp`, a temporary directory will be created for the process.\nIf prefixed with `./`, the path will be relative to the current working directory.\nIf prefixed with `//`, the path will be relative to the workspace root.\nIf prefixed with `@/` (or set to `@`), the path will be relative to the workspace's local checkout: the\nrepository its executables operate on, bound with `flow workspace checkout`. Outside a git workspace this\nis the workspace root.\nEnvironment variables in the path will be expanded at runtime.\n",
       "type": "string",
       "default": ""
     },
@@ -379,7 +379,7 @@
       "type": "object",
       "properties": {
         "envFile": {
-          "description": "A path to a file containing environment variables to be passed to the executable.\nThe file should contain one variable per line in the format `KEY=VALUE`.\n",
+          "description": "A path to a file containing environment variables to be passed to the executable.\nThe file should contain one variable per line in the format `KEY=VALUE`.\nA file that does not exist is skipped with a warning.\n",
           "type": "string",
           "default": ""
         },

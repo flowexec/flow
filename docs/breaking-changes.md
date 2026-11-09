@@ -7,6 +7,52 @@ description: "Breaking changes between flow releases, and what to do about each 
 
 This page documents changes that require you to update existing flow files, config, or scripts when upgrading between releases.
 
+## v2.5.0
+
+### MCP Runs That Finish Are Results
+
+**What changed:** `execute`, `run_command`, `run_python`, and `run_executable` return a run that
+started and finished as a normal result, with `output` and `exitCode`, whatever the exit code.
+Only a run that never started is a tool error (`NOT_STARTED`). Output has CRLF normalized, and a
+line redrawn with carriage returns keeps only its last frame.
+
+**How to migrate:** Check `exitCode` instead of `isError` to tell a failed run from a passing one.
+
+### Unset Variables in Argument Defaults Expand to Empty
+
+**What changed:** A `$VAR` in an argument's `default` that isn't set now expands to an empty
+string, as in a shell. It used to be left as written.
+
+**How to migrate:** Write `$$` where a default needs a literal `$`.
+
+### Missing Env Files Are Skipped
+
+**What changed:** A workspace `envFiles` entry or param `envFile` that doesn't exist is skipped
+with a warning. A missing param `envFile` used to fail the run, and one missing workspace file
+dropped every file in the list.
+
+### Sync Pulls Git Workspaces
+
+**What changed:** `flow sync`, the global `--sync` flag, and `sync` on the MCP tools pull
+git-sourced workspaces (fast-forward only) before rescanning. A workspace that can't be pulled is
+named and skipped. `--git` is deprecated, since pulling is the default, and `--force` no longer
+needs it.
+
+**How to migrate:** Use `flow sync --no-git` where a sync must not touch the network.
+
+### Listing a Workspace Lists Every Namespace
+
+**What changed:** `flow browse --list --workspace NAME` lists executables in all of that
+workspace's namespaces unless `--namespace` narrows it. It used to list only the root namespace.
+
+### Confirmations Need an Answer
+
+**What changed:** Without a terminal, `workspace remove`, `vault remove`, `secret remove`, and
+`config reset` read the confirmation as a line from stdin. No answer at all is a usage error
+(exit 2) asking for `--yes`; it used to abort with exit 0.
+
+**How to migrate:** Pass `--yes` in scripts, or pipe `yes`.
+
 ## v2.4.0
 
 ### Undefined Executable Input Is an Error

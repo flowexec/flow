@@ -97,6 +97,31 @@ type ExecutableOutput struct {
 	Tags            []string          `json:"tags,omitempty"`
 	Aliases         []string          `json:"aliases,omitempty"`
 	Annotations     map[string]string `json:"annotations,omitempty"`
+	// Inputs is set by list_executables when include_args is true.
+	Inputs *ExecutableInputs `json:"inputs,omitempty"`
+}
+
+// ExecutableInputs summarizes what a caller can or must supply to run an executable.
+type ExecutableInputs struct {
+	Args []ArgSummary `json:"args,omitempty"`
+	// Prompts are params a person would be asked for. Over MCP, pass them in execute's `params`.
+	Prompts []PromptSummary `json:"prompts,omitempty"`
+}
+
+// ArgSummary is one argument: positional when Pos is set, otherwise a --Flag.
+type ArgSummary struct {
+	Pos      *int   `json:"pos,omitempty"`
+	Flag     string `json:"flag,omitempty"`
+	EnvKey   string `json:"envKey,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Default  string `json:"default,omitempty"`
+	Required bool   `json:"required,omitempty"`
+}
+
+// PromptSummary is a param whose value is asked for when the run starts.
+type PromptSummary struct {
+	EnvKey string `json:"envKey"`
+	Prompt string `json:"prompt"`
 }
 
 // ExecutableListOutput is the output of the list_executables tool.
@@ -110,8 +135,9 @@ type ExecutableListOutput struct {
 type ExecutionOutput struct {
 	Output string `json:"output"`
 	// ExitCode is 0 on success. When Started is true it is the failing command's status, or 1 if flow
-	// ended the run itself, as on a timeout. When Started is false nothing ran: it is 2 for rejected
-	// input and 1 for other failures inside flow. It is -1 if flow could not be launched or was killed.
+	// ended the run itself, as on a timeout; the result is not a tool error either way. When Started
+	// is false nothing ran and the result is a tool error: it is 2 for rejected input and 1 for other
+	// failures inside flow. It is -1 if flow could not be launched or was killed.
 	ExitCode int `json:"exitCode"`
 	// Started reports whether flow got as far as running a command, request, or other action.
 	Started bool `json:"started"`

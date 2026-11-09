@@ -27,7 +27,7 @@ var LogModeFlag = &Metadata{
 
 var SyncCacheFlag = &Metadata{
 	Name:     "sync",
-	Usage:    "Sync flow cache and workspaces",
+	Usage:    "Sync the executable cache first, pulling git-sourced workspaces from their remotes",
 	Default:  false,
 	Required: false,
 }
@@ -51,7 +51,7 @@ var FilterWorkspaceFlag = &Metadata{
 var AllNamespacesFlag = &Metadata{
 	Name:      "all",
 	Shorthand: "a",
-	Usage:     "List from all namespaces.",
+	Usage:     "List from all namespaces. Implied when --workspace is set without --namespace.",
 	Default:   false,
 	Required:  false,
 }
@@ -140,12 +140,39 @@ var GitDepthFlag = &Metadata{
 	Default: 0,
 }
 
+var DryRunFlag = &Metadata{
+	Name: "dry-run",
+	Usage: "Print what the run would do - resolved args, params, dir and command - without running it. " +
+		"Secrets and prompts are not resolved.",
+	Default: false,
+}
+
+var CheckoutFlag = &Metadata{
+	Name: "checkout",
+	Usage: "Local clone of the repository this git workspace's executables operate on. " +
+		"An executable's dir starting with '@/' resolves against it.",
+	Default: "",
+}
+
+var ClearCheckoutFlag = &Metadata{
+	Name:    "clear",
+	Usage:   "Remove the workspace's checkout binding.",
+	Default: false,
+}
+
 var GitPullFlag = &Metadata{
 	Name:      "git",
 	Shorthand: "g",
-	Usage:     "Pull latest changes for all git-sourced workspaces before syncing",
+	Usage:     "Pull git-sourced workspaces before syncing (the default)",
 	Default:   false,
 	Required:  false,
+}
+
+var NoGitPullFlag = &Metadata{
+	Name:     "no-git",
+	Usage:    "Rescan without pulling git-sourced workspaces",
+	Default:  false,
+	Required: false,
 }
 
 var ForceFlag = &Metadata{
@@ -386,9 +413,9 @@ var CmdModeFlag = &Metadata{
 
 var RunWorkspaceFlag = &Metadata{
 	Name: "workspace",
-	Usage: "Workspace whose environment the ad-hoc/transient run should use (only with --cmd or --spec). " +
-		"Defaults to the workspace containing the run directory, then the current workspace. " +
-		"Does not change the global current workspace.",
+	Usage: "Workspace to run in, by name or path: where a named executable is resolved, and whose " +
+		"environment an ad-hoc or transient run uses. Defaults to the workspace containing the run " +
+		"directory, then the current workspace. Does not change the global current workspace.",
 	Default:  "",
 	Required: false,
 }

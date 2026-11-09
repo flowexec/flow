@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -167,28 +166,8 @@ func removeSecretFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 		success = fmt.Sprintf("Secret '%s' unlinked (the secret itself was not deleted)", reference)
 	}
 
-	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
-	if !skipConfirm {
-		form, err := views.NewForm(
-			logger.Theme(ctx.Config.Theme.String()),
-			ctx.StdIn(),
-			ctx.StdOut(),
-			&views.FormField{
-				Key:   "confirm",
-				Type:  views.PromptTypeConfirm,
-				Title: prompt,
-			})
-		if err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		if err := form.Run(ctx); err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		resp := form.FindByKey("confirm").Value()
-		if truthy, _ := strconv.ParseBool(resp); !truthy {
-			logger.Log().Warnf("Aborting")
-			return
-		}
+	if !confirmed(ctx, cmd, prompt) {
+		return
 	}
 
 	if err = v.DeleteSecret(reference); err != nil {

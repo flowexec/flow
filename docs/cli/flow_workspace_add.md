@@ -16,6 +16,7 @@ Examples:
   flow workspace add shared https://github.com/org/flows.git
   flow workspace add tools git@github.com:org/tools.git --branch main
   flow workspace add stable https://github.com/org/flows.git --tag v1.0.0
+  flow workspace add ops git@github.com:org/app.git --branch flows --checkout ~/dev/app
 
 ```shell
 flow workspace add NAME PATH_OR_GIT_URL [flags]
@@ -26,6 +27,7 @@ flow workspace add NAME PATH_OR_GIT_URL [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `-b, --branch` | `string` | Git branch to checkout when cloning a git workspace |
+| `--checkout` | `string` | Local clone of the repository this git workspace's executables operate on. An executable's dir starting with '@/' resolves against it. |
 | `--depth` | `int` | Git clone depth (0 for full history) |
 | `-h, --help` |  | help for add |
 | `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
@@ -37,7 +39,7 @@ flow workspace add NAME PATH_OR_GIT_URL [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 

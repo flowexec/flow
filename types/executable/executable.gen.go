@@ -13,8 +13,8 @@ type Argument struct {
 	//
 	// `$VAR` and `${VAR}` are expanded against the executable's environment, then the
 	// environment
-	// flow was started in. A variable that does not resolve is left as written. Use
-	// `$$` for a literal `$`.
+	// flow was started in. A variable that is not set expands to an empty string, as
+	// in a shell. Use `$$` for a literal `$`.
 	//
 	Default string `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
@@ -67,7 +67,12 @@ const ArgumentTypeString ArgumentType = "string"
 // If prefixed with `./`, the path will be relative to the current working
 // directory.
 // If prefixed with `//`, the path will be relative to the workspace root.
-// Environment variables in the path will be expended at runtime.
+// If prefixed with `@/` (or set to `@`), the path will be relative to the
+// workspace's local checkout: the
+// repository its executables operate on, bound with `flow workspace checkout`.
+// Outside a git workspace this
+// is the workspace root.
+// Environment variables in the path will be expanded at runtime.
 type Directory string
 
 // Run the command or file inside a container instead of on the host.
@@ -373,6 +378,7 @@ type Parameter struct {
 	// A path to a file containing environment variables to be passed to the
 	// executable.
 	// The file should contain one variable per line in the format `KEY=VALUE`.
+	// A file that does not exist is skipped with a warning.
 	//
 	EnvFile string `json:"envFile,omitempty" yaml:"envFile,omitempty" mapstructure:"envFile,omitempty"`
 

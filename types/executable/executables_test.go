@@ -2,6 +2,7 @@ package executable_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -425,5 +426,26 @@ var _ = Describe("Executable Visibility", func() {
 		ex.SetContext(ws, "path", "", "file.flow")
 		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityInternal)).To(BeFalse())
 		Expect(ex.IsVisibleFromWorkspace(ws, common.VisibilityHidden)).To(BeTrue())
+	})
+})
+
+var _ = Describe("Directory checkout prefix", func() {
+	It("resolves @/ against the run's checkout", func() {
+		dir, isTmp, err := executable.Directory("@/sub").ExpandDirectory(
+			"/ws", "/ws/x.flow", "", map[string]string{"FLOW_CHECKOUT_DIR": "/src/app"})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(isTmp).To(BeFalse())
+		Expect(dir).To(Equal(filepath.Join("/src/app", "sub")))
+
+		dir, _, err = executable.Directory("@").ExpandDirectory(
+			"/ws", "/ws/x.flow", "", map[string]string{"FLOW_CHECKOUT_DIR": "/src/app"})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(dir).To(Equal("/src/app"))
+	})
+
+	It("fails with how to bind one when none is set", func() {
+		GinkgoT().Setenv("FLOW_CHECKOUT_DIR", "")
+		_, _, err := executable.Directory("@/sub").ExpandDirectory("/ws", "/ws/x.flow", "", map[string]string{})
+		Expect(err).To(MatchError(ContainSubstring("workspace checkout")))
 	})
 })

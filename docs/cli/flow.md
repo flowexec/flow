@@ -19,12 +19,12 @@ See https://flowexec.io for more information.
 |------|------|-------------|
 | `-h, --help` |  | help for flow |
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 
 - [flow browse](flow_browse.md) — Discover and explore available executables.
-- [flow cache](flow_cache.md) — Manage temporary key-value data.
+- [flow cache](flow_cache.md) — Manage key-value data that persists across runs.
 - [flow cli](flow_cli.md) — Manage the flow CLI itself.
 - [flow config](flow_config.md) — View and update global flow configuration.
 - [flow exec](flow_exec.md) — Execute any executable by reference.

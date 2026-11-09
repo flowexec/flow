@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	"github.com/flowexec/tuikit/views"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -40,6 +38,7 @@ func RegisterWorkspaceCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	registerRemoveWorkspaceCmd(ctx, wsCmd)
 	registerListWorkspaceCmd(ctx, wsCmd)
 	registerGetWorkspaceCmd(ctx, wsCmd)
+	registerCheckoutWorkspaceCmd(ctx, wsCmd)
 	rootCmd.AddCommand(wsCmd)
 }
 
@@ -55,7 +54,8 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 			"  flow workspace add my-ws ./path/to/dir\n" +
 			"  flow workspace add shared https://github.com/org/flows.git\n" +
 			"  flow workspace add tools git@github.com:org/tools.git --branch main\n" +
-			"  flow workspace add stable https://github.com/org/flows.git --tag v1.0.0",
+			"  flow workspace add stable https://github.com/org/flows.git --tag v1.0.0\n" +
+			"  flow workspace add ops git@github.com:org/app.git --branch flows --checkout ~/dev/app",
 		Args: cobra.ExactArgs(2),
 		Run:  func(cmd *cobra.Command, args []string) { addWorkspaceFunc(ctx, cmd, args) },
 	}
@@ -63,6 +63,7 @@ func registerAddWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 	RegisterFlag(ctx, createCmd, *flags.GitBranchFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitTagFlag)
 	RegisterFlag(ctx, createCmd, *flags.GitDepthFlag)
+	RegisterFlag(ctx, createCmd, *flags.CheckoutFlag)
 	RegisterFlag(ctx, createCmd, *flags.OutputFormatFlag)
 	wsCmd.AddCommand(createCmd)
 }
@@ -85,6 +86,16 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	if branch != "" && tag != "" {
 		errhandler.HandleUsage(ctx, cmd, "cannot specify both --branch and --tag")
 	}
+	checkout := ""
+	if raw := flags.ValueFor[string](cmd, *flags.CheckoutFlag, false); raw != "" {
+		if !git.IsGitURL(pathOrURL) {
+			errhandler.HandleUsage(ctx, cmd, "--checkout is only supported with Git URLs")
+		}
+		var err error
+		if checkout, err = checkoutPath(raw); err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+		}
+	}
 
 	var path string
 	if git.IsGitURL(pathOrURL) {
@@ -97,6 +108,7 @@ func addWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 			errhandler.HandleFatal(ctx, cmd, err)
 			return
 		}
+		source.Checkout = checkout
 		if userConfig.GitWorkspaces == nil {
 			userConfig.GitWorkspaces = make(map[string]config.GitSource)
 		}
@@ -407,36 +419,16 @@ func registerRemoveWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
 func removeWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	skipConfirm := flags.ValueFor[bool](cmd, *flags.YesFlag, false)
-	if !skipConfirm {
-		form, err := views.NewForm(
-			logger.Theme(ctx.Config.Theme.String()),
-			ctx.StdIn(),
-			ctx.StdOut(),
-			&views.FormField{
-				Key:   "confirm",
-				Type:  views.PromptTypeConfirm,
-				Title: fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name),
-			})
-		if err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		if err := form.Run(ctx); err != nil {
-			errhandler.HandleFatal(ctx, cmd, err)
-		}
-		resp := form.FindByKey("confirm").Value()
-		if truthy, _ := strconv.ParseBool(resp); !truthy {
-			logger.Log().Warnf("Aborting")
-			return
-		}
-	}
-
 	userConfig := ctx.Config
 	if name == userConfig.CurrentWorkspace {
 		errhandler.HandleUsage(ctx, cmd, "cannot remove the current workspace")
 	}
 	if _, found := userConfig.Workspaces[name]; !found {
 		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: name})
+	}
+
+	if !confirmed(ctx, cmd, fmt.Sprintf("Are you sure you want to remove the workspace '%s'?", name)) {
+		return
 	}
 
 	wsPath := userConfig.Workspaces[name]
@@ -586,4 +578,96 @@ func getWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 	} else {
 		workspaceIO.PrintWorkspaceConfig(outputFormat, wsCfg)
 	}
+}
+
+func registerCheckoutWorkspaceCmd(ctx *context.Context, wsCmd *cobra.Command) {
+	checkoutCmd := &cobra.Command{
+		Use:   "checkout NAME [PATH]",
+		Short: "Bind a git workspace to the local clone its executables operate on.",
+		Long: "A git workspace can hold only flow files for another repository. Bind it to your local clone of " +
+			"that repository, and an executable's dir starting with '@/' resolves there, with the clone's path " +
+			"in FLOW_CHECKOUT_DIR. When a run starts inside that repository or one of its worktrees, the " +
+			"caller's own working tree is used instead. The binding is stored in your user config.\n\n" +
+			"With only NAME, prints the current binding.\n\n" +
+			"Examples:\n" +
+			"  flow workspace checkout ops ~/dev/app\n" +
+			"  flow workspace checkout ops\n" +
+			"  flow workspace checkout ops --clear",
+		Args: cobra.RangeArgs(1, 2),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) == 0 {
+				return maps.Keys(ctx.Config.GitWorkspaces), cobra.ShellCompDirectiveNoFileComp
+			}
+			return nil, cobra.ShellCompDirectiveFilterDirs
+		},
+		Run: func(cmd *cobra.Command, args []string) { checkoutWorkspaceFunc(ctx, cmd, args) },
+	}
+	RegisterFlag(ctx, checkoutCmd, *flags.ClearCheckoutFlag)
+	RegisterFlag(ctx, checkoutCmd, *flags.OutputFormatFlag)
+	wsCmd.AddCommand(checkoutCmd)
+}
+
+func checkoutWorkspaceFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
+	name := args[0]
+	userConfig := ctx.Config
+	if _, found := userConfig.Workspaces[name]; !found {
+		errhandler.HandleFatal(ctx, cmd, flowerrors.WorkspaceNotFoundError{Workspace: name})
+	}
+	source, gitSourced := userConfig.GitWorkspaces[name]
+	if !gitSourced {
+		errhandler.HandleUsage(ctx, cmd,
+			"workspace '%s' is not git-sourced; its executables already use its own directory for '@/'", name)
+	}
+
+	clearBinding := flags.ValueFor[bool](cmd, *flags.ClearCheckoutFlag, false)
+	switch {
+	case clearBinding && len(args) > 1:
+		errhandler.HandleUsage(ctx, cmd, "cannot pass a PATH with --clear")
+	case !clearBinding && len(args) == 1:
+		msg := fmt.Sprintf("Workspace '%s' has no checkout bound", name)
+		if source.Checkout != "" {
+			msg = fmt.Sprintf("Workspace '%s' is bound to %s", name, source.Checkout)
+		}
+		response.HandleSuccess(ctx, cmd, msg, map[string]any{"name": name, "checkout": source.Checkout})
+		return
+	case clearBinding:
+		source.Checkout = ""
+	default:
+		path, err := checkoutPath(args[1])
+		if err != nil {
+			errhandler.HandleUsage(ctx, cmd, "%s", err.Error())
+		}
+		source.Checkout = path
+	}
+
+	userConfig.GitWorkspaces[name] = source
+	if err := filesystem.WriteConfig(userConfig); err != nil {
+		errhandler.HandleFatal(ctx, cmd, err)
+	}
+	msg := fmt.Sprintf("Workspace '%s' checkout cleared", name)
+	if source.Checkout != "" {
+		msg = fmt.Sprintf("Workspace '%s' bound to %s", name, source.Checkout)
+	}
+	response.HandleSuccess(ctx, cmd, msg, map[string]any{"name": name, "checkout": source.Checkout})
+}
+
+// checkoutPath resolves a checkout argument to an absolute path to an existing directory.
+func checkoutPath(raw string) (string, error) {
+	path := raw
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		path = filepath.Join(home, path[1:])
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(abs)
+	if err != nil || !info.IsDir() {
+		return "", fmt.Errorf("checkout %s is not a directory", raw)
+	}
+	return abs, nil
 }

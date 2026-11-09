@@ -36,7 +36,7 @@ flow browse --namespace 'myproject/*'    # include nested namespaces
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `-a, --all` |  | List from all namespaces. |
+| `-a, --all` |  | List from all namespaces. Implied when --workspace is set without --namespace. |
 | `--annotation` | `stringArray` | Filter by annotations. Format: 'key=value' for exact value match, or 'key' for presence regardless of value. Repeat the flag for multiple selectors; all selectors must match (AND). |
 | `-f, --filter` | `string` | Filter executable by reference substring. |
 | `-h, --help` |  | help for browse |
@@ -53,7 +53,7 @@ flow browse --namespace 'myproject/*'    # include nested namespaces
 | Flag | Type | Description |
 |------|------|-------------|
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 

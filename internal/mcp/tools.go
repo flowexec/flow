@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"unicode/utf8"
 
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -29,7 +30,11 @@ func capOutput(output string) (string, bool) {
 	if len(output) <= maxExecutionOutputBytes {
 		return output, false
 	}
-	return output[len(output)-maxExecutionOutputBytes:], true
+	tail := output[len(output)-maxExecutionOutputBytes:]
+	for len(tail) > 0 && !utf8.RuneStart(tail[0]) {
+		tail = tail[1:]
+	}
+	return tail, true
 }
 
 // sendProgress sends a progress notification to the client if a progress token was provided.

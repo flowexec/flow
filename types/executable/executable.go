@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -41,8 +42,29 @@ func (e Directory) ExpandDirectory(
 		return td, true, nil
 	}
 
+	if e == checkoutDirLabel || strings.HasPrefix(string(e), checkoutDirLabel+"/") {
+		checkout := env[checkoutEnvKey]
+		if checkout == "" {
+			checkout = os.Getenv(checkoutEnvKey)
+		}
+		if checkout == "" {
+			return "", false, fmt.Errorf(
+				"dir '%s' needs this workspace's local checkout, and none is bound; "+
+					"bind one with 'workspace checkout NAME PATH'", e,
+			)
+		}
+		rest := strings.TrimPrefix(strings.TrimPrefix(string(e), checkoutDirLabel), "/")
+		return filepath.Join(checkout, filepath.FromSlash(rest)), false, nil
+	}
+
 	return utils.ExpandDirectory(string(e), wsPath, execPath, env), false, nil
 }
+
+const (
+	// checkoutDirLabel prefixes a dir resolved against the workspace's local checkout.
+	checkoutDirLabel = "@"
+	checkoutEnvKey   = "FLOW_CHECKOUT_DIR"
+)
 
 type ExecutableEnvironment struct {
 	Params ParameterList `json:"params" yaml:"params"`

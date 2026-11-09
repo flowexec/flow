@@ -33,6 +33,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/runner/render"
 	"github.com/flowexec/flow/v2/internal/runner/request"
 	"github.com/flowexec/flow/v2/internal/runner/serial"
+	"github.com/flowexec/flow/v2/internal/services/git"
 	"github.com/flowexec/flow/v2/internal/utils/env"
 	"github.com/flowexec/flow/v2/pkg/context"
 	flowErrors "github.com/flowexec/flow/v2/pkg/errors"
@@ -112,6 +113,7 @@ func RegisterExecCmd(ctx *context.Context, rootCmd *cobra.Command) {
 	RegisterFlag(ctx, subCmd, *flags.CmdDirFlag)
 	RegisterFlag(ctx, subCmd, *flags.SpecFlag)
 	RegisterFlag(ctx, subCmd, *flags.RunWorkspaceFlag)
+	RegisterFlag(ctx, subCmd, *flags.DryRunFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
@@ -155,6 +157,11 @@ func execFunc(ctx *context.Context, cmd *cobra.Command, verb executable.Verb, ar
 	execArgs := executableInputArgs(args)
 	if err := checkExecutableInput(e, execArgs); err != nil {
 		errhandler.HandleFatal(ctx, cmd, err)
+		return
+	}
+
+	if flags.ValueFor[bool](cmd, *flags.DryRunFlag, false) {
+		printDryRun(ctx, cmd, e, ref, execArgs)
 		return
 	}
 
@@ -222,6 +229,8 @@ func execTransient(ctx *context.Context, cmd *cobra.Command, verb executable.Ver
 		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec are mutually exclusive")
 	case len(args) > 0:
 		errhandler.HandleUsage(ctx, cmd, "--cmd and --spec don't take arguments, got: %s", strings.Join(args, " "))
+	case flags.ValueFor[bool](cmd, *flags.DryRunFlag, false):
+		errhandler.HandleUsage(ctx, cmd, "--dry-run applies to named executables, not --cmd or --spec")
 	case len(adhocCmds) > 0:
 		execAdHoc(ctx, cmd, verb, adhocCmds)
 	default:
@@ -264,9 +273,12 @@ func unanswerablePrompts(source string, fields []*views.FormField) error {
 	}
 	keys := make([]string, 0, len(fields))
 	for _, field := range fields {
-		keys = append(keys, field.Key)
+		keys = append(keys, fmt.Sprintf("%s (%q)", field.Key, field.Title))
 	}
-	return flowErrors.NewUsageError("missing values for prompt params: %s", strings.Join(keys, ", "))
+	return flowErrors.NewUsageError(
+		"missing values for prompt params: %s; pass each in execute's params by its key",
+		strings.Join(keys, ", "),
+	)
 }
 
 // resolveExecutableForRun resolves the target executable and ref from the verb and args, syncing the
@@ -315,7 +327,7 @@ func notRunnableHereError(e *executable.Executable, ref executable.Ref, currentW
 	}
 	return fmt.Errorf(
 		"executable '%s' is private to workspace '%s' and cannot be run from workspace '%s'. "+
-			"Switch to it with 'flow workspace switch %s', or set 'visibility: public' in its flow file",
+			"Run it in its workspace with '--workspace %s', or set 'visibility: public' in its flow file",
 		ref, e.Workspace(), currentWs, e.Workspace(),
 	)
 }
@@ -801,6 +813,11 @@ func buildExecEnv(ctx *context.Context, cmd *cobra.Command, e *executable.Execut
 		} else {
 			applyWorkspaceParameterOverrides(wsCfg, envMap)
 		}
+	}
+
+	// Serial and parallel steps resolve their dir against this env, so it needs the checkout too.
+	if checkout := env.CheckoutDir(ctx, e); checkout != "" {
+		envMap[git.CheckoutEnvKey] = checkout
 	}
 
 	paramOverrides := flags.ValueFor[[]string](cmd, *flags.ParameterValueFlag, false)

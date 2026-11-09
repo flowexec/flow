@@ -30,8 +30,8 @@ flow cache remove KEY [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `-L, --log-level` | `string` | Log verbosity level (debug, info, fatal) (default "info") |
-| `--sync` |  | Sync flow cache and workspaces |
+| `--sync` |  | Sync the executable cache first, pulling git-sourced workspaces from their remotes |
 
 ## See also
 
-- [flow cache](flow_cache.md) — Manage temporary key-value data.
+- [flow cache](flow_cache.md) — Manage key-value data that persists across runs.

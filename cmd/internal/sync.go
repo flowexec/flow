@@ -21,9 +21,10 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Use:     "sync",
 		Short:   "Refresh workspace cache and discover new executables.",
 		Example: syncExamples,
-		Long: "Refresh the workspace cache and discover new executables. " +
-			"Use --git to also pull latest changes for all git-sourced workspaces before syncing. " +
-			"Use --force with --git to discard local changes and hard reset to the remote.",
+		Long: "Pull git-sourced workspaces from their remotes, then refresh the workspace cache and " +
+			"discover new executables. A pull only fast-forwards; a workspace that can't be pulled is " +
+			"named and skipped. Use --no-git to rescan without touching the network, and --force to " +
+			"discard local changes and hard reset git workspaces to their remotes.",
 		Args: cobra.NoArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			printContext(ctx, cmd)
@@ -33,23 +34,30 @@ func RegisterSyncCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		},
 	}
 	RegisterFlag(ctx, subCmd, *flags.GitPullFlag)
+	RegisterFlag(ctx, subCmd, *flags.NoGitPullFlag)
 	RegisterFlag(ctx, subCmd, *flags.ForceFlag)
+	if err := subCmd.Flags().MarkDeprecated(flags.GitPullFlag.Name, "sync pulls git workspaces by default"); err != nil {
+		logger.Log().FatalErr(err)
+	}
 	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
 	rootCmd.AddCommand(subCmd)
 }
 
 func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
-	pullGit := flags.ValueFor[bool](cmd, *flags.GitPullFlag, false)
+	noGit := flags.ValueFor[bool](cmd, *flags.NoGitPullFlag, false)
 	force := flags.ValueFor[bool](cmd, *flags.ForceFlag, false)
 
-	if force && !pullGit {
-		errhandler.HandleUsage(ctx, cmd, "--force can only be used with --git")
+	switch {
+	case noGit && flags.ValueFor[bool](cmd, *flags.GitPullFlag, false):
+		errhandler.HandleUsage(ctx, cmd, "--git and --no-git are mutually exclusive")
+	case noGit && force:
+		errhandler.HandleUsage(ctx, cmd, "--force resets git workspaces, so it can't be used with --no-git")
 	}
 
 	start := time.Now()
 
 	var pullFailures []string
-	if pullGit {
+	if !noGit && hasGitWorkspaces(ctx) {
 		pullFailures = pullGitWorkspaces(ctx, force)
 	}
 
@@ -65,6 +73,33 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 		"duration":     duration.Round(time.Second).String(),
 		"pullFailures": pullFailures,
 	})
+}
+
+// PullGitWorkspacesForSync pulls git-sourced workspaces for the global --sync flag. It never resets
+// local changes, and reports failures as warnings: a run asked to sync should still run, but must not
+// look current when it isn't.
+func PullGitWorkspacesForSync(ctx *context.Context) {
+	if !hasGitWorkspaces(ctx) {
+		return
+	}
+	if failed := pullGitWorkspaces(ctx, false); len(failed) > 0 {
+		logger.Log().Warnf(
+			"git workspaces not updated, so they may run stale code: %s (see 'workspace update <name>')",
+			strings.Join(failed, ", "),
+		)
+	}
+}
+
+func hasGitWorkspaces(ctx *context.Context) bool {
+	if len(ctx.Config.GitWorkspaces) > 0 {
+		return true
+	}
+	for _, path := range ctx.Config.Workspaces {
+		if git.IsManagedClone(path) {
+			return true
+		}
+	}
+	return false
 }
 
 func pullGitWorkspaces(ctx *context.Context, force bool) []string {
@@ -112,7 +147,7 @@ func pullGitWorkspaces(ctx *context.Context, force bool) []string {
 }
 
 const syncExamples = `
-  flow sync               # rescan all workspaces for new executables
-  flow sync --git         # pull all git-sourced workspaces, then rescan
-  flow sync --git --force # hard-reset git workspaces before rescan
+  flow sync               # pull git-sourced workspaces, then rescan for executables
+  flow sync --no-git      # rescan only, without touching the network
+  flow sync --force       # hard-reset git workspaces to their remotes, then rescan
 `

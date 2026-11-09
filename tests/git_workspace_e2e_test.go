@@ -97,10 +97,10 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 		})
 	})
 
-	When("syncing with --git flag (flow sync --git)", func() {
+	When("syncing (flow sync)", func() {
 		It("pulls all git workspaces and syncs cache", func() {
 			stdOut := ctx.StdOut()
-			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
 			out, err := readFileContent(stdOut)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(ContainSubstring("Synced flow cache"))
@@ -119,10 +119,21 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			Expect(gitStatus(clone)).To(BeEmpty())
 
 			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
-			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
 
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Changed Upstream"))
 			Expect(gitStatus(clone)).To(BeEmpty())
+		})
+
+		It("leaves the clone as it is with --no-git", func() {
+			bare := initBareRepo(GinkgoTB())
+			DeferCleanup(os.RemoveAll, bare)
+			Expect(run.Run(ctx.Context, "workspace", "add", "git-local-ws", localFileURL(bare))).To(Succeed())
+			clone := ctx.Config.Workspaces["git-local-ws"]
+
+			pushFlowYAML(GinkgoTB(), bare, "main", "displayName: Not Pulled\n")
+			Expect(run.Run(ctx.Context, "sync", "--no-git")).To(Succeed())
+			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).NotTo(ContainSubstring("Not Pulled"))
 		})
 
 		It("still reports the git source", func() {
@@ -152,7 +163,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			Expect(gitStatus(clone)).To(ContainSubstring("flow.yaml"))
 
 			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
-			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
 
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Changed Upstream"))
 			Expect(gitStatus(clone)).To(BeEmpty())
@@ -173,7 +184,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			Expect(filesystem.WriteConfig(ctx.Config)).To(Succeed())
 
 			pushFlowYAML(GinkgoTB(), bare, "feature", "displayName: Changed Upstream\n")
-			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
 
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(ContainSubstring("Changed Upstream"))
 			Expect(ctx.Config.GitWorkspaces[name].Remote).To(Equal(localFileURL(bare)))
@@ -211,7 +222,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			pushFlowYAML(GinkgoTB(), bare, "main", "displayName: Added Upstream\n")
 			utils.ResetTestContext(ctx, GinkgoTB())
 			stdOut := ctx.StdOut()
-			Expect(run.Run(ctx.Context, "sync", "--git")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync")).To(Succeed())
 			Expect(readFileContent(stdOut)).To(MatchRegexp("git pull failed for: .*" + name))
 			Expect(os.ReadFile(filepath.Join(clone, "flow.yaml"))).To(BeEquivalentTo(edited))
 		})
@@ -240,7 +251,7 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 
 			utils.ResetTestContext(ctx, GinkgoTB())
 			stdOut := ctx.StdOut()
-			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync", "--force")).To(Succeed())
 			Expect(readFileContent(stdOut)).To(MatchRegexp("git pull failed for: .*" + name))
 			Expect(os.ReadFile(precious)).To(BeEquivalentTo("uncommitted\n"))
 		})
@@ -257,13 +268,13 @@ var _ = Describe("git workspace e2e", Ordered, func() {
 			Expect(os.WriteFile(filepath.Join(checkout, "flow.yaml"), []byte(config), 0600)).To(Succeed())
 
 			Expect(run.Run(ctx.Context, "workspace", "add", name, checkout)).To(Succeed())
-			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync", "--force")).To(Succeed())
 			Expect(ctx.Config.GitWorkspaces).NotTo(HaveKey(name))
 
 			Expect(os.WriteFile(filepath.Join(checkout, "flow.yaml"), []byte("displayName: Local\n"), 0600)).To(Succeed())
 			wip := filepath.Join(checkout, "wip.txt")
 			Expect(os.WriteFile(wip, []byte("work in progress\n"), 0600)).To(Succeed())
-			Expect(run.Run(ctx.Context, "sync", "--git", "--force")).To(Succeed())
+			Expect(run.Run(ctx.Context, "sync", "--force")).To(Succeed())
 
 			Expect(wip).To(BeAnExistingFile())
 			Expect(os.ReadFile(filepath.Join(checkout, "flow.yaml"))).To(BeEquivalentTo("displayName: Local\n"))

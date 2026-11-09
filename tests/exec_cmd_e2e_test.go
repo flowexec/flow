@@ -73,6 +73,20 @@ var _ = Describe("exec e2e", func() {
 		})
 	})
 
+	When("--dry-run is set", func() {
+		It("prints the resolved plan without running the command", func() {
+			runner := utils.NewE2ECommandRunner()
+			stdOut := ctx.StdOut()
+			Expect(runner.Run(
+				ctx.Context, "exec", "examples:with-params", "--dry-run", "--param", "PARAM1=value1",
+			)).To(Succeed())
+			out, _ := readFileContent(stdOut)
+			Expect(out).To(ContainSubstring("ref: exec"))
+			Expect(out).To(ContainSubstring("PARAM1: value1"))
+			Expect(out).NotTo(ContainSubstring("flow completed"))
+		})
+	})
+
 	Describe("file parameter and argument output files", func() {
 		It("should create temporary files for file arguments", func() {
 			runner := utils.NewE2ECommandRunner()

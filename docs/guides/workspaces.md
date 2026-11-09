@@ -51,7 +51,7 @@ flow workspace add local-tools file:///path/to/bare/repo
 
 Flow supports HTTPS, SSH, and `file://` Git URLs. The `file://` protocol is useful for local testing, air-gapped environments, or pointing at bare repos on a shared filesystem.
 
-Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved in the workspace's `flow.yaml` so they can be used for updates.
+Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved under `gitWorkspaces` in your flow config so they can be used for updates.
 
 ### Updating Git Workspaces
 
@@ -72,15 +72,43 @@ This respects the branch or tag originally specified when the workspace was adde
 
 If a pull fails due to merge conflicts or local changes, the error output from git is shown directly. Use `--force` to discard local changes and hard reset to the remote state.
 
-You can also update all git workspaces at once during a cache sync:
+`flow sync` updates every git workspace at once, then rescans:
 
 ```shell
-# Sync cache and pull all git workspaces
-flow sync --git
+# Pull all git workspaces, then rescan
+flow sync
+
+# Rescan only, without touching the network
+flow sync --no-git
 
 # Force pull all git workspaces (discards local changes)
-flow sync --git --force
+flow sync --force
 ```
+
+A pull only fast-forwards; a workspace that can't be pulled is named and skipped. The global
+`--sync` flag on any command, and `sync` on the MCP tools, pull the same way before running, so a
+run never uses stale code without saying so.
+
+### Binding a Git Workspace to a Local Checkout
+
+A git workspace can hold only flow files for another repository, such as an orphan branch of an
+application repo whose tasks run that app's scripts. Its executables need your clone of the
+application, which lives in a different place on every machine. Bind it in your user config:
+
+```shell
+# Bind when adding
+flow workspace add ops git@github.com:org/app.git --branch flows --checkout ~/dev/app
+
+# Or bind, show, or clear later
+flow workspace checkout ops ~/dev/app
+flow workspace checkout ops
+flow workspace checkout ops --clear
+```
+
+An executable opts in with a `dir` of `@` or `@/sub/path`, and every run gets the resolved path as
+`FLOW_CHECKOUT_DIR`. When you run a task from inside that repository, or any of its worktrees, your
+own working tree is used instead of the bound clone. In a workspace that isn't git-sourced, `@/`
+is the workspace root, so the same flow files work either way.
 
 ### Switching Workspaces
 
@@ -174,7 +202,7 @@ executables:
 - `gitRefType`: Either `branch` or `tag`
 
 Adding a workspace from a Git URL records these under `gitWorkspaces` in your flow config, not in the clone, so
-its `flow.yaml` stays exactly as upstream wrote it and `flow sync --git` can pull changes to it.
+its `flow.yaml` stays exactly as upstream wrote it and `flow sync` can pull changes to it.
 
 > **Complete reference**: See the [workspace configuration schema](../types/workspace.md) for all available options.
 

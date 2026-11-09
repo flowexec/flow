@@ -108,6 +108,7 @@ Where a workspace added from a git URL pulls from.
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
+| `checkout` | `string` |  |  | A local clone of the repository this workspace's executables operate on, for a workspace that holds only flow files. An executable's `dir` starting with `@/` resolves against it, and runs get it as `FLOW_CHECKOUT_DIR`. When a run starts inside that repository or one of its worktrees, the caller's own checkout is used instead. Set with `flow workspace checkout`.  |
 | `ref` | `string` |  |  | The branch or tag name specified when the workspace was added. |
 | `refType` | `string` |  |  | The type of ref. Empty if no ref was specified. |
 | `remote` | `string` |  | Yes | The git remote URL the workspace was cloned from. |

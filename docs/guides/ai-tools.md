@@ -110,8 +110,10 @@ environment and secrets and is captured in flow's execution history.
 ## Running work — pick the closest tool
 
 1. **Named task?** (build, test, lint, validate, generate, deploy, …) → `mcp__flow__list_executables`
-   to find it, then `mcp__flow__execute` with its verb + name. Don't hand-roll a shell command a
-   flow executable already covers.
+   to find it (`include_args: true` adds each one's args and prompt params), then
+   `mcp__flow__execute` with its verb + name. Answer prompt params in `params`. A run that finishes
+   returns its `output` and `exitCode`, non-zero included; `dry_run: true` shows what a run would
+   do without running it. Don't hand-roll a shell command a flow executable already covers.
 2. **Arbitrary one-off command?** (a `git ...`, a script) → `mcp__flow__run_command` with the
    command and a short `label`. It runs with workspace env/secrets and lands in `flow logs` with
    provenance. Pass `commands` (array) + `mode` (`serial`/`parallel`) to run several in one call.

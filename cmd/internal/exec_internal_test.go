@@ -94,7 +94,7 @@ func TestCheckExecutableInput(t *testing.T) {
 }
 
 func TestUnanswerablePrompts(t *testing.T) {
-	fields := []*views.FormField{{Key: "TARGET"}, {Key: "REGION"}}
+	fields := []*views.FormField{{Key: "TARGET", Title: "Deploy where?"}, {Key: "REGION"}}
 	if err := unanswerablePrompts(store.RunSourceCLI, fields); err != nil {
 		t.Errorf("cli run rejected: %v", err)
 	}
@@ -102,8 +102,9 @@ func TestUnanswerablePrompts(t *testing.T) {
 		t.Errorf("mcp run without prompts rejected: %v", err)
 	}
 	err := unanswerablePrompts(store.RunSourceMCP, fields)
-	if err == nil || !strings.Contains(err.Error(), "TARGET, REGION") {
-		t.Errorf("got %v, want an error naming the params", err)
+	if err == nil || !strings.Contains(err.Error(), `TARGET ("Deploy where?"), REGION`) ||
+		!strings.Contains(err.Error(), "params") {
+		t.Errorf("got %v, want an error naming the params, their prompts, and how to pass them", err)
 	}
 }
 
@@ -167,7 +168,7 @@ func TestNotRunnableHereError(t *testing.T) {
 		for _, want := range []string{
 			"is private to workspace 'other'",
 			"cannot be run from workspace 'mine'",
-			"flow workspace switch other",
+			"--workspace other",
 			"visibility: public",
 		} {
 			if !strings.Contains(msg, want) {
