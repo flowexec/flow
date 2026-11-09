@@ -125,7 +125,8 @@ func addExecuteTool(srv *server.MCPServer, executor CommandExecutor) {
 				"your working directory (a worktree or fresh clone): the default is the server's own.")),
 		mcp.WithString("workspace", mcp.Description(
 			"Workspace to run in, by name or path. Overrides `dir`; doesn't change the current workspace.")),
-		mcp.WithBoolean("sync", mcp.Description("Sync executables before running")),
+		mcp.WithBoolean("sync", mcp.Description(
+			"Sync before running: rescan executables and pull git-sourced workspaces from their remotes.")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	executeFlow.Annotations = mcp.ToolAnnotation{
@@ -302,7 +303,8 @@ func addRunCommandTool(srv *server.MCPServer, executor CommandExecutor) {
 			mcp.Description("Working directory (default: the current directory)")),
 		mcp.WithString("workspace",
 			mcp.Description(runWorkspaceDescription)),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
+		mcp.WithBoolean("sync", mcp.Description(
+			"Sync before running: rescan executables and pull git-sourced workspaces from their remotes.")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runCommand.Annotations = mcp.ToolAnnotation{
@@ -362,7 +364,8 @@ func addRunPythonTool(srv *server.MCPServer, executor CommandExecutor) {
 				"environment and virtualenv")),
 		mcp.WithString("workspace",
 			mcp.Description(runWorkspaceDescription)),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
+		mcp.WithBoolean("sync", mcp.Description(
+			"Sync before running: rescan executables and pull git-sourced workspaces from their remotes.")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runPython.Annotations = mcp.ToolAnnotation{
@@ -414,7 +417,8 @@ func addRunExecutableTool(srv *server.MCPServer, executor CommandExecutor) {
 				"working directory: the default is the server's own.")),
 		mcp.WithString("workspace",
 			mcp.Description(runWorkspaceDescription)),
-		mcp.WithBoolean("sync", mcp.Description("Sync flow before running")),
+		mcp.WithBoolean("sync", mcp.Description(
+			"Sync before running: rescan executables and pull git-sourced workspaces from their remotes.")),
 		mcp.WithOutputSchema[ExecutionOutput](),
 	)
 	runExecutable.Annotations = mcp.ToolAnnotation{

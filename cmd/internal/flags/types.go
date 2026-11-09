@@ -27,7 +27,7 @@ var LogModeFlag = &Metadata{
 
 var SyncCacheFlag = &Metadata{
 	Name:     "sync",
-	Usage:    "Sync flow cache and workspaces",
+	Usage:    "Sync the executable cache first, pulling git-sourced workspaces from their remotes",
 	Default:  false,
 	Required: false,
 }

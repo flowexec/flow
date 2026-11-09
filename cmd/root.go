@@ -44,6 +44,7 @@ func NewRootCmd(ctx *context.Context) *cobra.Command {
 			ctx.LogWorkspaceResolution()
 			sync := flags.ValueFor[bool](cmd.Root(), *flags.SyncCacheFlag, true)
 			if sync {
+				internal.PullGitWorkspacesForSync(ctx)
 				if err := cache.UpdateAll(ctx.DataStore); err != nil {
 					errhandler.HandleFatal(ctx, cmd, err)
 				}

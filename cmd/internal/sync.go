@@ -67,6 +67,33 @@ func syncFunc(ctx *context.Context, cmd *cobra.Command, _ []string) {
 	})
 }
 
+// PullGitWorkspacesForSync pulls git-sourced workspaces for the global --sync flag. It never resets
+// local changes, and reports failures as warnings: a run asked to sync should still run, but must not
+// look current when it isn't.
+func PullGitWorkspacesForSync(ctx *context.Context) {
+	if !hasGitWorkspaces(ctx) {
+		return
+	}
+	if failed := pullGitWorkspaces(ctx, false); len(failed) > 0 {
+		logger.Log().Warnf(
+			"git workspaces not updated, so they may run stale code: %s (see 'workspace update <name>')",
+			strings.Join(failed, ", "),
+		)
+	}
+}
+
+func hasGitWorkspaces(ctx *context.Context) bool {
+	if len(ctx.Config.GitWorkspaces) > 0 {
+		return true
+	}
+	for _, path := range ctx.Config.Workspaces {
+		if git.IsManagedClone(path) {
+			return true
+		}
+	}
+	return false
+}
+
 func pullGitWorkspaces(ctx *context.Context, force bool) []string {
 	if err := git.EnsureInstalled(); err != nil {
 		logger.Log().Errorf("Cannot pull git workspaces: %v", err)

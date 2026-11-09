@@ -861,7 +861,7 @@ var _ = Describe("MCP Server", func() {
 		Context("sync_executables tool", func() {
 			It("should call executor with correct arguments", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "sync").
+					ExecuteContext(gomock.Any(), "sync", "--git").
 					Return("Synced executables", nil)
 
 				_, err := mcpClient.CallTool(ctx, newCallToolRequest("sync_executables", nil))

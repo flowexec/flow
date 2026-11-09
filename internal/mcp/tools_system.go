@@ -70,7 +70,8 @@ func addSystemTools(srv *server.MCPServer, executor CommandExecutor) {
 
 	sync := mcp.NewTool("sync_executables",
 		mcp.WithDescription("Refresh cached workspaces and executables, e.g. after .flow files change outside "+
-			"write_flowfile."),
+			"write_flowfile. Also pulls git-sourced workspaces from their remotes; one with local changes "+
+			"is skipped and named in the output."),
 	)
 	sync.Annotations = mcp.ToolAnnotation{
 		Title:           "Sync executable and workspace state",
@@ -263,7 +264,7 @@ func syncStateHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 		}
 
 		sendProgress(srv, ctx, progressToken, 0, 1, "Syncing state")
-		output, err := executor.ExecuteContext(ctx, "sync")
+		output, err := executor.ExecuteContext(ctx, "sync", "--git")
 
 		if ctx.Err() != nil {
 			return toolError(ErrCodeCancelled, "sync was cancelled"), nil
