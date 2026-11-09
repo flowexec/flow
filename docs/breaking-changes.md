@@ -7,7 +7,7 @@ description: "Breaking changes between flow releases, and what to do about each 
 
 This page documents changes that require you to update existing flow files, config, or scripts when upgrading between releases.
 
-## Unreleased
+## v2.5.0
 
 ### MCP Runs That Finish Are Results
 
