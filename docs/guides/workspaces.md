@@ -51,7 +51,7 @@ flow workspace add local-tools file:///path/to/bare/repo
 
 Flow supports HTTPS, SSH, and `file://` Git URLs. The `file://` protocol is useful for local testing, air-gapped environments, or pointing at bare repos on a shared filesystem.
 
-Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved in the workspace's `flow.yaml` so they can be used for updates.
+Git workspaces are stored in `~/.cache/flow/git-workspaces/` following Go module conventions (e.g., `github.com/myorg/tools/`). The git remote URL and branch/tag information are saved under `gitWorkspaces` in your flow config so they can be used for updates.
 
 ### Updating Git Workspaces
 
@@ -81,6 +81,31 @@ flow sync --git
 # Force pull all git workspaces (discards local changes)
 flow sync --git --force
 ```
+
+The global `--sync` flag on any command, and `sync` on the MCP `execute` tool, also pull git
+workspaces (without `--force`) before running. A workspace that can't be pulled is named in a
+warning, so a run never uses stale code without saying so.
+
+### Binding a Git Workspace to a Local Checkout
+
+A git workspace can hold only flow files for another repository, such as an orphan branch of an
+application repo whose tasks run that app's scripts. Its executables need your clone of the
+application, which lives in a different place on every machine. Bind it in your user config:
+
+```shell
+# Bind when adding
+flow workspace add ops git@github.com:org/app.git --branch flows --checkout ~/dev/app
+
+# Or bind, show, or clear later
+flow workspace checkout ops ~/dev/app
+flow workspace checkout ops
+flow workspace checkout ops --clear
+```
+
+An executable opts in with a `dir` of `@` or `@/sub/path`, and every run gets the resolved path as
+`FLOW_CHECKOUT_DIR`. When you run a task from inside that repository, or any of its worktrees, your
+own working tree is used instead of the bound clone. In a workspace that isn't git-sourced, `@/`
+is the workspace root, so the same flow files work either way.
 
 ### Switching Workspaces
 

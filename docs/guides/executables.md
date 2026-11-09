@@ -189,6 +189,16 @@ flow deploy app --param API_TOKEN=override --param ENVIRONMENT=staging
 > [!NOTE]
 > If the `outputFile` field is used to save a value, it will automatically be cleaned up after the executable finishes running.
 
+### Checking Inputs Without Running
+
+`--dry-run` resolves an executable the way a run would and prints the plan without running
+anything: args and params by env key, the resolved `dir`, and the command or steps. Secrets and
+prompts aren't resolved, so it's safe for a workspace you haven't trusted.
+
+```shell
+flow deploy app --dry-run --param ENVIRONMENT=staging -- --region us-east-1
+```
+
 ## Working Directories
 
 Control where executables run with the `dir` field:
@@ -224,6 +234,7 @@ executables:
 
 **Directory prefixes:**
 - `//`: Workspace root directory
+- `@/`: The workspace's local checkout (see [Binding a Git Workspace to a Local Checkout](workspaces.md#binding-a-git-workspace-to-a-local-checkout))
 - `~/`: User home directory
 - `./`: Current working directory
 - `f:tmp`: Temporary directory (auto-cleaned)
