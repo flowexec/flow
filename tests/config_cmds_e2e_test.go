@@ -238,7 +238,9 @@ var _ = Describe("config e2e", Ordered, func() {
 			Expect(writer.Close()).To(Succeed())
 
 			ctx.SetIO(reader, ctx.StdOut())
-			Expect(run.Run(ctx.Context, "config", "reset")).ToNot(Succeed())
+			ctx.ExpectFailure()
+			_ = run.Run(ctx.Context, "config", "reset")
+			Expect(ctx.ExitCalls()).To(ContainElement(ContainSubstring("pass --yes")))
 		})
 
 		It("should abort reset when confirmation is false", func() {

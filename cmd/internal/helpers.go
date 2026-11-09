@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"os"
 	"strconv"
 	"strings"
@@ -169,32 +170,42 @@ func loadTemplateFromPath(name, path string) *executable.Template {
 }
 
 // confirmed asks the user to confirm a destructive action unless --yes was passed. It returns false
-// when the user declines. Getting no answer at all - stdin closed or empty, as when an agent or
-// script runs the command - is a usage error, so a skipped action never looks like a success.
+// when the user declines. Without a terminal the answer is read as a line from stdin, so a script can
+// pipe "yes"; getting no answer at all - stdin closed or empty, as when an agent runs the command - is
+// a usage error, so a skipped action never looks like a success.
 func confirmed(ctx *context.Context, cmd *cobra.Command, title string) bool {
 	if flags.ValueFor[bool](cmd, *flags.YesFlag, false) {
 		return true
 	}
-	form, err := views.NewForm(
-		logger.Theme(ctx.Config.Theme.String()),
-		ctx.StdIn(),
-		ctx.StdOut(),
-		&views.FormField{Key: "confirm", Type: views.PromptTypeConfirm, Title: title},
-	)
-	if err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
+	var resp string
+	if flowIO.TTYAttached(ctx.StdIn(), ctx.StdOut()) {
+		form, err := views.NewForm(
+			logger.Theme(ctx.Config.Theme.String()),
+			ctx.StdIn(),
+			ctx.StdOut(),
+			&views.FormField{Key: "confirm", Type: views.PromptTypeConfirm, Title: title},
+		)
+		if err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		if err := form.Run(ctx); err != nil {
+			errhandler.HandleFatal(ctx, cmd, err)
+		}
+		resp = form.FindByKey("confirm").Value()
+	} else {
+		logger.Log().PlainTextInfo(title)
+		line, _ := bufio.NewReader(ctx.StdIn()).ReadString('\n')
+		resp = strings.TrimSpace(line)
+		if resp == "" {
+			errhandler.HandleUsage(ctx, cmd, "no confirmation received; pass --yes to confirm")
+			return false
+		}
 	}
-	if err := form.Run(ctx); err != nil {
-		errhandler.HandleFatal(ctx, cmd, err)
-	}
-	resp := strings.TrimSpace(form.FindByKey("confirm").Value())
-	if resp == "" {
-		errhandler.HandleUsage(ctx, cmd, "no confirmation received; pass --yes to confirm")
-		return false
-	}
-	if truthy, _ := strconv.ParseBool(resp); !truthy {
+	switch strings.ToLower(resp) {
+	case "y", "yes", "true", "1":
+		return true
+	default:
 		logger.Log().Warnf("Aborting")
 		return false
 	}
-	return true
 }
