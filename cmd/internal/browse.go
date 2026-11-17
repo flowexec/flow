@@ -280,13 +280,10 @@ const browseExamples = `
   flow browse --verb run                   # list only 'run' executables
   flow browse --namespace myproject        # filter by namespace
   flow browse --namespace 'myproject/*'    # include nested namespaces
+  flow browse VERB [ID]                    # detailed view of a specific executable
 `
 
 var browseLong = fmt.Sprintf(`Browse executables across workspaces.
-
-  flow browse           # Interactive multi-pane executable browser
-  flow browse --list    # Simple list view of executables
-  flow browse VERB [ID] # Detailed view of specific executable
 
 See %s for more information on executable verbs and
 %s for more information on executable references.`,
