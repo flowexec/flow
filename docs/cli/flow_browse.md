@@ -11,12 +11,6 @@ Discover and explore available executables.
 
 Browse executables across workspaces.
 
-```shell
-flow browse           # Interactive multi-pane executable browser
-flow browse --list    # Simple list view of executables
-flow browse VERB [ID] # Detailed view of specific executable
-```
-
 See https://flowexec.io/types/flowfile#executableverb for more information on executable verbs and
 https://flowexec.io/types/flowfile#executableref for more information on executable references.
 
@@ -32,6 +26,7 @@ flow browse --list                       # flat list of all executables
 flow browse --verb run                   # list only 'run' executables
 flow browse --namespace myproject        # filter by namespace
 flow browse --namespace 'myproject/*'    # include nested namespaces
+flow browse VERB [ID]                    # detailed view of a specific executable
 ```
 
 ## Options
