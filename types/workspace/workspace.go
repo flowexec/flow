@@ -3,6 +3,8 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/flowexec/tuikit/types"
@@ -47,6 +49,22 @@ func (w *Workspace) Location() string {
 func (w *Workspace) SetContext(name, location string) {
 	w.assignedName = name
 	w.location = location
+}
+
+// ResolvedAgentInstructions returns the agent instructions for this workspace.
+// If AgentInstructionsFile is set, its content is read from disk and takes precedence
+// over the inline AgentInstructions field.
+func (w *Workspace) ResolvedAgentInstructions() string {
+	if w.AgentInstructionsFile != "" && w.Location() != "" {
+		p := filepath.Join(w.Location(), w.AgentInstructionsFile)
+		data, err := os.ReadFile(filepath.Clean(p))
+		if err == nil {
+			if s := strings.TrimSpace(string(data)); s != "" {
+				return s
+			}
+		}
+	}
+	return strings.TrimSpace(w.AgentInstructions)
 }
 
 func (w *Workspace) YAML() (string, error) {

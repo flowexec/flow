@@ -33,6 +33,22 @@ type VerbAliases map[string][]string
 // Every workspace has a workspace config file named `flow.yaml` in the root of the
 // workspace directory.
 type Workspace struct {
+	// Free-text instructions surfaced to AI agents that connect to this workspace via
+	// the MCP server.
+	// Use it to tell agents about project conventions, required workflows,
+	// environment constraints,
+	// or anything they should know before working in this workspace.
+	// Returned by `get_info` and `get_workspace` so agents see it without an extra
+	// call.
+	//
+	AgentInstructions string `json:"agentInstructions,omitempty" yaml:"agentInstructions,omitempty" mapstructure:"agentInstructions,omitempty"`
+
+	// Path to a file containing agent instructions, relative to the workspace root.
+	// When set, its content is used as `agentInstructions`. If both are set, the file
+	// takes precedence.
+	//
+	AgentInstructionsFile string `json:"agentInstructionsFile,omitempty" yaml:"agentInstructionsFile,omitempty" mapstructure:"agentInstructionsFile,omitempty"`
+
 	// Annotations corresponds to the JSON schema field "annotations".
 	Annotations WorkspaceAnnotations `json:"annotations,omitempty" yaml:"annotations,omitempty" mapstructure:"annotations,omitempty"`
 

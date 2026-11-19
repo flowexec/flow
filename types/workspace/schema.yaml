@@ -109,6 +109,20 @@ properties:
       The type of git ref specified when the workspace was added.
       Either "branch" or "tag". Empty if no ref was specified.
     default: ""
+  agentInstructions:
+    type: string
+    description: |
+      Free-text instructions surfaced to AI agents that connect to this workspace via the MCP server.
+      Use it to tell agents about project conventions, required workflows, environment constraints,
+      or anything they should know before working in this workspace.
+      Returned by `get_info` and `get_workspace` so agents see it without an extra call.
+    default: ""
+  agentInstructionsFile:
+    type: string
+    description: |
+      Path to a file containing agent instructions, relative to the workspace root.
+      When set, its content is used as `agentInstructions`. If both are set, the file takes precedence.
+    default: ""
   worktreeDir:
     type: string
     description: |

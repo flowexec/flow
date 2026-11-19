@@ -56,6 +56,22 @@ func addWorktreeTools(srv *server.MCPServer, executor CommandExecutor) {
 		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false),
 	}
 	srv.AddTool(removeWorktree, removeWorktreeHandler(executor))
+
+	pruneWorktrees := mcp.NewTool("prune_worktrees",
+		mcp.WithDescription("Clean up stale worktree entries (directories that no longer exist on disk). "+
+			"With merged=true, also remove worktrees whose branches are fully merged into the default branch. "+
+			"Set dry_run to preview what would be removed without acting."),
+		mcp.WithBoolean("merged", mcp.Description(
+			"Also remove worktrees whose branches are fully merged into the default branch")),
+		mcp.WithBoolean("dry_run", mcp.Description(
+			"Preview what would be pruned without removing anything (default false)")),
+	)
+	pruneWorktrees.Annotations = mcp.ToolAnnotation{
+		Title:           "Prune stale and merged worktrees",
+		DestructiveHint: boolPtr(true), ReadOnlyHint: boolPtr(false),
+		IdempotentHint: boolPtr(false), OpenWorldHint: boolPtr(false),
+	}
+	srv.AddTool(pruneWorktrees, pruneWorktreesHandler(executor))
 }
 
 type worktreeEntry struct {
@@ -85,7 +101,7 @@ func listWorktreesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		branchFilter := request.GetString("branch_filter", "")
 		cursor := request.GetString("cursor", "")
 
-		output, err := executor.Execute("worktree", "list", "--output", "json")
+		output, err := executor.Execute(worktreeCmd, "list", outputFlag, outputJSON)
 		if err != nil {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to list worktrees: %s", output)), nil
 		}
@@ -140,7 +156,7 @@ func addWorktreeHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, "branch is required"), nil
 		}
 
-		args := []string{"worktree", "add", branch, "--output", "json"}
+		args := []string{worktreeCmd, "add", branch, outputFlag, outputJSON}
 
 		if base := request.GetString("base", ""); base != "" {
 			args = append(args, "--base", base)
@@ -176,7 +192,7 @@ func removeWorktreeHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, "branch_or_path is required"), nil
 		}
 
-		args := []string{"worktree", "remove", target, "--yes", "--output", "json"}
+		args := []string{worktreeCmd, "remove", target, "--yes", outputFlag, outputJSON}
 
 		if request.GetBool("force", false) {
 			args = append(args, "--force")
@@ -192,6 +208,47 @@ func removeWorktreeHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return mcp.NewToolResultText(output), nil
 		}
 
+		jsonData, _ := json.Marshal(result)
+		return mcp.NewToolResultStructured(result, string(jsonData)), nil
+	}
+}
+
+type pruneWorktreesOutput struct {
+	Stale   any    `json:"stale"`
+	Merged  any    `json:"merged"`
+	Message string `json:"message"`
+	DryRun  bool   `json:"dryRun"`
+}
+
+func pruneWorktreesHandler(executor CommandExecutor) server.ToolHandlerFunc {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		merged := request.GetBool("merged", false)
+		dryRun := request.GetBool("dry_run", false)
+
+		args := []string{worktreeCmd, "prune", "--yes", outputFlag, outputJSON}
+		if merged {
+			args = append(args, "--merged")
+		}
+		if dryRun {
+			args = append(args, "--dry-run")
+		}
+
+		output, err := executor.Execute(args...)
+		if err != nil {
+			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to prune worktrees: %s", output)), nil
+		}
+
+		var env successEnvelope
+		if err := json.Unmarshal([]byte(output), &env); err != nil {
+			return mcp.NewToolResultText(output), nil
+		}
+
+		result := pruneWorktreesOutput{
+			Message: env.Result.Message,
+			DryRun:  dryRun,
+			Stale:   env.Result.Data["stale"],
+			Merged:  env.Result.Data["merged"],
+		}
 		jsonData, _ := json.Marshal(result)
 		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
