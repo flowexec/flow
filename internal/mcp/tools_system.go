@@ -93,6 +93,7 @@ func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolRe
 	// an unregistered workspace cannot be switched to, and its executables live only here.
 	var wsName, wsPath, wsSource string
 	var wsRegistered bool
+	var agentInstructions string
 	res, err := filesystem.ResolveWorkspace(cfg, filesystem.ResolveOptions{})
 	if err != nil {
 		return toolError(ErrCodeInternal, fmt.Sprintf("failed to resolve current workspace: %s", err)), nil
@@ -100,6 +101,9 @@ func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolRe
 	if res != nil {
 		wsName, wsPath = res.Name, res.Path
 		wsSource, wsRegistered = string(res.Source), res.Registered
+		if ws, wsErr := filesystem.LoadWorkspaceConfig(wsName, wsPath); wsErr == nil {
+			agentInstructions = ws.ResolvedAgentInstructions()
+		}
 	}
 
 	output := FlowInfoOutput{
@@ -112,6 +116,7 @@ func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolRe
 			WorkspaceRegistered: wsRegistered,
 			WorkspaceSource:     wsSource,
 			SessionID:           mcpProvenance(ctx).Session,
+			AgentInstructions:   agentInstructions,
 		},
 		Summary:    flowInfoSummary,
 		DocsURL:    docsBaseURL,
@@ -166,7 +171,7 @@ func getExecutionLogsHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			}
 		}
 
-		cmdArgs := []string{"logs", "--output", "json"}
+		cmdArgs := []string{"logs", outputFlag, outputJSON}
 		if last {
 			cmdArgs = append(cmdArgs, "--last")
 		}

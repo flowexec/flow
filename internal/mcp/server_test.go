@@ -102,6 +102,12 @@ var _ = Describe("MCP Server", func() {
 				"list_worktrees",
 				"add_worktree",
 				"remove_worktree",
+				"prune_worktrees",
+				"get_project_status",
+				"list_templates",
+				"get_template",
+				"generate_template",
+				"list_secrets",
 			}
 
 			for _, expectedTool := range expectedTools {

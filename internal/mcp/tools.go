@@ -12,11 +12,21 @@ func addServerTools(srv *server.MCPServer, executor CommandExecutor) {
 	addWorkspaceTools(srv, executor)
 	addExecutableTools(srv, executor)
 	addWorktreeTools(srv, executor)
+	addProjectTools(srv, executor)
+	addTemplateTools(srv, executor)
+	addSecretTools(srv, executor)
 }
 
 func boolPtr(b bool) *bool {
 	return &b
 }
+
+const (
+	outputFlag  = "--output"
+	outputJSON  = "json"
+	execCmd     = "exec"
+	worktreeCmd = "worktree"
+)
 
 // maxExecutionOutputBytes caps captured subprocess output returned by execute/run_command/
 // run_executable so a large run (e.g. `validate`, which chains generate+lint+test+e2e) can't

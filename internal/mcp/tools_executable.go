@@ -151,7 +151,7 @@ func getExecutableHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
 		}
 
-		cmdArgs := []string{"browse", "--output", "json", executableVerb}
+		cmdArgs := []string{"browse", outputFlag, outputJSON, executableVerb}
 		if executableID != "" {
 			cmdArgs = append(cmdArgs, executableID)
 		}
@@ -175,7 +175,7 @@ func listExecutablesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		tagFilter := request.GetString("tag", "")
 		cursor := request.GetString("cursor", "")
 
-		cmdArgs := []string{"browse", "--output", "json", "--workspace", wsFilter, "--namespace", nsFilter}
+		cmdArgs := []string{"browse", outputFlag, outputJSON, "--workspace", wsFilter, "--namespace", nsFilter}
 		if verbFilter != "" {
 			cmdArgs = append(cmdArgs, "--verb", verbFilter)
 		}
@@ -342,7 +342,7 @@ func runCommandHandler(srv *server.MCPServer, executor CommandExecutor) server.T
 			return toolError(ErrCodeInvalidInput, "command or commands is required"), nil
 		}
 
-		cmdArgs := []string{"exec"}
+		cmdArgs := []string{execCmd}
 		for _, c := range commands {
 			cmdArgs = append(cmdArgs, "--cmd", c)
 		}
@@ -399,7 +399,7 @@ func runPythonHandler(srv *server.MCPServer, executor CommandExecutor) server.To
 			return toolError(ErrCodeInvalidInput, "code is required"), nil
 		}
 
-		cmdArgs := []string{"exec", "--interpreter", "python", "--cmd", code}
+		cmdArgs := []string{execCmd, "--interpreter", "python", "--cmd", code}
 		if label := request.GetString("label", ""); label != "" {
 			cmdArgs = append(cmdArgs, "--label", label)
 		}
@@ -451,7 +451,7 @@ func runExecutableHandler(srv *server.MCPServer, executor CommandExecutor) serve
 		if err != nil {
 			return toolError(ErrCodeInvalidInput, "spec is required"), nil
 		}
-		cmdArgs := []string{"exec", "--spec", spec}
+		cmdArgs := []string{execCmd, "--spec", spec}
 		if label := request.GetString("label", ""); label != "" {
 			cmdArgs = append(cmdArgs, "--label", label)
 		}
