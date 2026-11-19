@@ -97,6 +97,12 @@ type Workspace struct {
 
 	// VerbAliases corresponds to the JSON schema field "verbAliases".
 	VerbAliases *WorkspaceVerbAliases `json:"verbAliases,omitempty" yaml:"verbAliases,omitempty" mapstructure:"verbAliases,omitempty"`
+
+	// Directory where `flow worktree add` creates new worktrees, relative to the
+	// workspace root.
+	// Defaults to `.worktrees/`.
+	//
+	WorktreeDir string `json:"worktreeDir,omitempty" yaml:"worktreeDir,omitempty" mapstructure:"worktreeDir,omitempty"`
 }
 
 type WorkspaceAnnotations common.Annotations

@@ -11,6 +11,7 @@ func addServerTools(srv *server.MCPServer, executor CommandExecutor) {
 	addSystemTools(srv, executor)
 	addWorkspaceTools(srv, executor)
 	addExecutableTools(srv, executor)
+	addWorktreeTools(srv, executor)
 }
 
 func boolPtr(b bool) *bool {

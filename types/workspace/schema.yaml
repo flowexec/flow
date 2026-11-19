@@ -109,6 +109,12 @@ properties:
       The type of git ref specified when the workspace was added.
       Either "branch" or "tag". Empty if no ref was specified.
     default: ""
+  worktreeDir:
+    type: string
+    description: |
+      Directory where `flow worktree add` creates new worktrees, relative to the workspace root.
+      Defaults to `.worktrees/`.
+    default: ""
   assignedName:
     type: string
     goJSONSchema:
