@@ -85,7 +85,11 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 
 		if ws.AgentInstructions == "" && ws.Path != "" {
 			if wsCfg, loadErr := filesystem.ReadWorkspaceConfig(wsName, ws.Path); loadErr == nil {
-				ws.AgentInstructions = wsCfg.ResolvedAgentInstructions()
+				if cfg, cfgErr := filesystem.LoadConfig(); cfgErr == nil {
+					ws.AgentInstructions = resolveAgentInstructions(wsCfg, cfg)
+				} else {
+					ws.AgentInstructions = wsCfg.ResolvedAgentInstructions()
+				}
 			}
 		}
 
