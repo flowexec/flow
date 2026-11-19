@@ -124,7 +124,7 @@ func PruneWorktrees(repoDir string, dryRun bool) ([]string, error) {
 	}
 
 	if dryRun {
-		output, err := gitOutput(root, "worktree", "prune", "--dry-run", "-v")
+		output, err := gitCombinedOutput(root, "worktree", "prune", "--dry-run", "-v")
 		if err != nil {
 			return nil, fmt.Errorf("pruning worktrees (dry run): %w", err)
 		}
@@ -199,7 +199,10 @@ func BranchMerged(repoDir, branch string) (bool, error) {
 		return false, nil //nolint:nilerr
 	}
 	for _, line := range strings.Split(output, "\n") {
-		name := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "* "))
+		name := strings.TrimSpace(line)
+		// Strip prefix markers: "* " (current), "+ " (checked out in another worktree).
+		name = strings.TrimLeft(name, "*+ ")
+		name = strings.TrimSpace(name)
 		if name == branch {
 			return true, nil
 		}
