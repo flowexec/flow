@@ -67,7 +67,7 @@ func NewServer(executor CommandExecutor, opts ...Option) (*Server, error) {
 	srv := server.NewMCPServer(cfg.name, cfg.version, srvOpts...)
 	addServerTools(srv, executor)
 	addServerPrompts(srv)
-	addServerResources(srv)
+	addServerResources(srv, executor)
 
 	if err := applyExtensions(srv, exts); err != nil {
 		return nil, err

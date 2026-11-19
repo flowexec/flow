@@ -150,6 +150,10 @@ func (c *capturingExecutor) ExecuteContext(ctx context.Context, _ ...string) (st
 	return "", nil
 }
 
+func (c *capturingExecutor) ExecuteStreaming(ctx context.Context, _ func(string), args ...string) (string, error) {
+	return c.ExecuteContext(ctx, args...)
+}
+
 func TestCallSessionFromExtensionMiddleware(t *testing.T) {
 	t.Setenv(store.RunSessionEnv, "server-start-conversation")
 	mw := func(next server.ToolHandlerFunc) server.ToolHandlerFunc {

@@ -78,3 +78,23 @@ func (mr *MockCommandExecutorMockRecorder) ExecuteContext(ctx any, args ...any) 
 	varargs := append([]any{ctx}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteContext", reflect.TypeOf((*MockCommandExecutor)(nil).ExecuteContext), varargs...)
 }
+
+// ExecuteStreaming mocks base method.
+func (m *MockCommandExecutor) ExecuteStreaming(ctx context.Context, onLine func(string), args ...string) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, onLine}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteStreaming", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteStreaming indicates an expected call of ExecuteStreaming.
+func (mr *MockCommandExecutorMockRecorder) ExecuteStreaming(ctx, onLine any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, onLine}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStreaming", reflect.TypeOf((*MockCommandExecutor)(nil).ExecuteStreaming), varargs...)
+}

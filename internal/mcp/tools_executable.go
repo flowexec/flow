@@ -230,10 +230,6 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 
 		args := request.GetString("args", "")
 		syncFlag := request.GetBool("sync", false)
-		var progressToken any
-		if request.Params.Meta != nil {
-			progressToken = request.Params.Meta.ProgressToken
-		}
 
 		if err := validateExecutableRef(executableVerb, executableID); err != nil {
 			return toolError(ErrCodeInvalidInput, err.Error()), nil
@@ -278,16 +274,12 @@ func executeFlowHandler(srv *server.MCPServer, executor CommandExecutor) server.
 		// directory has to reach it — the server's own is rarely the right one.
 		ctx = withRunDir(ctx, request.GetString("dir", ""))
 
-		sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
-		output, err := executor.ExecuteContext(ctx, cmdArgs...)
+		output, err := executeWithStreaming(ctx, srv, request, executor, cmdArgs)
 
 		if ctx.Err() != nil {
 			return toolError(ErrCodeCancelled, "execution was cancelled"), nil
 		}
 
-		sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
-
-		sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 		ref := strings.Join([]string{executableVerb, executableID}, " ")
 		result := executionResult(ref+" execution failed", output, err)
 		if dryRun && !result.IsError {
@@ -471,27 +463,18 @@ func runTransientTool(
 	ctx context.Context, srv *server.MCPServer, request mcp.CallToolRequest,
 	executor CommandExecutor, cmdArgs []string, failMsg string,
 ) (*mcp.CallToolResult, error) {
-	var progressToken any
-	if request.Params.Meta != nil {
-		progressToken = request.Params.Meta.ProgressToken
-	}
-
 	// Tag the run as MCP-originated with the caller's identity.
 	ctx = withProvenance(ctx, mcpProvenance(ctx))
 	// `dir` is forwarded as --dir for the command itself; it also has to be the subprocess's
 	// working directory so workspace resolution starts from where the caller is working.
 	ctx = withRunDir(ctx, request.GetString("dir", ""))
 
-	sendProgress(srv, ctx, progressToken, 0, 2, "Preparing execution")
-	output, err := executor.ExecuteContext(ctx, append(cmdArgs, plainLogArgs...)...)
+	output, err := executeWithStreaming(ctx, srv, request, executor, append(cmdArgs, plainLogArgs...))
 
 	if ctx.Err() != nil {
 		return toolError(ErrCodeCancelled, "execution was cancelled"), nil
 	}
 
-	sendProgress(srv, ctx, progressToken, 1, 2, "Processing result")
-
-	sendProgress(srv, ctx, progressToken, 2, 2, "Complete")
 	return executionResult(failMsg, output, err), nil
 }
 

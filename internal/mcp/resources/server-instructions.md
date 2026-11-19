@@ -8,7 +8,7 @@ Call `get_info` once at the start of a session (unless the context is already pr
 
 After `get_info`, call `get_project_status` to see the git branch, dirty state, ahead/behind, and last few run results in one shot — it replaces separate git-status and logs queries.
 
-Re-read these instructions mid-session via the `flow://server/instructions` resource.
+Re-read these instructions mid-session via the `flow://server/instructions` resource. Read `flow://failures/recent` to see what failed recently — useful for picking up where a previous session left off.
 
 ## Flow as your shell
 
