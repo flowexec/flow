@@ -74,6 +74,19 @@ unregistered workspace runs normally but cannot be switched to. Exporting `FLOW_
 server's environment pins it for every call instead. See
 [Unregistered workspaces](workspaces.md#unregistered-workspaces).
 
+If a worktree's workspace has no `agentInstructions`, the server falls back to the parent repo's
+registered workspace instructions.
+
+**Resources**
+
+| Resource | Description |
+|----------|-------------|
+| `flow://server/instructions` | Server usage instructions (re-read after switching workspaces) |
+| `flow://workspace/{name}` | Workspace metadata as JSON |
+| `flow://executable/{workspace}/{namespace}/{name}` | Executable definition as JSON |
+| `flow://flowfile/{path}` | Raw flowfile YAML (path must be within a workspace) |
+| `flow://logs/{run_id}` | Execution output as plain text |
+
 **Prompts**
 
 Structured prompts the assistant can invoke for common tasks:
