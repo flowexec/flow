@@ -57,6 +57,12 @@ var NoCreateBranchFlag = &flags.Metadata{
 	Default: false,
 }
 
+var NoSizeFlag = &flags.Metadata{
+	Name:    "no-size",
+	Usage:   "Skip measuring each worktree's disk usage, which walks every file and is slow on large checkouts.",
+	Default: false,
+}
+
 var MergedFlag = &flags.Metadata{
 	Name:    "merged",
 	Usage:   "Also remove worktrees whose branches have been merged into the default branch.",
@@ -132,6 +138,7 @@ func registerWorktreeListCmd(ctx *context.Context, wtCmd *cobra.Command) {
 		PostRun: func(cmd *cobra.Command, args []string) { WaitForTUI(ctx, cmd) },
 		Run:     func(cmd *cobra.Command, args []string) { worktreeListFunc(ctx, cmd) },
 	}
+	RegisterFlag(ctx, listCmd, *NoSizeFlag)
 	RegisterFlag(ctx, listCmd, *flags.OutputFormatFlag)
 	wtCmd.AddCommand(listCmd)
 }
@@ -161,6 +168,7 @@ func worktreeListFunc(ctx *context.Context, cmd *cobra.Command) {
 	}
 
 	cwdRoot, _ := git.WorktreeTopLevel(cwd)
+	measure := !flags.ValueFor[bool](cmd, *NoSizeFlag, false)
 	displayList := make([]worktreeIO.DisplayInfo, 0, len(worktrees))
 	for i, wt := range worktrees {
 		display := worktreeIO.DisplayInfo{
@@ -175,7 +183,7 @@ func worktreeListFunc(ctx *context.Context, cmd *cobra.Command) {
 		if cwdRoot != "" && pathsEqual(cwdRoot, wt.Path) {
 			display.IsCurrent = true
 		}
-		enrichWorktreeDisplay(&display, repoRoot)
+		enrichWorktreeDisplay(&display, repoRoot, measure)
 		displayList = append(displayList, display)
 	}
 
@@ -201,7 +209,7 @@ func worktreeListFunc(ctx *context.Context, cmd *cobra.Command) {
 	}
 }
 
-func enrichWorktreeDisplay(d *worktreeIO.DisplayInfo, repoRoot string) {
+func enrichWorktreeDisplay(d *worktreeIO.DisplayInfo, repoRoot string, measure bool) {
 	if !d.Prunable {
 		if status, err := git.GetWorktreeStatus(d.Path); err == nil {
 			d.Dirty = status.Dirty
@@ -209,9 +217,11 @@ func enrichWorktreeDisplay(d *worktreeIO.DisplayInfo, repoRoot string) {
 			d.Ahead = status.Ahead
 			d.Behind = status.Behind
 		}
-		if bytes, err := git.DiskUsage(d.Path); err == nil {
-			d.SizeBytes = bytes
-			d.Size = git.FormatSize(bytes)
+		if measure {
+			if bytes, err := git.DiskUsage(d.Path); err == nil {
+				d.SizeBytes = bytes
+				d.Size = git.FormatSize(bytes)
+			}
 		}
 	}
 	if d.Branch != "" && !d.IsMain {

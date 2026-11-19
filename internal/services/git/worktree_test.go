@@ -228,6 +228,68 @@ func TestBranchMerged(t *testing.T) {
 	}
 }
 
+func TestBranchMergedFreshBranch(t *testing.T) {
+	repo := initBareRepo(t)
+	gitRun(t, repo, "branch", "fresh")
+
+	merged, err := git.BranchMerged(repo, "fresh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merged {
+		t.Error("expected a branch with no commits of its own to not be merged")
+	}
+}
+
+func TestBranchMergedSquash(t *testing.T) {
+	repo := initBareRepo(t)
+
+	gitRun(t, repo, "checkout", "-b", "squashed")
+	writeFile(t, filepath.Join(repo, "a.txt"), "a\n")
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "a")
+	writeFile(t, filepath.Join(repo, "b.txt"), "b\n")
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "b")
+	gitRun(t, repo, "checkout", "main")
+	gitRun(t, repo, "merge", "--squash", "squashed")
+	gitRun(t, repo, "commit", "-m", "squash")
+
+	merged, err := git.BranchMerged(repo, "squashed")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !merged {
+		t.Error("expected a squash-merged branch to be merged")
+	}
+}
+
+func TestBranchMergedOnRemoteOnly(t *testing.T) {
+	origin := initBareRepo(t)
+	clone := filepath.Join(t.TempDir(), "clone")
+	gitRun(t, origin, "clone", origin, clone)
+	gitRun(t, clone, "config", "user.email", "test@test.com")
+	gitRun(t, clone, "config", "user.name", "Test")
+
+	gitRun(t, clone, "checkout", "-b", "feature")
+	writeFile(t, filepath.Join(clone, "f.txt"), "f\n")
+	gitRun(t, clone, "add", ".")
+	gitRun(t, clone, "commit", "-m", "feature")
+	gitRun(t, clone, "push", "origin", "feature")
+	gitRun(t, origin, "merge", "--squash", "feature")
+	gitRun(t, origin, "commit", "-m", "squash feature")
+	gitRun(t, clone, "fetch", "origin")
+
+	// The clone's local main was never pulled; the merge is only on origin/main.
+	merged, err := git.BranchMerged(clone, "feature")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !merged {
+		t.Error("expected a branch merged on the remote default branch to be merged")
+	}
+}
+
 func TestAddWorktreeExistingBranch(t *testing.T) {
 	repo := initBareRepo(t)
 

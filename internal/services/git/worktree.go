@@ -184,30 +184,77 @@ func GetWorktreeStatus(worktreePath string) (WorktreeStatusInfo, error) {
 	return status, nil
 }
 
-// BranchMerged reports whether branch has been merged into the repository's default branch.
+// BranchMerged reports whether branch's work has landed on the repository's default branch:
+// merged, fast-forwarded, or squash-merged. A branch with no commits of its own is never
+// merged, so a worktree that was just created is not mistaken for finished work.
 func BranchMerged(repoDir, branch string) (bool, error) {
 	root, err := RepoCommonDir(repoDir)
 	if err != nil {
 		return false, err
 	}
-	defaultBr, err := DefaultBranch(root)
+	target, err := mergeTarget(root)
 	if err != nil {
 		return false, err
 	}
-	output, err := gitOutput(root, "branch", "--merged", defaultBr)
+	if !hasOwnCommits(root, branch) {
+		return false, nil
+	}
+	if _, err := gitOutput(root, "merge-base", "--is-ancestor", "refs/heads/"+branch, target); err == nil {
+		return true, nil
+	}
+	return squashMerged(root, branch, target), nil
+}
+
+// mergeTarget is the ref a branch lands on: the remote's default branch when there is one,
+// since a local default that is never pulled would miss everything merged upstream.
+func mergeTarget(root string) (string, error) {
+	defaultBr, err := DefaultBranch(root)
 	if err != nil {
-		return false, nil //nolint:nilerr
+		return "", err
+	}
+	remote := "refs/remotes/origin/" + defaultBr
+	if _, err := gitOutput(root, "rev-parse", "--verify", "--quiet", remote); err == nil {
+		return remote, nil
+	}
+	return "refs/heads/" + defaultBr, nil
+}
+
+// hasOwnCommits reads the branch's reflog: a branch only ever created or renamed has nothing
+// of its own. Without a reflog there is no telling, so it counts as having commits.
+func hasOwnCommits(root, branch string) bool {
+	output, err := gitOutput(root, "reflog", "show", "--format=%gs", "refs/heads/"+branch, "--")
+	if err != nil || strings.TrimSpace(output) == "" {
+		return true
 	}
 	for _, line := range strings.Split(output, "\n") {
-		name := strings.TrimSpace(line)
-		// Strip prefix markers: "* " (current), "+ " (checked out in another worktree).
-		name = strings.TrimLeft(name, "*+ ")
-		name = strings.TrimSpace(name)
-		if name == branch {
-			return true, nil
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "branch: Created from") || strings.HasPrefix(line, "Branch: renamed") {
+			continue
 		}
+		return true
 	}
-	return false, nil
+	return false
+}
+
+// squashMerged reports whether target already holds the branch's combined change: the branch's
+// tree as one commit on its merge base is patch-equivalent to a commit on target.
+func squashMerged(root, branch, target string) bool {
+	base, err := gitOutput(root, "merge-base", target, "refs/heads/"+branch)
+	if err != nil {
+		return false
+	}
+	squash, err := gitOutput(root, "commit-tree", "refs/heads/"+branch+"^{tree}",
+		"-p", strings.TrimSpace(base), "-m", "squash")
+	if err != nil {
+		return false
+	}
+	cherry, err := gitOutput(root, "cherry", target, strings.TrimSpace(squash))
+	if err != nil {
+		return false
+	}
+	// No output means the synthetic commit is itself on target.
+	cherry = strings.TrimSpace(cherry)
+	return cherry == "" || strings.HasPrefix(cherry, "-")
 }
 
 // DefaultBranch returns the repository's default branch name.
