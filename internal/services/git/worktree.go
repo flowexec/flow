@@ -241,6 +241,21 @@ func RepoCommonDir(dir string) (string, error) {
 	return filepath.Clean(filepath.Dir(commonDir)), nil
 }
 
+// WorktreeTopLevel returns the top-level directory of the worktree containing dir.
+// Unlike RepoCommonDir (which returns the main repo root), this returns the worktree-specific root.
+func WorktreeTopLevel(dir string) (string, error) {
+	output, err := gitOutput(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", fmt.Errorf("resolving worktree root: %w", err)
+	}
+	resolved := strings.TrimSpace(output)
+	resolved, err = filepath.EvalSymlinks(resolved)
+	if err != nil {
+		return resolved, nil //nolint:nilerr
+	}
+	return filepath.Clean(resolved), nil
+}
+
 // WorktreeDirName converts a branch name to a filesystem-safe directory name.
 func WorktreeDirName(branch string) string {
 	name := strings.TrimPrefix(branch, "refs/heads/")

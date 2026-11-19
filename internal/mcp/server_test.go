@@ -99,6 +99,9 @@ var _ = Describe("MCP Server", func() {
 				"sync_executables",
 				"write_flowfile",
 				"get_workspace_config",
+				"list_worktrees",
+				"add_worktree",
+				"remove_worktree",
 			}
 
 			for _, expectedTool := range expectedTools {

@@ -228,6 +228,191 @@ func TestBranchMerged(t *testing.T) {
 	}
 }
 
+func TestAddWorktreeExistingBranch(t *testing.T) {
+	repo := initBareRepo(t)
+
+	gitRun(t, repo, "branch", "existing-branch")
+
+	wtPath := filepath.Join(t.TempDir(), "existing")
+	if err := git.AddWorktree(repo, wtPath, "existing-branch", false, ""); err != nil {
+		t.Fatalf("AddWorktree with existing branch: %v", err)
+	}
+
+	wts, err := git.ListWorktrees(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, wt := range wts {
+		if wt.Branch == "existing-branch" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("existing-branch worktree not found after add")
+	}
+}
+
+func TestAddWorktreeWithBase(t *testing.T) {
+	repo := initBareRepo(t)
+
+	// Make a second commit so HEAD differs from initial.
+	writeFile(t, filepath.Join(repo, "second.txt"), "second\n")
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "second commit")
+
+	// Get the initial commit hash.
+	cmd := exec.Command("git", "rev-parse", "HEAD~1")
+	cmd.Dir = repo
+	baseOut, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := strings.TrimSpace(string(baseOut))
+
+	wtPath := filepath.Join(t.TempDir(), "based")
+	if err := git.AddWorktree(repo, wtPath, "based-branch", true, base); err != nil {
+		t.Fatalf("AddWorktree with base: %v", err)
+	}
+
+	// Verify the worktree HEAD matches the base commit.
+	headCmd := exec.Command("git", "rev-parse", "HEAD")
+	headCmd.Dir = wtPath
+	headOut, err := headCmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(headOut)) != base {
+		t.Errorf("worktree HEAD = %s, want base %s", strings.TrimSpace(string(headOut)), base)
+	}
+}
+
+func TestRemoveWorktreeForce(t *testing.T) {
+	repo := initBareRepo(t)
+
+	wtPath := filepath.Join(t.TempDir(), "dirty-wt")
+	if err := git.AddWorktree(repo, wtPath, "dirty-branch", true, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Dirty the worktree.
+	writeFile(t, filepath.Join(wtPath, "uncommitted.txt"), "dirty\n")
+
+	// Non-force removal should fail.
+	if err := git.RemoveWorktree(repo, wtPath, false); err == nil {
+		t.Error("expected non-force removal of dirty worktree to fail")
+	}
+
+	// Force removal should succeed.
+	if err := git.RemoveWorktree(repo, wtPath, true); err != nil {
+		t.Fatalf("force removal failed: %v", err)
+	}
+}
+
+func TestPruneWorktrees(t *testing.T) {
+	repo := initBareRepo(t)
+
+	wtPath := filepath.Join(t.TempDir(), "stale-wt")
+	if err := git.AddWorktree(repo, wtPath, "stale-branch", true, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually delete the worktree directory to simulate a stale entry.
+	if err := os.RemoveAll(wtPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Dry run should report the stale entry.
+	pruned, err := git.PruneWorktrees(repo, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pruned) == 0 {
+		// Some git versions don't output the same format; just verify no error.
+		t.Log("dry-run reported no stale entries (git format may vary)")
+	}
+
+	// Actual prune should clean up.
+	_, err = git.PruneWorktrees(repo, false)
+	if err != nil {
+		t.Fatalf("prune failed: %v", err)
+	}
+
+	// After prune, only the main worktree should remain.
+	wts, err := git.ListWorktrees(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wts) != 1 {
+		t.Errorf("expected 1 worktree after prune, got %d", len(wts))
+	}
+}
+
+func TestListWorktreesMultiple(t *testing.T) {
+	repo := initBareRepo(t)
+
+	wt1 := filepath.Join(t.TempDir(), "wt1")
+	wt2 := filepath.Join(t.TempDir(), "wt2")
+	if err := git.AddWorktree(repo, wt1, "branch-a", true, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := git.AddWorktree(repo, wt2, "branch-b", true, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	wts, err := git.ListWorktrees(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wts) != 3 {
+		t.Fatalf("expected 3 worktrees, got %d", len(wts))
+	}
+
+	branches := map[string]bool{}
+	for _, wt := range wts {
+		branches[wt.Branch] = true
+	}
+	for _, want := range []string{"main", "branch-a", "branch-b"} {
+		if !branches[want] {
+			t.Errorf("missing branch %q in worktree list", want)
+		}
+	}
+}
+
+func TestListWorktreesDetached(t *testing.T) {
+	repo := initBareRepo(t)
+
+	wtPath := filepath.Join(t.TempDir(), "detached")
+	// Create a worktree in detached HEAD state.
+	cmd := exec.Command("git", "worktree", "add", "--detach", wtPath)
+	cmd.Dir = repo
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git worktree add --detach: %s\n%s", err, out)
+	}
+
+	wts, err := git.ListWorktrees(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var detachedWt *git.WorktreeInfo
+	for i, wt := range wts {
+		if wt.Detached {
+			detachedWt = &wts[i]
+			break
+		}
+	}
+	if detachedWt == nil {
+		t.Fatal("no detached worktree found")
+	}
+	if detachedWt.Branch != "" {
+		t.Errorf("detached worktree has branch=%q, want empty", detachedWt.Branch)
+	}
+	if detachedWt.HEAD == "" {
+		t.Error("detached worktree has empty HEAD")
+	}
+}
+
 func TestGetWorktreeStatus(t *testing.T) {
 	repo := initBareRepo(t)
 

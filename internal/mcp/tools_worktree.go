@@ -121,6 +121,13 @@ func listWorktreesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 	}
 }
 
+type successEnvelope struct {
+	Result struct {
+		Message string         `json:"message"`
+		Data    map[string]any `json:"data"`
+	} `json:"result"`
+}
+
 type addWorktreeOutput struct {
 	Branch string `json:"branch"`
 	Path   string `json:"path"`
@@ -138,14 +145,17 @@ func addWorktreeHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		if base := request.GetString("base", ""); base != "" {
 			args = append(args, "--base", base)
 		}
+		if dir := request.GetString("dir", ""); dir != "" {
+			args = append(args, "--dir", dir)
+		}
 
 		output, err := executor.Execute(args...)
 		if err != nil {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to create worktree: %s", output)), nil
 		}
 
-		var result addWorktreeOutput
-		if err := json.Unmarshal([]byte(output), &result); err != nil {
+		result, err := extractEnvelopeData[addWorktreeOutput](output)
+		if err != nil {
 			return mcp.NewToolResultText(output), nil
 		}
 
@@ -177,12 +187,29 @@ func removeWorktreeHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to remove worktree: %s", output)), nil
 		}
 
-		var result removeWorktreeOutput
-		if err := json.Unmarshal([]byte(output), &result); err != nil {
+		result, err := extractEnvelopeData[removeWorktreeOutput](output)
+		if err != nil {
 			return mcp.NewToolResultText(output), nil
 		}
 
 		jsonData, _ := json.Marshal(result)
 		return mcp.NewToolResultStructured(result, string(jsonData)), nil
 	}
+}
+
+func extractEnvelopeData[T any](output string) (T, error) {
+	var env successEnvelope
+	var zero T
+	if err := json.Unmarshal([]byte(output), &env); err != nil {
+		return zero, err
+	}
+	dataBytes, err := json.Marshal(env.Result.Data)
+	if err != nil {
+		return zero, err
+	}
+	var result T
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		return zero, err
+	}
+	return result, nil
 }

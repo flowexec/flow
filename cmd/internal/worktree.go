@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -161,7 +160,7 @@ func worktreeListFunc(ctx *context.Context, cmd *cobra.Command) {
 		return
 	}
 
-	cwdRoot, _ := worktreeRoot(cwd)
+	cwdRoot, _ := git.WorktreeTopLevel(cwd)
 	displayList := make([]worktreeIO.DisplayInfo, 0, len(worktrees))
 	for i, wt := range worktrees {
 		display := worktreeIO.DisplayInfo{
@@ -173,7 +172,7 @@ func worktreeListFunc(ctx *context.Context, cmd *cobra.Command) {
 			Locked:   wt.Locked,
 			Prunable: wt.Prunable,
 		}
-		if cwdRoot != "" && filepath.Clean(cwdRoot) == filepath.Clean(wt.Path) {
+		if cwdRoot != "" && pathsEqual(cwdRoot, wt.Path) {
 			display.IsCurrent = true
 		}
 		enrichWorktreeDisplay(&display, repoRoot)
@@ -499,21 +498,35 @@ func ensureGitignore(repoRoot, worktreePath string) {
 		return
 	}
 
+	needsNewline := false
+	if data, err := os.ReadFile(gitignorePath); err == nil && len(data) > 0 && data[len(data)-1] != '\n' {
+		needsNewline = true
+	}
+
 	f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return
 	}
 	defer f.Close()
 
-	// Ensure we start on a new line.
-	info, _ := f.Stat()
-	if info != nil && info.Size() > 0 {
-		buf := make([]byte, 1)
-		if _, err := f.ReadAt(buf, info.Size()-1); err == nil && buf[0] != '\n' {
-			_, _ = f.WriteString("\n")
-		}
+	if needsNewline {
+		_, _ = f.WriteString("\n")
 	}
 	_, _ = f.WriteString(dirEntry + "\n")
+}
+
+func pathsEqual(a, b string) bool {
+	a = filepath.Clean(a)
+	b = filepath.Clean(b)
+	if a == b {
+		return true
+	}
+	aReal, errA := filepath.EvalSymlinks(a)
+	bReal, errB := filepath.EvalSymlinks(b)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return aReal == bReal
 }
 
 func gitignoreContains(path, entry string) bool {
@@ -530,26 +543,4 @@ func gitignoreContains(path, entry string) bool {
 		}
 	}
 	return false
-}
-
-// worktreeRoot returns the top-level directory of the worktree that dir belongs to.
-func worktreeRoot(dir string) (string, error) {
-	// git rev-parse --show-toplevel returns the worktree root, not the repo root.
-	output, err := worktreeTopLevel(dir)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Clean(strings.TrimSpace(output)), nil
-}
-
-func worktreeTopLevel(dir string) (string, error) {
-	// Use the git service's gitOutput indirectly by going through RepoCommonDir's approach,
-	// but we need --show-toplevel which gives the worktree root.
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-	cmd.Dir = dir
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
 }
