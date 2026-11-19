@@ -16,6 +16,7 @@ flow worktree list [flags]
 | Flag | Type | Description |
 |------|------|-------------|
 | `-h, --help` |  | help for list |
+| `--no-size` |  | Skip measuring each worktree's disk usage, which walks every file and is slow on large checkouts. |
 | `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
 
 ## Options inherited from parent commands
