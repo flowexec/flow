@@ -16,6 +16,8 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 
 | Field | Type | Default | Required | Description |
 | ----- | ---- | ------- | :------: | ----------- |
+| `agentInstructions` | `string` |  |  | Free-text instructions surfaced to AI agents that connect to this workspace via the MCP server. Use it to tell agents about project conventions, required workflows, environment constraints, or anything they should know before working in this workspace. Returned by `get_info` and `get_workspace` so agents see it without an extra call.  |
+| `agentInstructionsFile` | `string` |  |  | Path to a file containing agent instructions, relative to the workspace root. When set, its content is used as `agentInstructions`. If both are set, the file takes precedence.  |
 | `annotations` | [CommonAnnotations](#commonannotations) | map[] |  |  |
 | `description` | `string` |  |  | A description of the workspace. This description is rendered as markdown in the interactive UI. |
 | `descriptionFile` | `string` |  |  | A path to a markdown file that contains the description of the workspace. |
@@ -28,6 +30,7 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `tags` | [CommonTags](#commontags) | [] |  |  |
 | `templates` | [ExecutableFilter](#executablefilter) |  |  | Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered within the workspace during `flow sync`. Uses the same include/exclude semantics as the executables filter. When unset, the entire workspace is scanned (minus the default exclusions like node_modules/, vendor/, and .git/).  |
 | `verbAliases` | [VerbAliases](#verbaliases) |  |  |  |
+| `worktreeDir` | `string` |  |  | Directory where `flow worktree add` creates new worktrees, relative to the workspace root. Defaults to `.worktrees/`.  |
 
 ## Definitions
 

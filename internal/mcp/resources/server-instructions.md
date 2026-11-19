@@ -4,7 +4,9 @@ Flow is a local automation platform. **Executables** (tasks of any kind) are dec
 
 ## Start here
 
-Call `get_info` once at the start of a session (unless the context is already provided). It returns the current workspace/namespace/vault, a short summary, and URLs for docs (`llmsTxtUrl`), JSON schemas (`schemaUrls.*`), and guides (`guideUrls.*`). Fetch those URLs when you need deeper detail instead of asking the user. `write_flowfile` validates against the flowfile schema server-side, so you don't need the schema in context to author files — fetch `schemaUrls.flowFile` only as the authoritative reference for non-trivial executables.
+Call `get_info` once at the start of a session (unless the context is already provided). It returns the current workspace/namespace/vault, a short summary, and URLs for docs (`llmsTxtUrl`), JSON schemas (`schemaUrls.*`), and guides (`guideUrls.*`). If the workspace has `agentInstructions` (or an `agentInstructionsFile`), they appear in `currentContext.agentInstructions` — read and follow them: they carry the workspace author's project conventions, required workflows, and environment constraints. Fetch docs URLs when you need deeper detail instead of asking the user. `write_flowfile` validates against the flowfile schema server-side, so you don't need the schema in context to author files — fetch `schemaUrls.flowFile` only as the authoritative reference for non-trivial executables.
+
+After `get_info`, call `get_project_status` to see the git branch, dirty state, ahead/behind, and last few run results in one shot — it replaces separate git-status and logs queries.
 
 ## Flow as your shell
 
@@ -20,6 +22,24 @@ Prefer running work **through flow** over a raw shell tool — you get the works
 Every run you launch is attributed to this session. `get_execution_logs` with `mine: true` returns only what *this* session has run — use it to review your own recent work; `source`/`session`/`status` filter more broadly.
 
 By default `get_execution_logs` returns only run **metadata** (ref, status, exitCode, error). To read the captured **output**, set `tail` (last N lines — best for debugging, since errors surface at the end), `grep` (a regex to pull just the matching lines out of a large log), or `content: true` (the whole log). Output is always byte-capped to protect the context window; `contentTruncated` in the response tells you when part of a log was omitted (widen with `tail`/`grep`/`max_bytes`, or open `logFile` directly). This reads the log live, so it also works on a **still-running** execution — you get a snapshot of what has been written so far.
+
+## Worktrees
+
+`list_worktrees`, `add_worktree`, `remove_worktree`, and `prune_worktrees` manage git worktrees through the workspace's configured worktree directory. Use worktrees to isolate parallel tasks on separate branches without stashing or switching.
+
+- `prune_worktrees` cleans up stale entries (directories that no longer exist on disk). Pass `merged: true` to also remove worktrees whose branches are fully merged into the default branch. Always call with `dry_run: true` first to preview what would be removed.
+
+## Templates
+
+`list_templates`, `get_template`, and `generate_template` discover and scaffold from flowfile templates (`*.flow.tmpl`). Templates produce ready-to-run flowfiles with optional artifacts (config files, scripts, etc.).
+
+- Call `list_templates` to see what's available — each entry includes form fields the template expects.
+- Call `get_template` before generating to see the full definition: artifacts, pre/post-run hooks, and the template body.
+- `generate_template` writes the flowfile and artifacts into the workspace. Pass form values in `fields` as key→value pairs; unanswered required fields fail before writing.
+
+## Secrets
+
+`list_secrets` returns the names of secrets in the current vault — **never values**. Use it to discover which secrets are available for executables that reference vault entries via `$s(NAME)` or environment variables. Pass `vault` to query a specific vault instead of the current one.
 
 ## Notes
 

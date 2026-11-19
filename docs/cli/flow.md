@@ -36,3 +36,4 @@ See https://flowexec.io for more information.
 - [flow template](flow_template.md) — Manage flowfile templates.
 - [flow vault](flow_vault.md) — Manage sensitive secret stores.
 - [flow workspace](flow_workspace.md) — Manage development workspaces.
+- [flow worktree](flow_worktree.md) — Manage git worktrees for the current repository.

@@ -49,24 +49,29 @@ type CurrentContext struct {
 	// filters on. A client reads it once here rather than inferring which records are its own:
 	// the value is knowable only to the server, since the stdio transport carries no identity.
 	SessionID string `json:"sessionId"`
+	// AgentInstructions is the workspace author's guidance for AI agents: project conventions,
+	// required workflows, environment constraints. Present only when the workspace sets
+	// agentInstructions or agentInstructionsFile.
+	AgentInstructions string `json:"agentInstructions,omitempty"`
 }
 
 // WorkspaceOutput is the output of the get_workspace tool.
 type WorkspaceOutput struct {
-	Name            string              `json:"name"`
-	Path            string              `json:"path"`
-	DisplayName     string              `json:"displayName,omitempty"`
-	Description     string              `json:"description,omitempty"`
-	FullDescription string              `json:"fullDescription,omitempty"`
-	DescriptionFile string              `json:"descriptionFile,omitempty"`
-	Tags            []string            `json:"tags,omitempty"`
-	EnvFiles        []string            `json:"envFiles,omitempty"`
-	Executables     *ExecutableFilter   `json:"executables,omitempty"`
-	VerbAliases     map[string][]string `json:"verbAliases,omitempty"`
-	Annotations     map[string]string   `json:"annotations,omitempty"`
-	GitRemote       string              `json:"gitRemote,omitempty"`
-	GitRef          string              `json:"gitRef,omitempty"`
-	GitRefType      string              `json:"gitRefType,omitempty"`
+	Name              string              `json:"name"`
+	Path              string              `json:"path"`
+	DisplayName       string              `json:"displayName,omitempty"`
+	Description       string              `json:"description,omitempty"`
+	FullDescription   string              `json:"fullDescription,omitempty"`
+	DescriptionFile   string              `json:"descriptionFile,omitempty"`
+	Tags              []string            `json:"tags,omitempty"`
+	EnvFiles          []string            `json:"envFiles,omitempty"`
+	Executables       *ExecutableFilter   `json:"executables,omitempty"`
+	VerbAliases       map[string][]string `json:"verbAliases,omitempty"`
+	Annotations       map[string]string   `json:"annotations,omitempty"`
+	GitRemote         string              `json:"gitRemote,omitempty"`
+	GitRef            string              `json:"gitRef,omitempty"`
+	GitRefType        string              `json:"gitRefType,omitempty"`
+	AgentInstructions string              `json:"agentInstructions,omitempty"`
 }
 
 type ExecutableFilter struct {

@@ -77,12 +77,13 @@ func workspaceResourceHandler(_ context.Context, request mcp.ReadResourceRequest
 	}
 
 	output := WorkspaceOutput{
-		Name:        ws.AssignedName(),
-		Path:        ws.Location(),
-		DisplayName: ws.DisplayName,
-		Description: ws.Description,
-		Tags:        ws.Tags,
-		Annotations: map[string]string(ws.Annotations),
+		Name:              ws.AssignedName(),
+		Path:              ws.Location(),
+		DisplayName:       ws.DisplayName,
+		Description:       ws.Description,
+		Tags:              ws.Tags,
+		Annotations:       map[string]string(ws.Annotations),
+		AgentInstructions: ws.ResolvedAgentInstructions(),
 	}
 	if ws.Executables != nil {
 		output.Executables = &ExecutableFilter{

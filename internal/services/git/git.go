@@ -348,6 +348,20 @@ func gitOutput(dir string, args ...string) (string, error) {
 	return string(out), nil
 }
 
+func gitCombinedOutput(dir string, args ...string) (string, error) {
+	if err := EnsureInstalled(); err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", errors.Wrapf(err, "git %s:\n%s", strings.Join(args, " "), strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
+}
+
 // parseGitURL extracts the host and path from a git URL (HTTPS or SSH).
 func parseGitURL(gitURL string) (host, repoPath string, err error) {
 	if sshURLPattern.MatchString(gitURL) {

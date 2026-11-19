@@ -431,16 +431,17 @@ var _ = Describe("Executable Visibility", func() {
 
 var _ = Describe("Directory checkout prefix", func() {
 	It("resolves @/ against the run's checkout", func() {
+		checkout := filepath.FromSlash("/src/app")
 		dir, isTmp, err := executable.Directory("@/sub").ExpandDirectory(
-			"/ws", "/ws/x.flow", "", map[string]string{"FLOW_CHECKOUT_DIR": "/src/app"})
+			filepath.FromSlash("/ws"), filepath.FromSlash("/ws/x.flow"), "", map[string]string{"FLOW_CHECKOUT_DIR": checkout})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(isTmp).To(BeFalse())
-		Expect(dir).To(Equal(filepath.Join("/src/app", "sub")))
+		Expect(dir).To(Equal(filepath.Join(checkout, "sub")))
 
 		dir, _, err = executable.Directory("@").ExpandDirectory(
-			"/ws", "/ws/x.flow", "", map[string]string{"FLOW_CHECKOUT_DIR": "/src/app"})
+			filepath.FromSlash("/ws"), filepath.FromSlash("/ws/x.flow"), "", map[string]string{"FLOW_CHECKOUT_DIR": checkout})
 		Expect(err).ToNot(HaveOccurred())
-		Expect(dir).To(Equal("/src/app"))
+		Expect(dir).To(Equal(checkout))
 	})
 
 	It("fails with how to bind one when none is set", func() {

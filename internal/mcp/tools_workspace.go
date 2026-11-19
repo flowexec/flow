@@ -67,7 +67,7 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeInvalidInput, "workspace_name is required"), nil
 		}
 
-		output, err := executor.Execute("workspace", "get", wsName, "--output", "json")
+		output, err := executor.Execute("workspace", "get", wsName, outputFlag, outputJSON)
 		if err != nil {
 			return toolError(ErrCodeNotFound, fmt.Sprintf("Failed to get workspace %s: %s", wsName, output)), nil
 		}
@@ -83,6 +83,12 @@ func getWorkspaceHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			ws.Description = ""
 		}
 
+		if ws.AgentInstructions == "" && ws.Path != "" {
+			if wsCfg, loadErr := filesystem.ReadWorkspaceConfig(wsName, ws.Path); loadErr == nil {
+				ws.AgentInstructions = wsCfg.ResolvedAgentInstructions()
+			}
+		}
+
 		jsonData, _ := json.Marshal(ws)
 		return mcp.NewToolResultStructured(ws, string(jsonData)), nil
 	}
@@ -92,7 +98,7 @@ func listWorkspacesHandler(executor CommandExecutor) server.ToolHandlerFunc {
 	return func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		cursor := request.GetString("cursor", "")
 
-		output, err := executor.Execute("workspace", "list", "--output", "json")
+		output, err := executor.Execute("workspace", "list", outputFlag, outputJSON)
 		if err != nil {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to list workspaces: %s", output)), nil
 		}
@@ -168,12 +174,13 @@ func getWorkspaceConfigHandler() server.ToolHandlerFunc {
 
 		output := WorkspaceConfigOutput{
 			WorkspaceOutput: WorkspaceOutput{
-				Name:        ws.AssignedName(),
-				Path:        ws.Location(),
-				DisplayName: ws.DisplayName,
-				Description: ws.Description,
-				Tags:        ws.Tags,
-				Annotations: map[string]string(ws.Annotations),
+				Name:              ws.AssignedName(),
+				Path:              ws.Location(),
+				DisplayName:       ws.DisplayName,
+				Description:       ws.Description,
+				Tags:              ws.Tags,
+				Annotations:       map[string]string(ws.Annotations),
+				AgentInstructions: ws.ResolvedAgentInstructions(),
 			},
 		}
 		if ws.Executables != nil {
