@@ -138,6 +138,31 @@ var _ = Describe("MCP Server", func() {
 		})
 	})
 
+	Describe("Resource Registration", func() {
+		It("should register the static instructions resource", func() {
+			result, err := mcpClient.ListResources(ctx, mcp.ListResourcesRequest{})
+			Expect(err).ToNot(HaveOccurred())
+
+			uris := make([]string, len(result.Resources))
+			for i, r := range result.Resources {
+				uris[i] = r.URI
+			}
+			Expect(uris).To(ContainElement("flow://server/instructions"))
+		})
+
+		It("should return server instructions content", func() {
+			result, err := mcpClient.ReadResource(ctx, mcp.ReadResourceRequest{
+				Params: mcp.ReadResourceParams{URI: "flow://server/instructions"},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Contents).To(HaveLen(1))
+			text, ok := result.Contents[0].(mcp.TextResourceContents)
+			Expect(ok).To(BeTrue())
+			Expect(text.Text).To(ContainSubstring("Flow MCP Server Instructions"))
+			Expect(text.MIMEType).To(Equal("text/markdown"))
+		})
+	})
+
 	Describe("Resource Template Registration", func() {
 		It("should register all expected resource templates", func() {
 			result, err := mcpClient.ListResourceTemplates(ctx, mcp.ListResourceTemplatesRequest{})

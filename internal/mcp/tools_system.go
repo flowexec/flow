@@ -102,7 +102,7 @@ func getInfoHandler(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolRe
 		wsName, wsPath = res.Name, res.Path
 		wsSource, wsRegistered = string(res.Source), res.Registered
 		if ws, wsErr := filesystem.LoadWorkspaceConfig(wsName, wsPath); wsErr == nil {
-			agentInstructions = ws.ResolvedAgentInstructions()
+			agentInstructions = resolveAgentInstructions(ws, cfg)
 		}
 	}
 
