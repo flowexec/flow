@@ -112,6 +112,11 @@
     },
     "verbAliases": {
       "$ref": "#/definitions/VerbAliases"
+    },
+    "worktreeDir": {
+      "description": "Directory where `flow worktree add` creates new worktrees, relative to the workspace root.\nDefaults to `.worktrees/`.\n",
+      "type": "string",
+      "default": ""
     }
   }
 }

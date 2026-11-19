@@ -28,6 +28,7 @@ Every workspace has a workspace config file named `flow.yaml` in the root of the
 | `tags` | [CommonTags](#commontags) | [] |  |  |
 | `templates` | [ExecutableFilter](#executablefilter) |  |  | Filters controlling which flowfile template files (*.flow.tmpl) are auto-discovered within the workspace during `flow sync`. Uses the same include/exclude semantics as the executables filter. When unset, the entire workspace is scanned (minus the default exclusions like node_modules/, vendor/, and .git/).  |
 | `verbAliases` | [VerbAliases](#verbaliases) |  |  |  |
+| `worktreeDir` | `string` |  |  | Directory where `flow worktree add` creates new worktrees, relative to the workspace root. Defaults to `.worktrees/`.  |
 
 ## Definitions
 
