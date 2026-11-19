@@ -4,9 +4,11 @@ Flow is a local automation platform. **Executables** (tasks of any kind) are dec
 
 ## Start here
 
-Call `get_info` once at the start of a session (unless the context is already provided). It returns the current workspace/namespace/vault, a short summary, and URLs for docs (`llmsTxtUrl`), JSON schemas (`schemaUrls.*`), and guides (`guideUrls.*`). If the workspace has `agentInstructions` (or an `agentInstructionsFile`), they appear in `currentContext.agentInstructions` — read and follow them: they carry the workspace author's project conventions, required workflows, and environment constraints. Fetch docs URLs when you need deeper detail instead of asking the user. `write_flowfile` validates against the flowfile schema server-side, so you don't need the schema in context to author files — fetch `schemaUrls.flowFile` only as the authoritative reference for non-trivial executables.
+Call `get_info` once at the start of a session (unless the context is already provided). It returns the current workspace/namespace/vault, a short summary, and URLs for docs (`llmsTxtUrl`), JSON schemas (`schemaUrls.*`), and guides (`guideUrls.*`). If the workspace has `agentInstructions` (or an `agentInstructionsFile`), they appear in `currentContext.agentInstructions` — read and follow them: they carry the workspace author's project conventions, required workflows, and environment constraints. In a git worktree whose workspace has no instructions, the server falls back to the parent repository's registered workspace instructions. Fetch docs URLs when you need deeper detail instead of asking the user. `write_flowfile` validates against the flowfile schema server-side, so you don't need the schema in context to author files — fetch `schemaUrls.flowFile` only as the authoritative reference for non-trivial executables.
 
 After `get_info`, call `get_project_status` to see the git branch, dirty state, ahead/behind, and last few run results in one shot — it replaces separate git-status and logs queries.
+
+To re-read these instructions mid-session (e.g. after switching workspaces or worktrees), read the `flow://server/instructions` resource instead of reconnecting.
 
 ## Flow as your shell
 
