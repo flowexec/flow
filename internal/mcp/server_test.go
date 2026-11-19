@@ -139,7 +139,7 @@ var _ = Describe("MCP Server", func() {
 	})
 
 	Describe("Resource Registration", func() {
-		It("should register the static instructions resource", func() {
+		It("should register all static resources", func() {
 			result, err := mcpClient.ListResources(ctx, mcp.ListResourcesRequest{})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -148,6 +148,34 @@ var _ = Describe("MCP Server", func() {
 				uris[i] = r.URI
 			}
 			Expect(uris).To(ContainElement("flow://server/instructions"))
+			Expect(uris).To(ContainElement("flow://failures/recent"))
+		})
+
+		It("should return recent failures", func() {
+			logsJSON := `{"history":[{"ref":"test unit","startedAt":"2026-01-01T00:00:00Z",` +
+				`"duration":"5s","status":"failed","exitCode":1,` +
+				`"error":"exit status 1","content":"FAIL pkg/foo"}]}`
+			mockExecutor.EXPECT().Execute(
+				"logs", "--status", "failed", "--content", "--tail", "30",
+				"--max-bytes", "10000", "--output", "json",
+			).Return(logsJSON, nil)
+
+			result, err := mcpClient.ReadResource(ctx, mcp.ReadResourceRequest{
+				Params: mcp.ReadResourceParams{URI: "flow://failures/recent"},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.Contents).To(HaveLen(1))
+			text, ok := result.Contents[0].(mcp.TextResourceContents)
+			Expect(ok).To(BeTrue())
+			Expect(text.MIMEType).To(Equal("application/json"))
+
+			var parsed struct {
+				Failures []map[string]any `json:"failures"`
+				Count    int              `json:"count"`
+			}
+			Expect(json.Unmarshal([]byte(text.Text), &parsed)).To(Succeed())
+			Expect(parsed.Count).To(Equal(1))
+			Expect(parsed.Failures[0]["ref"]).To(Equal("test unit"))
 		})
 
 		It("should return server instructions content", func() {

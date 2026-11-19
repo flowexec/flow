@@ -86,6 +86,7 @@ registered workspace instructions.
 | `flow://executable/{workspace}/{namespace}/{name}` | Executable definition as JSON |
 | `flow://flowfile/{path}` | Raw flowfile YAML (path must be within a workspace) |
 | `flow://logs/{run_id}` | Execution output as plain text |
+| `flow://failures/recent` | Last few failed runs with tailed error output (JSON) |
 
 **Prompts**
 
@@ -238,6 +239,10 @@ flow logs --client cursor --status failed
 The interactive `flow logs` view shows an **Origin** column (the client, or `cli`/`mcp`) so you can see at a glance which runs came from an assistant; opening a record reveals its full source, client, and session.
 
 The assistant can review its own activity too: `get_execution_logs` accepts the same `source`/`session`/`status` filters, plus `mine: true` — a shortcut that scopes results to the calling session's own runs, so it can check "what have I run so far?" without guessing a session ID.
+
+**Streaming progress** — when a client sends an MCP progress token with a tool call, the server streams execution output line-by-line as `notifications/progress` messages. Clients that support progress notifications see real-time output during long-running builds, tests, and deploys.
+
+**Session bootstrapping** — the `flow://failures/recent` resource returns the last few failed runs with tailed error output as JSON, so a new session can pick up where a previous one left off without manual log hunting.
 
 How flow decides which session a run belongs to — including how an application embedding the server can name it per tool call — is covered in [Run Provenance](run-provenance.md#what-a-session-is).
 

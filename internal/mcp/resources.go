@@ -16,7 +16,9 @@ import (
 	"github.com/flowexec/flow/v2/types/config"
 )
 
-func addServerResources(srv *server.MCPServer) {
+const mimeJSON = "application/json"
+
+func addServerResources(srv *server.MCPServer, executor CommandExecutor) {
 	// Static resource: server instructions.
 	instructionsResource := mcp.NewResource(
 		"flow://server/instructions",
@@ -32,7 +34,7 @@ func addServerResources(srv *server.MCPServer) {
 		"flow://workspace/{name}",
 		"Workspace Configuration",
 		mcp.WithTemplateDescription("Workspace metadata and configuration as JSON"),
-		mcp.WithTemplateMIMEType("application/json"),
+		mcp.WithTemplateMIMEType(mimeJSON),
 	)
 	srv.AddResourceTemplate(workspaceTemplate, workspaceResourceHandler)
 
@@ -41,7 +43,7 @@ func addServerResources(srv *server.MCPServer) {
 		executableURITemplate,
 		"Executable Definition",
 		mcp.WithTemplateDescription("Executable definition and metadata as JSON"),
-		mcp.WithTemplateMIMEType("application/json"),
+		mcp.WithTemplateMIMEType(mimeJSON),
 	)
 	srv.AddResourceTemplate(executableTemplate, executableResourceHandler)
 
@@ -62,6 +64,62 @@ func addServerResources(srv *server.MCPServer) {
 		mcp.WithTemplateMIMEType("text/plain"),
 	)
 	srv.AddResourceTemplate(logsTemplate, logsResourceHandler)
+
+	// Static resource: recent failures.
+	failuresResource := mcp.NewResource(
+		"flow://failures/recent",
+		"Recent Failures",
+		mcp.WithResourceDescription("The last few failed executions with error output, "+
+			"for picking up where a previous session left off."),
+		mcp.WithMIMEType(mimeJSON),
+	)
+	srv.AddResource(failuresResource, recentFailuresHandler(executor))
+}
+
+const recentFailuresLimit = 5
+
+func recentFailuresHandler(executor CommandExecutor) server.ResourceHandlerFunc {
+	return func(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+		output, err := executor.Execute(
+			"logs", "--status", "failed", "--content", "--tail", "30",
+			"--max-bytes", "10000", outputFlag, outputJSON,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query logs: %w", err)
+		}
+
+		var cliOutput struct {
+			History []LogEntry `json:"history"`
+		}
+		if err := json.Unmarshal([]byte(output), &cliOutput); err != nil {
+			return nil, fmt.Errorf("failed to parse logs: %w", err)
+		}
+
+		entries := cliOutput.History
+		if len(entries) > recentFailuresLimit {
+			entries = entries[len(entries)-recentFailuresLimit:]
+		}
+
+		result := struct {
+			Failures []LogEntry `json:"failures"`
+			Count    int        `json:"count"`
+		}{
+			Failures: entries,
+			Count:    len(entries),
+		}
+		jsonData, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal failures: %w", err)
+		}
+
+		return []mcp.ResourceContents{
+			mcp.TextResourceContents{
+				URI:      "flow://failures/recent",
+				MIMEType: mimeJSON,
+				Text:     string(jsonData),
+			},
+		}, nil
+	}
 }
 
 func instructionsResourceHandler(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
@@ -120,7 +178,7 @@ func workspaceResourceHandler(_ context.Context, request mcp.ReadResourceRequest
 	return []mcp.ResourceContents{
 		mcp.TextResourceContents{
 			URI:      uri,
-			MIMEType: "application/json",
+			MIMEType: mimeJSON,
 			Text:     string(jsonData),
 		},
 	}, nil
@@ -205,7 +263,7 @@ func executableResourceHandler(_ context.Context, request mcp.ReadResourceReques
 				return []mcp.ResourceContents{
 					mcp.TextResourceContents{
 						URI:      uri,
-						MIMEType: "application/json",
+						MIMEType: mimeJSON,
 						Text:     string(jsonData),
 					},
 				}, nil

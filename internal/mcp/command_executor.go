@@ -1,8 +1,11 @@
 package mcp
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,6 +133,10 @@ func mcpProvenance(ctx context.Context) runProvenance {
 type CommandExecutor interface {
 	Execute(args ...string) (string, error)
 	ExecuteContext(ctx context.Context, args ...string) (string, error)
+	// ExecuteStreaming runs the command and calls onLine for each line of combined output as it
+	// arrives. The full output is still collected and returned. Callers use this to stream
+	// progress to MCP clients while a long-running execution is in flight.
+	ExecuteStreaming(ctx context.Context, onLine func(line string), args ...string) (string, error)
 }
 
 // FlowCLIExecutor runs the flow CLI with provided arguments. The CLI is being executed instead of importing the
@@ -180,6 +187,70 @@ func (c *FlowCLIExecutor) ExecuteContext(ctx context.Context, args ...string) (s
 		return string(output), err
 	}
 	return string(output), nil
+}
+
+func (c *FlowCLIExecutor) ExecuteStreaming(
+	ctx context.Context, onLine func(line string), args ...string,
+) (string, error) {
+	name := "flow"
+	if envName := os.Getenv(cliBinaryEnvKey); envName != "" {
+		name = envName
+	}
+	cmd := exec.CommandContext(ctx, name, args...) // #nosec G204,G702
+	cmd.Dir = runDirFromContext(ctx)
+	cmd.Env = noColorEnv(os.Environ())
+
+	startedFile, removeMarker := newRunMarker()
+	defer removeMarker()
+	if startedFile != "" {
+		cmd.Env = append(cmd.Env, store.RunStartedFileEnv+"="+startedFile)
+	}
+
+	if p, ok := provenanceFromContext(ctx); ok {
+		cmd.Env = append(cmd.Env,
+			fmt.Sprintf("%s=%s", store.RunSourceEnv, p.Source),
+			fmt.Sprintf("%s=%s", store.RunClientEnv, p.Client),
+			fmt.Sprintf("%s=%s", store.RunSessionEnv, p.Session),
+		)
+	}
+
+	// Merge stdout and stderr into a single pipe for line-by-line streaming.
+	pr, pw := io.Pipe()
+	cmd.Stdout = pw
+	cmd.Stderr = pw
+
+	if err := cmd.Start(); err != nil {
+		pw.Close()
+		pr.Close()
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(pr)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for scanner.Scan() {
+			line := scanner.Text()
+			buf.WriteString(line)
+			buf.WriteByte('\n')
+			onLine(line)
+		}
+	}()
+
+	waitErr := cmd.Wait()
+	pw.Close()
+	<-done
+
+	output := buf.String()
+	if waitErr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(waitErr, &exitErr) {
+			return output, &CLIExitError{Code: exitErr.ExitCode(), Started: runStarted(startedFile)}
+		}
+		return output, waitErr
+	}
+	return output, nil
 }
 
 // noColorEnv returns environ set up for colorless output, for flow's logger and the commands it

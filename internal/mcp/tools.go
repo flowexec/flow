@@ -2,8 +2,10 @@ package mcp
 
 import (
 	"context"
+	"sync/atomic"
 	"unicode/utf8"
 
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -46,6 +48,30 @@ func capOutput(output string) (string, bool) {
 		tail = tail[1:]
 	}
 	return tail, true
+}
+
+// executeWithStreaming runs a command through the executor. When the request carries a progress
+// token, output is streamed line-by-line as MCP progress notifications so the client can display
+// it while the command is still running. Without a token it falls back to ExecuteContext.
+func executeWithStreaming(
+	ctx context.Context, srv *server.MCPServer, request mcp.CallToolRequest,
+	executor CommandExecutor, args []string,
+) (string, error) {
+	var progressToken any
+	if request.Params.Meta != nil {
+		progressToken = request.Params.Meta.ProgressToken
+	}
+	if progressToken == nil {
+		return executor.ExecuteContext(ctx, args...)
+	}
+
+	sendProgress(srv, ctx, progressToken, 0, 0, "Running")
+	var lineCount atomic.Int64
+	output, err := executor.ExecuteStreaming(ctx, func(line string) {
+		n := lineCount.Add(1)
+		sendProgress(srv, ctx, progressToken, float64(n), 0, line)
+	}, args...)
+	return output, err
 }
 
 // sendProgress sends a progress notification to the client if a progress token was provided.
