@@ -17,6 +17,16 @@ import (
 )
 
 func addServerResources(srv *server.MCPServer) {
+	// Static resource: server instructions.
+	instructionsResource := mcp.NewResource(
+		"flow://server/instructions",
+		"Server Instructions",
+		mcp.WithResourceDescription("The MCP server's usage instructions — the same text sent as "+
+			"the server instructions on connect. Re-read after switching workspaces or worktrees."),
+		mcp.WithMIMEType("text/markdown"),
+	)
+	srv.AddResource(instructionsResource, instructionsResourceHandler)
+
 	// Resource template: workspace by name
 	workspaceTemplate := mcp.NewResourceTemplate(
 		"flow://workspace/{name}",
@@ -52,6 +62,16 @@ func addServerResources(srv *server.MCPServer) {
 		mcp.WithTemplateMIMEType("text/plain"),
 	)
 	srv.AddResourceTemplate(logsTemplate, logsResourceHandler)
+}
+
+func instructionsResourceHandler(_ context.Context, _ mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+	return []mcp.ResourceContents{
+		mcp.TextResourceContents{
+			URI:      "flow://server/instructions",
+			MIMEType: "text/markdown",
+			Text:     serverInstructions,
+		},
+	}, nil
 }
 
 func workspaceResourceHandler(_ context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
