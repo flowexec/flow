@@ -153,8 +153,8 @@ func ValidateOneOf(fieldName string, vals ...interface{}) error {
 			continue
 		}
 
-		isPtr := reflect.ValueOf(val).Kind() == reflect.Ptr && !reflect.ValueOf(val).IsNil()
-		isVal := reflect.ValueOf(val).Kind() != reflect.Ptr && !reflect.ValueOf(val).IsZero()
+		isPtr := reflect.ValueOf(val).Kind() == reflect.Pointer && !reflect.ValueOf(val).IsNil()
+		isVal := reflect.ValueOf(val).Kind() != reflect.Pointer && !reflect.ValueOf(val).IsZero()
 		if isPtr || isVal {
 			count++
 		}

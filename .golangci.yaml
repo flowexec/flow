@@ -89,7 +89,11 @@ linters:
         path: _test\.go
       - linters:
           - gosec
-        text: G115
+        text: (G115|G703)
+      # Cobra command metadata, TUI key labels, and e2e fixtures read better as literals.
+      - linters:
+          - goconst
+        path: ^(cmd/internal|internal/io|tests)/
       - linters:
           - staticcheck
         text: (SA5011|SA5001)

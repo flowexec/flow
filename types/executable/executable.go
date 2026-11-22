@@ -178,15 +178,15 @@ func (e *Executable) Env() *ExecutableEnvironment {
 			continue
 		}
 
-		isPtr := reflect.ValueOf(field).Kind() == reflect.Ptr && !reflect.ValueOf(field).IsNil()
-		isVal := reflect.ValueOf(field).Kind() != reflect.Ptr && !reflect.ValueOf(field).IsZero()
+		isPtr := reflect.ValueOf(field).Kind() == reflect.Pointer && !reflect.ValueOf(field).IsNil()
+		isVal := reflect.ValueOf(field).Kind() != reflect.Pointer && !reflect.ValueOf(field).IsZero()
 		if isPtr || isVal {
 			execType = field
 			break
 		}
 	}
 	v := reflect.ValueOf(execType)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return nil
 	}
 	typeElem := v.Elem()

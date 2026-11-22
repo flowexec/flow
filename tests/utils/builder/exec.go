@@ -124,7 +124,7 @@ func ExecWithArgs(opts ...Option) *executable.Executable {
 	var argCmds []string
 	for _, arg := range args {
 		if arg.Pos != nil && *arg.Pos > 0 {
-			argCmds = append(argCmds, fmt.Sprintf("echo 'pos=%d, key=%s'", arg.Pos, arg.EnvKey))
+			argCmds = append(argCmds, fmt.Sprintf("echo 'pos=%d, key=%s'", *arg.Pos, arg.EnvKey))
 		} else if arg.Flag != "" {
 			argCmds = append(argCmds, fmt.Sprintf("echo 'flag=%s, key=%s'", arg.Flag, arg.EnvKey))
 		}

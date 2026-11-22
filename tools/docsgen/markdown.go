@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	mdDir = "types"
+	mdDir      = "types"
+	objectType = "object"
 )
 
 var (
@@ -82,7 +83,7 @@ func generateMarkdownDocs() {
 }
 
 func newTopLevelPage(f schema.FileName, s *schema.JSONSchema, sm map[schema.FileName]*schema.JSONSchema) *topLevelPage {
-	if s.Type != "object" {
+	if s.Type != objectType {
 		return nil
 	}
 	pOrder := maps.Keys(s.Properties)
@@ -134,11 +135,11 @@ func typeStr(s *schema.JSONSchema) string {
 			name += schema.TitleCase(part)
 		}
 	}
-	standard := []string{"string", "integer", "number", "boolean", "object"}
+	standard := []string{"string", "integer", "number", "boolean", objectType}
 	switch {
 	case name == "array":
 		return fmt.Sprintf("`array` (%s)", typeStr(s.Items))
-	case name == "object" && s.AdditionalProperties != nil:
+	case name == objectType && s.AdditionalProperties != nil:
 		// TODO: look into if this is correct
 		return fmt.Sprintf("`map` (`string` -> %s)", typeStr(s.AdditionalProperties))
 	case slices.Contains(standard, name) ||
