@@ -55,7 +55,7 @@ var _ = Describe("digest e2e", Ordered, func() {
 		Expect(doc.Sections[1].Metadata).To(HaveKeyWithValue("count", BeNumerically("==", 1)))
 		Expect(doc.Sections[2].Content).To(ContainSubstring("name: simple-print"))
 		// The run was recorded under the alias verb typed (exec); the section still finds it.
-		Expect(doc.Sections[2].Content).To(ContainSubstring("| digest-run-1 | failed |"))
+		Expect(doc.Sections[2].Metadata["recentRuns"]).To(ContainElement(HaveKeyWithValue("id", "digest-run-1")))
 		Expect(doc.MaxChars).To(Equal(digest.DefaultMaxChars))
 	})
 

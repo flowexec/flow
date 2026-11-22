@@ -861,7 +861,22 @@ var _ = Describe("MCP Server", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.IsError).To(BeFalse())
 				Expect(result.StructuredContent).ToNot(BeNil())
-				Expect(getTextContent(result)).To(Equal(out))
+				Expect(getTextContent(result)).To(ContainSubstring(`"label":"File: flow.yaml"`))
+			})
+
+			It("should find the document when a log line precedes it", func() {
+				out := `level=warn msg="cache stale"` + "\n" + `{"sections":[],"totalChars":0,"maxChars":40000}`
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--", "runs:").
+					Return(out, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{
+					"sources": []string{"runs:"},
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.StructuredContent).ToNot(BeNil())
+				Expect(getTextContent(result)).To(HavePrefix(`{"sections":[]`))
 			})
 
 			It("should surface the CLI's error code", func() {

@@ -18,7 +18,7 @@ func addDigestTools(srv *server.MCPServer, executor CommandExecutor) {
 	getDigest := mcp.NewTool("get_digest",
 		mcp.WithDescription("Gather project state into one document: run logs, run history, executable "+
 			"definitions and file contents. Each source is a type:value pointer: `run:<id>` (metadata and log "+
-			"tail), `runs:<filter>` (table of runs; terms `ref:`, `status:passed|failed|cancelled|running`, "+
+			"tail), `runs:<filter>` (table of runs; terms `ref:`, `status:completed|failed|cancelled|running`, "+
 			"`ran:7d`, `limit:`, bare words match the ref), `exec:<verb>/<id>` (definition, script and last 5 "+
 			"runs) or `file:<path>` (relative to the workspace root, which it can't leave)."),
 		mcp.WithArray("sources", mcp.Required(), mcp.WithStringItems(),
@@ -65,11 +65,14 @@ func getDigestHandler(executor CommandExecutor) server.ToolHandlerFunc {
 			return toolError(ErrCodeExecutionFailed, fmt.Sprintf("Failed to build digest: %s", output)), nil
 		}
 
+		// Output is combined stdout+stderr, so a stray log line can sit around the document.
 		var doc digest.Document
-		if json.Unmarshal([]byte(output), &doc) != nil {
-			return mcp.NewToolResultText(output), nil //nolint:nilerr // unparseable output is still the answer, as text
+		start := strings.Index(output, "{")
+		if start < 0 || json.NewDecoder(strings.NewReader(output[start:])).Decode(&doc) != nil {
+			return mcp.NewToolResultText(output), nil //nolint:nilerr // unparseable output is still the answer
 		}
-		return mcp.NewToolResultStructured(doc, output), nil
+		jsonData, _ := json.Marshal(doc)
+		return mcp.NewToolResultStructured(doc, string(jsonData)), nil
 	}
 }
 

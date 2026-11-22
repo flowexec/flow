@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/flowexec/flow/v2/internal/io/logs"
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 	"github.com/flowexec/flow/v2/types/executable"
@@ -44,7 +46,7 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 	if err != nil {
 		return nil, err
 	}
-	def, err := e.YAML()
+	def, err := definitionYAML(e)
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +71,17 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 	}
 	s.addField("Flow file", relTo(e.WorkspacePath(), e.FlowFilePath()))
 
-	s.parts = append(s.parts, &part{heading: "Definition", body: strings.TrimSuffix(def, "\n"), tier: tierFixed})
+	s.parts = append(s.parts, &part{
+		heading: "Definition", body: def, tier: tierFixed, verbatim: true, lang: langYAML,
+	})
 
 	if path, ok := scriptPath(e); ok {
 		if body, err := readText(path); err == nil {
-			s.Metadata["script"] = path
+			rel := relTo(e.WorkspacePath(), path)
+			s.Metadata["script"] = rel
 			s.parts = append(s.parts, &part{
-				heading: "Script: " + relTo(e.WorkspacePath(), path),
-				body:    body, tier: tierFile, limit: maxFileChars,
+				heading: "Script: " + rel, body: body, tier: tierFile, limit: maxFileChars,
+				verbatim: true, lang: fenceLang(path), totalLines: lineCount(body),
 			})
 		}
 	}
@@ -99,10 +104,24 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 			body = r.runTable(rows, false)
 		}
 		s.parts = append(s.parts, &part{
-			heading: fmt.Sprintf("Recent runs (last %d)", recentRunsLimit), body: body, tier: tierFixed,
+			heading: "Recent runs", body: body, tier: tierFixed,
 		})
 	}
 	return s, nil
+}
+
+// definitionYAML renders the executable as it would appear in a flow file.
+func definitionYAML(e *executable.Executable) (string, error) {
+	var b strings.Builder
+	enc := yaml.NewEncoder(&b)
+	enc.SetIndent(2)
+	if err := enc.Encode(e); err != nil {
+		return "", fmt.Errorf("encoding %s: %w", e.Ref(), err)
+	}
+	if err := enc.Close(); err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(b.String(), "\n"), nil
 }
 
 // historyRefs lists every ref the executable's runs may be recorded under: runs keep the verb
@@ -158,6 +177,13 @@ func scriptPath(e *executable.Executable) (string, bool) {
 		return "", false
 	case dir == "":
 		dir = base
+	case dir == "." || strings.HasPrefix(dir, "./"):
+		// The runner resolves these from the working directory, not the flow file.
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", false
+		}
+		dir = filepath.Join(wd, dir)
 	case strings.HasPrefix(dir, "//"):
 		dir = filepath.Join(e.WorkspacePath(), filepath.FromSlash(strings.TrimPrefix(dir, "//")))
 	case strings.HasPrefix(dir, "~/"):

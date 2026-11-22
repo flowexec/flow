@@ -25,6 +25,8 @@ Every run you launch is attributed to this session. `get_execution_logs` with `m
 
 By default `get_execution_logs` returns only run **metadata** (ref, status, exitCode, error). To read the captured **output**, set `tail` (last N lines — best for debugging, since errors surface at the end), `grep` (a regex to pull just the matching lines out of a large log), or `content: true` (the whole log). Output is always byte-capped to protect the context window; `contentTruncated` in the response tells you when part of a log was omitted (widen with `tail`/`grep`/`max_bytes`, or open `logFile` directly). This reads the log live, so it also works on a **still-running** execution — you get a snapshot of what has been written so far.
 
+To debug a failure in one call, use `get_digest` with `sources` such as `["run:<id>", "exec:<verb>/<id>", "runs:status:failed ran:1d"]`. It returns the run's log tail next to the executable's definition, its script and recent runs, and fits all of it to `max_chars`. Add `file:<path>` for config the failure points at. Pass `dir` from a worktree. Tables show 8-character run IDs, which `run:` accepts.
+
 ## Worktrees
 
 `list_worktrees`, `add_worktree`, `remove_worktree`, and `prune_worktrees` manage git worktrees through the workspace's configured worktree directory. Use worktrees to isolate parallel tasks on separate branches without stashing or switching.

@@ -152,15 +152,17 @@ Each source is `type:value`:
 
 | Source | Resolves to |
 |--------|-------------|
-| `run:<id>` | One run's metadata and the tail of its log |
-| `runs:<filter>` | A summary table of runs, with a note when the same ref fails repeatedly. Terms are `ref:<text>`, `status:passed\|failed\|cancelled\|running`, `ran:<age>` (or `since:`) and `limit:<n>` (default 20); bare words match the ref |
+| `run:<id>` | One run's metadata and the tail of its log. A unique ID prefix (6+ characters, as shown in tables) works |
+| `runs:<filter>` | A summary table of runs. Refs whose latest run failed, and that failed more than once recently, are listed under *Repeated failures*. Terms are `ref:<text>`, `status:completed\|failed\|cancelled\|running` (`passed` works too), `ran:<age>` (or `since:`) and `limit:<n>` (default 20); bare words match the ref |
 | `exec:<verb>/<id>` | The executable's definition, its script file when it has one, and its last 5 runs. `<verb> <id>` works too |
 | `file:<path>` | The file's contents, resolved from the workspace root. Paths outside the workspace are rejected |
 
 `--max-chars` (default 40000) is shared by all sections. Metadata, definitions and tables are
 always kept; file and script text shrinks next, and log output gives way first. `--max-lines`
 caps each run's log (default 400), and `--no-history` drops recent runs from `exec:` sections.
-A section that was cut is marked `truncated`.
+A section that was cut is marked `truncated`, and its heading says how much was kept, e.g.
+`Output (last 120 of 2340 lines)`. Logs and files are fenced so their own Markdown can't break the
+document's structure.
 
 `-o json` returns `{"sections": [{"type", "ref", "label", "metadata", "content", "truncated"}],
 "totalChars", "maxChars"}`. The MCP server exposes the same output as the `get_digest` tool.

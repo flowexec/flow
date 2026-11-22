@@ -68,9 +68,9 @@ func (r *resolver) fileSection(p string) (*Section, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	s.textHeading = "Contents"
 	s.parts = append(s.parts, &part{
-		body: body, tier: tierFile, limit: maxFileChars, truncated: info.Size() > maxFileRead,
+		heading: "Contents", body: body, tier: tierFile, limit: maxFileChars, verbatim: true,
+		lang: fenceLang(rel), totalLines: lineCount(body), truncated: info.Size() > maxFileRead,
 	})
 	return s, nil
 }
@@ -103,4 +103,29 @@ func within(root, path string) bool {
 		return false
 	}
 	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
+}
+
+func lineCount(s string) int {
+	if s == "" {
+		return 0
+	}
+	return strings.Count(s, "\n") + 1
+}
+
+const langYAML = "yaml"
+
+// fenceLang names a Markdown fence language from a file extension, for highlighting.
+func fenceLang(path string) string {
+	switch ext := strings.TrimPrefix(filepath.Ext(path), "."); ext {
+	case "yml", "flow", "tmpl":
+		return langYAML
+	case "sh", "bash", "zsh":
+		return "sh"
+	case "py":
+		return "python"
+	case "js", "ts", "go", "json", langYAML, "toml", "md", "sql", "rb", "rs":
+		return ext
+	default:
+		return ""
+	}
 }

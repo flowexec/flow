@@ -76,9 +76,7 @@ type Section struct {
 
 	// fields is the metadata in display order for text output.
 	fields []field
-	// textHeading titles the content in text output only, so JSON content stays raw.
-	textHeading string
-	parts       []*part
+	parts  []*part
 }
 
 type field struct{ key, value string }
@@ -94,12 +92,64 @@ const (
 )
 
 type part struct {
-	heading   string
-	body      string
-	tier      tier
-	keepTail  bool // logs keep their end, where failures surface; files keep their start
-	limit     int
-	truncated bool
+	heading string
+	body    string
+	tier    tier
+	// keepTail keeps a log's end, where failures surface; files keep their start.
+	keepTail bool
+	limit    int
+	// verbatim content (logs, files, YAML) is fenced in Markdown so its own headings and
+	// formatting can't bleed into the document's structure.
+	verbatim bool
+	lang     string
+	// totalLines is the line count before any cut, for "(last N of M lines)".
+	totalLines int
+	truncated  bool
+}
+
+// title is the part's heading, noting how much of it was kept when it was cut.
+func (p *part) title() string {
+	if !p.truncated || p.totalLines == 0 {
+		return p.heading
+	}
+	kept := 0
+	if p.body != "" {
+		kept = strings.Count(p.body, "\n") + 1
+	}
+	if kept == 0 {
+		return fmt.Sprintf("%s (omitted to fit the budget; %d lines)", p.heading, p.totalLines)
+	}
+	edge := "first"
+	if p.keepTail {
+		edge = "last"
+	}
+	return fmt.Sprintf("%s (%s %d of %d lines)", p.heading, edge, kept, p.totalLines)
+}
+
+// markdown renders the part under a heading, fencing verbatim content.
+func (p *part) markdown(level string) string {
+	var b strings.Builder
+	if p.heading != "" {
+		b.WriteString(level + " " + p.title() + "\n\n")
+	}
+	if p.body == "" {
+		return strings.TrimSuffix(b.String(), "\n\n")
+	}
+	if !p.verbatim {
+		b.WriteString(p.body)
+		return b.String()
+	}
+	fence := "```"
+	for strings.Contains(p.body, fence) {
+		fence += "`"
+	}
+	b.WriteString(fence + p.lang + "\n" + p.body + "\n" + fence)
+	return b.String()
+}
+
+// overhead is what markdown adds around the body: heading, fences and separators.
+func (p *part) overhead() int {
+	return runeLen(p.heading) + len(p.lang) + 64
 }
 
 type source struct {
@@ -223,20 +273,22 @@ func (s *Section) addField(key, value string) {
 	s.fields = append(s.fields, field{key: key, value: value})
 }
 
-// assemble joins the (budgeted) parts into Content.
+// assemble joins the (budgeted) parts into Content. A single-part section's content is the raw
+// body (a log, a file) so consumers needn't unwrap it; a composite one is Markdown.
 func (s *Section) assemble() {
-	var blocks []string
 	for _, p := range s.parts {
 		if p.truncated {
 			s.Truncated = true
 		}
-		switch {
-		case p.heading != "" && p.body != "":
-			blocks = append(blocks, "### "+p.heading+"\n\n"+p.body)
-		case p.heading != "":
-			blocks = append(blocks, "### "+p.heading)
-		case p.body != "":
-			blocks = append(blocks, p.body)
+	}
+	if len(s.parts) == 1 {
+		s.Content = s.parts[0].body
+		return
+	}
+	blocks := make([]string, 0, len(s.parts))
+	for _, p := range s.parts {
+		if md := p.markdown("###"); md != "" {
+			blocks = append(blocks, md)
 		}
 	}
 	s.Content = strings.Join(blocks, "\n\n")

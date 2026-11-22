@@ -21,9 +21,9 @@ func RegisterDigestCmd(ctx *context.Context, rootCmd *cobra.Command) {
 		Short: "Gather runs, executables and files into one document.",
 		Long: "Resolve each source against run history, the executable cache and the workspace, and print " +
 			"one labeled section per source. Sources are type:value pointers:\n\n" +
-			"  run:<id>         one run's metadata and log tail\n" +
-			"  runs:<filter>    a table of matching runs; filter terms are ref:<text>, status:<passed|failed|" +
-			"cancelled|running>, ran:<age> (or since:) and limit:<n>, and bare words match the ref\n" +
+			"  run:<id>         one run's metadata and log tail; a unique ID prefix (6+ characters) works\n" +
+			"  runs:<filter>    a table of matching runs; filter terms are ref:<text>, status:<completed|failed|" +
+			"cancelled|running> (passed works too), ran:<age> (or since:) and limit:<n>, and bare words match the ref\n" +
 			"  exec:<verb>/<id> an executable's definition, script source and last 5 runs\n" +
 			"  file:<path>      a file's contents, relative to the workspace root and confined to it",
 		Example: digestExamples,

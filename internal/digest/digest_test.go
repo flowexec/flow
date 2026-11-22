@@ -140,7 +140,9 @@ func TestRunSection(t *testing.T) {
 		t.Fatalf("unexpected content %q (truncated=%v)", s.Content, s.Truncated)
 	}
 	text := doc.Text()
-	for _, want := range []string{"## Run run-1", "- Status: failed (exit 1)", "### Output\n", "--- FAIL: TestMerge"} {
+	for _, want := range []string{
+		"## Run run-1", "- Status: failed (exit 1)", "### Output\n\n```text\nsetup\n--- FAIL: TestMerge\nFAIL\n```",
+	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("text output missing %q:\n%s", want, text)
 		}
@@ -156,7 +158,7 @@ func TestRunSection_MaxLinesKeepsTail(t *testing.T) {
 	if s.Content != "log line 48\nlog line 49\nlog line 50" || !s.Truncated {
 		t.Fatalf("expected the last 3 lines, truncated; got %q (truncated=%v)", s.Content, s.Truncated)
 	}
-	if !strings.Contains(doc.Text(), "### Output (last 3 lines)") {
+	if !strings.Contains(doc.Text(), "### Output (last 3 of 50 lines)") {
 		t.Fatalf("text heading should name the line cap:\n%s", doc.Text())
 	}
 }
@@ -187,8 +189,15 @@ func TestRunsSection_FiltersAndNotesRepeatedFailures(t *testing.T) {
 	if !strings.Contains(s.Content, "| a | test ws/unit | failed | 1 |") {
 		t.Fatalf("table missing row for a:\n%s", s.Content)
 	}
-	if !strings.Contains(s.Content, "Note: test ws/unit failed 2 of its 2 runs shown.") {
+	// c (passed) is outside status:failed but still counts toward the ref's recent history, and e
+	// is outside the 7d window.
+	if !strings.Contains(s.Content, "### Repeated failures\n\n- `test ws/unit` — failed 2 of its last 3 runs within 7d, "+
+		"including the latest") {
 		t.Fatalf("expected a repeated-failure note:\n%s", s.Content)
+	}
+	notes, ok := s.Metadata["repeatedFailures"].([]digest.RepeatedFailure)
+	if !ok || len(notes) != 1 || notes[0].Failed != 2 || notes[0].Runs != 3 {
+		t.Fatalf("unexpected structured notes: %+v", s.Metadata["repeatedFailures"])
 	}
 	if strings.Contains(s.Content, "line") {
 		t.Fatalf("runs summary must not include log content:\n%s", s.Content)
@@ -201,8 +210,79 @@ func TestRunsSection_Limit(t *testing.T) {
 		f.addRun(fmt.Sprintf("r%d", i), "test ws/unit", 0, time.Duration(i+1)*time.Minute, "")
 	}
 	doc := resolve(t, f, digest.Options{}, "runs:limit:2")
-	if got := doc.Sections[0].Metadata["count"]; got != 2 {
-		t.Fatalf("expected 2 runs, got %v", got)
+	s := doc.Sections[0]
+	if s.Metadata["count"] != 2 || s.Metadata["matched"] != 5 {
+		t.Fatalf("expected 2 of 5 runs, got %v of %v", s.Metadata["count"], s.Metadata["matched"])
+	}
+	if !strings.Contains(doc.Text(), "- Matched: 5 (showing the newest 2)") {
+		t.Fatalf("text should say the table is cut:\n%s", doc.Text())
+	}
+}
+
+func TestRunsSection_NoNoteForRecoveredRefs(t *testing.T) {
+	f := newFixture(t)
+	f.addRun("ok", "test ws/unit", 0, 1*time.Hour, "")
+	f.addRun("bad1", "test ws/unit", 1, 2*time.Hour, "")
+	f.addRun("bad2", "test ws/unit", 1, 3*time.Hour, "")
+
+	doc := resolve(t, f, digest.Options{}, "runs:status:failed")
+	if _, ok := doc.Sections[0].Metadata["repeatedFailures"]; ok {
+		t.Fatalf("a ref whose latest run passed shouldn't be flagged: %v", doc.Sections[0].Metadata)
+	}
+}
+
+func TestRunsSection_RejectsUnknownFilterKeys(t *testing.T) {
+	f := newFixture(t)
+	_, err := digest.Resolve(context.Background(), []string{"runs:stauts:failed"}, digest.Options{}, f.deps())
+	if err == nil || !strings.Contains(err.Error(), `unknown filter "stauts"`) {
+		t.Fatalf("expected an unknown-filter error, got %v", err)
+	}
+	// A full ref's colon is not a key.
+	resolve(t, f, digest.Options{}, "runs:ws/ns:unit")
+}
+
+func TestRunSection_IDPrefix(t *testing.T) {
+	f := newFixture(t)
+	f.addRun("abcdef12-0000", "test ws/unit", 0, time.Minute, "")
+	f.addRun("abcdef99-0000", "test ws/unit", 0, time.Minute, "")
+
+	doc := resolve(t, f, digest.Options{}, "run:abcdef12")
+	if doc.Sections[0].Metadata["id"] != "abcdef12-0000" {
+		t.Fatalf("prefix should resolve to the full ID: %v", doc.Sections[0].Metadata)
+	}
+	_, err := digest.Resolve(context.Background(), []string{"run:abcdef"}, digest.Options{}, f.deps())
+	if err == nil || !strings.Contains(err.Error(), "matches 2 runs") {
+		t.Fatalf("expected an ambiguous-prefix error, got %v", err)
+	}
+	_, err = digest.Resolve(context.Background(), []string{"run:abc"}, digest.Options{}, f.deps())
+	var nf flowerrors.RunNotFoundError
+	if !errors.As(err, &nf) {
+		t.Fatalf("a prefix under 6 characters should not match: %v", err)
+	}
+}
+
+func TestRunsSection_ErrorSnippetKeepsTheCause(t *testing.T) {
+	f := newFixture(t)
+	rec := store.ExecutionRecord{
+		ID: "nested", Ref: "validate ws/", StartedAt: now, Status: store.RunFailed, ExitCode: 1,
+		Error: "serial execution failed: lint ws/: parallel execution failed: lint ws/go: " +
+			"parallel execution failed: lint ws/go: command exited with non-zero status exit status 1",
+	}
+	if err := f.ds.RecordExecution(rec); err != nil {
+		t.Fatal(err)
+	}
+	doc := resolve(t, f, digest.Options{}, "runs:")
+	if !strings.Contains(doc.Sections[0].Content, "| lint ws/: lint ws/go: exit status 1 |") {
+		t.Fatalf("error cell should drop wrappers and repeats:\n%s", doc.Sections[0].Content)
+	}
+}
+
+func TestText_FencesEmbeddedMarkdown(t *testing.T) {
+	f := newFixture(t)
+	f.writeFile("README.md", "## Not a digest section\n```go\nx := 1\n```")
+	text := resolve(t, f, digest.Options{}, "file:README.md").Text()
+	if !strings.Contains(text, "````md\n## Not a digest section") {
+		t.Fatalf("file content should be fenced with a fence longer than any inside it:\n%s", text)
 	}
 }
 
@@ -227,8 +307,9 @@ func TestExecSection(t *testing.T) {
 			t.Fatalf("%s: unexpected label %q", src, s.Label)
 		}
 		for _, want := range []string{
-			"### Definition", "name: unit", "### Script: .execs/scripts/unit.sh", "go test ./...",
-			"### Recent runs (last 5)", "| r1 | failed | 1 | 1.5s | 21 min ago |", "| r2 | completed | 0 | 1.5s | 6d ago |",
+			"### Definition\n\n```yaml\nexec:\n  file: scripts/unit.sh\nname: unit\n",
+			"### Script: .execs/scripts/unit.sh\n\n```sh\n#!/bin/sh\ngo test ./...\n```",
+			"### Recent runs", "| r1 | failed | 1 | 1.5s | 21 min ago |", "| r2 | completed | 0 | 1.5s | 6d ago |",
 		} {
 			if !strings.Contains(s.Content, want) {
 				t.Errorf("%s: content missing %q:\n%s", src, want, s.Content)
@@ -366,5 +447,35 @@ func TestBudget_MetadataSurvivesAZeroContentBudget(t *testing.T) {
 	s := doc.Sections[0]
 	if s.Metadata["status"] != "failed" || !s.Truncated {
 		t.Fatalf("metadata should remain and content be marked truncated: %+v", s)
+	}
+}
+
+func TestBudget_CompositeSectionsStayWithinBudget(t *testing.T) {
+	f := newFixture(t)
+	flowFile := f.writeFile(".execs/test.flow", "executables: []\n")
+	f.writeFile(".execs/big.sh", strings.Repeat("echo line\n", 500))
+	e := &executable.Executable{Verb: "test", Name: "big", Exec: &executable.ExecExecutableType{File: "big.sh"}}
+	e.SetContext("ws", f.wsDir, "", flowFile)
+	f.execs.byRef[executable.NewRef("ws/big", "test")] = e
+
+	const budget = 800
+	doc := resolve(t, f, digest.Options{MaxChars: budget}, "exec:test/big")
+	if doc.TotalChars > budget {
+		t.Fatalf("total %d exceeds budget %d:\n%s", doc.TotalChars, budget, doc.Sections[0].Content)
+	}
+	if !strings.Contains(doc.Sections[0].Content, "### Script: .execs/big.sh (first ") {
+		t.Fatalf("the cut script heading should say how much was kept:\n%s", doc.Sections[0].Content)
+	}
+}
+
+func TestRunsSection_RunningRunHasNoDurationOrExit(t *testing.T) {
+	f := newFixture(t)
+	rec := store.ExecutionRecord{ID: "live", Ref: "test ws/unit", StartedAt: now, Status: store.RunRunning}
+	if err := f.ds.RecordExecution(rec); err != nil {
+		t.Fatal(err)
+	}
+	doc := resolve(t, f, digest.Options{}, "runs:")
+	if !strings.Contains(doc.Sections[0].Content, "| live | test ws/unit | running | - | - |") {
+		t.Fatalf("a running run shouldn't show a final duration or exit code:\n%s", doc.Sections[0].Content)
 	}
 }

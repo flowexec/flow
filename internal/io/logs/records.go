@@ -244,8 +244,9 @@ func joinRecords(records []store.ExecutionRecord, idx archiveIndex) []UnifiedRec
 	return unified
 }
 
-// FindRecord returns the run with the given ID, searching all retained history rather than the
-// recent window LoadRecords reads.
+// FindRecord returns the run with the given ID, or the one run whose ID starts with it (at least
+// minIDPrefix characters). It searches all retained history rather than the recent window
+// LoadRecords reads.
 func FindRecord(ds store.DataStore, logsDir string, id string) (*UnifiedRecord, error) {
 	if ds == nil {
 		return nil, errors.New("data store is not available")
@@ -254,17 +255,33 @@ func FindRecord(ds store.DataStore, logsDir string, id string) (*UnifiedRecord, 
 	if err != nil {
 		return nil, err
 	}
+	var matches []store.ExecutionRecord
 	for _, records := range byRef {
 		for _, r := range records {
-			if r.ID != id {
-				continue
+			switch {
+			case r.ID == id:
+				return joinOne(ds, logsDir, r), nil
+			case len(id) >= minIDPrefix && strings.HasPrefix(r.ID, id):
+				matches = append(matches, r)
 			}
-			reconciled := reconcileStale(ds, []store.ExecutionRecord{r})
-			joined := joinRecords(reconciled, buildArchiveIndex(logsDir))
-			return &joined[0], nil
 		}
 	}
-	return nil, flowerrors.NewRunNotFoundError(id)
+	switch len(matches) {
+	case 0:
+		return nil, flowerrors.NewRunNotFoundError(id)
+	case 1:
+		return joinOne(ds, logsDir, matches[0]), nil
+	default:
+		return nil, flowerrors.NewUsageError("run ID %q matches %d runs; give more of the ID", id, len(matches))
+	}
+}
+
+// minIDPrefix keeps a short prefix from matching most of history.
+const minIDPrefix = 6
+
+func joinOne(ds store.DataStore, logsDir string, r store.ExecutionRecord) *UnifiedRecord {
+	joined := joinRecords(reconcileStale(ds, []store.ExecutionRecord{r}), buildArchiveIndex(logsDir))
+	return &joined[0]
 }
 
 var ageWithDaysRe = regexp.MustCompile(`^(\d+)d(.*)$`)

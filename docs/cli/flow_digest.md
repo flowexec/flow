@@ -11,8 +11,8 @@ Gather runs, executables and files into one document.
 
 Resolve each source against run history, the executable cache and the workspace, and print one labeled section per source. Sources are type:value pointers:
 
-  run:<id>         one run's metadata and log tail
-  runs:<filter>    a table of matching runs; filter terms are ref:<text>, status:<passed|failed|cancelled|running>, ran:<age> (or since:) and limit:<n>, and bare words match the ref
+  run:<id>         one run's metadata and log tail; a unique ID prefix (6+ characters) works
+  runs:<filter>    a table of matching runs; filter terms are ref:<text>, status:<completed|failed|cancelled|running> (passed works too), ran:<age> (or since:) and limit:<n>, and bare words match the ref
   exec:<verb>/<id> an executable's definition, script source and last 5 runs
   file:<path>      a file's contents, relative to the workspace root and confined to it
 
