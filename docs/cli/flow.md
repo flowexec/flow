@@ -27,6 +27,7 @@ See https://flowexec.io for more information.
 - [flow cache](flow_cache.md) — Manage key-value data that persists across runs.
 - [flow cli](flow_cli.md) — Manage the flow CLI itself.
 - [flow config](flow_config.md) — View and update global flow configuration.
+- [flow digest](flow_digest.md) — Gather runs, executables and files into one document.
 - [flow exec](flow_exec.md) — Execute any executable by reference.
 - [flow logs](flow_logs.md) — View execution history and logs.
 - [flow mcp](flow_mcp.md) — Start Model Context Provider (MCP) server for AI assistant integration

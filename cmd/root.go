@@ -121,6 +121,7 @@ func RegisterSubCommands(ctx *context.Context, rootCmd *cobra.Command, mcpOpts .
 	internal.RegisterWorktreeCmd(ctx, rootCmd)
 	internal.RegisterTemplateCmd(ctx, rootCmd)
 	internal.RegisterLogsCmd(ctx, rootCmd)
+	internal.RegisterDigestCmd(ctx, rootCmd)
 	internal.RegisterSyncCmd(ctx, rootCmd)
 	internal.RegisterSchemaCmd(ctx, rootCmd)
 	internal.RegisterMCPCmd(ctx, rootCmd, mcpOpts...)

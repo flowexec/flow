@@ -58,6 +58,7 @@ Connecting the server gives your assistant the tools; it does not make it *reach
 | `run_python` | Run **Python** code through flow (with `code`, a `label`, working `dir`, and optional `workspace`) — uses the workspace's virtualenv when there is one |
 | `run_executable` | Run a **transient executable of any type** from an inline `spec` — a serial/parallel batch, an HTTP `request`, a `render`, or a `launch` — without saving a file |
 | `get_execution_logs` | Output from recent runs, filterable by `source`/`session`/`status`, `mine` for this session's own runs, or `id` for one run |
+| `get_digest` | One document from several `sources` (`run:<id>`, `runs:<filter>`, `exec:<verb>/<id>`, `file:<path>`), fit to a `max_chars` budget — the same output as `flow digest -o json` |
 | `sync_executables` | Refresh cached workspace and executable state |
 | `write_flowfile` | Create or update a `.flow` file, validated before writing |
 
@@ -66,7 +67,7 @@ The run tools form a ladder, closest-fit first: **`execute`** for a task you've 
 **Working in a worktree or a fresh clone**
 
 The MCP server inherits whatever directory it was started in, which is often not where you are
-working. Pass `dir` on `execute`, `run_command`, `run_python`, `run_executable`, or `list_executables` and flow
+working. Pass `dir` on `execute`, `run_command`, `run_python`, `run_executable`, `list_executables`, or `get_digest` and flow
 resolves the workspace by walking up from *that* directory to the nearest `flow.yaml` — so a git
 worktree or a just-cloned repo works without being registered first. `get_info` reports
 `workspaceRegistered` and `workspaceSource` so you can tell which case you are in; an

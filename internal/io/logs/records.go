@@ -1,13 +1,17 @@
 package logs
 
 import (
+	"errors"
 	"fmt"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	tuikitIO "github.com/flowexec/tuikit/io"
 
+	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 	"github.com/flowexec/flow/v2/pkg/store"
 )
 
@@ -238,4 +242,65 @@ func joinRecords(records []store.ExecutionRecord, idx archiveIndex) []UnifiedRec
 		return unified[i].StartedAt.After(unified[j].StartedAt)
 	})
 	return unified
+}
+
+// FindRecord returns the run with the given ID, searching all retained history rather than the
+// recent window LoadRecords reads.
+func FindRecord(ds store.DataStore, logsDir string, id string) (*UnifiedRecord, error) {
+	if ds == nil {
+		return nil, errors.New("data store is not available")
+	}
+	byRef, err := ds.GetAllExecutionHistory(0)
+	if err != nil {
+		return nil, err
+	}
+	for _, records := range byRef {
+		for _, r := range records {
+			if r.ID != id {
+				continue
+			}
+			reconciled := reconcileStale(ds, []store.ExecutionRecord{r})
+			joined := joinRecords(reconciled, buildArchiveIndex(logsDir))
+			return &joined[0], nil
+		}
+	}
+	return nil, flowerrors.NewRunNotFoundError(id)
+}
+
+var ageWithDaysRe = regexp.MustCompile(`^(\d+)d(.*)$`)
+
+// ParseAge parses a lookback window such as "90m", "7d" or "1d12h": time.ParseDuration plus a
+// leading day count.
+func ParseAge(s string) (time.Duration, error) {
+	if m := ageWithDaysRe.FindStringSubmatch(s); m != nil {
+		days, _ := strconv.Atoi(m[1])
+		d := time.Duration(days) * 24 * time.Hour
+		if m[2] != "" {
+			rest, err := time.ParseDuration(m[2])
+			if err != nil {
+				return 0, fmt.Errorf("invalid duration %q: %w", s, err)
+			}
+			d += rest
+		}
+		return d, nil
+	}
+	return time.ParseDuration(s)
+}
+
+// LoadRecordsForRefs retrieves history for several refs in one read, newest first. Use it for one
+// executable reached through alias verbs, since runs are recorded under the verb that was typed.
+func LoadRecordsForRefs(ds store.DataStore, logsDir string, refs []string, limitPerRef int) ([]UnifiedRecord, error) {
+	if ds == nil {
+		return nil, nil
+	}
+	byRef, err := ds.GetExecutionHistories(refs, limitPerRef)
+	if err != nil {
+		return nil, err
+	}
+	var records []store.ExecutionRecord
+	for _, rs := range byRef {
+		records = append(records, rs...)
+	}
+	records = reconcileStale(ds, records)
+	return joinRecords(records, buildArchiveIndex(logsDir)), nil
 }

@@ -558,3 +558,24 @@ var GlobalCacheFlag = &Metadata{
 	Default:   false,
 	Required:  false,
 }
+
+var DigestMaxCharsFlag = &Metadata{
+	Name:     "max-chars",
+	Usage:    "Character budget shared by all sections. Log, file and script text shrink to fit; logs first.",
+	Default:  40000,
+	Required: false,
+}
+
+var DigestMaxLinesFlag = &Metadata{
+	Name:     "max-lines",
+	Usage:    "Maximum log lines kept per run section.",
+	Default:  400,
+	Required: false,
+}
+
+var DigestNoHistoryFlag = &Metadata{
+	Name:     "no-history",
+	Usage:    "Omit recent runs from exec sections.",
+	Default:  false,
+	Required: false,
+}

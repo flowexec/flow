@@ -96,6 +96,7 @@ var _ = Describe("MCP Server", func() {
 				"run_python",
 				"run_executable",
 				"get_execution_logs",
+				"get_digest",
 				"sync_executables",
 				"write_flowfile",
 				"get_workspace_config",
@@ -837,6 +838,48 @@ var _ = Describe("MCP Server", func() {
 
 			It("should require a spec", func() {
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("run_executable", map[string]interface{}{}))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+			})
+		})
+
+		Context("get_digest tool", func() {
+			It("should pass sources and the budget to the CLI and return structured sections", func() {
+				out := `{"sections":[{"type":"file","ref":"flow.yaml","label":"File: flow.yaml",` +
+					`"metadata":{"path":"flow.yaml"},"content":"tags: []","truncated":false}],` +
+					`"totalChars":8,"maxChars":500}`
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--max-chars", "500",
+						"--", "file:flow.yaml", "runs:status:failed").
+					Return(out, nil)
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{
+					"sources":   []string{"file:flow.yaml", "runs:status:failed"},
+					"max_chars": 500,
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+				Expect(result.StructuredContent).ToNot(BeNil())
+				Expect(getTextContent(result)).To(Equal(out))
+			})
+
+			It("should surface the CLI's error code", func() {
+				mockExecutor.EXPECT().
+					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--", "run:nope").
+					Return(`{"error":{"code":"NOT_FOUND","message":"run nope not found"}}`, errors.New("exit status 1"))
+
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{
+					"sources": []string{"run:nope"},
+				}))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result.IsError).To(BeTrue())
+				Expect(getTextContent(result)).To(ContainSubstring(`"code":"NOT_FOUND"`))
+			})
+
+			It("should reject a call without sources", func() {
+				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{}))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.IsError).To(BeTrue())
 			})

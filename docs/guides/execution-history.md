@@ -135,6 +135,36 @@ flow logs kill a1b2c3d4
 > Make sure all required parameters are provided via `--param` flags or environment variables when
 > using `--background`.
 
+## Digests
+
+`flow digest` gathers runs, executables and files into one document, with a `## ` section per
+source. Use it to read a failure next to the task that produced it, or to hand project state to a
+script or agent.
+
+```shell
+flow digest run:<id>                             # metadata and the last 400 log lines
+flow digest runs:"test status:failed ran:7d"     # a table of matching runs
+flow digest exec:test/unit                       # definition, script source and last 5 runs
+flow digest file:flow.yaml exec:build/binary     # several sources in one document
+```
+
+Each source is `type:value`:
+
+| Source | Resolves to |
+|--------|-------------|
+| `run:<id>` | One run's metadata and the tail of its log |
+| `runs:<filter>` | A summary table of runs, with a note when the same ref fails repeatedly. Terms are `ref:<text>`, `status:passed\|failed\|cancelled\|running`, `ran:<age>` (or `since:`) and `limit:<n>` (default 20); bare words match the ref |
+| `exec:<verb>/<id>` | The executable's definition, its script file when it has one, and its last 5 runs. `<verb> <id>` works too |
+| `file:<path>` | The file's contents, resolved from the workspace root. Paths outside the workspace are rejected |
+
+`--max-chars` (default 40000) is shared by all sections. Metadata, definitions and tables are
+always kept; file and script text shrinks next, and log output gives way first. `--max-lines`
+caps each run's log (default 400), and `--no-history` drops recent runs from `exec:` sections.
+A section that was cut is marked `truncated`.
+
+`-o json` returns `{"sections": [{"type", "ref", "label", "metadata", "content", "truncated"}],
+"totalChars", "maxChars"}`. The MCP server exposes the same output as the `get_digest` tool.
+
 ## Clearing History
 
 ```shell
