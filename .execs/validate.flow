@@ -69,7 +69,7 @@ executables:
             # upstream built it with, and golangci-lint refuses to run once that trails the
             # directive. This also pins one version for CI and local runs alike, rather than
             # deferring to whatever happens to be on PATH.
-            lint="go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0"
+            lint="go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0"
 
             if [ "${CI:-}" = "true" ]; then
               echo "Running golangci-lint with sarif output..."

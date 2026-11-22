@@ -120,7 +120,7 @@ executables:
           # Create temporary Dockerfile that uses TARGETARCH for multi-arch builds
           TEMP_DOCKERFILE=/tmp/Dockerfile.multiarch.$$
 
-          echo "FROM --platform=\$TARGETPLATFORM golang:1.25.1-bookworm" > "$TEMP_DOCKERFILE"
+          echo "FROM --platform=\$TARGETPLATFORM golang:1.27.3-bookworm" > "$TEMP_DOCKERFILE"
           echo "" >> "$TEMP_DOCKERFILE"
           echo "ARG TARGETARCH" >> "$TEMP_DOCKERFILE"
           echo 'ENV DISABLE_FLOW_INTERACTIVE="true"' >> "$TEMP_DOCKERFILE"
