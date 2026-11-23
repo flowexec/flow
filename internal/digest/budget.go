@@ -6,15 +6,16 @@ import (
 	"unicode/utf8"
 )
 
-// applyBudget shrinks elastic content so all sections fit maxChars. Fixed content is counted
+// applyBudget shrinks elastic content so all sections' Content fits maxChars. Fixed content is counted
 // first and never cut; files and scripts then share what is left, and logs take the remainder.
 // Within a tier the budget is split fairly: small parts keep everything and the largest are cut.
 func applyBudget(sections []*Section, maxChars int) {
 	remaining := maxChars
 	var files, logParts []*part
 	for _, s := range sections {
-		for _, p := range s.parts {
-			if len(s.parts) > 1 {
+		parts := s.contentParts()
+		for _, p := range parts {
+			if len(parts) > 1 {
 				remaining -= p.overhead()
 			}
 			switch p.tier {

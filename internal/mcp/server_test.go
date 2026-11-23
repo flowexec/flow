@@ -867,7 +867,7 @@ var _ = Describe("MCP Server", func() {
 			It("should find the document when a log line precedes it", func() {
 				out := `level=warn msg="cache stale"` + "\n" + `{"sections":[],"totalChars":0,"maxChars":40000}`
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--", "runs:").
+					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--max-chars", "12000", "--", "runs:").
 					Return(out, nil)
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{
@@ -881,7 +881,7 @@ var _ = Describe("MCP Server", func() {
 
 			It("should surface the CLI's error code", func() {
 				mockExecutor.EXPECT().
-					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--", "run:nope").
+					ExecuteContext(gomock.Any(), "digest", "--output", "json", "--max-chars", "12000", "--", "run:nope").
 					Return(`{"error":{"code":"NOT_FOUND","message":"run nope not found"}}`, errors.New("exit status 1"))
 
 				result, err := mcpClient.CallTool(ctx, newCallToolRequest("get_digest", map[string]interface{}{

@@ -209,16 +209,17 @@ func (r *resolver) runsSection(value string, q runsQuery) (*Section, error) {
 	if len(rows) > 0 {
 		body = r.runTable(rows, true)
 	}
-	s.parts = append(s.parts, &part{body: body, tier: tierFixed})
+	s.parts = append(s.parts, &part{body: body, tier: tierFixed, structured: true})
 	if len(notes) > 0 {
 		s.parts = append(s.parts, &part{
-			heading: "Repeated failures", body: failureNotes(notes, q.sinceText), tier: tierFixed,
+			heading: "Repeated failures", body: failureNotes(notes, q.sinceText), tier: tierFixed, structured: true,
 		})
 	}
 	return s, nil
 }
 
 // RepeatedFailure flags a ref whose latest run failed and that failed more than once recently.
+// Runs counts finished runs only; cancelled and running ones are left out.
 type RepeatedFailure struct {
 	Ref    string `json:"execRef" yaml:"execRef"`
 	Failed int    `json:"failed"  yaml:"failed"`
@@ -226,13 +227,19 @@ type RepeatedFailure struct {
 }
 
 // repeatedFailures finds refs that are failing now (latest run failed) and failed at least twice
-// in the given history, which must be newest first. Most failures first.
+// in the given history, which must be newest first. Most failures first. Cancelled and running
+// runs are skipped: neither passed nor failed, they'd otherwise hide a streak behind an
+// interrupted retry or the run still in flight.
 func repeatedFailures(records []logs.UnifiedRecord) []RepeatedFailure {
 	byRef := map[string]*RepeatedFailure{}
 	latestFailed := map[string]bool{}
 	var order []string
 	for _, rec := range records {
-		failed := logs.CanonicalStatus(rec) == store.RunFailed
+		status := logs.CanonicalStatus(rec)
+		if status == store.RunCancelled || status == store.RunRunning {
+			continue
+		}
+		failed := status == store.RunFailed
 		t, ok := byRef[rec.Ref]
 		if !ok {
 			t = &RepeatedFailure{Ref: rec.Ref}

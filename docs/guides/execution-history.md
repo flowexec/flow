@@ -165,7 +165,10 @@ A section that was cut is marked `truncated`, and its heading says how much was 
 document's structure.
 
 `-o json` returns `{"sections": [{"type", "ref", "label", "metadata", "content", "truncated"}],
-"totalChars", "maxChars"}`. The MCP server exposes the same output as the `get_digest` tool.
+"totalChars", "maxChars"}`. Run tables and repeated failures are in `metadata` (`runs`, `recentRuns`,
+`repeatedFailures`) and not repeated in `content`. Cancelled and running runs don't count toward a
+failure streak. The MCP server exposes the same output as the `get_digest` tool, with a smaller
+default budget (12000).
 
 ## Clearing History
 

@@ -14,23 +14,20 @@ import (
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 )
 
+// mcpDefaultMaxChars is lower than the CLI's default: an agent pays for every character in context,
+// and can ask for more once it knows it needs it.
+const mcpDefaultMaxChars = 12000
+
 func addDigestTools(srv *server.MCPServer, executor CommandExecutor) {
 	getDigest := mcp.NewTool("get_digest",
-		mcp.WithDescription("Gather project state into one document: run logs, run history, executable "+
-			"definitions and file contents. Each source is a type:value pointer: `run:<id>` (metadata and log "+
-			"tail), `runs:<filter>` (table of runs; terms `ref:`, `status:completed|failed|cancelled|running`, "+
-			"`ran:7d`, `limit:`, bare words match the ref), `exec:<verb>/<id>` (definition, script and last 5 "+
-			"runs) or `file:<path>` (relative to the workspace root, which it can't leave)."),
+		mcp.WithDescription("Runs, executables and files in one budgeted document, e.g. a failed run's log "+
+			"next to its task's definition."),
 		mcp.WithArray("sources", mcp.Required(), mcp.WithStringItems(),
-			mcp.Description(`Sources to resolve, e.g. ["run:3f2a…", "runs:status:failed ran:1d", "exec:test/unit", `+
-				`"file:flow.yaml"]`)),
+			mcp.Description("`run:<id>`, `runs:<filter>` (ref:, status:, ran:7d, limit:), `exec:<verb>/<id>`, "+
+				"`file:<path>` (workspace-relative)")),
 		mcp.WithNumber("max_chars", mcp.Description(fmt.Sprintf(
-			"Character budget shared by all sections (default %d). Logs shrink first, then files.",
-			digest.DefaultMaxChars))),
-		mcp.WithString("dir", mcp.Description(
-			"Resolve the workspace from this directory. Set it to your working directory (a worktree or "+
-				"fresh clone) so file and exec sources read that tree.")),
-		mcp.WithOutputSchema[digest.Document](),
+			"Content budget (default %d); logs shrink first", mcpDefaultMaxChars))),
+		mcp.WithString("dir", mcp.Description("Your working directory")),
 	)
 	getDigest.Annotations = mcp.ToolAnnotation{
 		Title:           "Get a digest of project state",
@@ -46,13 +43,11 @@ func getDigestHandler(executor CommandExecutor) server.ToolHandlerFunc {
 		if len(sources) == 0 {
 			return toolError(ErrCodeInvalidInput, "sources must be a non-empty array of strings"), nil
 		}
-		cmdArgs := []string{"digest", outputFlag, outputJSON}
-		if maxChars := request.GetInt("max_chars", 0); maxChars != 0 {
-			if maxChars < 0 {
-				return toolError(ErrCodeInvalidInput, "max_chars must be positive"), nil
-			}
-			cmdArgs = append(cmdArgs, "--max-chars", strconv.Itoa(maxChars))
+		maxChars := request.GetInt("max_chars", mcpDefaultMaxChars)
+		if maxChars <= 0 {
+			return toolError(ErrCodeInvalidInput, "max_chars must be positive"), nil
 		}
+		cmdArgs := []string{"digest", outputFlag, outputJSON, "--max-chars", strconv.Itoa(maxChars)}
 		// `--` keeps a source that starts with a dash from being read as a flag.
 		cmdArgs = append(cmdArgs, "--")
 		cmdArgs = append(cmdArgs, sources...)

@@ -104,7 +104,7 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 			body = r.runTable(rows, false)
 		}
 		s.parts = append(s.parts, &part{
-			heading: "Recent runs", body: body, tier: tierFixed,
+			heading: "Recent runs", body: body, tier: tierFixed, structured: true,
 		})
 	}
 	return s, nil

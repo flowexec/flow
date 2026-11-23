@@ -105,6 +105,9 @@ type part struct {
 	// totalLines is the line count before any cut, for "(last N of M lines)".
 	totalLines int
 	truncated  bool
+	// structured parts render data already in Metadata (run tables, notes). Text output shows
+	// them; JSON content leaves them out rather than send the same rows twice.
+	structured bool
 }
 
 // title is the part's heading, noting how much of it was kept when it was cut.
@@ -273,6 +276,17 @@ func (s *Section) addField(key, value string) {
 	s.fields = append(s.fields, field{key: key, value: value})
 }
 
+// contentParts are the parts that make up Content: everything not already in Metadata.
+func (s *Section) contentParts() []*part {
+	parts := make([]*part, 0, len(s.parts))
+	for _, p := range s.parts {
+		if !p.structured {
+			parts = append(parts, p)
+		}
+	}
+	return parts
+}
+
 // assemble joins the (budgeted) parts into Content. A single-part section's content is the raw
 // body (a log, a file) so consumers needn't unwrap it; a composite one is Markdown.
 func (s *Section) assemble() {
@@ -281,12 +295,13 @@ func (s *Section) assemble() {
 			s.Truncated = true
 		}
 	}
-	if len(s.parts) == 1 {
-		s.Content = s.parts[0].body
+	parts := s.contentParts()
+	if len(parts) == 1 {
+		s.Content = parts[0].body
 		return
 	}
-	blocks := make([]string, 0, len(s.parts))
-	for _, p := range s.parts {
+	blocks := make([]string, 0, len(parts))
+	for _, p := range parts {
 		if md := p.markdown("###"); md != "" {
 			blocks = append(blocks, md)
 		}

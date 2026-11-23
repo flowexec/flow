@@ -186,21 +186,25 @@ func TestRunsSection_FiltersAndNotesRepeatedFailures(t *testing.T) {
 	if !ok || len(rows) != 2 || rows[0].ID != "a" || rows[1].ID != "b" {
 		t.Fatalf("expected failed unit runs a, b within 7d; got %+v", s.Metadata["runs"])
 	}
-	if !strings.Contains(s.Content, "| a | test ws/unit | failed | 1 |") {
-		t.Fatalf("table missing row for a:\n%s", s.Content)
+	text := doc.Text()
+	if !strings.Contains(text, "| a | test ws/unit | failed | 1 |") {
+		t.Fatalf("table missing row for a:\n%s", text)
+	}
+	if s.Content != "" {
+		t.Fatalf("JSON content shouldn't repeat the rows and notes already in metadata: %q", s.Content)
 	}
 	// c (passed) is outside status:failed but still counts toward the ref's recent history, and e
 	// is outside the 7d window.
-	if !strings.Contains(s.Content, "### Repeated failures\n\n- `test ws/unit` — failed 2 of its last 3 runs within 7d, "+
+	if !strings.Contains(text, "### Repeated failures\n\n- `test ws/unit` — failed 2 of its last 3 runs within 7d, "+
 		"including the latest") {
-		t.Fatalf("expected a repeated-failure note:\n%s", s.Content)
+		t.Fatalf("expected a repeated-failure note:\n%s", text)
 	}
 	notes, ok := s.Metadata["repeatedFailures"].([]digest.RepeatedFailure)
 	if !ok || len(notes) != 1 || notes[0].Failed != 2 || notes[0].Runs != 3 {
 		t.Fatalf("unexpected structured notes: %+v", s.Metadata["repeatedFailures"])
 	}
-	if strings.Contains(s.Content, "line") {
-		t.Fatalf("runs summary must not include log content:\n%s", s.Content)
+	if strings.Contains(text, "line") {
+		t.Fatalf("runs summary must not include log content:\n%s", text)
 	}
 }
 
@@ -228,6 +232,28 @@ func TestRunsSection_NoNoteForRecoveredRefs(t *testing.T) {
 	doc := resolve(t, f, digest.Options{}, "runs:status:failed")
 	if _, ok := doc.Sections[0].Metadata["repeatedFailures"]; ok {
 		t.Fatalf("a ref whose latest run passed shouldn't be flagged: %v", doc.Sections[0].Metadata)
+	}
+}
+
+func TestRunsSection_CancelledAndRunningDontBreakAStreak(t *testing.T) {
+	f := newFixture(t)
+	for _, r := range []store.ExecutionRecord{
+		{ID: "live", Status: store.RunRunning, StartedAt: now},
+		{ID: "stop", Status: store.RunCancelled, ExitCode: 130, StartedAt: now.Add(-time.Minute)},
+		{ID: "f1", Status: store.RunFailed, ExitCode: 1, StartedAt: now.Add(-2 * time.Minute)},
+		{ID: "f2", Status: store.RunFailed, ExitCode: 1, StartedAt: now.Add(-3 * time.Minute)},
+		{ID: "ok", Status: store.RunCompleted, StartedAt: now.Add(-4 * time.Minute)},
+	} {
+		r.Ref = "test ws/unit"
+		if err := f.ds.RecordExecution(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	doc := resolve(t, f, digest.Options{}, "runs:")
+	notes, ok := doc.Sections[0].Metadata["repeatedFailures"].([]digest.RepeatedFailure)
+	if !ok || len(notes) != 1 || notes[0].Failed != 2 || notes[0].Runs != 3 {
+		t.Fatalf("expected 2 of 3 finished runs failed, ignoring the cancelled and running ones: %+v",
+			doc.Sections[0].Metadata["repeatedFailures"])
 	}
 }
 
@@ -272,8 +298,8 @@ func TestRunsSection_ErrorSnippetKeepsTheCause(t *testing.T) {
 		t.Fatal(err)
 	}
 	doc := resolve(t, f, digest.Options{}, "runs:")
-	if !strings.Contains(doc.Sections[0].Content, "| lint ws/: lint ws/go: exit status 1 |") {
-		t.Fatalf("error cell should drop wrappers and repeats:\n%s", doc.Sections[0].Content)
+	if !strings.Contains(doc.Text(), "| lint ws/: lint ws/go: exit status 1 |") {
+		t.Fatalf("error cell should drop wrappers and repeats:\n%s", doc.Text())
 	}
 }
 
@@ -306,19 +332,23 @@ func TestExecSection(t *testing.T) {
 		if s.Label != "Executable: test ws/unit" {
 			t.Fatalf("%s: unexpected label %q", src, s.Label)
 		}
+		if strings.Contains(s.Content, "Recent runs") {
+			t.Fatalf("%s: JSON content shouldn't repeat metadata.recentRuns:\n%s", src, s.Content)
+		}
+		text := doc.Text()
 		for _, want := range []string{
 			"### Definition\n\n```yaml\nexec:\n  file: scripts/unit.sh\nname: unit\n",
 			"### Script: .execs/scripts/unit.sh\n\n```sh\n#!/bin/sh\ngo test ./...\n```",
 			"### Recent runs", "| r1 | failed | 1 | 1.5s | 21 min ago |", "| r2 | completed | 0 | 1.5s | 6d ago |",
 		} {
-			if !strings.Contains(s.Content, want) {
-				t.Errorf("%s: content missing %q:\n%s", src, want, s.Content)
+			if !strings.Contains(text, want) {
+				t.Errorf("%s: text missing %q:\n%s", src, want, text)
 			}
 		}
 	}
 
 	doc := resolve(t, f, digest.Options{NoHistory: true}, "exec:test/unit")
-	if strings.Contains(doc.Sections[0].Content, "Recent runs") {
+	if strings.Contains(doc.Text(), "Recent runs") {
 		t.Fatalf("--no-history should omit recent runs")
 	}
 }
@@ -475,7 +505,7 @@ func TestRunsSection_RunningRunHasNoDurationOrExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	doc := resolve(t, f, digest.Options{}, "runs:")
-	if !strings.Contains(doc.Sections[0].Content, "| live | test ws/unit | running | - | - |") {
-		t.Fatalf("a running run shouldn't show a final duration or exit code:\n%s", doc.Sections[0].Content)
+	if !strings.Contains(doc.Text(), "| live | test ws/unit | running | - | - |") {
+		t.Fatalf("a running run shouldn't show a final duration or exit code:\n%s", doc.Text())
 	}
 }
