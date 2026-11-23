@@ -41,7 +41,7 @@
     ],
     "deny": [
       "Edit(types/**/*.gen.go)",
-      "Edit(docs/cli/**)",
+      "Edit(docs/cli/flow*.md)",
       "Edit(docs/types/**)",
       "Edit(docs/public/schemas/**)",
       "Bash(flow secret get:*)",
