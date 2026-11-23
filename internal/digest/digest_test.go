@@ -564,3 +564,24 @@ func TestRunsSection_AgentFacingFields(t *testing.T) {
 		t.Fatalf("text should show the label beside the ref:\n%s", doc.Text())
 	}
 }
+
+func TestExecSection_ScriptPathIsRelativeThroughSymlinkedWorkspace(t *testing.T) {
+	f := newFixture(t)
+	f.writeFile(".execs/test.flow", "executables: []\n")
+	f.writeFile(".execs/scripts/unit.sh", "go test ./...\n")
+	// The workspace is registered through a symlink while scripts resolve to the real path, as with
+	// macOS /var -> /private/var or Windows short names.
+	link := filepath.Join(filepath.Dir(f.wsDir), "ws-link")
+	if err := os.Symlink(f.wsDir, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	e := &executable.Executable{Verb: "test", Name: "unit", Exec: &executable.ExecExecutableType{File: "scripts/unit.sh"}}
+	e.SetContext("ws", link, "", filepath.Join(link, ".execs", "test.flow"))
+	f.execs.byRef[executable.NewRef("ws/unit", "test")] = e
+
+	s := resolve(t, f, digest.Options{NoHistory: true}, "exec:test/unit").Sections[0]
+	if s.Metadata["script"] != ".execs/scripts/unit.sh" || s.Metadata["flowFile"] != ".execs/test.flow" {
+		t.Fatalf("paths should be workspace-relative with forward slashes: script=%v flowFile=%v",
+			s.Metadata["script"], s.Metadata["flowFile"])
+	}
+}

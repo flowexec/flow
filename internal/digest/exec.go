@@ -11,6 +11,7 @@ import (
 
 	"github.com/flowexec/flow/v2/internal/io/logs"
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 )
@@ -216,15 +217,35 @@ func scriptPath(e *executable.Executable) (string, bool) {
 		return "", false
 	}
 	root, err := filepath.EvalSymlinks(e.WorkspacePath())
-	if err != nil || !within(root, resolved) {
+	if err != nil || !filesystem.IsPathWithin(resolved, root) {
 		return "", false
 	}
 	return resolved, true
 }
 
+// relTo returns path relative to root with forward slashes, so a digest reads the same on every
+// OS and doesn't expose machine paths. NormalizePath covers macOS's /private prefix; the retry
+// with both sides symlink-resolved covers other aliases, such as Windows short names.
 func relTo(root, path string) string {
-	if rel, err := filepath.Rel(root, path); err == nil && !strings.HasPrefix(rel, "..") {
-		return rel
+	rel := func(root, path string) (string, bool) {
+		if !filesystem.IsPathWithin(path, root) {
+			return "", false
+		}
+		r, err := filepath.Rel(filesystem.NormalizePath(root), filesystem.NormalizePath(path))
+		if err != nil {
+			return "", false
+		}
+		return filepath.ToSlash(r), true
 	}
-	return path
+	if r, ok := rel(root, path); ok {
+		return r
+	}
+	rootReal, rerr := filepath.EvalSymlinks(root)
+	pathReal, perr := filepath.EvalSymlinks(path)
+	if rerr == nil && perr == nil {
+		if r, ok := rel(rootReal, pathReal); ok {
+			return r
+		}
+	}
+	return filepath.ToSlash(path)
 }

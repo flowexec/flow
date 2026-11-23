@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/pkg/filesystem"
 )
 
 // maxFileRead bounds how much of a file is read; anything past it would be cut by the budget.
@@ -43,7 +44,7 @@ func (r *resolver) fileSection(p string) (*Section, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	if !within(rootReal, resolved) {
+	if !filesystem.IsPathWithin(resolved, rootReal) {
 		return nil, flowerrors.NewUsageError("file %s is outside the workspace root %s", p, root)
 	}
 	info, err := os.Stat(resolved)
@@ -94,15 +95,6 @@ func readText(path string) (string, error) {
 		text = strings.ToValidUTF8(text, "�")
 	}
 	return strings.TrimSuffix(text, "\n"), nil
-}
-
-// within reports whether path is root or inside it. Both must already be symlink-resolved.
-func within(root, path string) bool {
-	rel, err := filepath.Rel(root, path)
-	if err != nil {
-		return false
-	}
-	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 func lineCount(s string) int {
