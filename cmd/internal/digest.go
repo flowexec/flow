@@ -33,7 +33,7 @@ func RegisterDigestCmd(ctx *context.Context, rootCmd *cobra.Command) {
 			digestFunc(ctx, cmd, args)
 		},
 	}
-	RegisterFlag(ctx, subCmd, *flags.OutputFormatFlag)
+	RegisterFlag(ctx, subCmd, *flags.DigestOutputFlag)
 	RegisterFlag(ctx, subCmd, *flags.DigestMaxCharsFlag)
 	RegisterFlag(ctx, subCmd, *flags.DigestMaxLinesFlag)
 	RegisterFlag(ctx, subCmd, *flags.DigestNoHistoryFlag)
@@ -41,7 +41,7 @@ func RegisterDigestCmd(ctx *context.Context, rootCmd *cobra.Command) {
 }
 
 func digestFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
-	format := strings.ToLower(flags.ValueFor[string](cmd, *flags.OutputFormatFlag, false))
+	format := strings.ToLower(flags.ValueFor[string](cmd, *flags.DigestOutputFlag, false))
 	switch format {
 	case "", "text", "json", "yaml", "yml":
 	default:
@@ -95,7 +95,7 @@ func digestFunc(ctx *context.Context, cmd *cobra.Command, args []string) {
 }
 
 const digestExamples = `
-  flow digest run:3f2a9c1e-...                     # one run's metadata and log tail
+  flow digest run:3f2a9c1e                         # one run's metadata and log tail, by ID prefix
   flow digest runs:"test status:failed ran:7d"     # failed test runs from the last week
   flow digest exec:test/unit                       # definition, script and recent runs
   flow digest file:./flow.yaml exec:build/binary   # several sources in one document

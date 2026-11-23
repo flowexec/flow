@@ -23,7 +23,7 @@ flow digest SOURCE [SOURCE...] [flags]
 ## Examples
 
 ```shell
-flow digest run:3f2a9c1e-...                     # one run's metadata and log tail
+flow digest run:3f2a9c1e                         # one run's metadata and log tail, by ID prefix
 flow digest runs:"test status:failed ran:7d"     # failed test runs from the last week
 flow digest exec:test/unit                       # definition, script and recent runs
 flow digest file:./flow.yaml exec:build/binary   # several sources in one document
@@ -38,7 +38,7 @@ flow digest runs:status:failed -o json           # structured sections for scrip
 | `--max-chars` | `int` | Character budget shared by all sections. Log, file and script text shrink to fit; logs first. (default 40000) |
 | `--max-lines` | `int` | Maximum log lines kept per run section. (default 400) |
 | `--no-history` |  | Omit recent runs from exec sections. |
-| `-o, --output` | `string` | Output format. One of: yaml, json, or tui. |
+| `-o, --output` | `string` | Output format. One of: text (default), json, or yaml. |
 
 ## Options inherited from parent commands
 

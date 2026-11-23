@@ -559,6 +559,16 @@ var GlobalCacheFlag = &Metadata{
 	Required:  false,
 }
 
+// DigestOutputFlag shares --output's name, so the error handler still finds it, but digest
+// renders text rather than a TUI.
+var DigestOutputFlag = &Metadata{
+	Name:      "output",
+	Shorthand: "o",
+	Usage:     "Output format. One of: text (default), json, or yaml.",
+	Default:   "",
+	Required:  false,
+}
+
 var DigestMaxCharsFlag = &Metadata{
 	Name:     "max-chars",
 	Usage:    "Character budget shared by all sections. Log, file and script text shrink to fit; logs first.",
