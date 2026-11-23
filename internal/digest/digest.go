@@ -60,9 +60,11 @@ type Deps struct {
 
 // Document is the resolved digest: one section per source, in the order given.
 type Document struct {
-	Sections   []Section `json:"sections"   yaml:"sections"`
-	TotalChars int       `json:"totalChars" yaml:"totalChars"`
-	MaxChars   int       `json:"maxChars"   yaml:"maxChars"`
+	// GeneratedAt anchors the sections' timestamps, so a reader can tell how stale a run is.
+	GeneratedAt string    `json:"generatedAt" yaml:"generatedAt"`
+	Sections    []Section `json:"sections"    yaml:"sections"`
+	TotalChars  int       `json:"totalChars"  yaml:"totalChars"`
+	MaxChars    int       `json:"maxChars"    yaml:"maxChars"`
 }
 
 // Section is the resolved state for one source.
@@ -186,7 +188,7 @@ func Resolve(ctx context.Context, sources []string, opts Options, deps Deps) (*D
 	}
 
 	r := &resolver{opts: opts, deps: deps}
-	doc := &Document{MaxChars: opts.MaxChars}
+	doc := &Document{MaxChars: opts.MaxChars, GeneratedAt: deps.Now().UTC().Format(time.RFC3339)}
 	sections := make([]*Section, 0, len(parsed))
 	for _, src := range parsed {
 		if err := ctx.Err(); err != nil {

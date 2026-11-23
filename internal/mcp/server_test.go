@@ -876,7 +876,7 @@ var _ = Describe("MCP Server", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.StructuredContent).ToNot(BeNil())
-				Expect(getTextContent(result)).To(HavePrefix(`{"sections":[]`))
+				Expect(getTextContent(result)).To(ContainSubstring(`"sections":[]`))
 			})
 
 			It("should surface the CLI's error code", func() {

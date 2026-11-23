@@ -153,7 +153,7 @@ Each source is `type:value`:
 | Source | Resolves to |
 |--------|-------------|
 | `run:<id>` | One run's metadata and the tail of its log. A unique ID prefix (6+ characters, as shown in tables) works |
-| `runs:<filter>` | A summary table of runs. Refs whose latest run failed, and that failed more than once recently, are listed under *Repeated failures*. Terms are `ref:<text>`, `status:completed\|failed\|cancelled\|running` (`passed` works too), `ran:<age>` (or `since:`) and `limit:<n>` (default 20); bare words match the ref |
+| `runs:<filter>` | A summary table of runs. Refs whose latest run failed, and that failed more than once recently, are listed under *Still failing*. Terms are `ref:<text>`, `status:completed\|failed\|cancelled\|running` (`passed` works too), `ran:<age>` (or `since:`) and `limit:<n>` (default 20); bare words match the ref or an ad-hoc run's label |
 | `exec:<verb>/<id>` | The executable's definition, its script file when it has one, and its last 5 runs. `<verb> <id>` works too |
 | `file:<path>` | The file's contents, resolved from the workspace root. Paths outside the workspace are rejected |
 

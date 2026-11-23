@@ -16,6 +16,7 @@ import (
 	"github.com/flowexec/flow/v2/internal/digest"
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
 	"github.com/flowexec/flow/v2/pkg/store"
+	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -187,7 +188,7 @@ func TestRunsSection_FiltersAndNotesRepeatedFailures(t *testing.T) {
 		t.Fatalf("expected failed unit runs a, b within 7d; got %+v", s.Metadata["runs"])
 	}
 	text := doc.Text()
-	if !strings.Contains(text, "| a | test ws/unit | failed | 1 |") {
+	if !strings.Contains(text, "| a | test ws/unit | 1 | 1.5s | 1h ago | - |") {
 		t.Fatalf("table missing row for a:\n%s", text)
 	}
 	if s.Content != "" {
@@ -195,8 +196,7 @@ func TestRunsSection_FiltersAndNotesRepeatedFailures(t *testing.T) {
 	}
 	// c (passed) is outside status:failed but still counts toward the ref's recent history, and e
 	// is outside the 7d window.
-	if !strings.Contains(text, "### Repeated failures\n\n- `test ws/unit` — failed 2 of its last 3 runs within 7d, "+
-		"including the latest") {
+	if !strings.Contains(text, "### Still failing\n\n- `test ws/unit` — 2 of its last 3 runs within 7d failed") {
 		t.Fatalf("expected a repeated-failure note:\n%s", text)
 	}
 	notes, ok := s.Metadata["repeatedFailures"].([]digest.RepeatedFailure)
@@ -298,7 +298,7 @@ func TestRunsSection_ErrorSnippetKeepsTheCause(t *testing.T) {
 		t.Fatal(err)
 	}
 	doc := resolve(t, f, digest.Options{}, "runs:")
-	if !strings.Contains(doc.Text(), "| lint ws/: lint ws/go: exit status 1 |") {
+	if !strings.Contains(doc.Text(), "| failed | 1 | 0s | just now | lint ws/: lint ws/go |") {
 		t.Fatalf("error cell should drop wrappers and repeats:\n%s", doc.Text())
 	}
 }
@@ -350,6 +350,29 @@ func TestExecSection(t *testing.T) {
 	doc := resolve(t, f, digest.Options{NoHistory: true}, "exec:test/unit")
 	if strings.Contains(doc.Text(), "Recent runs") {
 		t.Fatalf("--no-history should omit recent runs")
+	}
+}
+
+func TestExecSection_DefinitionOmitsDefaultVisibility(t *testing.T) {
+	f := newFixture(t)
+	flowFile := f.writeFile(".execs/x.flow", "executables: []\n")
+	public := executable.ExecutableVisibility(common.VisibilityPublic)
+	for name, vis := range map[string]*executable.ExecutableVisibility{"implied": nil, "explicit": &public} {
+		e := &executable.Executable{
+			Verb: "build", Name: name, Visibility: vis, Exec: &executable.ExecExecutableType{Cmd: "true"},
+		}
+		e.SetContext("ws", f.wsDir, "", flowFile)
+		e.SetDefaults()
+		f.execs.byRef[executable.NewRef("ws/"+name, "build")] = e
+	}
+
+	implied := resolve(t, f, digest.Options{NoHistory: true}, "exec:build/implied").Sections[0].Content
+	if strings.Contains(implied, "visibility") {
+		t.Fatalf("the default visibility shouldn't appear:\n%s", implied)
+	}
+	explicit := resolve(t, f, digest.Options{NoHistory: true}, "exec:build/explicit").Sections[0].Content
+	if !strings.Contains(explicit, "visibility: public") {
+		t.Fatalf("a non-default visibility should stay:\n%s", explicit)
 	}
 }
 
@@ -507,5 +530,37 @@ func TestRunsSection_RunningRunHasNoDurationOrExit(t *testing.T) {
 	doc := resolve(t, f, digest.Options{}, "runs:")
 	if !strings.Contains(doc.Text(), "| live | test ws/unit | running | - | - |") {
 		t.Fatalf("a running run shouldn't show a final duration or exit code:\n%s", doc.Text())
+	}
+}
+
+func TestRunsSection_AgentFacingFields(t *testing.T) {
+	f := newFixture(t)
+	long := "serial execution failed: deploy ws/: " + strings.Repeat("x", 200) + ": exit status 1"
+	for _, r := range []store.ExecutionRecord{
+		{ID: "adhoc", Ref: "exec ws/", Label: "smoke check", Status: store.RunCompleted, StartedAt: now},
+		{ID: "long", Ref: "deploy ws/", Status: store.RunFailed, ExitCode: 1, Error: long, StartedAt: now},
+	} {
+		if err := f.ds.RecordExecution(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	doc := resolve(t, f, digest.Options{}, "runs:smoke", "runs:deploy")
+	if doc.GeneratedAt != now.Format(time.RFC3339) {
+		t.Fatalf("generatedAt should anchor relative times: %q", doc.GeneratedAt)
+	}
+	adhoc, _ := doc.Sections[0].Metadata["runs"].([]digest.RunSummary)
+	if len(adhoc) != 1 || adhoc[0].Label != "smoke check" {
+		t.Fatalf("an ad-hoc run should be found and named by its label: %+v", adhoc)
+	}
+	deploy, _ := doc.Sections[1].Metadata["runs"].([]digest.RunSummary)
+	if len(deploy) != 1 {
+		t.Fatalf("expected one deploy run: %+v", doc.Sections[1].Metadata)
+	}
+	if want := "deploy ws/: " + strings.Repeat("x", 200); deploy[0].Error != want {
+		t.Fatalf("JSON should carry the whole cleaned error, not the table cell:\n%q", deploy[0].Error)
+	}
+	if !strings.Contains(doc.Text(), "| exec ws/ (smoke check) |") {
+		t.Fatalf("text should show the label beside the ref:\n%s", doc.Text())
 	}
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/flowexec/flow/v2/internal/io/logs"
 	flowerrors "github.com/flowexec/flow/v2/pkg/errors"
+	"github.com/flowexec/flow/v2/types/common"
 	"github.com/flowexec/flow/v2/types/executable"
 )
 
@@ -101,7 +102,7 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 		s.Metadata["recentRuns"] = rows
 		body := "No recorded runs."
 		if len(rows) > 0 {
-			body = r.runTable(rows, false)
+			body = r.runTable(rows, false, true)
 		}
 		s.parts = append(s.parts, &part{
 			heading: "Recent runs", body: body, tier: tierFixed, structured: true,
@@ -110,12 +111,23 @@ func (r *resolver) execSection(ref executable.Ref) (*Section, error) {
 	return s, nil
 }
 
-// definitionYAML renders the executable as it would appear in a flow file.
+// definitionYAML renders the executable as it would appear in a flow file, leaving out the
+// visibility flow fills in by default so the definition shows what the author wrote.
 func definitionYAML(e *executable.Executable) (string, error) {
+	def := *e
+	if def.Visibility != nil {
+		implied := common.VisibilityPrivate
+		if e.Name == "" && e.Namespace() == "" {
+			implied = common.VisibilityPublic
+		}
+		if common.Visibility(*def.Visibility) == implied {
+			def.Visibility = nil
+		}
+	}
 	var b strings.Builder
 	enc := yaml.NewEncoder(&b)
 	enc.SetIndent(2)
-	if err := enc.Encode(e); err != nil {
+	if err := enc.Encode(&def); err != nil {
 		return "", fmt.Errorf("encoding %s: %w", e.Ref(), err)
 	}
 	if err := enc.Close(); err != nil {

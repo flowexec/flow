@@ -14,8 +14,10 @@ import (
 
 // RunSummary is one row of a run table.
 type RunSummary struct {
-	ID        string `json:"id"                 yaml:"id"`
-	Ref       string `json:"execRef"            yaml:"execRef"`
+	ID  string `json:"id"      yaml:"id"`
+	Ref string `json:"execRef" yaml:"execRef"`
+	// Label names an ad-hoc run, whose ref alone (exec ws/) doesn't tell runs apart.
+	Label     string `json:"label,omitempty"    yaml:"label,omitempty"`
 	Status    string `json:"status"             yaml:"status"`
 	ExitCode  int    `json:"exitCode"           yaml:"exitCode"`
 	Duration  string `json:"duration,omitempty" yaml:"duration,omitempty"`
@@ -34,7 +36,7 @@ type runsQuery struct {
 
 // parseRunsQuery reads `key:value` terms (ref, status, since/ran, limit). Bare words are part of
 // the ref match, so `runs:"test unit status:failed"` matches failed runs of refs containing
-// "test unit".
+// "test unit". The match also checks an ad-hoc run's label, which is how one is named.
 func parseRunsQuery(value string) (runsQuery, error) {
 	q := runsQuery{limit: defaultRunsLimit}
 	var refTerms []string
@@ -161,7 +163,7 @@ func (r *resolver) runsSection(value string, q runsQuery) (*Section, error) {
 		want := strings.ToLower(q.ref)
 		var matched []logs.UnifiedRecord
 		for _, rec := range records {
-			if strings.Contains(strings.ToLower(rec.Ref), want) {
+			if strings.Contains(strings.ToLower(rec.Ref), want) || strings.Contains(strings.ToLower(rec.Label), want) {
 				matched = append(matched, rec)
 			}
 		}
@@ -207,12 +209,12 @@ func (r *resolver) runsSection(value string, q runsQuery) (*Section, error) {
 
 	body := "No matching runs."
 	if len(rows) > 0 {
-		body = r.runTable(rows, true)
+		body = r.runTable(rows, true, q.status == "")
 	}
 	s.parts = append(s.parts, &part{body: body, tier: tierFixed, structured: true})
 	if len(notes) > 0 {
 		s.parts = append(s.parts, &part{
-			heading: "Repeated failures", body: failureNotes(notes, q.sinceText), tier: tierFixed, structured: true,
+			heading: "Still failing", body: failureNotes(notes, q.sinceText), tier: tierFixed, structured: true,
 		})
 	}
 	return s, nil
@@ -270,10 +272,9 @@ func failureNotes(notes []RepeatedFailure, since string) string {
 	lines := make([]string, 0, len(notes))
 	for _, n := range notes {
 		if n.Failed == n.Runs {
-			lines = append(lines, fmt.Sprintf("- `%s` — failed all of its last %d runs%s", n.Ref, n.Runs, window))
+			lines = append(lines, fmt.Sprintf("- `%s` — all of its last %d runs%s failed", n.Ref, n.Runs, window))
 		} else {
-			lines = append(lines, fmt.Sprintf("- `%s` — failed %d of its last %d runs%s, including the latest",
-				n.Ref, n.Failed, n.Runs, window))
+			lines = append(lines, fmt.Sprintf("- `%s` — %d of its last %d runs%s failed", n.Ref, n.Failed, n.Runs, window))
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -283,33 +284,52 @@ func summarize(rec logs.UnifiedRecord) RunSummary {
 	return RunSummary{
 		ID:        rec.ID,
 		Ref:       rec.Ref,
+		Label:     rec.Label,
 		Status:    string(logs.CanonicalStatus(rec)),
 		ExitCode:  rec.ExitCode,
 		Duration:  runDuration(rec),
 		StartedAt: rec.StartedAt.UTC().Format(time.RFC3339),
-		Error:     errorSnippet(rec.Error, 80),
+		Error:     cleanError(rec.Error, rec.ExitCode, maxErrorChars),
 	}
 }
 
-func (r *resolver) runTable(rows []RunSummary, withRef bool) string {
-	header := []string{"ID", "Status", "Exit", "Duration", "When"}
+// runTable renders run rows. withRef adds the ref and error columns for cross-executable views;
+// withStatus is off when a status filter already makes every row's status the same.
+func (r *resolver) runTable(rows []RunSummary, withRef, withStatus bool) string {
+	header := []string{"ID"}
 	if withRef {
-		header = []string{"ID", "Ref", "Status", "Exit", "Duration", "When", "Error"}
+		header = append(header, "Ref")
+	}
+	if withStatus {
+		header = append(header, "Status")
+	}
+	header = append(header, "Exit", "Duration", "When")
+	if withRef {
+		header = append(header, "Error")
 	}
 	table := make([][]string, 0, len(rows))
 	for _, row := range rows {
 		started, _ := time.Parse(time.RFC3339, row.StartedAt)
-		when := relativeTime(r.deps.Now(), started)
 		exit := strconv.Itoa(row.ExitCode)
 		if row.Status == string(store.RunRunning) {
 			exit = "-"
 		}
-		id := shortID(row.ID)
+		cells := []string{shortID(row.ID)}
 		if withRef {
-			table = append(table, []string{id, row.Ref, row.Status, exit, row.Duration, when, row.Error})
-		} else {
-			table = append(table, []string{id, row.Status, exit, row.Duration, when})
+			ref := row.Ref
+			if row.Label != "" {
+				ref += " (" + row.Label + ")"
+			}
+			cells = append(cells, ref)
 		}
+		if withStatus {
+			cells = append(cells, row.Status)
+		}
+		cells = append(cells, exit, row.Duration, relativeTime(r.deps.Now(), started))
+		if withRef {
+			cells = append(cells, ellipsizeStart(row.Error, errorCellChars))
+		}
+		table = append(table, cells)
 	}
 	return markdownTable(header, table)
 }
@@ -392,8 +412,15 @@ var errorWrappers = []string{
 	"serial execution failed: ", "parallel execution failed: ", "command exited with non-zero status ",
 }
 
-// errorSnippet shortens a run error to its first line, keeping its end, where the cause is.
-func errorSnippet(s string, n int) string {
+const (
+	maxErrorChars  = 500
+	errorCellChars = 80
+)
+
+// cleanError reduces a run error to its first line without runner wrappers or repeated refs,
+// keeping its end, where the cause is. A trailing "exit status N" matching the run's exit code
+// is dropped, since that is already in exitCode.
+func cleanError(s string, exitCode, n int) string {
 	s, _, _ = strings.Cut(strings.TrimSpace(s), "\n")
 	for _, w := range errorWrappers {
 		s = strings.ReplaceAll(s, w, "")
@@ -406,7 +433,14 @@ func errorSnippet(s string, n int) string {
 			kept = append(kept, seg)
 		}
 	}
-	s = strings.Join(kept, ": ")
+	if last := len(kept) - 1; last >= 0 && kept[last] == fmt.Sprintf("exit status %d", exitCode) {
+		kept = kept[:last]
+	}
+	return ellipsizeStart(strings.Join(kept, ": "), n)
+}
+
+// ellipsizeStart keeps the last n characters of s.
+func ellipsizeStart(s string, n int) string {
 	if runeLen(s) <= n {
 		return s
 	}
