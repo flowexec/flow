@@ -10,10 +10,11 @@ via `.execs/*.flow`.
 ## Critical Rules
 
 1. **Only `*.gen.go` is generated — the rest of `types/` is hand-written.** Never edit
-   `types/**/*.gen.go`, `docs/cli/`, `docs/types/`, or `docs/public/schemas/`; edit the source
+   `types/**/*.gen.go`, `docs/cli/flow*.md`, `docs/types/`, or `docs/public/schemas/`; edit the source
    schema and run the `generate` executable. Sources are `types/executable/*_schema.yaml` and
    `types/{config,workspace,common}/schema.yaml`. CI's `validate generated` fails on uncommitted
    diffs. (Permission rules block these writes, so a failed edit here is expected, not a bug.)
+   `docs/cli/index.md` is hand-maintained: add new top-level commands to it.
 2. **Remove `FDescribe`/`FIt`/`FEntry` before committing** — they silently exclude every other
    spec in the suite.
 3. **In `cmd/`, never `log.Fatal`, `os.Exit`, or `logger.Log().FatalErr()`** — use

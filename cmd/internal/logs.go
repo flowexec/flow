@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -151,25 +149,6 @@ func buildContentOptions(cmd *cobra.Command) (logs.ContentOptions, bool) {
 	return opts, includeContent
 }
 
-// durationWithDays extends time.ParseDuration to support a "d" (day) suffix.
-var durationWithDaysRe = regexp.MustCompile(`^(\d+)d(.*)$`)
-
-func parseDurationWithDays(s string) (time.Duration, error) {
-	if m := durationWithDaysRe.FindStringSubmatch(s); m != nil {
-		days, _ := strconv.Atoi(m[1])
-		d := time.Duration(days) * 24 * time.Hour
-		if m[2] != "" {
-			rest, err := time.ParseDuration(m[2])
-			if err != nil {
-				return 0, fmt.Errorf("invalid duration %q: %w", s, err)
-			}
-			d += rest
-		}
-		return d, nil
-	}
-	return time.ParseDuration(s)
-}
-
 func buildRecordFilter(cmd *cobra.Command) logs.RecordFilter {
 	var f logs.RecordFilter
 
@@ -183,7 +162,7 @@ func buildRecordFilter(cmd *cobra.Command) logs.RecordFilter {
 
 	sinceStr := flags.ValueFor[string](cmd, *flags.LogFilterSinceFlag, false)
 	if sinceStr != "" {
-		d, err := parseDurationWithDays(sinceStr)
+		d, err := logs.ParseAge(sinceStr)
 		if err != nil {
 			logger.Log().Fatalf("Invalid --since value %q: %v", sinceStr, err)
 		}

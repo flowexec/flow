@@ -135,6 +135,69 @@ flow logs kill a1b2c3d4
 > Make sure all required parameters are provided via `--param` flags or environment variables when
 > using `--background`.
 
+## Digests
+
+`flow digest` gathers runs, executables and files into one document, with a `## ` section per
+source. Use it to read a failure next to the task that produced it, or to hand project state to a
+script or agent.
+
+```shell
+flow digest run:3f2a9c1e                         # metadata and the last 400 log lines
+flow digest runs:"test status:failed ran:7d"     # a table of matching runs
+flow digest exec:test/unit                       # definition, script source and last 5 runs
+flow digest run:3f2a9c1e exec:test/unit          # a failure beside the task that produced it
+```
+
+Each source is `type:value`:
+
+| Source | Resolves to |
+|--------|-------------|
+| `run:<id>` | One run's metadata and the tail of its log. Tables show 8-character IDs; any unique prefix of 6 or more characters works |
+| `runs:<filter>` | A table of runs, newest first. Terms are `ref:<text>`, `status:completed\|failed\|cancelled\|running` (`passed` works too), `ran:<age>` (or `since:`) and `limit:<n>` (default 20). Bare words match the ref or an ad-hoc run's label. An unknown term is an error |
+| `exec:<verb>/<id>` | The executable's definition, its script file when it has one, and its last 5 runs under any of its verb aliases. `<verb> <id>` works too |
+| `file:<path>` | The file's contents, resolved from the workspace root. Paths outside the workspace are rejected |
+
+A `runs:` section ends with **Still failing** when a ref in the table failed its latest run and has
+failed more than once recently. Cancelled and running runs don't count either way.
+
+### Size
+
+`--max-chars` (default 40000) is shared by all sections. Metadata, definitions and tables are
+always kept; file and script text shrinks next, and log output gives way first. `--max-lines` caps
+each run's log (default 400), and `--no-history` drops recent runs from `exec:` sections. A cut part
+says how much was kept, e.g. `Output (last 120 of 2340 lines)`. Logs, files, scripts and
+definitions are fenced, so their own Markdown can't break the document's structure.
+
+### JSON
+
+`-o json` returns the same sections as data:
+
+```json
+{
+  "generatedAt": "2026-11-21T10:30:00Z",
+  "sections": [
+    {
+      "type": "run",
+      "ref": "3f2a9c1e",
+      "label": "Run 3f2a9c1e",
+      "metadata": { "id": "3f2a9c1e-…", "execRef": "test flow/unit", "status": "failed", "exitCode": 1 },
+      "content": "--- FAIL: TestMerge …",
+      "truncated": false
+    }
+  ],
+  "totalChars": 1842,
+  "maxChars": 40000
+}
+```
+
+`content` holds a run's log or a file's text as-is, and an executable's definition and script as
+Markdown. Run tables are data in `metadata` (`runs`, `recentRuns`, and `repeatedFailures` for
+*Still failing*) and aren't repeated in `content`. Each run row carries the full `id` for a
+follow-up `run:` source.
+
+The MCP server returns the same document from the `get_digest` tool, with a smaller default budget
+(12000) to save the agent's context.
+
 ## Clearing History
 
 ```shell

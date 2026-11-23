@@ -156,3 +156,29 @@ func (e RunCancelledError) Code() string { return ErrCodeCancelled }
 func NewRunCancelledError(signal string) RunCancelledError {
 	return RunCancelledError{Signal: signal}
 }
+
+// RunNotFoundError indicates no execution record exists with the given run ID.
+type RunNotFoundError struct {
+	ID string
+}
+
+func (e RunNotFoundError) Error() string { return fmt.Sprintf("run %s not found", e.ID) }
+
+func (e RunNotFoundError) Code() string { return ErrCodeNotFound }
+
+func NewRunNotFoundError(id string) RunNotFoundError {
+	return RunNotFoundError{ID: id}
+}
+
+// FileNotFoundError indicates a requested file does not exist.
+type FileNotFoundError struct {
+	Path string
+}
+
+func (e FileNotFoundError) Error() string { return fmt.Sprintf("file %s not found", e.Path) }
+
+func (e FileNotFoundError) Code() string { return ErrCodeNotFound }
+
+func NewFileNotFoundError(path string) FileNotFoundError {
+	return FileNotFoundError{Path: path}
+}
